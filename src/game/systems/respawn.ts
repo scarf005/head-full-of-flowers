@@ -140,7 +140,6 @@ export const spawnObstacles = (world: WorldState) => {
       obstacle.maxHp = 9
     }
     obstacle.hp = obstacle.maxHp
-    obstacle.hitFlash = 0
     obstacle.active = true
     cursor += 1
   }

@@ -106,6 +106,8 @@ export const constrainUnitsToArena = (world: WorldState) => {
 export interface ObstacleDamageDeps {
   spawnExplosion: (x: number, y: number, radius: number) => void
   breakObstacle: (obstacle: Obstacle) => void
+  onSfxHit?: () => void
+  onSfxDeath?: () => void
 }
 
 export const damageHouseByExplosion = (
@@ -119,6 +121,7 @@ export const damageHouseByExplosion = (
     return
   }
 
+  let tookDamage = false
   const originX = obstacle.position.x - obstacle.width * 0.5
   const originY = obstacle.position.y - obstacle.height * 0.5
   for (let row = 0; row < obstacle.tiles.length; row += 1) {
@@ -133,9 +136,15 @@ export const damageHouseByExplosion = (
         continue
       }
 
-      obstacle.hp -= 1.6
-      obstacle.hitFlash = 1
+      obstacle.tiles[row][col] = false
+      obstacle.hp -= 1
+      deps.spawnExplosion(tileCenterX, tileCenterY, 0.16)
+      tookDamage = true
     }
+  }
+
+  if (tookDamage) {
+    deps.onSfxHit?.()
   }
 
   if (obstacle.hp <= 0) {
@@ -144,6 +153,7 @@ export const damageHouseByExplosion = (
         obstacle.tiles[row][col] = false
       }
     }
+    deps.onSfxDeath?.()
     deps.breakObstacle(obstacle)
   }
 }
@@ -169,14 +179,17 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
         continue
       }
 
-      obstacle.hp -= Math.max(0.9, projectile.damage * 0.85)
-      obstacle.hitFlash = 1
+      obstacle.tiles[tileY][tileX] = false
+      obstacle.hp -= 1
+      deps.spawnExplosion(originX + tileX + 0.5, originY + tileY + 0.5, 0.14)
+      deps.onSfxHit?.()
       if (obstacle.hp <= 0) {
         for (let row = 0; row < obstacle.tiles.length; row += 1) {
           for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
             obstacle.tiles[row][col] = false
           }
         }
+        deps.onSfxDeath?.()
         deps.breakObstacle(obstacle)
       }
       return true
@@ -193,9 +206,11 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
       continue
     }
 
-    obstacle.hp -= Math.max(1, projectile.damage * 0.95)
-    obstacle.hitFlash = 1
-    if (obstacle.hp <= 0) {
+    obstacle.hp -= Math.max(0.9, projectile.damage * 0.85)
+    deps.spawnExplosion(Math.floor(projectile.position.x) + 0.5, Math.floor(projectile.position.y) + 0.5, 0.14)
+    deps.onSfxHit?.()
+    if (obstacle.hp <= 0 || obstacle.width > 1 || obstacle.height > 1) {
+      deps.onSfxDeath?.()
       deps.breakObstacle(obstacle)
     }
     return true

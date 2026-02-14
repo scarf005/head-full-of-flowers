@@ -187,7 +187,6 @@ export class Obstacle {
   height = 2
   hp = 0
   maxHp = 0
-  hitFlash = 0
   lootDropped = false
   tiles: boolean[][] = []
 }

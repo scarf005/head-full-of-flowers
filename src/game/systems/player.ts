@@ -21,10 +21,6 @@ export const updateCombatFeel = (world: WorldState, dt: number) => {
     unit.recoil = Math.max(0, unit.recoil - dt * 8.5)
   }
 
-  for (const obstacle of world.obstacles) {
-    obstacle.hitFlash = Math.max(0, obstacle.hitFlash - dt * 10)
-  }
-
   world.cameraShake = Math.max(0, world.cameraShake - dt * 5)
   const shakePower = world.cameraShake * world.cameraShake
   world.cameraOffset.x = randomRange(-1, 1) * shakePower * 0.24
