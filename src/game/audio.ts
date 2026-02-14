@@ -13,8 +13,8 @@ export class AudioDirector {
     this.gameplayTrack.loop = true
     this.menuTrack.preload = "auto"
     this.gameplayTrack.preload = "auto"
-    this.menuTrack.volume = 0.38
-    this.gameplayTrack.volume = 0.45
+    this.menuTrack.volume = 0.22
+    this.gameplayTrack.volume = 0.3
   }
 
   prime() {
@@ -76,7 +76,7 @@ export class SfxSynth {
       this.bus.release.value = 0.14
 
       this.masterGain = this.context.createGain()
-      this.masterGain.gain.value = 0.8
+      this.masterGain.gain.value = 1
       this.bus.connect(this.masterGain)
       this.masterGain.connect(this.context.destination)
     }
@@ -99,7 +99,12 @@ export class SfxSynth {
 
   hit() {
     const context = this.ensureContext()
-    this.chirp(context, 260, 70, 0.1, "triangle", 0.16)
+    this.chirp(context, 260, 70, 0.1, "triangle", 0.32)
+  }
+
+  die() {
+    const context = this.ensureContext()
+    this.chirp(context, 180, 38, 0.22, "sawtooth", 0.52)
   }
 
   explosion() {
