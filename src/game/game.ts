@@ -159,12 +159,12 @@ export class FlowerArenaGame {
     this.player.primaryAmmo = Number.POSITIVE_INFINITY
     this.player.secondaryMode = "grenade"
     this.player.radius = 14
-    this.player.speed = 190
+    this.player.speed = PLAYER_BASE_SPEED
 
     this.bots = []
     for (let index = 0; index < BOT_COUNT; index += 1) {
       const bot = new Unit(`bot-${index + 1}`, false, "blue")
-      bot.speed = 162
+      bot.speed = BOT_BASE_SPEED
       bot.radius = 13
       bot.primaryWeapon = this.randomLootablePrimary()
       bot.primaryAmmo = PRIMARY_WEAPONS[bot.primaryWeapon].pickupAmmo
@@ -184,7 +184,7 @@ export class FlowerArenaGame {
     secondaryWeaponSignal.value = "Grenade"
     hpSignal.value = { hp: this.player.hp, maxHp: this.player.maxHp }
     perkOptionsSignal.value = []
-    statusMessageSignal.value = "Click to begin the 90 second bloom match"
+    statusMessageSignal.value = "Click once to wake audio, then click again to deploy"
     crosshairSignal.value = {
       x: this.input.canvasX,
       y: this.input.canvasY,
@@ -203,8 +203,21 @@ export class FlowerArenaGame {
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
-    this.primeAudio()
+    const wasPrimed = this.audioPrimed
+    if (!this.audioPrimed) {
+      this.primeAudio()
+    }
+
+    if (!wasPrimed && !this.started && event.key !== "Enter") {
+      return
+    }
+
     this.input.keys.add(event.key.toLowerCase())
+
+    if (event.key === "Enter" && (!this.started || this.finished)) {
+      this.beginMatch()
+      return
+    }
 
     if (event.key === "1" || event.key === "2" || event.key === "3") {
       const perkIndex = Number(event.key) - 1
@@ -234,7 +247,15 @@ export class FlowerArenaGame {
   }
 
   private onPointerDown = (event: PointerEvent) => {
-    this.primeAudio()
+    const wasPrimed = this.audioPrimed
+    if (!this.audioPrimed) {
+      this.primeAudio()
+    }
+
+    if (!wasPrimed && !this.started) {
+      statusMessageSignal.value = "Menu theme awake. Click again or press Enter to deploy"
+      return
+    }
 
     if (!this.started || this.finished) {
       this.beginMatch()
@@ -279,6 +300,8 @@ export class FlowerArenaGame {
     }
 
     this.audioPrimed = true
+    this.audioDirector.prime()
+    this.sfx.prime()
     this.audioDirector.startMenu()
   }
 
@@ -298,7 +321,7 @@ export class FlowerArenaGame {
     this.player.damageMultiplier = 1
     this.player.fireRateMultiplier = 1
     this.player.bulletSizeMultiplier = 1
-    this.player.speed = 190
+    this.player.speed = PLAYER_BASE_SPEED
     this.player.grenadeTimer = 1
     this.equipPrimary(this.player, "pistol", Number.POSITIVE_INFINITY)
 
@@ -308,7 +331,7 @@ export class FlowerArenaGame {
       bot.damageMultiplier = 1
       bot.fireRateMultiplier = 1
       bot.bulletSizeMultiplier = 1
-      bot.speed = 162
+      bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
       const weaponId = this.randomLootablePrimary()
       this.equipPrimary(bot, weaponId, PRIMARY_WEAPONS[weaponId].pickupAmmo)
@@ -343,6 +366,10 @@ export class FlowerArenaGame {
       zone.active = false
     }
 
+    this.cameraShake = 0
+    this.cameraOffset.set(0, 0)
+    this.hitStop = 0
+
     this.syncHudSignals()
     statusMessageSignal.value = "Fight for map coverage"
     this.audioDirector.startGameplay()
@@ -365,7 +392,7 @@ export class FlowerArenaGame {
       let safe = true
 
       for (const existing of occupied) {
-        if (distSquared(candidate.x, candidate.y, existing.x, existing.y) < 180 * 180) {
+        if (distSquared(candidate.x, candidate.y, existing.x, existing.y) < 120 * 120) {
           safe = false
           break
         }
@@ -392,10 +419,14 @@ export class FlowerArenaGame {
   private update(dt: number) {
     this.camera.x = lerp(this.camera.x, this.player.position.x, clamp(dt * 10, 0, 1))
     this.camera.y = lerp(this.camera.y, this.player.position.y, clamp(dt * 10, 0, 1))
+    this.updateCombatFeel(dt)
+
+    const simDt = this.hitStop > 0 ? dt * 0.12 : dt
+    this.hitStop = Math.max(0, this.hitStop - dt)
 
     if (!this.running) {
-      this.updateFlowers(dt)
-      this.updateDamagePopups(dt)
+      this.updateFlowers(simDt)
+      this.updateDamagePopups(simDt)
       this.updateCrosshairWorld()
       return
     }
@@ -407,14 +438,14 @@ export class FlowerArenaGame {
     }
 
     this.updateCrosshairWorld()
-    this.updatePlayer(dt)
-    this.updateBots(dt)
-    this.updateProjectiles(dt)
-    this.updateThrowables(dt)
-    this.updateMolotovZones(dt)
-    this.updateFlowers(dt)
-    this.updateDamagePopups(dt)
-    this.updatePickups(dt)
+    this.updatePlayer(simDt)
+    this.updateBots(simDt)
+    this.updateProjectiles(simDt)
+    this.updateThrowables(simDt)
+    this.updateMolotovZones(simDt)
+    this.updateFlowers(simDt)
+    this.updateDamagePopups(simDt)
+    this.updatePickups(simDt)
     this.syncHudSignals()
   }
 
@@ -438,6 +469,18 @@ export class FlowerArenaGame {
     this.input.worldY = this.camera.y + this.input.canvasY - VIEW_HEIGHT * 0.5
   }
 
+  private updateCombatFeel(dt: number) {
+    for (const unit of this.units) {
+      unit.hitFlash = Math.max(0, unit.hitFlash - dt * 6.5)
+      unit.recoil = Math.max(0, unit.recoil - dt * 8.5)
+    }
+
+    this.cameraShake = Math.max(0, this.cameraShake - dt * 5)
+    const shakePower = this.cameraShake * this.cameraShake
+    this.cameraOffset.x = randomRange(-1, 1) * shakePower * 24
+    this.cameraOffset.y = randomRange(-1, 1) * shakePower * 18
+  }
+
   private updatePlayer(dt: number) {
     this.player.shootCooldown = Math.max(0, this.player.shootCooldown - dt)
     this.player.secondaryCooldown = Math.max(0, this.player.secondaryCooldown - dt)
@@ -458,9 +501,13 @@ export class FlowerArenaGame {
       moveX += 1
     }
 
-    const moveLength = Math.hypot(moveX, moveY) || 1
-    this.player.velocity.x = (moveX / moveLength) * this.player.speed
-    this.player.velocity.y = (moveY / moveLength) * this.player.speed
+    const moveLength = Math.hypot(moveX, moveY)
+    const targetSpeed = this.player.speed
+    const targetVelocityX = moveLength > 0 ? (moveX / moveLength) * targetSpeed : 0
+    const targetVelocityY = moveLength > 0 ? (moveY / moveLength) * targetSpeed : 0
+    const accel = moveLength > 0 ? 24 : 18
+    this.player.velocity.x = lerp(this.player.velocity.x, targetVelocityX, clamp(dt * accel, 0, 1))
+    this.player.velocity.y = lerp(this.player.velocity.y, targetVelocityY, clamp(dt * accel, 0, 1))
 
     this.player.position.x += this.player.velocity.x * dt
     this.player.position.y += this.player.velocity.y * dt
@@ -483,19 +530,55 @@ export class FlowerArenaGame {
     this.collectNearbyPickup(this.player)
   }
 
+  private findNearestTarget(origin: Unit, maxDistance = Number.POSITIVE_INFINITY) {
+    let target: Unit | null = null
+    let bestDistance = maxDistance
+    let deltaX = 0
+    let deltaY = 0
+
+    for (const candidate of this.units) {
+      if (candidate.id === origin.id) {
+        continue
+      }
+
+      const dx = candidate.position.x - origin.position.x
+      const dy = candidate.position.y - origin.position.y
+      const distance = Math.hypot(dx, dy)
+      if (distance >= bestDistance) {
+        continue
+      }
+
+      target = candidate
+      bestDistance = distance
+      deltaX = dx
+      deltaY = dy
+    }
+
+    return {
+      target,
+      distance: bestDistance,
+      deltaX,
+      deltaY
+    }
+  }
+
   private updateBots(dt: number) {
     for (const bot of this.bots) {
       bot.shootCooldown = Math.max(0, bot.shootCooldown - dt)
       bot.secondaryCooldown = Math.max(0, bot.secondaryCooldown - dt)
       bot.aiDecisionTimer -= dt
+      let desiredVelocityX = bot.velocity.x
+      let desiredVelocityY = bot.velocity.y
 
-      const toPlayerX = this.player.position.x - bot.position.x
-      const toPlayerY = this.player.position.y - bot.position.y
-      const distanceToPlayer = Math.hypot(toPlayerX, toPlayerY)
+      const nearestTarget = this.findNearestTarget(bot, 760)
+      const hasTarget = nearestTarget.target !== null
+      const distanceToTarget = nearestTarget.distance
+      const toTargetX = nearestTarget.deltaX
+      const toTargetY = nearestTarget.deltaY
 
       if (bot.hp <= bot.maxHp * 0.32) {
         bot.aiState = "flee"
-      } else if (distanceToPlayer < 430) {
+      } else if (hasTarget && distanceToTarget < 430) {
         bot.aiState = "aggro"
       } else {
         bot.aiState = "wander"
@@ -509,43 +592,46 @@ export class FlowerArenaGame {
       }
 
       if (bot.aiState === "wander") {
-        bot.velocity.x = bot.aiMove.x * bot.speed * 0.65
-        bot.velocity.y = bot.aiMove.y * bot.speed * 0.65
+        desiredVelocityX = bot.aiMove.x * bot.speed * 0.7
+        desiredVelocityY = bot.aiMove.y * bot.speed * 0.7
       }
 
       if (bot.aiState === "aggro") {
-        const distanceSafe = distanceToPlayer || 1
-        const towardX = toPlayerX / distanceSafe
-        const towardY = toPlayerY / distanceSafe
+        const distanceSafe = distanceToTarget || 1
+        const towardX = toTargetX / distanceSafe
+        const towardY = toTargetY / distanceSafe
         const strafe = Math.sin(performance.now() * 0.001 + Number(bot.id.replace("bot-", "")))
-        bot.velocity.x = (towardX + -towardY * strafe * 0.45) * bot.speed
-        bot.velocity.y = (towardY + towardX * strafe * 0.45) * bot.speed
+        desiredVelocityX = (towardX + -towardY * strafe * 0.45) * bot.speed
+        desiredVelocityY = (towardY + towardX * strafe * 0.45) * bot.speed
 
         bot.aim.x = towardX
         bot.aim.y = towardY
 
-        if (distanceToPlayer < 680) {
+        if (distanceToTarget < 680) {
           this.firePrimary(bot)
         }
 
-        if (distanceToPlayer < 300 && Math.random() < 0.014) {
+        if (distanceToTarget < 300 && Math.random() < 0.014) {
           this.throwSecondary(bot)
         }
       }
 
       if (bot.aiState === "flee") {
-        const distanceSafe = distanceToPlayer || 1
-        const fromX = -toPlayerX / distanceSafe
-        const fromY = -toPlayerY / distanceSafe
-        bot.velocity.x = fromX * bot.speed * 1.1
-        bot.velocity.y = fromY * bot.speed * 1.1
-        bot.aim.x = toPlayerX / distanceSafe
-        bot.aim.y = toPlayerY / distanceSafe
+        const distanceSafe = distanceToTarget || 1
+        const fromX = -toTargetX / distanceSafe
+        const fromY = -toTargetY / distanceSafe
+        desiredVelocityX = fromX * bot.speed * 1.15
+        desiredVelocityY = fromY * bot.speed * 1.15
+        bot.aim.x = toTargetX / distanceSafe
+        bot.aim.y = toTargetY / distanceSafe
 
-        if (distanceToPlayer < 520) {
+        if (distanceToTarget < 520) {
           this.firePrimary(bot)
         }
       }
+
+      bot.velocity.x = lerp(bot.velocity.x, desiredVelocityX, clamp(dt * 16, 0, 1))
+      bot.velocity.y = lerp(bot.velocity.y, desiredVelocityY, clamp(dt * 16, 0, 1))
 
       bot.position.x += bot.velocity.x * dt
       bot.position.y += bot.velocity.y * dt
@@ -567,6 +653,7 @@ export class FlowerArenaGame {
     const weapon = PRIMARY_WEAPONS[shooter.primaryWeapon]
 
     shooter.shootCooldown = weapon.cooldown / shooter.fireRateMultiplier
+    shooter.recoil = Math.min(1, shooter.recoil + 0.38 + weapon.pellets * 0.05)
     if (Number.isFinite(shooter.primaryAmmo)) {
       shooter.primaryAmmo = Math.max(0, shooter.primaryAmmo - 1)
     }
@@ -585,8 +672,8 @@ export class FlowerArenaGame {
       projectile.ownerTeam = shooter.team
       projectile.position.x = shooter.position.x + dirX * (shooter.radius + 8)
       projectile.position.y = shooter.position.y + dirY * (shooter.radius + 8)
-      projectile.velocity.x = dirX * weapon.speed * randomRange(0.93, 1.06)
-      projectile.velocity.y = dirY * weapon.speed * randomRange(0.93, 1.06)
+      projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
+      projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
       projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
       projectile.damage = weapon.damage * shooter.damageMultiplier
       projectile.maxRange = weapon.range
@@ -599,8 +686,11 @@ export class FlowerArenaGame {
     }
 
     if (shooter.isPlayer) {
+      this.cameraShake = Math.min(1.8, this.cameraShake + 0.24)
       this.sfx.shoot()
       this.updatePlayerWeaponSignals()
+    } else if (Math.random() > 0.82) {
+      this.sfx.shoot()
     }
   }
 
@@ -629,10 +719,14 @@ export class FlowerArenaGame {
 
     const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
     shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
+    shooter.recoil = Math.min(1, shooter.recoil + 0.5)
 
     if (shooter.isPlayer) {
+      this.cameraShake = Math.min(1.8, this.cameraShake + 0.3)
       this.sfx.shoot()
       secondaryWeaponSignal.value = mode === "grenade" ? "Grenade" : "Molotov"
+    } else if (Math.random() > 0.88) {
+      this.sfx.shoot()
     }
   }
 
@@ -666,7 +760,7 @@ export class FlowerArenaGame {
       }
 
       for (const unit of this.units) {
-        if (unit.team === projectile.ownerTeam || unit.id === projectile.ownerId) {
+        if (unit.id === projectile.ownerId) {
           continue
         }
 
@@ -711,6 +805,8 @@ export class FlowerArenaGame {
       } else {
         this.igniteMolotov(throwable)
       }
+      this.cameraShake = Math.min(2, this.cameraShake + 0.46)
+      this.hitStop = Math.max(this.hitStop, 0.012)
       this.sfx.explosion()
     }
   }
@@ -720,7 +816,7 @@ export class FlowerArenaGame {
     const explosionRadiusSquared = explosionRadius * explosionRadius
 
     for (const unit of this.units) {
-      if (unit.team === throwable.ownerTeam) {
+      if (unit.id === throwable.ownerId) {
         continue
       }
 
@@ -743,21 +839,12 @@ export class FlowerArenaGame {
       )
     }
 
-    const isPlayerOwner = throwable.ownerId === this.player.id
-    this.spawnFlowers(
-      isPlayerOwner ? "white" : "blue",
-      throwable.position.x,
-      throwable.position.y,
-      randomRange(-1, 1),
-      randomRange(-1, 1),
-      randomInt(14, 20),
-      isPlayerOwner
-    )
   }
 
   private igniteMolotov(throwable: Throwable) {
     const zone = this.allocMolotovZone()
     zone.active = true
+    zone.ownerId = throwable.ownerId
     zone.ownerTeam = throwable.ownerTeam
     zone.position.copy(throwable.position)
     zone.radius = 54
@@ -788,7 +875,7 @@ export class FlowerArenaGame {
         zone.tick = 0.18
         const radiusSquared = zone.radius * zone.radius
         for (const unit of this.units) {
-          if (unit.team === zone.ownerTeam) {
+          if (unit.id === zone.ownerId) {
             continue
           }
 
@@ -800,7 +887,7 @@ export class FlowerArenaGame {
           this.applyDamage(
             unit,
             4,
-            zone.ownerTeam === "white" ? this.player.id : "zone",
+            zone.ownerId,
             unit.position.x,
             unit.position.y,
             unit.position.x - zone.position.x,
@@ -924,14 +1011,16 @@ export class FlowerArenaGame {
   ) {
     const damage = Math.max(1, amount)
     target.hp = Math.max(0, target.hp - damage)
+    target.hitFlash = 1
+    target.recoil = Math.min(1, target.recoil + 0.45)
 
     const popup = this.allocPopup()
     popup.active = true
     popup.position.set(target.position.x + randomRange(-8, 8), target.position.y - randomRange(10, 16))
-    popup.velocity.set(randomRange(-15, 15), randomRange(28, 48))
+    popup.velocity.set(randomRange(-26, 26), randomRange(34, 56))
     popup.text = `${Math.round(damage)}`
-    popup.color = target.isPlayer ? "#7ec4ff" : "#ffffff"
-    popup.life = 0.55
+    popup.color = target.isPlayer ? "#8fc8ff" : "#fff6cc"
+    popup.life = 0.62
 
     const isPlayerShooter = sourceId === this.player.id
     this.spawnFlowers(
@@ -943,6 +1032,17 @@ export class FlowerArenaGame {
       randomInt(10, 20),
       isPlayerShooter
     )
+
+    if (isPlayerShooter) {
+      this.cameraShake = Math.min(2, this.cameraShake + 0.42)
+      this.hitStop = Math.max(this.hitStop, 0.024)
+    }
+
+    if (target.isPlayer) {
+      this.cameraShake = Math.min(2, this.cameraShake + 0.58)
+      this.hitStop = Math.max(this.hitStop, 0.032)
+    }
+
     this.sfx.hit()
 
     if (target.hp <= 0) {
@@ -1129,13 +1229,16 @@ export class FlowerArenaGame {
 
     this.renderArenaGround()
 
-    this.context.translate(VIEW_WIDTH * 0.5 - this.camera.x, VIEW_HEIGHT * 0.5 - this.camera.y)
+    const renderCameraX = this.camera.x + this.cameraOffset.x
+    const renderCameraY = this.camera.y + this.cameraOffset.y
+
+    this.context.translate(VIEW_WIDTH * 0.5 - renderCameraX, VIEW_HEIGHT * 0.5 - renderCameraY)
     this.renderMolotovZones()
-    this.renderFlowers()
     this.renderPickups(dt)
     this.renderThrowables()
     this.renderProjectiles()
     this.renderUnits()
+    this.renderFlowers()
     this.renderDamagePopups()
     this.renderArenaBoundary()
     this.context.restore()
@@ -1277,31 +1380,74 @@ export class FlowerArenaGame {
         continue
       }
 
-      const glow = projectile.radius * (1.8 + projectile.glow)
+      const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+      const angle = Math.atan2(projectile.velocity.y, projectile.velocity.x)
+      const stretch = clamp(speed / 700, 1.1, 2.6)
+      const length = projectile.radius * 2.6 * stretch
+      const width = projectile.radius * 1.4
+      const glow = projectile.radius * (2.2 + projectile.glow)
+
       this.context.fillStyle = "rgba(255, 233, 120, 0.2)"
       this.context.beginPath()
       this.context.arc(projectile.position.x, projectile.position.y, glow, 0, Math.PI * 2)
       this.context.fill()
 
-      this.context.fillStyle = "#ffeb77"
+      this.context.save()
+      this.context.translate(projectile.position.x, projectile.position.y)
+      this.context.rotate(angle)
+
+      this.context.fillStyle = "rgba(255, 181, 72, 0.35)"
       this.context.beginPath()
-      this.context.arc(projectile.position.x, projectile.position.y, projectile.radius, 0, Math.PI * 2)
+      this.context.ellipse(-length * 0.2, 0, length * 0.55, width * 0.86, 0, 0, Math.PI * 2)
       this.context.fill()
+
+      this.context.fillStyle = "#ffc248"
+      this.context.beginPath()
+      this.context.moveTo(-length * 0.52, 0)
+      this.context.quadraticCurveTo(-length * 0.2, -width * 0.65, length * 0.45, 0)
+      this.context.quadraticCurveTo(-length * 0.2, width * 0.65, -length * 0.52, 0)
+      this.context.fill()
+
+      this.context.fillStyle = "#fff2aa"
+      this.context.beginPath()
+      this.context.ellipse(length * 0.18, 0, width * 0.4, width * 0.3, 0, 0, Math.PI * 2)
+      this.context.fill()
+
+      this.context.restore()
     }
+  }
+
+  private botPalette(id: string) {
+    const palettes = [
+      { tone: "#7aa6ff", edge: "#3d67bf" },
+      { tone: "#ff9c8e", edge: "#c95a5f" },
+      { tone: "#89d7b7", edge: "#2f9b7c" },
+      { tone: "#f7c276", edge: "#b88335" },
+      { tone: "#c7a8ff", edge: "#7d59b7" },
+      { tone: "#f3a7d8", edge: "#b36093" },
+      { tone: "#9fd4ff", edge: "#4f7fa8" }
+    ]
+
+    const index = Number(id.replace("bot-", ""))
+    return palettes[index % palettes.length]
   }
 
   private renderUnits() {
     for (const unit of this.units) {
+      const drawX = unit.position.x - unit.aim.x * unit.recoil * 4
+      const drawY = unit.position.y - unit.aim.y * unit.recoil * 4
+
       this.context.fillStyle = "rgba(0, 0, 0, 0.2)"
       this.context.beginPath()
-      this.context.ellipse(unit.position.x, unit.position.y + 12, 12, 7, 0, 0, Math.PI * 2)
+      this.context.ellipse(drawX, drawY + 12, 12, 7, 0, 0, Math.PI * 2)
       this.context.fill()
 
-      const tone = unit.isPlayer ? "#f6f2df" : "#7aa6ff"
-      const edge = unit.isPlayer ? "#b8b49a" : "#3d67bf"
-      const earLeftX = unit.position.x - 9
-      const earRightX = unit.position.x + 9
-      const earY = unit.position.y - 13
+      const palette = unit.isPlayer ? { tone: "#f6f2df", edge: "#b8b49a" } : this.botPalette(unit.id)
+      const tone = palette.tone
+      const edge = palette.edge
+      const earLeftX = drawX - 9
+      const earRightX = drawX + 9
+      const earY = drawY - 13
 
       this.context.fillStyle = edge
       this.context.fillRect(earLeftX - 3, earY - 6, 5, 7)
@@ -1311,25 +1457,34 @@ export class FlowerArenaGame {
       this.context.fillRect(earRightX, earY - 4, 3, 4)
 
       this.context.fillStyle = edge
-      this.context.fillRect(unit.position.x - 11, unit.position.y - 10, 22, 20)
+      this.context.fillRect(drawX - 11, drawY - 10, 22, 20)
       this.context.fillStyle = tone
-      this.context.fillRect(unit.position.x - 9, unit.position.y - 8, 18, 16)
+      this.context.fillRect(drawX - 9, drawY - 8, 18, 16)
 
-      const gunLength = 13
-      const gunX = unit.position.x + unit.aim.x * gunLength
-      const gunY = unit.position.y + unit.aim.y * gunLength
+      const gunLength = 13 + unit.recoil * 3
+      const gunX = drawX + unit.aim.x * gunLength
+      const gunY = drawY + unit.aim.y * gunLength
       this.context.strokeStyle = unit.isPlayer ? "#f0e6ad" : "#a2d0ff"
       this.context.lineWidth = 4
       this.context.beginPath()
-      this.context.moveTo(unit.position.x, unit.position.y)
+      this.context.moveTo(drawX, drawY)
       this.context.lineTo(gunX, gunY)
       this.context.stroke()
 
+      if (unit.hitFlash > 0) {
+        const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
+        this.context.globalAlpha = clamp(unit.hitFlash * flicker, 0, 1)
+        this.context.fillStyle = unit.isPlayer ? "#7ebeff" : "#fff8d1"
+        this.context.fillRect(drawX - 10, drawY - 9, 20, 18)
+        this.context.fillRect(earLeftX - 2, earY - 4, 14, 4)
+        this.context.globalAlpha = 1
+      }
+
       const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
       this.context.fillStyle = "rgba(0, 0, 0, 0.4)"
-      this.context.fillRect(unit.position.x - 12, unit.position.y - 19, 24, 4)
+      this.context.fillRect(drawX - 12, drawY - 19, 24, 4)
       this.context.fillStyle = unit.isPlayer ? "#e8ffdb" : "#8fc0ff"
-      this.context.fillRect(unit.position.x - 12, unit.position.y - 19, 24 * hpRatio, 4)
+      this.context.fillRect(drawX - 12, drawY - 19, 24 * hpRatio, 4)
     }
   }
 
@@ -1341,14 +1496,18 @@ export class FlowerArenaGame {
         continue
       }
 
-      const alpha = clamp(popup.life / 0.55, 0, 1)
+      const alpha = clamp(popup.life / 0.62, 0, 1)
+      const scale = 1 + (1 - alpha) * 0.14
       this.context.fillStyle = `rgba(0, 0, 0, ${0.5 * alpha})`
       this.context.fillText(popup.text, popup.position.x + 1, popup.position.y + 1)
-      this.context.fillStyle = popup.color.replace("rgb", "rgba")
+
+      this.context.save()
       this.context.globalAlpha = alpha
       this.context.fillStyle = popup.color
-      this.context.fillText(popup.text, popup.position.x, popup.position.y)
-      this.context.globalAlpha = 1
+      this.context.translate(popup.position.x, popup.position.y)
+      this.context.scale(scale, scale)
+      this.context.fillText(popup.text, 0, 0)
+      this.context.restore()
     }
   }
 
@@ -1383,9 +1542,12 @@ export class FlowerArenaGame {
     this.context.font = "bold 24px monospace"
     this.context.fillText("BadaBada", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 - 14)
     this.context.font = "14px monospace"
-    this.context.fillText("Click to start 90s arena", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 16)
+    const startHint = this.audioPrimed
+      ? "Click or press Enter to start 90s arena"
+      : "Click once to unlock music, then deploy"
+    this.context.fillText(startHint, VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 16)
     if (this.finished) {
-      this.context.fillText("Click again for rematch", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 38)
+      this.context.fillText("Match over. Click for rematch", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 38)
     }
   }
 }

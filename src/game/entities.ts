@@ -155,6 +155,7 @@ export class Pickup {
 
 export class MolotovZone {
   active = false
+  ownerId = ""
   ownerTeam: Team = "white"
   position = new Vec2()
   radius = 54

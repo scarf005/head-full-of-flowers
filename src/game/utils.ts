@@ -1,6 +1,6 @@
 import { Vec2 } from "./entities.ts"
 
-export const ARENA_RADIUS = 760
+export const ARENA_RADIUS = 380
 
 export const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 

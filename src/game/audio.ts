@@ -3,6 +3,8 @@ export class AudioDirector {
   private gameplayTrack: HTMLAudioElement
   private unlocked = false
 
+  private mode: "menu" | "gameplay" | "stopped" = "stopped"
+
   constructor(menuUrl: string, gameplayUrl: string) {
     this.menuTrack = new Audio(menuUrl)
     this.gameplayTrack = new Audio(gameplayUrl)
@@ -17,35 +19,44 @@ export class AudioDirector {
 
   prime() {
     this.unlocked = true
-    this.menuTrack.play().then(() => {
-      this.menuTrack.pause()
-      this.menuTrack.currentTime = 0
-    }).catch(() => {})
+    this.menuTrack.load()
+    this.gameplayTrack.load()
   }
 
   startMenu() {
-    if (!this.unlocked) {
+    if (!this.unlocked || this.mode === "menu") {
       return
     }
 
     this.gameplayTrack.pause()
     this.gameplayTrack.currentTime = 0
+    this.gameplayTrack.muted = true
+    this.menuTrack.muted = false
     this.menuTrack.play().catch(() => {})
+    this.mode = "menu"
   }
 
   startGameplay() {
-    if (!this.unlocked) {
+    if (!this.unlocked || this.mode === "gameplay") {
       return
     }
 
     this.menuTrack.pause()
     this.menuTrack.currentTime = 0
+    this.menuTrack.muted = true
+    this.gameplayTrack.muted = false
     this.gameplayTrack.play().catch(() => {})
+    this.mode = "gameplay"
   }
 
   stopAll() {
     this.menuTrack.pause()
     this.gameplayTrack.pause()
+    this.menuTrack.currentTime = 0
+    this.gameplayTrack.currentTime = 0
+    this.menuTrack.muted = false
+    this.gameplayTrack.muted = false
+    this.mode = "stopped"
   }
 }
 

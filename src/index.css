@@ -1,28 +1,28 @@
 :root {
-  font-family: "Chakra Petch", "Trebuchet MS", sans-serif
-  line-height: 1.35
-  font-weight: 400
-  font-synthesis: none
-  text-rendering: optimizeLegibility
-  -webkit-font-smoothing: antialiased
-  -moz-osx-font-smoothing: grayscale
-  -webkit-text-size-adjust: 100%
-  color: #f4ffe7
-  background: radial-gradient(circle at 14% 14%, #d8f0ba 0%, #a9c788 42%, #6f8f5a 100%)
+  font-family: "Chakra Petch", "Trebuchet MS", sans-serif;
+  line-height: 1.35;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  color: #f4ffe7;
+  background: radial-gradient(circle at 14% 14%, #d8f0ba 0%, #a9c788 42%, #6f8f5a 100%);
 }
 
 * {
-  box-sizing: border-box
+  box-sizing: border-box;
 }
 
 html,
 body,
 #app {
-  width: 100%
-  min-height: 100%
-  margin: 0
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
 }
 
 body {
-  min-height: 100vh
+  min-height: 100vh;
 }
