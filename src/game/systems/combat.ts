@@ -267,11 +267,6 @@ const nearestUnitIdByTeam = (
   return nearestId
 }
 
-const nearestEnemyId = (world: WorldState, sourceTeam: Team, originX: number, originY: number, excludedUnitId: string) => {
-  const hostileTeam = sourceTeam === "white" ? "blue" : "white"
-  return nearestUnitIdByTeam(world, hostileTeam, originX, originY, excludedUnitId)
-}
-
 export const applyDamage = (
   world: WorldState,
   targetId: string,
@@ -308,18 +303,30 @@ export const applyDamage = (
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
   const isBoundarySource = sourceId === "arena"
   const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
-  const sourceByNearestSameTeam = sourceUnit?.id
+  const sourceByNearestTeam = sourceUnit?.id
     ?? (!isBoundarySource && resolvedSourceTeam
       ? nearestUnitIdByTeam(world, resolvedSourceTeam, hitX, hitY, target.id)
       : "")
-  const sourceByNearestEnemy = !isBoundarySource
-    ? (sourceByNearestSameTeam
-      ? sourceByNearestSameTeam
-      : nearestEnemyId(world, resolvedSourceTeam ?? target.team, hitX, hitY, target.id))
-    : sourceId
-  const normalizedSourceId = isPlayerSource
+  let normalizedSourceId = isPlayerSource
     ? world.player.id
-    : sourceByNearestEnemy || sourceId
+    : sourceByNearestTeam || sourceId
+
+  const sourceIdIsUnit = sourceId.length > 0
+    ? world.units.some((unit) => unit.id === sourceId)
+    : false
+  const normalizedSourceIdIsUnit = normalizedSourceId.length > 0
+    ? world.units.some((unit) => unit.id === normalizedSourceId)
+    : false
+
+  if (!isPlayerSource && !isBoundarySource && !sourceIdIsUnit && !normalizedSourceIdIsUnit) {
+    const fallbackId = resolvedSourceTeam === world.player.team
+      ? world.player.id
+      : world.units.find((unit) => unit.team === resolvedSourceTeam && !unit.isPlayer)?.id
+
+    if (fallbackId) {
+      normalizedSourceId = fallbackId
+    }
+  }
     
   const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfHarm
