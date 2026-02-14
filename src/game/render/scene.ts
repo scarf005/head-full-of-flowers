@@ -34,6 +34,7 @@ const FLOWER_LAYER_FLUSH_LIMIT = 1200
 const HP_RING_THICKNESS_WORLD = 3 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
 const SECONDARY_RELOAD_RING_THICKNESS_WORLD = 1 / WORLD_SCALE
+const UNIT_STATUS_RING_GAP_WORLD = 0.05
 const HP_RING_COLOR = "#ff8a80"
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
 const SECONDARY_RELOAD_RING_COLOR = "#4f5458"
@@ -954,11 +955,12 @@ const renderUnitStatusRings = (
   body: number
 ) => {
   const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
-  const hpRadius = body + HP_RING_THICKNESS_WORLD * 0.72
-  const primaryRadius = hpRadius + HP_RING_THICKNESS_WORLD + PRIMARY_RELOAD_RING_THICKNESS_WORLD * 0.85
-  const secondaryRadius = primaryRadius + PRIMARY_RELOAD_RING_THICKNESS_WORLD + SECONDARY_RELOAD_RING_THICKNESS_WORLD * 0.85
+  const hpRadius = body + HP_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
+  const primaryRadius = hpRadius + HP_RING_THICKNESS_WORLD * 0.45 + PRIMARY_RELOAD_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
+  const secondaryRadius = primaryRadius + PRIMARY_RELOAD_RING_THICKNESS_WORLD * 0.45 + SECONDARY_RELOAD_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
 
   context.save()
+  context.lineCap = "butt"
   context.beginPath()
   context.arc(drawX, drawY, hpRadius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio)
   context.strokeStyle = HP_RING_COLOR
