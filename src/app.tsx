@@ -1,33 +1,27 @@
-import './app.css'
-import { useState } from 'preact/hooks'
-import preactLogo from './assets/preact.svg'
+import "./app.css"
 
-export function App() {
-  const [count, setCount] = useState(0)
+import { useRef } from "preact/hooks"
+
+import { GameHud } from "./game/hud.tsx"
+import { useFlowerArena } from "./game/use-flower-arena.ts"
+
+export const App = () => {
+  const canvasNode = useRef<HTMLCanvasElement>(null)
+
+  useFlowerArena(canvasNode)
 
   return (
-    <>
-      <img src="/vite-deno.svg" alt="Vite with Deno" />
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://preactjs.com" target="_blank">
-          <img src={preactLogo} class="logo preact" alt="Preact logo" />
-        </a>
+    <main class="game-shell">
+      <div class="game-frame">
+        <canvas
+          ref={canvasNode}
+          class="arena-canvas"
+          width={960}
+          height={540}
+          aria-label="BadaBada arena"
+        />
+        <GameHud />
       </div>
-      <h1>Vite + Preact</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/app.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p class="read-the-docs">
-        Click on the Vite and Preact logos to learn more
-      </p>
-    </>
+    </main>
   )
 }

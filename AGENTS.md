@@ -13,7 +13,7 @@
 - **Coding Style:**
   - **Quotes:** Double quotes (`"`) exclusively.
   - **Semicolons:** **NO** semicolons.
-  - **Structure:** Modular ES6 classes.
+  - **Structure:** for parts that doesn't need performance, prefer functional programming and pure functions. Use modular ES6 classes only when needed.
 - **Music:**
   - `linear & gestalt`: main menu music
   - `MY DIVINE PERVERSIONS`: main gameplay loop music

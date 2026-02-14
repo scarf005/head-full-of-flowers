@@ -1,11 +1,22 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/random@*": "0.1.2",
+    "jsr:@std/random@~0.1.5": "0.1.5",
     "npm:@deno/vite-plugin@^1.0.5": "1.0.6_vite@7.3.1__picomatch@4.0.3",
     "npm:@preact/preset-vite@^2.10.2": "2.10.2_@babel+core@7.28.5_vite@7.3.1__picomatch@4.0.3_preact@10.28.2",
+    "npm:@preact/signals@^2.8.0": "2.8.0_preact@10.28.2",
     "npm:preact@^10.28.0": "10.28.2",
     "npm:vite@*": "7.3.1_picomatch@4.0.3",
     "npm:vite@^7.2.7": "7.3.1_picomatch@4.0.3"
+  },
+  "jsr": {
+    "@std/random@0.1.2": {
+      "integrity": "21e28f39dcc72d522bb0d2bc13586567d6044c86ee77a0056fcde0e13758c3ee"
+    },
+    "@std/random@0.1.5": {
+      "integrity": "d26614c4f6c441afc22397a1c5b8f27d02ab8f5572f1d29e7b0cd57f3d548235"
+    }
   },
   "npm": {
     "@babel/code-frame@7.27.1": {
@@ -338,6 +349,16 @@
         "picocolors",
         "vite",
         "vite-prerender-plugin"
+      ]
+    },
+    "@preact/signals-core@1.13.0": {
+      "integrity": "sha512-slT6XeTCAbdql61GVLlGU4x7XHI7kCZV5Um5uhE4zLX4ApgiiXc0UYFvVOKq06xcovzp7p+61l68oPi563ARKg=="
+    },
+    "@preact/signals@2.8.0_preact@10.28.2": {
+      "integrity": "sha512-lcILM82mei8s/53n2M6uZlrDHLlgLld8Squ0PVSUL5Ae1M45uEstWfHm+wcDqp2U5I/ZYrBvCY65udFyTo5OZw==",
+      "dependencies": [
+        "@preact/signals-core",
+        "preact"
       ]
     },
     "@prefresh/babel-plugin@0.5.2": {
@@ -811,8 +832,10 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/random@~0.1.5",
       "npm:@deno/vite-plugin@^1.0.5",
       "npm:@preact/preset-vite@^2.10.2",
+      "npm:@preact/signals@^2.8.0",
       "npm:preact@^10.28.0",
       "npm:vite@^7.2.7"
     ]
