@@ -19,6 +19,8 @@ export const BOT_BASE_SPEED = 8.4
 export const UNIT_BASE_HP = 10
 export const PLAYER_RADIUS = 0.3
 export const BOT_RADIUS = 0.28
+export const ARENA_BORDER_DAMAGE = 1
+export const ARENA_BORDER_DAMAGE_COOLDOWN = 0.16
 
 export const OBSTACLE_COUNT_MIN = 7
 export const OBSTACLE_COUNT_MAX = 11

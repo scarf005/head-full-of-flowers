@@ -67,6 +67,17 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
     }
   }
 
+  const botIdCandidate = ownerId.replace("bot-", "")
+  const botIndex = Number(botIdCandidate)
+  if (!Number.isInteger(botIndex) || botIndex <= 0) {
+    return {
+      team: "white" as const,
+      color: "#f0f0ea",
+      accent: "#d1d0cc",
+      fromPlayer: false
+    }
+  }
+
   const palette = deps.botPalette(ownerId)
   return {
     team: "blue" as const,

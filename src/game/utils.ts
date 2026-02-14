@@ -21,10 +21,16 @@ export const limitToArena = (position: Vec2, radius: number, arenaRadius: number
   const maxDistance = arenaRadius - radius
   const current = position.length()
   if (current <= maxDistance) {
-    return
+    return false
+  }
+
+  if (maxDistance <= 0) {
+    position.set(0, 0)
+    return true
   }
 
   position.scale(maxDistance / (current || 1))
+  return true
 }
 
 export const distSquared = (ax: number, ay: number, bx: number, by: number) => {

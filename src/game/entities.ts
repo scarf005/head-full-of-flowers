@@ -88,6 +88,7 @@ export class Unit {
   grenadeTimer = 2
   hitFlash = 0
   recoil = 0
+  arenaBoundaryDamageCooldown = 0
 
   constructor(id: string, isPlayer: boolean, team: Team) {
     this.id = id
@@ -105,6 +106,7 @@ export class Unit {
     this.aiDecisionTimer = 0
     this.hitFlash = 0
     this.recoil = 0
+    this.arenaBoundaryDamageCooldown = 0
   }
 }
 

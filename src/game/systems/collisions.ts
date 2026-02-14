@@ -8,6 +8,21 @@ import {
   worldToObstacleGrid
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
+import { ARENA_BORDER_DAMAGE, ARENA_BORDER_DAMAGE_COOLDOWN } from "../world/constants.ts"
+
+const ARENA_BORDER_DAMAGE_SOURCE = "arena"
+
+export interface ArenaBoundaryDamageDeps {
+  onArenaBoundaryDamage?: (
+    targetId: string,
+    amount: number,
+    sourceId: string,
+    hitX: number,
+    hitY: number,
+    impactX: number,
+    impactY: number
+  ) => void
+}
 
 const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: number, height: number) => {
   const halfWidth = width * 0.5
@@ -116,9 +131,34 @@ export const resolveUnitCollisions = (world: WorldState) => {
   }
 }
 
-export const constrainUnitsToArena = (world: WorldState) => {
+export const constrainUnitsToArena = (world: WorldState, dt: number, deps: ArenaBoundaryDamageDeps = {}) => {
   for (const unit of world.units) {
-    limitToArena(unit.position, unit.radius, world.arenaRadius)
+    const wasClamped = limitToArena(unit.position, unit.radius, world.arenaRadius)
+    if (unit.arenaBoundaryDamageCooldown > 0) {
+      unit.arenaBoundaryDamageCooldown = Math.max(0, unit.arenaBoundaryDamageCooldown - dt)
+    }
+
+    if (!wasClamped || !deps.onArenaBoundaryDamage) {
+      continue
+    }
+
+    if (unit.arenaBoundaryDamageCooldown > 0) {
+      continue
+    }
+
+    const distance = Math.hypot(unit.position.x, unit.position.y) || 1
+    const normalX = unit.position.x / distance
+    const normalY = unit.position.y / distance
+    unit.arenaBoundaryDamageCooldown = ARENA_BORDER_DAMAGE_COOLDOWN
+    deps.onArenaBoundaryDamage(
+      unit.id,
+      ARENA_BORDER_DAMAGE,
+      ARENA_BORDER_DAMAGE_SOURCE,
+      unit.position.x - normalX * unit.radius,
+      unit.position.y - normalY * unit.radius,
+      normalX,
+      normalY
+    )
   }
 }
 

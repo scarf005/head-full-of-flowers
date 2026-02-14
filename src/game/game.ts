@@ -478,7 +478,11 @@ export class FlowerArenaGame {
     })
 
     resolveUnitCollisions(this.world)
-    constrainUnitsToArena(this.world)
+    constrainUnitsToArena(this.world, simDt, {
+      onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+      }
+    })
 
     updateProjectiles(this.world, simDt, {
       hitObstacle: (projectileIndex) => {
