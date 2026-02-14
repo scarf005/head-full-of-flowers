@@ -248,14 +248,39 @@ export class FlowerArenaGame {
         : `Time up. ${winner.faction.label} overwhelms the field`
       setStatusMessage(message)
 
-      const total = this.world.factions.reduce((sum, faction) => {
-        return sum + (this.world.factionFlowerCounts[faction.id] ?? 0)
-      }, 0)
-      const pieSlices = this.world.factions.map((faction) => ({
-        color: faction.color,
-        percent: total > 0 ? (100 * (this.world.factionFlowerCounts[faction.id] ?? 0)) / total : 100 / this.world.factions.length
+      const standings = this.world.factions
+        .map((faction) => ({
+          id: faction.id,
+          label: faction.label,
+          color: faction.color,
+          flowers: this.world.factionFlowerCounts[faction.id] ?? 0
+        }))
+        .sort((left, right) => right.flowers - left.flowers)
+      const total = standings.reduce((sum, faction) => sum + faction.flowers, 0)
+      const standingsWithPercent = standings.map((faction) => ({
+        ...faction,
+        percent: total > 0 ? (100 * faction.flowers) / total : 100 / this.world.factions.length
       }))
-      setMatchResultSignal({ label: winner.faction.label, color: winner.faction.color }, pieSlices)
+      const pieSlices = standingsWithPercent.map((faction) => ({
+        color: faction.color,
+        percent: faction.percent
+      }))
+      const winnerPercent = standingsWithPercent[0]?.percent ?? 0
+      const runnerUpFlowers = standingsWithPercent[1]?.flowers ?? 0
+      const playerRank = Math.max(1, standingsWithPercent.findIndex((faction) => faction.id === this.world.player.id) + 1)
+      const stats = [
+        { label: "Total Flowers", value: total.toLocaleString() },
+        { label: "Winner Share", value: `${winnerPercent.toFixed(1)}%` },
+        { label: "Your Place", value: `${playerRank}/${standingsWithPercent.length}` },
+        { label: "Lead Margin", value: `${Math.max(0, winner.count - runnerUpFlowers)} flowers` }
+      ]
+
+      setMatchResultSignal(
+        { label: winner.faction.label, color: winner.faction.color },
+        pieSlices,
+        stats,
+        standingsWithPercent
+      )
     }
 
     setPauseSignal(false)

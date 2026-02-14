@@ -22,7 +22,9 @@ const defaultMatchResult = {
   visible: false,
   winnerLabel: "",
   winnerColor: "#f2ffe8",
-  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)"
+  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
+  stats: [],
+  standings: []
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -151,13 +153,17 @@ export const setPauseSignal = (paused: boolean) => {
 
 export const setMatchResultSignal = (
   winner: { label: string; color: string },
-  slices: { color: string; percent: number }[]
+  slices: { color: string; percent: number }[],
+  stats: { label: string; value: string }[],
+  standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
 ) => {
   matchResultSignal.value = {
     visible: true,
     winnerLabel: winner.label,
     winnerColor: winner.color,
-    pieGradient: buildPieGradient(slices)
+    pieGradient: buildPieGradient(slices),
+    stats,
+    standings
   }
 }
   

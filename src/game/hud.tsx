@@ -86,9 +86,34 @@ export const GameHud = () => {
 
       {result.visible ? (
         <div class="hud match-result" role="status" aria-live="polite">
-          <div class="match-result-title">Winner</div>
+          <div class="match-result-title">Match Results</div>
           <div class="match-result-name" style={{ color: result.winnerColor }}>{result.winnerLabel}</div>
-          <div class="match-result-pie" style={{ background: result.pieGradient }} />
+          <div class="match-result-content">
+            <div class="match-result-pie" style={{ background: result.pieGradient }} />
+            <div class="match-result-standings" aria-label="Final standings">
+              {result.standings.map((standing, index) => (
+                <div class="match-result-standing" key={standing.id}>
+                  <div class="match-result-standing-main">
+                    <span class="match-result-standing-rank">#{index + 1}</span>
+                    <i style={{ background: standing.color }} />
+                    <span>{standing.label}</span>
+                  </div>
+                  <div class="match-result-standing-values">
+                    <span>{standing.flowers.toLocaleString()}</span>
+                    <span>{standing.percent.toFixed(1)}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div class="match-result-stats" aria-label="Match statistics">
+            {result.stats.map((stat) => (
+              <div class="match-result-stat" key={stat.label}>
+                <div class="match-result-stat-label">{stat.label}</div>
+                <div class="match-result-stat-value">{stat.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

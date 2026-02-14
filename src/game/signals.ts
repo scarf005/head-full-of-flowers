@@ -13,6 +13,8 @@ export interface MatchResultHud {
   winnerLabel: string
   winnerColor: string
   pieGradient: string
+  stats: { label: string; value: string }[]
+  standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
 }
 
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
@@ -23,7 +25,9 @@ export const matchResultSignal = signal<MatchResultHud>({
   visible: false,
   winnerLabel: "",
   winnerColor: "#f2ffe8",
-  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)"
+  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
+  stats: [],
+  standings: []
 })
 
 export const primaryWeaponSignal = signal("Pistol")
