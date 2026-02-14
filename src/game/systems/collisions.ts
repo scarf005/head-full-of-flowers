@@ -133,7 +133,8 @@ export const damageHouseByExplosion = (
         continue
       }
 
-      obstacle.hp -= 0.5
+      obstacle.hp -= 1.6
+      obstacle.hitFlash = 1
     }
   }
 
@@ -168,8 +169,8 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
         continue
       }
 
-      obstacle.hp -= Math.max(0.08, projectile.damage * 0.1)
-      deps.spawnExplosion(projectile.position.x, projectile.position.y, 0.12)
+      obstacle.hp -= Math.max(0.9, projectile.damage * 0.85)
+      obstacle.hitFlash = 1
       if (obstacle.hp <= 0) {
         for (let row = 0; row < obstacle.tiles.length; row += 1) {
           for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
@@ -192,8 +193,8 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
       continue
     }
 
-    obstacle.hp -= Math.max(0.12, projectile.damage * 0.12)
-    deps.spawnExplosion(projectile.position.x, projectile.position.y, 0.14)
+    obstacle.hp -= Math.max(1, projectile.damage * 0.95)
+    obstacle.hitFlash = 1
     if (obstacle.hp <= 0) {
       deps.breakObstacle(obstacle)
     }

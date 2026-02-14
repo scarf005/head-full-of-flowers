@@ -213,6 +213,7 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
 
     const halfWidth = obstacle.width * 0.5
     const halfHeight = obstacle.height * 0.5
+    const flash = obstacle.hitFlash
     if (obstacle.kind === "warehouse") {
       const originX = obstacle.position.x - halfWidth
       const originY = obstacle.position.y - halfHeight
@@ -230,6 +231,10 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
           context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
           context.fillStyle = "#757b70"
           context.fillRect(tileX + 0.08, tileY + 0.46, 0.84, 0.12)
+          if (flash > 0.01) {
+            context.fillStyle = `rgba(255, 86, 86, ${flash * 0.45})`
+            context.fillRect(tileX + 0.04, tileY + 0.04, 0.92, 0.92)
+          }
         }
       }
     } else if (obstacle.kind === "wall") {
@@ -251,6 +256,10 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
           context.fillRect(obstacle.position.x - halfWidth + 0.06, py, obstacle.width - 0.12, 0.03)
         }
       }
+      if (flash > 0.01) {
+        context.fillStyle = `rgba(255, 80, 80, ${flash * 0.5})`
+        context.fillRect(obstacle.position.x - halfWidth + 0.04, obstacle.position.y - halfHeight + 0.04, obstacle.width - 0.08, obstacle.height - 0.08)
+      }
     } else {
       context.fillStyle = "#676a64"
       context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
@@ -263,6 +272,10 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         const t = i / Math.max(1, cuts - 1)
         const px = obstacle.position.x - halfWidth + 0.14 + t * (obstacle.width - 0.28)
         context.fillRect(px, obstacle.position.y - halfHeight + 0.16, 0.04, obstacle.height - 0.32)
+      }
+      if (flash > 0.01) {
+        context.fillStyle = `rgba(255, 92, 92, ${flash * 0.45})`
+        context.fillRect(obstacle.position.x - halfWidth + 0.05, obstacle.position.y - halfHeight + 0.05, obstacle.width - 0.1, obstacle.height - 0.1)
       }
     }
   }

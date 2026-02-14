@@ -131,15 +131,16 @@ export const spawnObstacles = (world: WorldState) => {
       obstacle.tiles = blueprint.tiles.map((row) => [...row])
       obstacle.maxHp = obstacle.tiles.reduce((sum, row) => {
         return sum + row.reduce((count, tile) => count + (tile ? 1 : 0), 0)
-      }, 0) * 10
+      }, 0) * 3
     } else if (obstacle.kind === "wall") {
       obstacle.tiles = []
-      obstacle.maxHp = 20
+      obstacle.maxHp = 7
     } else {
       obstacle.tiles = []
-      obstacle.maxHp = 30
+      obstacle.maxHp = 9
     }
     obstacle.hp = obstacle.maxHp
+    obstacle.hitFlash = 0
     obstacle.active = true
     cursor += 1
   }
