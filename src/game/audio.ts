@@ -77,13 +77,13 @@ export class SfxSynth {
       this.bus.release.value = 0.14
 
       this.masterGain = this.context.createGain()
-      this.masterGain.gain.value = 1
+      this.masterGain.gain.value = 0.9
 
       this.impactGain = this.context.createGain()
-      this.impactGain.gain.value = 1.5
+      this.impactGain.gain.value = 0.9
 
       this.bus.connect(this.masterGain)
-      this.impactGain.connect(this.context.destination)
+      this.impactGain.connect(this.bus)
       this.masterGain.connect(this.context.destination)
     }
 
@@ -105,13 +105,13 @@ export class SfxSynth {
 
   hit() {
     const context = this.ensureContext()
-    this.chirp(context, 340, 90, 0.11, "triangle", 0.85, true)
+    this.chirp(context, 340, 100, 0.11, "triangle", 0.52, true)
   }
 
   die() {
     const context = this.ensureContext()
-    this.chirp(context, 480, 140, 0.08, "square", 1.05, true)
-    this.chirp(context, 260, 48, 0.2, "sawtooth", 1.25, true, 0.04)
+    this.chirp(context, 360, 120, 0.09, "triangle", 0.78, true)
+    this.chirp(context, 260, 52, 0.16, "sine", 0.68, true, 0.03)
   }
 
   explosion() {
