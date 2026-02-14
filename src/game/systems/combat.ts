@@ -173,6 +173,28 @@ export interface DamageDeps {
   onPlayerHpChanged: () => void
 }
 
+const nearestEnemyId = (world: WorldState, sourceUnit: string, sourceTeam: "white" | "blue", targetX: number, targetY: number) => {
+  const hostileTeam = sourceTeam === "white" ? "blue" : "white"
+  let nearestEnemy = ""
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const unit of world.units) {
+    if (unit.team !== hostileTeam || unit.id === sourceUnit) {
+      continue
+    }
+
+    const distance = (unit.position.x - targetX) ** 2 + (unit.position.y - targetY) ** 2
+    if (distance >= nearestDistance) {
+      continue
+    }
+
+    nearestDistance = distance
+    nearestEnemy = unit.id
+  }
+
+  return nearestEnemy
+}
+
 export const applyDamage = (
   world: WorldState,
   targetId: string,
@@ -203,9 +225,15 @@ export const applyDamage = (
   popup.life = 0.62
 
   const hitSpeed = Math.hypot(impactX, impactY)
+  const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
+  const flowerSourceId = isSelfHarm
+    ? nearestEnemyId(world, target.id, sourceUnit.team, target.position.x, target.position.y) || sourceId
+    : sourceId
+
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
-    sourceId,
+    flowerSourceId,
     hitX,
     hitY,
     impactX,
