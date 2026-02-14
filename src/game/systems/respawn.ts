@@ -1,4 +1,4 @@
-import type { Obstacle, Vec2 } from "../entities.ts"
+import { Vec2, type Obstacle } from "../entities.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
@@ -58,24 +58,36 @@ const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radiu
 }
 
 export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
-  for (let attempt = 0; attempt < 42; attempt += 1) {
+  let bestCandidate: Vec2 | null = null
+  let bestDistanceScore = -1
+
+  for (let attempt = 0; attempt < 64; attempt += 1) {
     const candidate = randomPointInArena(world.arenaRadius)
-    let safe = true
+    if (collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
+      continue
+    }
 
+    let minDistanceScore = Number.POSITIVE_INFINITY
     for (const existing of occupied) {
-      if (distSquared(candidate.x, candidate.y, existing.x, existing.y) < 3.2 * 3.2) {
-        safe = false
-        break
+      const score = distSquared(candidate.x, candidate.y, existing.x, existing.y)
+      if (score < minDistanceScore) {
+        minDistanceScore = score
       }
     }
 
-    if (safe) {
-      if (collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
-        safe = false
-      }
+    if (minDistanceScore > bestDistanceScore) {
+      bestDistanceScore = minDistanceScore
+      bestCandidate = candidate
     }
+  }
 
-    if (safe) {
+  if (bestCandidate) {
+    return bestCandidate
+  }
+
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const candidate = randomPointInArena(world.arenaRadius)
+    if (!collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
       return candidate
     }
   }
@@ -84,10 +96,15 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
 }
 
 export const spawnAllUnits = (world: WorldState) => {
-  const occupied: Vec2[] = []
-  for (const unit of world.units) {
-    const spawn = findSafeSpawn(world, occupied)
-    occupied.push(spawn.clone())
+  const octagonVertexCount = 8
+  const stepAngle = (Math.PI * 2) / octagonVertexCount
+  const startAngle = Math.random() * Math.PI * 2
+
+  for (let index = 0; index < world.units.length; index += 1) {
+    const unit = world.units[index]
+    const angle = startAngle + stepAngle * (index % octagonVertexCount)
+    const spawnRadius = Math.max(1, world.arenaRadius - unit.radius - 3)
+    const spawn = new Vec2(Math.cos(angle) * spawnRadius, Math.sin(angle) * spawnRadius)
     unit.respawn(spawn)
   }
 
@@ -166,7 +183,6 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
 
 export const setupWorldUnits = (
   world: WorldState,
-  randomWeapon: () => PrimaryWeaponId,
   equipPrimary: (unitId: string, weaponId: PrimaryWeaponId, ammo: number) => void
 ) => {
   world.player.secondaryMode = "grenade"
@@ -181,8 +197,7 @@ export const setupWorldUnits = (
     bot.radius = BOT_RADIUS
     bot.maxHp = UNIT_BASE_HP
     bot.hp = UNIT_BASE_HP
-    const weapon = randomWeapon()
-    equipPrimary(bot.id, weapon, PRIMARY_WEAPONS[weapon].pickupAmmo)
+    equipPrimary(bot.id, "pistol", Number.POSITIVE_INFINITY)
   }
 
   spawnAllUnits(world)

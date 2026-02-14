@@ -67,10 +67,6 @@ export const setupInputAdapter = (
     world.input.worldX = world.camera.x + (world.input.canvasX - VIEW_WIDTH * 0.5) / WORLD_SCALE
     world.input.worldY = world.camera.y + (world.input.canvasY - VIEW_HEIGHT * 0.5) / WORLD_SCALE
 
-    if (!world.audioPrimed) {
-      handlers.onPrimeAudio()
-    }
-
     handlers.onCrosshair(world.input.screenX, world.input.screenY, true)
   }
 

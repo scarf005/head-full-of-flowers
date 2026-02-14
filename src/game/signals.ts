@@ -22,6 +22,7 @@ export interface MatchResultHud {
 }
 
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
+export const fpsSignal = signal(0)
 export const pausedSignal = signal(false)
 export const coverageSlicesSignal = signal<CoverageSlice[]>([])
 export const matchResultSignal = signal<MatchResultHud>({
@@ -36,6 +37,7 @@ export const primaryWeaponIconSignal = signal("P")
 export const primaryAmmoSignal = signal("∞")
 export const secondaryWeaponSignal = signal("Grenade")
 export const secondaryWeaponIconSignal = signal("G")
+export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 
 export const perkOptionsSignal = signal<PerkOption[]>([])

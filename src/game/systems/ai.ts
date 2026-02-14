@@ -1,5 +1,31 @@
-import { clamp, distSquared, lerp, limitToArena, randomRange } from "../utils.ts"
+import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
+
+const updateBotAim = (
+  bot: WorldState["bots"][number],
+  toTargetX: number,
+  toTargetY: number,
+  distanceToTarget: number,
+  dt: number,
+  nowMs: number,
+  panic = 0
+) => {
+  const botIndex = Number(bot.id.replace("bot-", "")) || 0
+  const baseAngle = Math.atan2(toTargetY, toTargetX)
+  const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
+  const movementFactor = clamp(bot.velocity.length() / (bot.speed || 1), 0, 1)
+  const sway =
+    Math.sin(nowMs * 0.006 + botIndex * 1.91) * (0.02 + farBias * 0.1 + movementFactor * 0.035 + panic * 0.05) +
+    Math.cos(nowMs * 0.003 + botIndex * 0.67) * (0.015 + farBias * 0.07 + panic * 0.02)
+  const targetAngle = baseAngle + sway
+  const trackRate = clamp(dt * (11 - farBias * 6 - panic * 1.6), 0.1, 0.95)
+
+  bot.aim.x = lerp(bot.aim.x, Math.cos(targetAngle), trackRate)
+  bot.aim.y = lerp(bot.aim.y, Math.sin(targetAngle), trackRate)
+  const aimLength = Math.hypot(bot.aim.x, bot.aim.y) || 1
+  bot.aim.x /= aimLength
+  bot.aim.y /= aimLength
+}
 
 const findNearestTarget = (world: WorldState, originId: string, x: number, y: number, maxDistance = Number.POSITIVE_INFINITY) => {
   let targetId = ""
@@ -52,6 +78,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     bot.aiDecisionTimer -= dt
     let desiredVelocityX = bot.velocity.x
     let desiredVelocityY = bot.velocity.y
+    const nowMs = deps.nowMs()
 
     const nearestTarget = findNearestTarget(world, bot.id, bot.position.x, bot.position.y, 36)
     const hasTarget = nearestTarget.targetId !== ""
@@ -88,14 +115,17 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const distanceSafe = distanceToTarget || 1
       const towardX = toTargetX / distanceSafe
       const towardY = toTargetY / distanceSafe
-      const strafe = Math.sin(deps.nowMs() * 0.001 + Number(bot.id.replace("bot-", "")))
+      const strafe = Math.sin(nowMs * 0.001 + Number(bot.id.replace("bot-", "")))
       desiredVelocityX = (towardX + -towardY * strafe * 0.45) * bot.speed
       desiredVelocityY = (towardY + towardX * strafe * 0.45) * bot.speed
 
-      bot.aim.x = towardX
-      bot.aim.y = towardY
+      updateBotAim(bot, toTargetX, toTargetY, distanceToTarget, dt, nowMs)
+      const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
+      const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
+      const requiredAlignment = lerp(0.8, 0.91, farBias)
+      const hesitationChance = lerp(0.02, 0.16, farBias)
 
-      if (distanceToTarget < 32) {
+      if (distanceToTarget < 32 && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
         deps.firePrimary(bot.id)
       }
 
@@ -115,10 +145,15 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const fromY = -toTargetY / distanceSafe
       desiredVelocityX = fromX * bot.speed * 1.15
       desiredVelocityY = fromY * bot.speed * 1.15
-      bot.aim.x = toTargetX / distanceSafe
-      bot.aim.y = toTargetY / distanceSafe
+      const towardX = toTargetX / distanceSafe
+      const towardY = toTargetY / distanceSafe
+      updateBotAim(bot, toTargetX, toTargetY, distanceToTarget, dt, nowMs, 0.45)
+      const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
+      const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
+      const requiredAlignment = lerp(0.78, 0.89, farBias)
+      const hesitationChance = lerp(0.06, 0.22, farBias)
 
-      if (distanceToTarget < 24) {
+      if (distanceToTarget < 24 && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
         deps.firePrimary(bot.id)
       }
     }

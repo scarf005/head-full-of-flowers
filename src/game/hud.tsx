@@ -1,6 +1,7 @@
 import {
   coverageSlicesSignal,
   crosshairSignal,
+  fpsSignal,
   hpSignal,
   matchResultSignal,
   pausedSignal,
@@ -10,6 +11,7 @@ import {
   primaryWeaponSignal,
   secondaryWeaponIconSignal,
   secondaryWeaponSignal,
+  secondaryWeaponCooldownSignal,
   statusMessageSignal,
   timeRemainingSignal
 } from "./signals.ts"
@@ -53,6 +55,7 @@ export const GameHud = () => {
             ))}
           </div>
         </div>
+        <div class="hud-pill hud-pill-fps">FPS {Math.round(fpsSignal.value)}</div>
       </div>
 
       <div class="hud status-text">{statusMessageSignal.value}</div>
@@ -72,7 +75,7 @@ export const GameHud = () => {
             <div class="weapon-icon">{secondaryWeaponIconSignal.value}</div>
           </div>
           <div class="weapon-value compact">{secondaryWeaponSignal.value}</div>
-          <div class="weapon-sub">RMB to throw</div>
+          <div class="weapon-sub">{secondaryWeaponCooldownSignal.value}</div>
         </div>
         <div class="weapon-card hp-card">
           <div class="weapon-title">HP</div>

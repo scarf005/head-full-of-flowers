@@ -1,6 +1,7 @@
 import {
   coverageSlicesSignal,
   crosshairSignal,
+  fpsSignal,
   hpSignal,
   matchResultSignal,
   pausedSignal,
@@ -9,6 +10,7 @@ import {
   primaryWeaponIconSignal,
   primaryWeaponSignal,
   secondaryWeaponIconSignal,
+  secondaryWeaponCooldownSignal,
   secondaryWeaponSignal,
   statusMessageSignal,
   timeRemainingSignal
@@ -60,6 +62,7 @@ const buildPieGradient = (slices: { color: string; percent: number }[]) => {
 
 export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) => {
   timeRemainingSignal.value = MATCH_DURATION_SECONDS
+  fpsSignal.value = 0
   pausedSignal.value = false
   coverageSlicesSignal.value = buildCoverageSlices(world)
   matchResultSignal.value = defaultMatchResult
@@ -68,6 +71,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   primaryAmmoSignal.value = "∞"
   secondaryWeaponSignal.value = "Grenade"
   secondaryWeaponIconSignal.value = "G"
+  secondaryWeaponCooldownSignal.value = "RMB to throw"
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
   perkOptionsSignal.value = []
   statusMessageSignal.value = "Click once to wake audio, then begin fighting"
@@ -76,6 +80,10 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
     y: canvas.clientHeight * 0.5,
     visible: false
   }
+}
+
+export const setFpsSignal = (fps: number) => {
+  fpsSignal.value = Math.max(0, fps)
 }
 
 export const updateCoverageSignals = (world: WorldState) => {
@@ -96,6 +104,15 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
     : "∞"
 }
 
+const updateSecondaryCooldownSignal = (world: WorldState) => {
+  if (!world.player.secondaryCooldown) {
+    secondaryWeaponCooldownSignal.value = "RMB to throw"
+    return
+  }
+
+  secondaryWeaponCooldownSignal.value = `${Math.max(0, world.player.secondaryCooldown).toFixed(1)}s`
+}
+
 export const syncHudSignals = (world: WorldState) => {
   timeRemainingSignal.value = world.timeRemaining
   hpSignal.value = {
@@ -103,6 +120,7 @@ export const syncHudSignals = (world: WorldState) => {
     maxHp: Math.round(world.player.maxHp)
   }
   updatePlayerWeaponSignals(world)
+  updateSecondaryCooldownSignal(world)
 }
 
 export const updatePlayerHpSignal = (world: WorldState) => {

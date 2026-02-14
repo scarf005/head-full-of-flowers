@@ -55,6 +55,11 @@
   color: #ffe5bd;
 }
 
+.hud-pill-fps {
+  min-width: 4.8rem;
+  text-align: right;
+}
+
 .score-panel {
   flex: 1;
   min-width: 0;
@@ -198,6 +203,15 @@
   margin-top: 0.2rem;
 }
 
+.hp-card .weapon-title,
+.hp-card .weapon-sub {
+  color: #ffd9d9;
+}
+
+.hp-card .weapon-value {
+  color: #ffdddd;
+}
+
 .hp-track {
   margin-top: 0.2rem;
   height: 8px;
@@ -209,7 +223,7 @@
 
 .hp-fill {
   height: 100%;
-  background: linear-gradient(90deg, #cdf7b3, #f3ffdc);
+  background: linear-gradient(90deg, #ff5e5e, #ff9c9c);
 }
 
 .perk-overlay {
