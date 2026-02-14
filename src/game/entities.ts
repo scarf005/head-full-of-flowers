@@ -142,6 +142,8 @@ export class Throwable {
   mode: SecondaryMode = "grenade"
   position = new Vec2()
   velocity = new Vec2()
+  rotation = 0
+  angularVelocity = 0
   life = 0.9
   maxLife = 0.9
   radius = 7

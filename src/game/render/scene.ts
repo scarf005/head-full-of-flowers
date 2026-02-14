@@ -10,7 +10,7 @@ import {
   OBSTACLE_MATERIAL_WAREHOUSE,
   obstacleGridToWorldCenter
 } from "../world/obstacle-grid.ts"
-import { terrainAt } from "../world/wfc-map.ts"
+import { terrainAt, type TerrainTile } from "../world/wfc-map.ts"
 import type { WorldState } from "../world/state.ts"
 
 export interface RenderSceneArgs {
@@ -28,6 +28,16 @@ const GRASS_TRANSITION_COLS = 5
 const GRASS_DARK_VARIANTS = 3
 const GRASS_TRANSITION_MASK_ORDER = [1, 2, 4, 8, 3, 6, 12, 9, 5, 10, 7, 14, 13, 11, 15]
 const GRASS_MASK_TO_TILE_INDEX = new Map(GRASS_TRANSITION_MASK_ORDER.map((mask, index) => [mask, index]))
+const TERRAIN_TINTS: Record<TerrainTile, string> = {
+  grass: "#8fa684",
+  clover: "#85a37a",
+  "wild-grass": "#7b9a70",
+  dirt: "#8e7d62",
+  "dirt-road": "#9f8965",
+  "road-edge": "#8f8a6b",
+  gravel: "#9a9a8f",
+  concrete: "#8b908c"
+}
 const FLOWER_SPRITE_PIXEL_SIZE = 16
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
 const FLOWER_LAYER_FLUSH_LIMIT = 1200
@@ -148,6 +158,8 @@ const grassVariantIndex = (cellX: number, cellY: number) => {
   return Math.floor(grassCellNoise(cellX, cellY, 0.93) * GRASS_DARK_VARIANTS) % GRASS_DARK_VARIANTS
 }
 
+const isGrassTile = (tile: TerrainTile) => tile === "grass" || tile === "clover" || tile === "wild-grass"
+
 const extractMaskAlpha = (image: HTMLImageElement) => {
   const maskCanvas = document.createElement("canvas")
   maskCanvas.width = FLOWER_SPRITE_PIXEL_SIZE
@@ -203,7 +215,9 @@ const buildGroundPatchCache = (world: WorldState) => {
         ? 0.34
         : terrain === "clover"
           ? 0.14
-          : -0.06
+          : terrain === "grass"
+            ? -0.06
+            : -0.38
       const patchField = (
         Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58
         + Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
@@ -604,6 +618,38 @@ const renderArenaGround = (
     context.globalAlpha = 1
   }
 
+  context.globalAlpha = 0.84
+  for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
+    const mapY = cellY + halfPatch
+    if (mapY < 0 || mapY >= patchSize) {
+      continue
+    }
+    for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
+      const mapX = cellX + halfPatch
+      if (mapX < 0 || mapX >= patchSize) {
+        continue
+      }
+
+      const terrain = world.terrainMap.tiles[mapY][mapX]
+      if (isGrassTile(terrain)) {
+        continue
+      }
+
+      const drawX = cellX * GRASS_TILE_WORLD_SIZE
+      const drawY = cellY * GRASS_TILE_WORLD_SIZE
+      context.fillStyle = TERRAIN_TINTS[terrain]
+      context.fillRect(drawX, drawY, GRASS_TILE_WORLD_SIZE, GRASS_TILE_WORLD_SIZE)
+
+      if (terrain === "dirt-road") {
+        context.globalAlpha = 0.18
+        context.fillStyle = "#d4c19a"
+        context.fillRect(drawX + 0.12, drawY + 0.18, 0.76, 0.14)
+        context.globalAlpha = 0.84
+      }
+    }
+  }
+  context.globalAlpha = 1
+
   context.restore()
   context.restore()
 }
@@ -725,7 +771,12 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, 
       context.beginPath()
       context.ellipse(throwable.position.x, throwable.position.y + 0.22, 0.2, 0.11, 0, 0, Math.PI * 2)
       context.fill()
-      drawGrenadeSprite(context, throwable.position.x, throwable.position.y, 0.08)
+
+      context.save()
+      context.translate(throwable.position.x, throwable.position.y)
+      context.rotate(throwable.rotation)
+      drawGrenadeSprite(context, 0, 0, 0.08)
+      context.restore()
       continue
     }
 
@@ -733,7 +784,12 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, 
     context.beginPath()
     context.ellipse(throwable.position.x, throwable.position.y + 0.2, 0.18, 0.1, 0, 0, Math.PI * 2)
     context.fill()
-    drawMolotovSprite(context, throwable.position.x, throwable.position.y, 0.08)
+
+    context.save()
+    context.translate(throwable.position.x, throwable.position.y)
+    context.rotate(throwable.rotation)
+    drawMolotovSprite(context, 0, 0, 0.08)
+    context.restore()
   }
 }
 

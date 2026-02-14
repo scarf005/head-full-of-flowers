@@ -1,4 +1,4 @@
-import { clamp, distSquared, limitToArena } from "../utils.ts"
+import { clamp, distSquared, limitToArena, randomRange } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
 import type { Team } from "../types.ts"
 import {
@@ -22,6 +22,8 @@ const GRENADE_RICOCHET_RANDOM_RADIANS = 0.45
 const GRENADE_AIR_DRAG = 0.18
 const GRENADE_HIT_CAMERA_SHAKE = 0.55
 const GRENADE_HIT_STOP = 0.022
+const THROWABLE_SPIN_MIN = 3.8
+const THROWABLE_SPIN_MAX = 11.4
 
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
@@ -58,6 +60,8 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.position.y = shooter.position.y + throwDirY * throwOffset
   throwable.velocity.x = throwDirX * speed
   throwable.velocity.y = throwDirY * speed
+  throwable.rotation = Math.random() * Math.PI * 2
+  throwable.angularVelocity = randomRange(-1, 1) * randomRange(THROWABLE_SPIN_MIN, THROWABLE_SPIN_MAX)
   throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
   throwable.maxLife = throwable.life
   throwable.radius = throwableRadius
@@ -120,6 +124,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     throwable.life -= dt
     throwable.position.x += throwable.velocity.x * dt
     throwable.position.y += throwable.velocity.y * dt
+    throwable.rotation += throwable.angularVelocity * dt
     if (throwable.mode === "molotov") {
       throwable.velocity.x *= clamp(1 - dt * 0.55, 0, 1)
       throwable.velocity.y *= clamp(1 - dt * 0.55, 0, 1)
