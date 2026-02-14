@@ -21,7 +21,26 @@ const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: 
     return
   }
 
-  const distance = Math.sqrt(dsq) || 0.0001
+  if (dsq <= 0.0000001) {
+    const deltaX = unit.position.x - centerX
+    const deltaY = unit.position.y - centerY
+    const overlapX = halfWidth + unit.radius - Math.abs(deltaX)
+    const overlapY = halfHeight + unit.radius - Math.abs(deltaY)
+
+    if (overlapX < overlapY) {
+      const nx = deltaX >= 0 ? 1 : -1
+      unit.position.x += nx * overlapX
+      unit.velocity.x += nx * overlapX * 2
+      return
+    }
+
+    const ny = deltaY >= 0 ? 1 : -1
+    unit.position.y += ny * overlapY
+    unit.velocity.y += ny * overlapY * 2
+    return
+  }
+
+  const distance = Math.sqrt(dsq)
   const push = unit.radius - distance
   const nx = dx / distance
   const ny = dy / distance
@@ -33,21 +52,33 @@ const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: 
 
 const resolveObstacleCollision = (world: WorldState, unit: Unit) => {
   const grid = world.obstacleGrid
-  const min = worldToObstacleGrid(grid.size, unit.position.x - unit.radius, unit.position.y - unit.radius)
-  const max = worldToObstacleGrid(grid.size, unit.position.x + unit.radius, unit.position.y + unit.radius)
-  const minX = Math.max(0, min.x)
-  const maxX = Math.min(grid.size - 1, max.x)
-  const minY = Math.max(0, min.y)
-  const maxY = Math.min(grid.size - 1, max.y)
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    const min = worldToObstacleGrid(grid.size, unit.position.x - unit.radius, unit.position.y - unit.radius)
+    const max = worldToObstacleGrid(grid.size, unit.position.x + unit.radius, unit.position.y + unit.radius)
+    const minX = Math.max(0, min.x)
+    const maxX = Math.min(grid.size - 1, max.x)
+    const minY = Math.max(0, min.y)
+    const maxY = Math.min(grid.size - 1, max.y)
 
-  for (let gy = minY; gy <= maxY; gy += 1) {
-    for (let gx = minX; gx <= maxX; gx += 1) {
-      if (!isObstacleCellSolid(grid, gx, gy)) {
-        continue
+    let pushed = false
+    for (let gy = minY; gy <= maxY; gy += 1) {
+      for (let gx = minX; gx <= maxX; gx += 1) {
+        if (!isObstacleCellSolid(grid, gx, gy)) {
+          continue
+        }
+
+        const beforeX = unit.position.x
+        const beforeY = unit.position.y
+        const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+        resolveUnitVsRect(unit, center.x, center.y, 1, 1)
+        if (beforeX !== unit.position.x || beforeY !== unit.position.y) {
+          pushed = true
+        }
       }
+    }
 
-      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
-      resolveUnitVsRect(unit, center.x, center.y, 1, 1)
+    if (!pushed) {
+      break
     }
   }
 }
