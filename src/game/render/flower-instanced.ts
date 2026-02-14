@@ -366,11 +366,14 @@ in float vAlpha;
 out vec4 outColor;
 
 void main() {
-  float profile = 1.0 - abs(vUv.y * 2.0 - 1.0);
-  profile = smoothstep(0.0, 1.0, profile);
-  float tipFade = smoothstep(0.0, 0.24, vUv.x);
-  float tailFade = smoothstep(1.0, 0.42, vUv.x);
-  float alpha = vAlpha * profile * tipFade * tailFade;
+  float centered = abs(vUv.y * 2.0 - 1.0);
+  float taper = mix(0.12, 1.0, pow(vUv.x, 0.82));
+  if (centered > taper) {
+    discard;
+  }
+  float sideFade = 1.0 - smoothstep(taper * 0.62, taper, centered);
+  float alongFade = smoothstep(0.0, 0.72, vUv.x);
+  float alpha = vAlpha * sideFade * alongFade;
   if (alpha <= 0.01) {
     discard;
   }
@@ -841,18 +844,21 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
     }
 
     const progress = Math.max(0, Math.min(1, projectile.traveled / Math.max(0.001, projectile.maxRange)))
-    const alpha = (1 - progress) * (projectile.kind === "flame" ? 0.46 : 0.54)
+    const alpha = Math.max(0.16, 0.95 - progress * (projectile.kind === "flame" ? 0.72 : 0.58))
     if (alpha <= 0.01) {
       continue
     }
 
-    const speedFactor = Math.max(0, Math.min(1.3, speed / 45))
-    const baseLength = projectile.kind === "flame" ? 0.42 : 0.55
-    const length = baseLength + speedFactor * (projectile.kind === "flame" ? 1.2 : 1.45)
-    const width = projectile.radius * (projectile.kind === "flame" ? 2.8 : 2.2)
+    const speedFactor = Math.max(0, Math.min(1.8, speed / (projectile.kind === "flame" ? 24 : 42)))
+    const length = projectile.kind === "flame"
+      ? Math.max(0.45, Math.min(2.4, speed * 0.055 + speedFactor * 0.5))
+      : Math.max(1.1, Math.min(5.8, speed * 0.11 + speedFactor * 0.85))
+    const width = projectile.kind === "flame"
+      ? Math.max(0.11, Math.min(0.3, projectile.radius * 1.5))
+      : Math.max(0.045, Math.min(0.085, projectile.radius * 0.22))
     const directionX = projectile.velocity.x / speed
     const directionY = projectile.velocity.y / speed
-    const [red, green, blue] = parseHexColorFloat(projectile.kind === "flame" ? "#ffb07a" : "#ffe7a6")
+    const [red, green, blue] = parseHexColorFloat(projectile.kind === "flame" ? "#ffb07a" : "#fff8df")
 
     ensureTrailCapacity(state, instanceCount + 1)
     const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE
@@ -883,17 +889,21 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
     }
 
     const lifeRatio = Math.max(0, Math.min(1, throwable.life / Math.max(0.001, throwable.maxLife)))
-    const alpha = lifeRatio * (throwable.mode === "grenade" ? 0.34 : 0.28)
+    const alpha = lifeRatio * (throwable.mode === "grenade" ? 0.55 : 0.42)
     if (alpha <= 0.01) {
       continue
     }
 
-    const speedFactor = Math.max(0, Math.min(1.2, speed / 20))
-    const length = 0.2 + speedFactor * (throwable.mode === "grenade" ? 0.85 : 0.62)
-    const width = throwable.radius * (throwable.mode === "grenade" ? 1.05 : 0.92)
+    const speedFactor = Math.max(0, Math.min(1.35, speed / 20))
+    const length = throwable.mode === "grenade"
+      ? Math.max(0.42, Math.min(2.1, speed * 0.09 + speedFactor * 0.24))
+      : Math.max(0.3, Math.min(1.25, speed * 0.055 + speedFactor * 0.14))
+    const width = throwable.mode === "grenade"
+      ? Math.max(0.07, Math.min(0.16, throwable.radius * 0.28))
+      : Math.max(0.07, Math.min(0.14, throwable.radius * 0.25))
     const directionX = throwable.velocity.x / speed
     const directionY = throwable.velocity.y / speed
-    const [red, green, blue] = parseHexColorFloat(throwable.mode === "grenade" ? "#eef4de" : "#ffbb7a")
+    const [red, green, blue] = parseHexColorFloat(throwable.mode === "grenade" ? "#f4f8e7" : "#ffd2a3")
 
     ensureTrailCapacity(state, instanceCount + 1)
     const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE

@@ -935,13 +935,17 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState,
     context.ellipse(projectile.position.x, projectile.position.y + 0.26, projectile.radius * 0.8, projectile.radius * 0.45, 0, 0, Math.PI * 2)
     context.fill()
 
-    const glowColor = projectile.kind === "flame"
-      ? "rgba(255, 148, 72, 0.36)"
-      : "rgba(255, 244, 176, 0.34)"
-    context.fillStyle = glowColor
-    context.beginPath()
-    context.arc(projectile.position.x, projectile.position.y, glow, 0, Math.PI * 2)
-    context.fill()
+    if (projectile.kind === "flame") {
+      context.fillStyle = "rgba(255, 148, 72, 0.36)"
+      context.beginPath()
+      context.arc(projectile.position.x, projectile.position.y, glow, 0, Math.PI * 2)
+      context.fill()
+    } else {
+      context.fillStyle = "rgba(255, 245, 208, 0.16)"
+      context.beginPath()
+      context.arc(projectile.position.x, projectile.position.y, projectile.radius * 1.05, 0, Math.PI * 2)
+      context.fill()
+    }
 
     if (renderTrails) {
       context.save()
