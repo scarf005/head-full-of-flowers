@@ -34,7 +34,7 @@ const FLOWER_LAYER_FLUSH_LIMIT = 1200
 const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.05
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
-const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#a7adb3"
+const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#c1c8cf"
 
 let grassBaseTexture: HTMLImageElement | null = null
 let grassDarkTexture: HTMLImageElement | null = null
@@ -1025,16 +1025,22 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     context.lineTo(gunX, gunY)
     context.stroke()
 
-    if (unit.hitFlash > 0) {
-      const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
-      context.globalAlpha = clamp(unit.hitFlash * flicker, 0, 1)
-      context.fillStyle = unit.isPlayer ? "#ff8a8a" : "#ff5454"
-      context.fillRect(drawX - body * 0.75, drawY - body * 0.85, body * 1.5, body * 1.7)
-      context.fillRect(earLeftX - body * 0.18, earY - body * 0.25, body * 1.36, body * 0.32)
-      context.globalAlpha = 1
-    }
+  if (unit.hitFlash > 0) {
+    const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
+    context.globalAlpha = clamp(unit.hitFlash * flicker, 0, 1)
+    context.fillStyle = unit.isPlayer ? "#ff8a8a" : "#ff5454"
+    context.fillRect(drawX - body * 0.75, drawY - body * 0.85, body * 1.5, body * 1.7)
+    context.fillRect(earLeftX - body * 0.18, earY - body * 0.25, body * 1.36, body * 0.32)
+    context.globalAlpha = 1
+  }
 
-    renderUnitStatusRings(context, unit, drawX, drawY, body)
+  const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
+  context.fillStyle = "rgba(0, 0, 0, 0.4)"
+  context.fillRect(drawX - body, drawY - body * 1.28, body * 2, body * 0.24)
+  context.fillStyle = unit.isPlayer ? "#e8ffdb" : "#8fc0ff"
+  context.fillRect(drawX - body, drawY - body * 1.28, body * 2 * hpRatio, body * 0.24)
+
+  renderUnitStatusRings(context, unit, drawX, drawY, body)
   }
 }
 
