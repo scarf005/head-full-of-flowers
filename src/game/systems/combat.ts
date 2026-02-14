@@ -3,6 +3,7 @@ import { sample } from "@std/random"
 import type { PrimaryWeaponId } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
+import type { Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 
@@ -115,6 +116,31 @@ export interface FirePrimaryDeps {
   startReload: (unitId: string) => void
   onPlayerShoot: () => void
   onOtherShoot: () => void
+  onPrimaryWeaponChanged?: (unitId: string) => void
+}
+
+const swapToPistolIfNeeded = (world: WorldState, shooter: Unit, onPrimaryWeaponChanged?: (unitId: string) => void) => {
+  if (shooter.primaryWeapon === "pistol") {
+    return
+  }
+
+  if (!Number.isFinite(shooter.primaryAmmo)) {
+    return
+  }
+
+  if (shooter.primaryAmmo > 0) {
+    return
+  }
+
+  if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
+    return
+  }
+
+  equipPrimary(shooter.id, world, "pistol", Number.POSITIVE_INFINITY, () => {
+    if (shooter.isPlayer && onPrimaryWeaponChanged) {
+      onPrimaryWeaponChanged(shooter.id)
+    }
+  })
 }
 
 export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrimaryDeps) => {
@@ -124,6 +150,8 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
+    swapToPistolIfNeeded(world, shooter, deps.onPrimaryWeaponChanged)
+
     const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
     if (hasReserve) {
       if (shooter.reloadCooldownMax <= 0) {
@@ -170,6 +198,8 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
+    swapToPistolIfNeeded(world, shooter, deps.onPrimaryWeaponChanged)
+
     const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
     if (hasReserve) {
       deps.startReload(shooter.id)
