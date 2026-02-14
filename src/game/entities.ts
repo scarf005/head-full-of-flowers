@@ -68,8 +68,8 @@ export class Unit {
   aim = new Vec2(1, 0)
   radius = 14
   speed = 175
-  maxHp = 10
-  hp = 10
+  maxHp = 5
+  hp = 5
   shootCooldown = 0
   secondaryCooldown = 0
   reloadCooldown = 0
