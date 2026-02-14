@@ -39,8 +39,15 @@ const collidesWithObstacle = (x: number, y: number, obstacle: Obstacle, radius: 
   if (isTiledObstacle(obstacle)) {
     const originX = obstacle.position.x - obstacle.width * 0.5
     const originY = obstacle.position.y - obstacle.height * 0.5
-    for (let row = 0; row < obstacle.tiles.length; row += 1) {
-      for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
+    const rows = obstacle.tiles.length
+    const cols = obstacle.tiles[0]?.length ?? 0
+    const minCol = Math.max(0, Math.floor(x - radius - originX))
+    const maxCol = Math.min(cols - 1, Math.floor(x + radius - originX))
+    const minRow = Math.max(0, Math.floor(y - radius - originY))
+    const maxRow = Math.min(rows - 1, Math.floor(y + radius - originY))
+
+    for (let row = minRow; row <= maxRow; row += 1) {
+      for (let col = minCol; col <= maxCol; col += 1) {
         if (!obstacle.tiles[row][col]) {
           continue
         }

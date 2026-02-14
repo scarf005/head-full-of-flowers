@@ -279,6 +279,70 @@ const mergeMasks = (first: boolean[][], second: boolean[][]) => {
   )
 }
 
+const buildMazeWallTiles = (size: number, paths: boolean[][]) => {
+  return Array.from({ length: size }, (_, y) =>
+    Array.from({ length: size }, (_, x) => {
+      if (paths[y][x]) {
+        return false
+      }
+      return circleFitsArena(x, y, size, 2.2)
+    })
+  )
+}
+
+const carveBlueprintFromMask = (mask: boolean[][], size: number, blueprint: MapObstacleBlueprint) => {
+  const left = Math.floor(blueprint.x - blueprint.width * 0.5 + size * 0.5)
+  const top = Math.floor(blueprint.y - blueprint.height * 0.5 + size * 0.5)
+
+  if (blueprint.kind === "warehouse") {
+    for (let row = 0; row < blueprint.tiles.length; row += 1) {
+      for (let col = 0; col < blueprint.tiles[row].length; col += 1) {
+        if (!blueprint.tiles[row][col]) {
+          continue
+        }
+
+        const gridX = left + col
+        const gridY = top + row
+        if (gridX < 0 || gridY < 0 || gridY >= size || gridX >= size) {
+          continue
+        }
+
+        mask[gridY][gridX] = false
+      }
+    }
+    return
+  }
+
+  const width = Math.max(1, Math.floor(blueprint.width))
+  const height = Math.max(1, Math.floor(blueprint.height))
+  for (let row = 0; row < height; row += 1) {
+    for (let col = 0; col < width; col += 1) {
+      const gridX = left + col
+      const gridY = top + row
+      if (gridX < 0 || gridY < 0 || gridY >= size || gridX >= size) {
+        continue
+      }
+      mask[gridY][gridX] = false
+    }
+  }
+}
+
+const createMazeWallBlueprint = (size: number, paths: boolean[][], blockers: MapObstacleBlueprint[]) => {
+  const tiles = buildMazeWallTiles(size, paths)
+  for (const blocker of blockers) {
+    carveBlueprintFromMask(tiles, size, blocker)
+  }
+
+  return {
+    kind: "warehouse" as const,
+    x: 0,
+    y: 0,
+    width: size,
+    height: size,
+    tiles
+  }
+}
+
 const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
   const obstacles: MapObstacleBlueprint[] = []
   const warehouseCount = randomInt(6, 10)
@@ -371,7 +435,7 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
 
 const createWallBlueprints = (size: number, paths: boolean[][], warehouses: MapObstacleBlueprint[]) => {
   const walls: MapObstacleBlueprint[] = []
-  const wallCount = randomInt(120, 200)
+  const wallCount = randomInt(24, 48)
 
   for (let y = 2; y < size - 2 && walls.length < wallCount; y += 1) {
     for (let x = 2; x < size - 2 && walls.length < wallCount; x += 1) {
@@ -593,8 +657,10 @@ export const createBarrenGardenMap = (size: number) => {
   const warehouseBlueprints = createWarehouseBlueprints(size, paths)
   const wallBlueprints = createWallBlueprints(size, paths, warehouseBlueprints)
   const rockBlueprints = createRockBlueprints(size, paths, [...warehouseBlueprints, ...wallBlueprints])
-  const obstacles = [...warehouseBlueprints, ...wallBlueprints, ...rockBlueprints]
-  const pickupSpawnPoints = createPickupSpawnPoints(size, paths, obstacles)
+  const structuralObstacles = [...warehouseBlueprints, ...wallBlueprints, ...rockBlueprints]
+  const mazeWallBlueprint = createMazeWallBlueprint(size, paths, structuralObstacles)
+  const obstacles = [mazeWallBlueprint, ...structuralObstacles]
+  const pickupSpawnPoints = createPickupSpawnPoints(size, paths, structuralObstacles)
 
   return {
     size,
