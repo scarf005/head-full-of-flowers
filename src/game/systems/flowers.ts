@@ -2,11 +2,12 @@ import { clamp, limitToArena, randomInt } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 import { BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR, BURNED_FACTION_ID } from "../factions.ts"
 
-const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.95
+const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.42
 const FLOWER_BACK_OFFSET = 0.26
 const FLOWER_DISTANCE_MIN = 0.08
 const FLOWER_DISTANCE_MAX = 1.85
-const FLOWER_POSITION_JITTER = 0.06
+const FLOWER_FORWARD_JITTER = 0.05
+const FLOWER_LATERAL_JITTER = 0.03
 const FLOWER_PUSH_ATTEMPTS = 9
 const FLOWER_PUSH_DISTANCE_STEP = 0.34
 const FLOWER_TILE_CAPACITY = 18
@@ -15,6 +16,7 @@ const FLOWER_SIZE_MAX = 0.42
 
 const FLOWER_AMOUNT_MIN = 10
 const FLOWER_AMOUNT_MAX = 20
+const FLOWER_AMOUNT_MULTIPLIER = 2
 const FLOWER_DAMAGE_REFERENCE = 2.1
 const FLOWER_IMPACT_SPEED_REFERENCE = 40
 const FLOWER_COUNT_SCALE_MIN = 0.55
@@ -211,21 +213,31 @@ const pickFlowerPosition = (
   originX: number,
   originY: number,
   angle: number,
+  angleDeltaNormalized: number,
   occupancyWeight: number,
   seed: number
 ) => {
   const spreadX = Math.cos(angle)
   const spreadY = Math.sin(angle)
+  const lateralX = -spreadY
+  const lateralY = spreadX
+  const centerBias = 1 - clamp(Math.abs(angleDeltaNormalized), 0, 1)
+  const directionalScale = 0.5 + centerBias * 0.7
   let chosenX = originX + spreadX * FLOWER_DISTANCE_MAX
   let chosenY = originY + spreadY * FLOWER_DISTANCE_MAX
   let lowestCount = Number.POSITIVE_INFINITY
 
   for (let attempt = 0; attempt < FLOWER_PUSH_ATTEMPTS; attempt += 1) {
-    const distance = seededRange(seed + attempt * 1.13, FLOWER_DISTANCE_MIN, FLOWER_DISTANCE_MAX) + attempt * FLOWER_PUSH_DISTANCE_STEP
-    const jitterX = seededRange(seed + attempt * 2.31, -FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
-    const jitterY = seededRange(seed + attempt * 3.41, -FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
-    const candidateX = originX + spreadX * distance + jitterX
-    const candidateY = originY + spreadY * distance + jitterY
+    const rawDistanceFactor = seeded01(seed + attempt * 1.13)
+    const biasedDistanceFactor = Math.pow(rawDistanceFactor, 0.65)
+    const distance = (
+      FLOWER_DISTANCE_MIN
+      + biasedDistanceFactor * (FLOWER_DISTANCE_MAX - FLOWER_DISTANCE_MIN)
+    ) * directionalScale + attempt * FLOWER_PUSH_DISTANCE_STEP
+    const forwardJitter = seededRange(seed + attempt * 2.31, -FLOWER_FORWARD_JITTER, FLOWER_FORWARD_JITTER)
+    const lateralJitter = seededRange(seed + attempt * 3.41, -FLOWER_LATERAL_JITTER, FLOWER_LATERAL_JITTER)
+    const candidateX = originX + spreadX * (distance + forwardJitter) + lateralX * lateralJitter
+    const candidateY = originY + spreadY * (distance + forwardJitter) + lateralY * lateralJitter
     const cellIndex = flowerCellIndexAt(world, candidateX, candidateY)
     const cellCount = cellIndex < 0 ? 0 : world.flowerDensityGrid[cellIndex]
     const projectedCount = cellCount + occupancyWeight
@@ -278,10 +290,21 @@ export const spawnFlowers = (
 
   for (let index = 0; index < amount; index += 1) {
     const flowerSeed = baseSeed + index * 0.619
-    const angle = baseAngle + seededRange(flowerSeed + 0.91, -FLOWER_SPAWN_CONE_HALF_ANGLE, FLOWER_SPAWN_CONE_HALF_ANGLE)
+    const angleSeed = seededRange(flowerSeed + 0.91, -1, 1)
+    const angleBias = Math.sign(angleSeed) * Math.pow(Math.abs(angleSeed), 1.6)
+    const angleOffset = angleBias * FLOWER_SPAWN_CONE_HALF_ANGLE
+    const angle = baseAngle + angleOffset
     const targetSize = seededRange(flowerSeed + 1.47, FLOWER_SIZE_MIN, FLOWER_SIZE_MAX) * bloomScale
     const bloomWeight = flowerOccupancyWeight(targetSize)
-    const spawn = pickFlowerPosition(world, originX, originY, angle, bloomWeight, flowerSeed + 2.03)
+    const spawn = pickFlowerPosition(
+      world,
+      originX,
+      originY,
+      angle,
+      angleOffset / FLOWER_SPAWN_CONE_HALF_ANGLE,
+      bloomWeight,
+      flowerSeed + 2.03
+    )
     let spawnX = spawn.x
     let spawnY = spawn.y
     const spawnLength = Math.hypot(spawnX, spawnY)
@@ -369,7 +392,7 @@ export const randomFlowerBurst = (damage: number, impactSpeed: number): FlowerBu
   )
 
   return {
-    amount: Math.max(2, Math.round(randomInt(FLOWER_AMOUNT_MIN, FLOWER_AMOUNT_MAX) * amountScale)),
+    amount: Math.max(2, Math.round(randomInt(FLOWER_AMOUNT_MIN, FLOWER_AMOUNT_MAX) * amountScale * FLOWER_AMOUNT_MULTIPLIER)),
     sizeScale
   }
 }
