@@ -80,8 +80,9 @@ export const equipPrimary = (
   unit.reloadCooldown = 0
   unit.reloadCooldownMax = 0
 
-  if (Number.isFinite(ammo) && Number.isFinite(config.magazineSize)) {
-    unit.reserveAmmo = Math.max(0, ammo)
+  const normalizedAmmo = Number.isFinite(ammo) ? ammo : config.pickupAmmo
+  if (Number.isFinite(normalizedAmmo) && Number.isFinite(config.magazineSize)) {
+    unit.reserveAmmo = Math.max(0, normalizedAmmo)
     const loaded = Math.min(unit.magazineSize, unit.reserveAmmo)
     unit.primaryAmmo = loaded
     unit.reserveAmmo -= loaded
@@ -115,7 +116,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
       return
     }
 
-    deps.equipPrimary(shooter.id, "pistol", Number.POSITIVE_INFINITY)
+    return
   }
 
   const weapon = PRIMARY_WEAPONS[shooter.primaryWeapon]
