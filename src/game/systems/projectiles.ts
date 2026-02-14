@@ -1,6 +1,28 @@
 import { clamp, distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 
+const distToSegmentSquared = (
+  pointX: number,
+  pointY: number,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number
+) => {
+  const segmentX = endX - startX
+  const segmentY = endY - startY
+  const lengthSquared = segmentX * segmentX + segmentY * segmentY
+  if (lengthSquared <= 0.000001) {
+    return distSquared(pointX, pointY, startX, startY)
+  }
+
+  const projection = ((pointX - startX) * segmentX + (pointY - startY) * segmentY) / lengthSquared
+  const t = clamp(projection, 0, 1)
+  const nearestX = startX + segmentX * t
+  const nearestY = startY + segmentY * t
+  return distSquared(pointX, pointY, nearestX, nearestY)
+}
+
 export interface ProjectileDeps {
   hitObstacle: (projectileIndex: number) => boolean
   spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: "white" | "blue") => void
@@ -36,6 +58,8 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       continue
     }
 
+    const previousX = projectile.position.x
+    const previousY = projectile.position.y
     const stepX = projectile.velocity.x * dt
     const stepY = projectile.velocity.y * dt
     projectile.position.x += stepX
@@ -87,7 +111,14 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       }
 
       const hitDistance = unit.radius + projectile.radius
-      if (distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <= hitDistance * hitDistance) {
+      if (distToSegmentSquared(
+        unit.position.x,
+        unit.position.y,
+        previousX,
+        previousY,
+        projectile.position.x,
+        projectile.position.y
+      ) <= hitDistance * hitDistance) {
         const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
         const impactDirX = projectile.velocity.x / impactLength
         const impactDirY = projectile.velocity.y / impactLength

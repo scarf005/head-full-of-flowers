@@ -104,7 +104,6 @@ export const constrainUnitsToArena = (world: WorldState) => {
 }
 
 export interface ObstacleDamageDeps {
-  spawnExplosion: (x: number, y: number, radius: number) => void
   breakObstacle: (obstacle: Obstacle) => void
 }
 
@@ -133,12 +132,16 @@ export const damageHouseByExplosion = (
         continue
       }
 
-      obstacle.tiles[row][col] = false
-      obstacle.hp -= 1
+      obstacle.hp -= 0.5
     }
   }
 
   if (obstacle.hp <= 0) {
+    for (let row = 0; row < obstacle.tiles.length; row += 1) {
+      for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
+        obstacle.tiles[row][col] = false
+      }
+    }
     deps.breakObstacle(obstacle)
   }
 }
@@ -164,10 +167,13 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
         continue
       }
 
-      obstacle.tiles[tileY][tileX] = false
-      obstacle.hp -= 1
-      deps.spawnExplosion(originX + tileX + 0.5, originY + tileY + 0.5, 0.45)
+      obstacle.hp -= Math.max(0.08, projectile.damage * 0.1)
       if (obstacle.hp <= 0) {
+        for (let row = 0; row < obstacle.tiles.length; row += 1) {
+          for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
+            obstacle.tiles[row][col] = false
+          }
+        }
         deps.breakObstacle(obstacle)
       }
       return true
@@ -184,8 +190,7 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
       continue
     }
 
-    obstacle.hp -= projectile.damage
-    deps.spawnExplosion(projectile.position.x, projectile.position.y, 0.3)
+    obstacle.hp -= Math.max(0.12, projectile.damage * 0.12)
     if (obstacle.hp <= 0) {
       deps.breakObstacle(obstacle)
     }

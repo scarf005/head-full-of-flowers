@@ -61,8 +61,8 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
   if (ownerId === deps.playerId) {
     return {
       team: "white" as const,
-      color: "#f1f7eb",
-      accent: "#dce7d0",
+      color: "#d4d9d2",
+      accent: "#b8beb6",
       fromPlayer: true
     }
   }
@@ -70,8 +70,8 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
   const palette = deps.botPalette(ownerId)
   return {
     team: "blue" as const,
-    color: pastelize(palette.tone, 0.56, 0.16),
-    accent: pastelize(palette.edge, 0.54, 0.1),
+    color: pastelize(palette.tone, 0.34, 0.08),
+    accent: pastelize(palette.edge, 0.3, 0.05),
     fromPlayer: false
   }
 }

@@ -76,23 +76,23 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState)
       }
 
       const terrain = terrainAt(world.terrainMap, worldX, worldY)
-      if (terrain === "grass") context.fillStyle = "#89bf6f"
-      if (terrain === "clover") context.fillStyle = "#78b462"
-      if (terrain === "wild-grass") context.fillStyle = "#6ca656"
-      if (terrain === "dirt") context.fillStyle = "#9a8259"
-      if (terrain === "dirt-road") context.fillStyle = "#8b6f47"
-      if (terrain === "road-edge") context.fillStyle = "#839764"
-      if (terrain === "gravel") context.fillStyle = "#8f8a7a"
-      if (terrain === "concrete") context.fillStyle = "#9ca091"
+      if (terrain === "grass") context.fillStyle = "#82957e"
+      if (terrain === "clover") context.fillStyle = "#798d76"
+      if (terrain === "wild-grass") context.fillStyle = "#72876f"
+      if (terrain === "dirt") context.fillStyle = "#8a7f70"
+      if (terrain === "dirt-road") context.fillStyle = "#7f7568"
+      if (terrain === "road-edge") context.fillStyle = "#7f8b78"
+      if (terrain === "gravel") context.fillStyle = "#8a887f"
+      if (terrain === "concrete") context.fillStyle = "#94968f"
       context.fillRect(worldX, worldY, tile, tile)
-      if (terrain === "grass") context.fillStyle = "#9ace82"
-      if (terrain === "clover") context.fillStyle = "#8cc373"
-      if (terrain === "wild-grass") context.fillStyle = "#80b96a"
-      if (terrain === "dirt") context.fillStyle = "#ab9166"
-      if (terrain === "dirt-road") context.fillStyle = "#9c7f53"
-      if (terrain === "road-edge") context.fillStyle = "#95a975"
-      if (terrain === "gravel") context.fillStyle = "#a4a090"
-      if (terrain === "concrete") context.fillStyle = "#b2b6a6"
+      if (terrain === "grass") context.fillStyle = "#90a48b"
+      if (terrain === "clover") context.fillStyle = "#879c84"
+      if (terrain === "wild-grass") context.fillStyle = "#80967e"
+      if (terrain === "dirt") context.fillStyle = "#988c7c"
+      if (terrain === "dirt-road") context.fillStyle = "#8d8173"
+      if (terrain === "road-edge") context.fillStyle = "#8d9b86"
+      if (terrain === "gravel") context.fillStyle = "#9a978d"
+      if (terrain === "concrete") context.fillStyle = "#a4a69f"
       context.fillRect(worldX + 0.05, worldY + 0.05, tile - 0.18, tile - 0.18)
     }
   }
@@ -252,12 +252,12 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         }
       }
     } else {
-      context.fillStyle = "#5f6d49"
+      context.fillStyle = "#676a64"
       context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
-      context.fillStyle = "#c3d7a2"
+      context.fillStyle = "#8f948b"
       context.fillRect(obstacle.position.x - halfWidth + 0.08, obstacle.position.y - halfHeight + 0.08, obstacle.width - 0.16, obstacle.height - 0.16)
 
-      context.fillStyle = "#7a5a3e"
+      context.fillStyle = "#5d605a"
       const cuts = Math.max(2, Math.floor(obstacle.width * 2.2))
       for (let i = 0; i < cuts; i += 1) {
         const t = i / Math.max(1, cuts - 1)
@@ -325,35 +325,27 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState)
     context.translate(projectile.position.x, projectile.position.y)
     context.rotate(angle)
 
-    const trailLength = projectile.kind === "flame" ? length * 1 : length * 1.45
-    for (let index = 0; index < 5; index += 1) {
-      const t = index / 4
+    const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
+    for (let index = 0; index < 6; index += 1) {
+      const t = index / 5
       const alpha = projectile.kind === "flame"
-        ? (1 - t) * 0.24
-        : (1 - t) * 0.34
-      context.fillStyle = `rgba(255, 255, 255, ${alpha})`
+        ? (1 - t) * 0.2
+        : (1 - t) * 0.22
+      context.fillStyle = projectile.kind === "flame"
+        ? `rgba(255, 177, 122, ${alpha})`
+        : `rgba(255, 230, 170, ${alpha})`
       context.beginPath()
       context.ellipse(
-        -trailLength * (0.36 + t * 0.44),
+        -trailLength * (0.3 + t * 0.58),
         0,
-        width * (0.84 - t * 0.2),
-        width * (0.52 - t * 0.14),
+        width * (0.9 - t * 0.36),
+        width * (0.56 - t * 0.24),
         0,
         0,
         Math.PI * 2
       )
       context.fill()
     }
-
-    context.strokeStyle = projectile.kind === "flame"
-      ? "rgba(255, 186, 118, 0.42)"
-      : "rgba(255, 246, 196, 0.48)"
-    context.lineWidth = width * 0.44
-    context.lineCap = "round"
-    context.beginPath()
-    context.moveTo(-trailLength * 1.24, 0)
-    context.lineTo(-length * 0.12, 0)
-    context.stroke()
 
     context.restore()
 

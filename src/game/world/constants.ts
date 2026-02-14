@@ -9,7 +9,7 @@ export const THROWABLE_POOL_SIZE = 96
 export const DAMAGE_POPUP_POOL_SIZE = 200
 export const PICKUP_POOL_SIZE = 12
 export const MOLOTOV_POOL_SIZE = 36
-export const OBSTACLE_POOL_SIZE = 36
+export const OBSTACLE_POOL_SIZE = 72
 
 export const BOT_COUNT = 7
 export const MATCH_DURATION_SECONDS = 90

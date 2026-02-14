@@ -97,13 +97,11 @@ export const spawnAllUnits = (world: WorldState) => {
 }
 
 export interface BreakObstacleDeps {
-  spawnExplosion: (x: number, y: number, radius: number) => void
   spawnPickupAt: (position: Vec2) => void
 }
 
 export const breakObstacle = (obstacle: Obstacle, deps: BreakObstacleDeps) => {
   obstacle.active = false
-  deps.spawnExplosion(obstacle.position.x, obstacle.position.y, Math.max(obstacle.width, obstacle.height) * 0.8)
 
   if (!obstacle.lootDropped && Math.random() > 0.48) {
     obstacle.lootDropped = true
@@ -133,10 +131,13 @@ export const spawnObstacles = (world: WorldState) => {
       obstacle.tiles = blueprint.tiles.map((row) => [...row])
       obstacle.maxHp = obstacle.tiles.reduce((sum, row) => {
         return sum + row.reduce((count, tile) => count + (tile ? 1 : 0), 0)
-      }, 0)
+      }, 0) * 10
+    } else if (obstacle.kind === "wall") {
+      obstacle.tiles = []
+      obstacle.maxHp = 20
     } else {
       obstacle.tiles = []
-      obstacle.maxHp = 2
+      obstacle.maxHp = 30
     }
     obstacle.hp = obstacle.maxHp
     obstacle.active = true

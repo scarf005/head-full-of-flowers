@@ -132,8 +132,8 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     projectile.kind = shooter.primaryWeapon === "flamethrower" ? "flame" : "ballistic"
     projectile.ownerId = shooter.id
     projectile.ownerTeam = shooter.team
-    projectile.position.x = shooter.position.x + dirX * (shooter.radius + 0.08)
-    projectile.position.y = shooter.position.y + dirY * (shooter.radius + 0.08)
+    projectile.position.x = shooter.position.x
+    projectile.position.y = shooter.position.y
     projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
     projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
     projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier

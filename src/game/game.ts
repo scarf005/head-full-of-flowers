@@ -96,9 +96,21 @@ export class FlowerArenaGame {
   private setupWorld() {
     setupWorldUnits(
       this.world,
-      () => randomLootablePrimary(),
+      () => this.randomLootablePrimaryForMatch(),
       (unitId, weaponId, ammo) => equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
     )
+  }
+
+  private canSpawnFlamethrower() {
+    return this.world.timeRemaining <= MATCH_DURATION_SECONDS * 0.5
+  }
+
+  private randomLootablePrimaryForMatch() {
+    if (this.canSpawnFlamethrower()) {
+      return randomLootablePrimary()
+    }
+
+    return Math.random() > 0.5 ? "assault" : "shotgun"
   }
 
   private setupInput() {
@@ -155,7 +167,7 @@ export class FlowerArenaGame {
       bot.bulletSizeMultiplier = 1
       bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
-      const weaponId = randomLootablePrimary()
+      const weaponId = this.randomLootablePrimaryForMatch()
       this.equipPrimary(bot.id, weaponId, PRIMARY_WEAPONS[weaponId].pickupAmmo)
       bot.secondaryMode = Math.random() > 0.58 ? "molotov" : "grenade"
     }
@@ -178,7 +190,7 @@ export class FlowerArenaGame {
       spawnPickupAt: (x, y) => {
         spawnPickupAt(this.world, { x, y }, {
           randomLootablePrimary: () => {
-            const id = randomLootablePrimary()
+            const id = this.randomLootablePrimaryForMatch()
             return id === "pistol" ? "assault" : id
           }
         })
@@ -346,11 +358,10 @@ export class FlowerArenaGame {
 
   private breakObstacle(obstacle: Obstacle) {
     breakObstacle(obstacle, {
-      spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
       spawnPickupAt: (position) => {
         spawnPickupAt(this.world, position, {
           randomLootablePrimary: () => {
-            const id = randomLootablePrimary()
+            const id = this.randomLootablePrimaryForMatch()
             return id === "pistol" ? "assault" : id
           }
         })
@@ -361,7 +372,7 @@ export class FlowerArenaGame {
   private respawnUnit(unitId: string) {
     respawnUnit(this.world, unitId, {
       equipPrimary: (id, weaponId, ammo) => this.equipPrimary(id, weaponId, ammo),
-      randomLootablePrimary: () => randomLootablePrimary()
+      randomLootablePrimary: () => this.randomLootablePrimaryForMatch()
     })
   }
 
@@ -478,7 +489,6 @@ export class FlowerArenaGame {
       hitObstacle: (projectileIndex) => {
         const projectile = this.world.projectiles[projectileIndex]
         return hitObstacle(this.world, projectile, {
-          spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
           breakObstacle: (obstacle) => this.breakObstacle(obstacle)
         })
       },
@@ -499,7 +509,6 @@ export class FlowerArenaGame {
           },
           damageHouseByExplosion: (obstacle, x, y, radius) => {
             damageHouseByExplosion(obstacle, x, y, radius, {
-              spawnExplosion: (sx, sy, rr) => this.spawnExplosion(sx, sy, rr),
               breakObstacle: (ob) => this.breakObstacle(ob)
             })
           },
@@ -528,7 +537,7 @@ export class FlowerArenaGame {
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {
-        const id = randomLootablePrimary()
+        const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
       }
     })
