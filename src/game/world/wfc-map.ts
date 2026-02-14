@@ -101,7 +101,7 @@ const carveBrush = (mask: boolean[][], centerX: number, centerY: number, radius:
 const connectPoints = (mask: boolean[][], fromX: number, fromY: number, toX: number, toY: number) => {
   let x = fromX
   let y = fromY
-  carveBrush(mask, x, y, randomInt(1, 2))
+  carveBrush(mask, x, y, randomInt(0, 1))
 
   for (let guard = 0; guard < mask.length * mask.length; guard += 1) {
     if (x === toX && y === toY) {
@@ -117,18 +117,18 @@ const connectPoints = (mask: boolean[][], fromX: number, fromY: number, toX: num
       y += Math.sign(dy)
     }
 
-    carveBrush(mask, x, y, Math.random() > 0.75 ? 2 : 1)
+    carveBrush(mask, x, y, Math.random() > 0.88 ? 1 : 0)
   }
 }
 
 const buildRoadNetworkMask = (size: number) => {
   const mask = Array.from({ length: size }, () => Array.from({ length: size }, () => false))
   const center = Math.floor(size * 0.5)
-  const hubCount = randomInt(4, 6)
+  const hubCount = randomInt(3, 5)
   const hubs: [number, number][] = [[center, center]]
 
   for (let index = 1; index < hubCount; index += 1) {
-    const ring = size * randomInt(20, 44) * 0.01
+    const ring = size * randomInt(18, 40) * 0.01
     const angle = (Math.PI * 2 * index) / hubCount + Math.random() * 0.9
     const x = Math.round(center + Math.cos(angle) * ring)
     const y = Math.round(center + Math.sin(angle) * ring)
@@ -169,6 +169,54 @@ const rectsOverlap = (
   )
 }
 
+const rectFitsArena = (left: number, top: number, width: number, height: number, size: number, margin: number) => {
+  for (let y = top; y < top + height; y += 1) {
+    for (let x = left; x < left + width; x += 1) {
+      if (!circleFitsArena(x, y, size, margin)) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+const rectTouchesMask = (
+  mask: boolean[][],
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+  padding: number
+) => {
+  for (let y = top - padding; y < top + height + padding; y += 1) {
+    if (y < 0 || y >= mask.length) {
+      continue
+    }
+
+    for (let x = left - padding; x < left + width + padding; x += 1) {
+      if (x < 0 || x >= mask[y].length) {
+        continue
+      }
+
+      if (mask[y][x]) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+const gridRectToWorldRect = (left: number, top: number, width: number, height: number, size: number) => {
+  return {
+    x: gridToWorldOrigin(left, size) + width * 0.5,
+    y: gridToWorldOrigin(top, size) + height * 0.5,
+    width,
+    height
+  }
+}
+
 const applyRoadNetwork = (tiles: TerrainTile[][]) => {
   const size = tiles.length
   const roads = buildRoadNetworkMask(size)
@@ -180,162 +228,17 @@ const applyRoadNetwork = (tiles: TerrainTile[][]) => {
         continue
       }
 
-      if (hasNeighbor(roads, x, y) && (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass")) {
+      if (
+        hasNeighbor(roads, x, y)
+        && (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass")
+        && Math.random() > 0.42
+      ) {
         tiles[y][x] = "road-edge"
       }
     }
   }
 
   return roads
-}
-
-const createMazePathMask = (size: number) => {
-  const mask = Array.from({ length: size }, () => Array.from({ length: size }, () => false))
-  const cellWidth = Math.max(4, Math.floor((size - 6) / 2))
-  const cellHeight = Math.max(4, Math.floor((size - 6) / 2))
-  const visited = Array.from({ length: cellHeight }, () => Array.from({ length: cellWidth }, () => false))
-  const stack: [number, number][] = [[randomInt(0, cellWidth - 1), randomInt(0, cellHeight - 1)]]
-
-  const carveCell = (cellX: number, cellY: number) => {
-    const gridX = 3 + cellX * 2
-    const gridY = 3 + cellY * 2
-    if (gridX >= 0 && gridY >= 0 && gridX < size && gridY < size) {
-      mask[gridY][gridX] = true
-    }
-  }
-
-  while (stack.length > 0) {
-    const [cellX, cellY] = stack[stack.length - 1]
-    visited[cellY][cellX] = true
-    carveCell(cellX, cellY)
-
-    const neighbors: [number, number, number, number][] = []
-    if (cellX > 0 && !visited[cellY][cellX - 1]) neighbors.push([cellX - 1, cellY, -1, 0])
-    if (cellX < cellWidth - 1 && !visited[cellY][cellX + 1]) neighbors.push([cellX + 1, cellY, 1, 0])
-    if (cellY > 0 && !visited[cellY - 1][cellX]) neighbors.push([cellX, cellY - 1, 0, -1])
-    if (cellY < cellHeight - 1 && !visited[cellY + 1][cellX]) neighbors.push([cellX, cellY + 1, 0, 1])
-
-    if (neighbors.length === 0) {
-      stack.pop()
-      continue
-    }
-
-    const [nextX, nextY, dirX, dirY] = neighbors[randomInt(0, neighbors.length - 1)]
-    const betweenX = 3 + cellX * 2 + dirX
-    const betweenY = 3 + cellY * 2 + dirY
-    if (betweenX >= 0 && betweenY >= 0 && betweenX < size && betweenY < size) {
-      mask[betweenY][betweenX] = true
-    }
-    stack.push([nextX, nextY])
-  }
-
-  const extraLoops = Math.floor(cellWidth * cellHeight * 0.14)
-  for (let loop = 0; loop < extraLoops; loop += 1) {
-    const cellX = randomInt(1, cellWidth - 2)
-    const cellY = randomInt(1, cellHeight - 2)
-    const gridX = 3 + cellX * 2
-    const gridY = 3 + cellY * 2
-    const directions: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-    const [dirX, dirY] = directions[randomInt(0, directions.length - 1)]
-    const betweenX = gridX + dirX
-    const betweenY = gridY + dirY
-    if (betweenX >= 2 && betweenY >= 2 && betweenX < size - 2 && betweenY < size - 2) {
-      mask[betweenY][betweenX] = true
-    }
-  }
-
-  return mask
-}
-
-const applyMazeGarden = (tiles: TerrainTile[][]) => {
-  const size = tiles.length
-  const mazePaths = createMazePathMask(size)
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      if (mazePaths[y][x]) {
-        tiles[y][x] = Math.random() > 0.18 ? "dirt-road" : "gravel"
-        continue
-      }
-
-      if (hasNeighbor(mazePaths, x, y) && (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass")) {
-        tiles[y][x] = "road-edge"
-      }
-    }
-  }
-
-  return mazePaths
-}
-
-const mergeMasks = (first: boolean[][], second: boolean[][]) => {
-  const size = first.length
-  return Array.from({ length: size }, (_, y) =>
-    Array.from({ length: size }, (_, x) => first[y][x] || second[y][x])
-  )
-}
-
-const buildMazeWallTiles = (size: number, paths: boolean[][]) => {
-  return Array.from({ length: size }, (_, y) =>
-    Array.from({ length: size }, (_, x) => {
-      if (paths[y][x]) {
-        return false
-      }
-      return circleFitsArena(x, y, size, 2.2)
-    })
-  )
-}
-
-const carveBlueprintFromMask = (mask: boolean[][], size: number, blueprint: MapObstacleBlueprint) => {
-  const left = Math.floor(blueprint.x - blueprint.width * 0.5 + size * 0.5)
-  const top = Math.floor(blueprint.y - blueprint.height * 0.5 + size * 0.5)
-
-  if (blueprint.kind === "warehouse") {
-    for (let row = 0; row < blueprint.tiles.length; row += 1) {
-      for (let col = 0; col < blueprint.tiles[row].length; col += 1) {
-        if (!blueprint.tiles[row][col]) {
-          continue
-        }
-
-        const gridX = left + col
-        const gridY = top + row
-        if (gridX < 0 || gridY < 0 || gridY >= size || gridX >= size) {
-          continue
-        }
-
-        mask[gridY][gridX] = false
-      }
-    }
-    return
-  }
-
-  const width = Math.max(1, Math.floor(blueprint.width))
-  const height = Math.max(1, Math.floor(blueprint.height))
-  for (let row = 0; row < height; row += 1) {
-    for (let col = 0; col < width; col += 1) {
-      const gridX = left + col
-      const gridY = top + row
-      if (gridX < 0 || gridY < 0 || gridY >= size || gridX >= size) {
-        continue
-      }
-      mask[gridY][gridX] = false
-    }
-  }
-}
-
-const createMazeWallBlueprint = (size: number, paths: boolean[][], blockers: MapObstacleBlueprint[]) => {
-  const tiles = buildMazeWallTiles(size, paths)
-  for (const blocker of blockers) {
-    carveBlueprintFromMask(tiles, size, blocker)
-  }
-
-  return {
-    kind: "warehouse" as const,
-    x: 0,
-    y: 0,
-    width: size,
-    height: size,
-    tiles
-  }
 }
 
 const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
@@ -347,49 +250,15 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
     const height = randomInt(3, 6)
     const left = randomInt(3, size - width - 4)
     const top = randomInt(3, size - height - 4)
-    let inArena = true
-    for (let y = top; y < top + height; y += 1) {
-      for (let x = left; x < left + width; x += 1) {
-        if (!circleFitsArena(x, y, size, 2.8)) {
-          inArena = false
-          break
-        }
-      }
-      if (!inArena) {
-        break
-      }
-    }
-
-    if (!inArena) {
+    if (!rectFitsArena(left, top, width, height, size, 2.8)) {
       continue
     }
 
-    let nearRoad = false
-    for (let y = top - 2; y < top + height + 2; y += 1) {
-      for (let x = left - 2; x < left + width + 2; x += 1) {
-        if (y < 0 || x < 0 || y >= paths.length || x >= paths[y].length) {
-          continue
-        }
-        if (paths[y][x]) {
-          nearRoad = true
-          break
-        }
-      }
-      if (nearRoad) {
-        break
-      }
-    }
-
-    if (!nearRoad) {
+    if (!rectTouchesMask(paths, left, top, width, height, 2)) {
       continue
     }
 
-    const worldRect = {
-      x: gridToWorldOrigin(left, size) + width * 0.5,
-      y: gridToWorldOrigin(top, size) + height * 0.5,
-      width,
-      height
-    }
+    const worldRect = gridRectToWorldRect(left, top, width, height, size)
 
     const blocked = obstacles.some((existing) => rectsOverlap(worldRect, existing, 2.2))
     if (blocked) {
@@ -428,41 +297,236 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
   return obstacles
 }
 
-const createWallBlueprints = (size: number, paths: boolean[][], warehouses: MapObstacleBlueprint[]) => {
-  const walls: MapObstacleBlueprint[] = []
-  const wallCount = randomInt(24, 48)
+const createWarehouseLootBlueprints = (size: number, warehouses: MapObstacleBlueprint[]) => {
+  const boxes: MapObstacleBlueprint[] = []
 
-  for (let y = 2; y < size - 2 && walls.length < wallCount; y += 1) {
-    for (let x = 2; x < size - 2 && walls.length < wallCount; x += 1) {
-      if (paths[y][x]) {
-        continue
-      }
-      if (!hasNeighbor(paths, x, y)) {
-        continue
-      }
-      if (Math.random() > 0.34) {
-        continue
-      }
-      if (!circleFitsArena(x, y, size, 2.3)) {
-        continue
-      }
+  for (const warehouse of warehouses) {
+    const left = Math.floor(warehouse.x - warehouse.width * 0.5 + size * 0.5)
+    const top = Math.floor(warehouse.y - warehouse.height * 0.5 + size * 0.5)
+    const candidates: [number, number][] = []
 
-      const wall = {
-        kind: "wall" as const,
-        x: gridToWorld(x, size),
-        y: gridToWorld(y, size),
-        width: 1,
-        height: 1,
-        tiles: [] as boolean[][]
-      }
+    for (let row = 1; row < warehouse.tiles.length - 1; row += 1) {
+      for (let col = 1; col < warehouse.tiles[row].length - 1; col += 1) {
+        if (warehouse.tiles[row][col]) {
+          continue
+        }
 
-      const blockedByWarehouse = warehouses.some((warehouse) => rectsOverlap(wall, warehouse, 0.4))
-      if (blockedByWarehouse) {
-        continue
-      }
+        const gridX = left + col
+        const gridY = top + row
+        if (!circleFitsArena(gridX, gridY, size, 2.4)) {
+          continue
+        }
 
-      walls.push(wall)
+        candidates.push([gridX, gridY])
+      }
     }
+
+    if (candidates.length === 0) {
+      continue
+    }
+
+    const [gridX, gridY] = candidates[randomInt(0, candidates.length - 1)]
+    boxes.push({
+      kind: "box",
+      x: gridToWorld(gridX, size),
+      y: gridToWorld(gridY, size),
+      width: 1,
+      height: 1,
+      tiles: []
+    })
+  }
+
+  return boxes
+}
+
+const createRoadsideStructureBlueprints = (size: number, paths: boolean[][], blocked: MapObstacleBlueprint[]) => {
+  const compounds: MapObstacleBlueprint[] = []
+  const structureCount = randomInt(8, 12)
+
+  for (let attempt = 0; attempt < 1200 && compounds.length < structureCount; attempt += 1) {
+    const width = randomInt(5, 9)
+    const height = randomInt(5, 8)
+    const left = randomInt(3, size - width - 4)
+    const top = randomInt(3, size - height - 4)
+
+    if (!rectFitsArena(left, top, width, height, size, 2.8)) {
+      continue
+    }
+    if (rectTouchesMask(paths, left, top, width, height, 0)) {
+      continue
+    }
+    if (!rectTouchesMask(paths, left, top, width, height, 2)) {
+      continue
+    }
+
+    const worldRect = gridRectToWorldRect(left, top, width, height, size)
+    const blockedByStructures = blocked.some((structure) => rectsOverlap(worldRect, structure, 2.2))
+      || compounds.some((existing) => rectsOverlap(worldRect, existing, 2.2))
+    if (blockedByStructures) {
+      continue
+    }
+
+    const tiles = Array.from({ length: height }, (_, row) =>
+      Array.from({ length: width }, (_, col) =>
+        row === 0 || col === 0 || row === height - 1 || col === width - 1
+      )
+    )
+
+    const firstEntrance = randomInt(0, 3)
+    const secondEntrance = (firstEntrance + randomInt(1, 3)) % 4
+    const carveEntrance = (side: number) => {
+      if (side === 0) {
+        tiles[0][Math.floor(width * 0.5)] = false
+      }
+      if (side === 1) {
+        tiles[height - 1][Math.floor(width * 0.5)] = false
+      }
+      if (side === 2) {
+        tiles[Math.floor(height * 0.5)][0] = false
+      }
+      if (side === 3) {
+        tiles[Math.floor(height * 0.5)][width - 1] = false
+      }
+    }
+
+    carveEntrance(firstEntrance)
+    carveEntrance(secondEntrance)
+
+    if (width >= 7 && height >= 6 && Math.random() > 0.6) {
+      const divideHorizontally = Math.random() > 0.5
+      if (divideHorizontally) {
+        const row = Math.floor(height * 0.5)
+        for (let col = 1; col < width - 1; col += 1) {
+          if (col !== Math.floor(width * 0.5)) {
+            tiles[row][col] = true
+          }
+        }
+      } else {
+        const col = Math.floor(width * 0.5)
+        for (let row = 1; row < height - 1; row += 1) {
+          if (row !== Math.floor(height * 0.5)) {
+            tiles[row][col] = true
+          }
+        }
+      }
+    }
+
+    compounds.push({
+      kind: "warehouse",
+      x: worldRect.x,
+      y: worldRect.y,
+      width,
+      height,
+      tiles
+    })
+  }
+
+  return compounds
+}
+
+const createWallBlueprints = (size: number, paths: boolean[][], blockedStructures: MapObstacleBlueprint[]) => {
+  const walls: MapObstacleBlueprint[] = []
+  const wallCount = randomInt(150, 220)
+
+  for (let attempt = 0; attempt < 5200 && walls.length < wallCount; attempt += 1) {
+    const centerX = randomInt(2, size - 3)
+    const centerY = randomInt(2, size - 3)
+    const onRoad = paths[centerY][centerX]
+    const nearRoad = onRoad || hasNeighbor(paths, centerX, centerY)
+
+    if (!nearRoad && Math.random() > 0.72) {
+      continue
+    }
+
+    if (!circleFitsArena(centerX, centerY, size, 2.3)) {
+      continue
+    }
+
+    let width = 1
+    let height = 1
+    const shapeRoll = Math.random()
+    if (onRoad) {
+      if (shapeRoll > 0.66) {
+        if (Math.random() > 0.5) {
+          width = 2
+        } else {
+          height = 2
+        }
+      }
+    } else if (nearRoad) {
+      if (shapeRoll > 0.76) {
+        if (Math.random() > 0.5) {
+          width = randomInt(3, 5)
+        } else {
+          height = randomInt(3, 5)
+        }
+      } else if (shapeRoll > 0.46) {
+        width = randomInt(2, 3)
+        height = randomInt(2, 3)
+      } else if (shapeRoll > 0.24) {
+        if (Math.random() > 0.5) {
+          width = randomInt(2, 4)
+        } else {
+          height = randomInt(2, 4)
+        }
+      }
+    } else {
+      if (shapeRoll > 0.84) {
+        if (Math.random() > 0.5) {
+          width = randomInt(2, 4)
+        } else {
+          height = randomInt(2, 4)
+        }
+      } else if (shapeRoll > 0.58) {
+        width = randomInt(2, 3)
+        height = randomInt(1, 2)
+      }
+    }
+
+    if (onRoad && width > 1 && height > 1) {
+      if (Math.random() > 0.5) {
+        width = 1
+      } else {
+        height = 1
+      }
+    }
+
+    const left = centerX - Math.floor(width * 0.5)
+    const top = centerY - Math.floor(height * 0.5)
+    if (left < 2 || top < 2 || left + width > size - 2 || top + height > size - 2) {
+      continue
+    }
+    if (!rectFitsArena(left, top, width, height, size, 2.3)) {
+      continue
+    }
+
+    if (!nearRoad && Math.random() > 0.42 && !rectTouchesMask(paths, left, top, width, height, 2)) {
+      continue
+    }
+
+    const wallRect = gridRectToWorldRect(left, top, width, height, size)
+    const blockedByStructure = blockedStructures.some((structure) => rectsOverlap(wallRect, structure, onRoad ? 0.35 : 0.55))
+    if (blockedByStructure) {
+      continue
+    }
+
+    const blockedByWall = walls.some((existing) => rectsOverlap(wallRect, existing, onRoad ? 0.05 : 0.14))
+    if (blockedByWall) {
+      continue
+    }
+
+    if (onRoad && Math.random() > 0.5) {
+      continue
+    }
+
+    walls.push({
+      kind: "wall",
+      x: wallRect.x,
+      y: wallRect.y,
+      width,
+      height,
+      tiles: []
+    })
   }
 
   return walls
@@ -470,16 +534,16 @@ const createWallBlueprints = (size: number, paths: boolean[][], warehouses: MapO
 
 const createRockBlueprints = (size: number, paths: boolean[][], blocked: MapObstacleBlueprint[]) => {
   const rocks: MapObstacleBlueprint[] = []
-  const rockCount = randomInt(14, 24)
+  const rockCount = randomInt(56, 92)
 
-  for (let attempt = 0; attempt < 900 && rocks.length < rockCount; attempt += 1) {
+  for (let attempt = 0; attempt < 3400 && rocks.length < rockCount; attempt += 1) {
     const gridX = randomInt(3, size - 4)
     const gridY = randomInt(3, size - 4)
     if (!circleFitsArena(gridX, gridY, size, 2.3)) {
       continue
     }
 
-    if (!paths[gridY][gridX] && Math.random() > 0.5) {
+    if (!paths[gridY][gridX] && Math.random() > 0.78) {
       continue
     }
 
@@ -646,15 +710,15 @@ export const createBarrenGardenMap = (size: number) => {
     Array.from({ length: size }, (_, x) => [...wave[y][x]][0] ?? "grass")
   )
 
-  const roads = buildRoadNetworkMask(size)
-  const mazePaths = createMazePathMask(size)
-  const paths = mergeMasks(roads, mazePaths)
+  const roads = applyRoadNetwork(tiles)
+  const paths = roads
   const warehouseBlueprints = createWarehouseBlueprints(size, paths)
-  const wallBlueprints = createWallBlueprints(size, paths, warehouseBlueprints)
-  const rockBlueprints = createRockBlueprints(size, paths, [...warehouseBlueprints, ...wallBlueprints])
-  const structuralObstacles = [...warehouseBlueprints, ...wallBlueprints, ...rockBlueprints]
-  const mazeWallBlueprint = createMazeWallBlueprint(size, paths, structuralObstacles)
-  const obstacles = [mazeWallBlueprint, ...structuralObstacles]
+  const warehouseLootBlueprints = createWarehouseLootBlueprints(size, warehouseBlueprints)
+  const roadsideStructureBlueprints = createRoadsideStructureBlueprints(size, paths, warehouseBlueprints)
+  const wallBlueprints = createWallBlueprints(size, paths, [...warehouseBlueprints, ...roadsideStructureBlueprints])
+  const rockBlueprints = createRockBlueprints(size, paths, [...warehouseBlueprints, ...roadsideStructureBlueprints, ...warehouseLootBlueprints, ...wallBlueprints])
+  const structuralObstacles = [...warehouseBlueprints, ...roadsideStructureBlueprints, ...warehouseLootBlueprints, ...wallBlueprints, ...rockBlueprints]
+  const obstacles = structuralObstacles
   const pickupSpawnPoints = createPickupSpawnPoints(size, paths, structuralObstacles)
 
   return {
