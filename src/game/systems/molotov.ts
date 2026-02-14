@@ -62,10 +62,6 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
       zone.tick = zone.tickInterval
       const radiusSquared = zone.radius * zone.radius
       for (const unit of world.units) {
-        if (unit.id === zone.ownerId) {
-          continue
-        }
-
         const dsq = distSquared(unit.position.x, unit.position.y, zone.position.x, zone.position.y)
         if (dsq > radiusSquared) {
           continue
