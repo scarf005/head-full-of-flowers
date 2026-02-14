@@ -10,6 +10,9 @@ export const randomLootablePrimary = (): PrimaryWeaponId => {
   return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
 }
 
+const DEATH_FLOWER_AMOUNT_MULTIPLIER = 2
+const DEATH_FLOWER_SIZE_SCALE_BOOST = 0.25
+
 export const startReload = (unitId: string, world: WorldState, onPlayerReloading: () => void) => {
   const unit = world.units.find((candidate) => candidate.id === unitId)
   if (!unit || unit.reloadCooldown > 0) {
@@ -261,6 +264,21 @@ export const applyDamage = (
     flowerBurst.sizeScale
   )
 
+  const isKilled = target.hp <= 0
+  if (isKilled) {
+    const deathBurst = randomFlowerBurst(damage, hitSpeed)
+    const extraDir = randomRange(0, Math.PI * 2)
+    deps.spawnFlowers(
+      flowerSourceId,
+      target.position.x,
+      target.position.y,
+      Math.cos(extraDir),
+      Math.sin(extraDir),
+      Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
+      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST)
+    )
+  }
+
   if (sourceId === world.player.id) {
     world.cameraShake = Math.min(1.2, world.cameraShake + 0.12)
     world.hitStop = Math.max(world.hitStop, 0.012)
@@ -277,7 +295,7 @@ export const applyDamage = (
 
   world.cameraShake = Math.min(1.15, world.cameraShake + 0.08)
 
-  if (target.hp <= 0) {
+  if (isKilled) {
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()
     } else {
