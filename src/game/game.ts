@@ -49,7 +49,7 @@ import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - line
 
 const VIEW_WIDTH = 960
 const VIEW_HEIGHT = 540
-const WORLD_SCALE = 14
+const WORLD_SCALE = VIEW_WIDTH / 25
 const FLOWER_POOL_SIZE = 5000
 const PROJECTILE_POOL_SIZE = 480
 const THROWABLE_POOL_SIZE = 96
@@ -59,8 +59,8 @@ const MOLOTOV_POOL_SIZE = 36
 const OBSTACLE_POOL_SIZE = 36
 const BOT_COUNT = 7
 const PERK_FLOWER_STEP = 130
-const PLAYER_BASE_SPEED = 14
-const BOT_BASE_SPEED = 12
+const PLAYER_BASE_SPEED = 9.5
+const BOT_BASE_SPEED = 8.4
 
 interface ExplosionFx {
   active: boolean
@@ -75,6 +75,8 @@ interface InputState {
   rightDown: boolean
   canvasX: number
   canvasY: number
+  screenX: number
+  screenY: number
   worldX: number
   worldY: number
 }
@@ -88,6 +90,8 @@ export class FlowerArenaGame {
     rightDown: false,
     canvasX: VIEW_WIDTH * 0.5,
     canvasY: VIEW_HEIGHT * 0.5,
+    screenX: VIEW_WIDTH * 0.5,
+    screenY: VIEW_HEIGHT * 0.5,
     worldX: 0,
     worldY: 0
   }
@@ -182,7 +186,7 @@ export class FlowerArenaGame {
     this.player.primaryAmmo = Number.POSITIVE_INFINITY
     this.player.reserveAmmo = Number.POSITIVE_INFINITY
     this.player.secondaryMode = "grenade"
-    this.player.radius = 0.82
+    this.player.radius = 0.3
     this.player.speed = PLAYER_BASE_SPEED
     this.player.maxHp = 10
     this.player.hp = 10
@@ -191,7 +195,7 @@ export class FlowerArenaGame {
     for (let index = 0; index < BOT_COUNT; index += 1) {
       const bot = new Unit(`bot-${index + 1}`, false, "blue")
       bot.speed = BOT_BASE_SPEED
-      bot.radius = 0.76
+      bot.radius = 0.28
       bot.maxHp = 10
       bot.hp = 10
       bot.primaryWeapon = this.randomLootablePrimary()
@@ -215,8 +219,8 @@ export class FlowerArenaGame {
     perkOptionsSignal.value = []
     statusMessageSignal.value = "Click once to wake audio, then fight from 50m down to 25m"
     crosshairSignal.value = {
-      x: this.input.canvasX,
-      y: this.input.canvasY,
+      x: this.canvas.clientWidth * 0.5,
+      y: this.canvas.clientHeight * 0.5,
       visible: false
     }
   }
@@ -260,17 +264,21 @@ export class FlowerArenaGame {
 
   private onPointerMove = (event: PointerEvent) => {
     const rect = this.canvas.getBoundingClientRect()
-    const x = (event.clientX - rect.left) * (VIEW_WIDTH / rect.width)
-    const y = (event.clientY - rect.top) * (VIEW_HEIGHT / rect.height)
+    const screenX = clamp(event.clientX - rect.left, 0, rect.width)
+    const screenY = clamp(event.clientY - rect.top, 0, rect.height)
+    const normalizedX = rect.width > 0 ? screenX / rect.width : 0.5
+    const normalizedY = rect.height > 0 ? screenY / rect.height : 0.5
 
-    this.input.canvasX = clamp(x, 0, VIEW_WIDTH)
-    this.input.canvasY = clamp(y, 0, VIEW_HEIGHT)
+    this.input.screenX = screenX
+    this.input.screenY = screenY
+    this.input.canvasX = normalizedX * VIEW_WIDTH
+    this.input.canvasY = normalizedY * VIEW_HEIGHT
     this.input.worldX = this.camera.x + (this.input.canvasX - VIEW_WIDTH * 0.5) / WORLD_SCALE
     this.input.worldY = this.camera.y + (this.input.canvasY - VIEW_HEIGHT * 0.5) / WORLD_SCALE
 
     crosshairSignal.value = {
-      x: this.input.canvasX,
-      y: this.input.canvasY,
+      x: this.input.screenX,
+      y: this.input.screenY,
       visible: true
     }
   }
@@ -313,8 +321,8 @@ export class FlowerArenaGame {
     this.input.leftDown = false
     this.input.rightDown = false
     crosshairSignal.value = {
-      x: this.input.canvasX,
-      y: this.input.canvasY,
+      x: this.input.screenX,
+      y: this.input.screenY,
       visible: false
     }
   }
@@ -448,7 +456,7 @@ export class FlowerArenaGame {
   }
 
   private spawnObstacles() {
-    const obstacleCount = randomInt(10, 16)
+    const obstacleCount = randomInt(7, 11)
     const occupied = this.units.map((unit) => unit.position)
     let cursor = 0
 
@@ -1010,8 +1018,8 @@ export class FlowerArenaGame {
       projectile.active = true
       projectile.ownerId = shooter.id
       projectile.ownerTeam = shooter.team
-      projectile.position.x = shooter.position.x + dirX * (shooter.radius + 0.28)
-      projectile.position.y = shooter.position.y + dirY * (shooter.radius + 0.28)
+      projectile.position.x = shooter.position.x + dirX * (shooter.radius + 0.08)
+      projectile.position.y = shooter.position.y + dirY * (shooter.radius + 0.08)
       projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
       projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
       projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
@@ -1054,8 +1062,8 @@ export class FlowerArenaGame {
     throwable.ownerId = shooter.id
     throwable.ownerTeam = shooter.team
     throwable.mode = mode
-    throwable.position.x = shooter.position.x + shooter.aim.x * (shooter.radius + 0.22)
-    throwable.position.y = shooter.position.y + shooter.aim.y * (shooter.radius + 0.22)
+    throwable.position.x = shooter.position.x + shooter.aim.x * (shooter.radius + 0.12)
+    throwable.position.y = shooter.position.y + shooter.aim.y * (shooter.radius + 0.12)
     throwable.velocity.x = shooter.aim.x * speed
     throwable.velocity.y = shooter.aim.y * speed
     throwable.life = mode === "grenade" ? 1.05 : 0.78
@@ -2046,7 +2054,7 @@ export class FlowerArenaGame {
       if (unit.hitFlash > 0) {
         const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
         this.context.globalAlpha = clamp(unit.hitFlash * flicker, 0, 1)
-        this.context.fillStyle = unit.isPlayer ? "#7ebeff" : "#fff8d1"
+        this.context.fillStyle = unit.isPlayer ? "#ff8a8a" : "#ff5454"
         this.context.fillRect(drawX - body * 0.75, drawY - body * 0.85, body * 1.5, body * 1.7)
         this.context.fillRect(earLeftX - body * 0.18, earY - body * 0.25, body * 1.36, body * 0.32)
         this.context.globalAlpha = 1
