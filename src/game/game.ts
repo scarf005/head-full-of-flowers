@@ -54,7 +54,7 @@ import { updateProjectiles } from "./systems/projectiles.ts"
 import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
-import type { Unit } from "./entities.ts"
+import { Flower, type Unit } from "./entities.ts"
 import { botPalette } from "./factions.ts"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
@@ -169,6 +169,9 @@ export class FlowerArenaGame {
     this.world.nextPerkFlowerTarget = PERK_FLOWER_STEP
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
+    this.world.flowerCellHead = new Int32Array(this.world.terrainMap.size * this.world.terrainMap.size)
+    this.world.flowerCellHead.fill(-1)
+    this.world.flowerDirtyCount = 0
 
     const player = this.world.player
     player.maxHp = UNIT_BASE_HP
@@ -194,9 +197,17 @@ export class FlowerArenaGame {
 
     for (const projectile of this.world.projectiles) projectile.active = false
     for (const throwable of this.world.throwables) throwable.active = false
-    for (const flower of this.world.flowers) {
+    for (let flowerIndex = 0; flowerIndex < this.world.flowers.length; flowerIndex += 1) {
+      const flower = this.world.flowers[flowerIndex]
+      flower.slotIndex = flowerIndex
       flower.active = false
+      flower.renderDirty = false
+      flower.team = "white"
+      flower.ownerId = ""
       flower.bloomCell = -1
+      flower.bloomWeight = 1
+      flower.prevInCell = -1
+      flower.nextInCell = -1
     }
     for (const popup of this.world.damagePopups) popup.active = false
     for (const pickup of this.world.pickups) pickup.active = false
@@ -315,9 +326,27 @@ export class FlowerArenaGame {
   }
 
   private allocFlower() {
-    const slot = this.world.flowers[this.world.flowerCursor]
-    this.world.flowerCursor = (this.world.flowerCursor + 1) % this.world.flowers.length
-    return slot
+    if (this.world.flowers.length > 0) {
+      const index = this.world.flowerCursor % this.world.flowers.length
+      const slot = this.world.flowers[index]
+      if (slot.slotIndex !== index) {
+        slot.slotIndex = index
+      }
+      this.world.flowerCursor = (index + 1) % this.world.flowers.length
+      if (!slot.active) {
+        return slot
+      }
+    }
+
+    const spawned = new Flower()
+    spawned.slotIndex = this.world.flowers.length
+    this.world.flowers.push(spawned)
+    if (this.world.flowers.length > 0) {
+      this.world.flowerCursor = this.world.flowerCursor % this.world.flowers.length
+    } else {
+      this.world.flowerCursor = 0
+    }
+    return spawned
   }
 
   private allocPopup() {

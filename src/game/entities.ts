@@ -139,9 +139,14 @@ export class Throwable {
 
 export class Flower {
   active = false
+  slotIndex = -1
+  renderDirty = false
   team: Team = "white"
   ownerId = ""
   bloomCell = -1
+  bloomWeight = 1
+  prevInCell = -1
+  nextInCell = -1
   color = "#f7ffef"
   accent = "#e5efcf"
   scorched = false

@@ -51,6 +51,9 @@ export interface MolotovDeps {
 }
 
 export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovDeps) => {
+  const mapSize = world.terrainMap.size
+  const half = Math.floor(mapSize * 0.5)
+
   for (const zone of world.molotovZones) {
     if (!zone.active) {
       continue
@@ -79,19 +82,34 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
       }
 
       if (zone.source === "flame") {
-        for (const flower of world.flowers) {
-          if (!flower.active) {
-            continue
-          }
+        const minGridX = Math.max(0, Math.floor(zone.position.x - zone.radius) + half - 1)
+        const maxGridX = Math.min(mapSize - 1, Math.floor(zone.position.x + zone.radius) + half + 1)
+        const minGridY = Math.max(0, Math.floor(zone.position.y - zone.radius) + half - 1)
+        const maxGridY = Math.min(mapSize - 1, Math.floor(zone.position.y + zone.radius) + half + 1)
 
-          const dsq = distSquared(flower.position.x, flower.position.y, zone.position.x, zone.position.y)
-          if (dsq > radiusSquared) {
-            continue
+        for (let gridY = minGridY; gridY <= maxGridY; gridY += 1) {
+          for (let gridX = minGridX; gridX <= maxGridX; gridX += 1) {
+            let flowerIndex = world.flowerCellHead[gridY * mapSize + gridX]
+            while (flowerIndex >= 0 && flowerIndex < world.flowers.length) {
+              const flower = world.flowers[flowerIndex]
+              const nextInCell = flower.nextInCell
+              if (flower.active) {
+                const dsq = distSquared(flower.position.x, flower.position.y, zone.position.x, zone.position.y)
+                if (dsq <= radiusSquared) {
+                  if (!flower.scorched || flower.color !== "#4a453d" || flower.accent !== "#29261f") {
+                    flower.scorched = true
+                    flower.color = "#4a453d"
+                    flower.accent = "#29261f"
+                    if (!flower.renderDirty) {
+                      flower.renderDirty = true
+                      world.flowerDirtyCount += 1
+                    }
+                  }
+                }
+              }
+              flowerIndex = nextInCell
+            }
           }
-
-          flower.scorched = true
-          flower.color = "#4a453d"
-          flower.accent = "#29261f"
         }
       }
     }

@@ -1,4 +1,5 @@
 import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
+import { renderFlowerInstances } from "./flower-instanced.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
@@ -27,6 +28,9 @@ const GRASS_TRANSITION_COLS = 5
 const GRASS_DARK_VARIANTS = 3
 const GRASS_TRANSITION_MASK_ORDER = [1, 2, 4, 8, 3, 6, 12, 9, 5, 10, 7, 14, 13, 11, 15]
 const GRASS_MASK_TO_TILE_INDEX = new Map(GRASS_TRANSITION_MASK_ORDER.map((mask, index) => [mask, index]))
+const FLOWER_SPRITE_PIXEL_SIZE = 16
+const FLOWER_LAYER_PIXELS_PER_TILE = 12
+const FLOWER_LAYER_FLUSH_LIMIT = 1200
 
 let grassBaseTexture: HTMLImageElement | null = null
 let grassDarkTexture: HTMLImageElement | null = null
@@ -34,6 +38,35 @@ let grassTransitionsTexture: HTMLImageElement | null = null
 let grassBaseTextureLoaded = false
 let grassDarkTextureLoaded = false
 let grassTransitionsTextureLoaded = false
+let flowerPetalMask: HTMLImageElement | null = null
+let flowerAccentMask: HTMLImageElement | null = null
+let flowerPetalMaskLoaded = false
+let flowerAccentMaskLoaded = false
+const flowerSpriteCache = new Map<string, HTMLCanvasElement>()
+let flowerPetalMaskAlpha: Uint8ClampedArray | null = null
+let flowerAccentMaskAlpha: Uint8ClampedArray | null = null
+
+let groundPatchCache: {
+  terrainMapRef: WorldState["terrainMap"] | null
+  size: number
+  cells: Uint8Array
+} = {
+  terrainMapRef: null,
+  size: 0,
+  cells: new Uint8Array(0)
+}
+
+let flowerLayerCache: {
+  terrainMapRef: WorldState["terrainMap"] | null
+  size: number
+  canvas: HTMLCanvasElement | null
+  context: CanvasRenderingContext2D | null
+} = {
+  terrainMapRef: null,
+  size: 0,
+  canvas: null,
+  context: null
+}
 
 if (typeof Image !== "undefined") {
   grassBaseTexture = new Image()
@@ -62,6 +95,24 @@ if (typeof Image !== "undefined") {
   if (grassTransitionsTexture.complete && grassTransitionsTexture.naturalWidth > 0) {
     grassTransitionsTextureLoaded = true
   }
+
+  flowerPetalMask = new Image()
+  flowerPetalMask.src = "/flowers/flower-petal-mask.png"
+  flowerPetalMask.onload = () => {
+    flowerPetalMaskLoaded = true
+  }
+  if (flowerPetalMask.complete && flowerPetalMask.naturalWidth > 0) {
+    flowerPetalMaskLoaded = true
+  }
+
+  flowerAccentMask = new Image()
+  flowerAccentMask.src = "/flowers/flower-accent-mask.png"
+  flowerAccentMask.onload = () => {
+    flowerAccentMaskLoaded = true
+  }
+  if (flowerAccentMask.complete && flowerAccentMask.naturalWidth > 0) {
+    flowerAccentMaskLoaded = true
+  }
 }
 
 const grassCellNoise = (x: number, y: number, seed: number) => {
@@ -69,26 +120,21 @@ const grassCellNoise = (x: number, y: number, seed: number) => {
   return value - Math.floor(value)
 }
 
-const readPatch = (cells: boolean[][], x: number, y: number) => {
-  if (y < 0 || y >= cells.length) {
-    return false
+const patchAt = (cells: Uint8Array, size: number, x: number, y: number) => {
+  if (x < 0 || y < 0 || x >= size || y >= size) {
+    return 0
   }
-  if (x < 0 || x >= cells[y].length) {
-    return false
-  }
-  return cells[y][x]
+  return cells[y * size + x]
 }
 
-const countPatchNeighbors = (cells: boolean[][], x: number, y: number) => {
+const patchNeighborCount = (cells: Uint8Array, size: number, x: number, y: number) => {
   let count = 0
   for (let oy = -1; oy <= 1; oy += 1) {
     for (let ox = -1; ox <= 1; ox += 1) {
       if (ox === 0 && oy === 0) {
         continue
       }
-      if (readPatch(cells, x + ox, y + oy)) {
-        count += 1
-      }
+      count += patchAt(cells, size, x + ox, y + oy)
     }
   }
   return count
@@ -96,6 +142,258 @@ const countPatchNeighbors = (cells: boolean[][], x: number, y: number) => {
 
 const grassVariantIndex = (cellX: number, cellY: number) => {
   return Math.floor(grassCellNoise(cellX, cellY, 0.93) * GRASS_DARK_VARIANTS) % GRASS_DARK_VARIANTS
+}
+
+const extractMaskAlpha = (image: HTMLImageElement) => {
+  const maskCanvas = document.createElement("canvas")
+  maskCanvas.width = FLOWER_SPRITE_PIXEL_SIZE
+  maskCanvas.height = FLOWER_SPRITE_PIXEL_SIZE
+  const maskContext = maskCanvas.getContext("2d")
+  if (!maskContext) {
+    return null
+  }
+
+  maskContext.imageSmoothingEnabled = false
+  maskContext.clearRect(0, 0, FLOWER_SPRITE_PIXEL_SIZE, FLOWER_SPRITE_PIXEL_SIZE)
+  maskContext.drawImage(image, 0, 0, FLOWER_SPRITE_PIXEL_SIZE, FLOWER_SPRITE_PIXEL_SIZE)
+  return maskContext.getImageData(0, 0, FLOWER_SPRITE_PIXEL_SIZE, FLOWER_SPRITE_PIXEL_SIZE).data
+}
+
+const ensureFlowerMaskAlpha = () => {
+  if (flowerPetalMaskAlpha && flowerAccentMaskAlpha) {
+    return true
+  }
+  if (!flowerPetalMask || !flowerAccentMask || !flowerPetalMaskLoaded || !flowerAccentMaskLoaded) {
+    return false
+  }
+
+  flowerPetalMaskAlpha = extractMaskAlpha(flowerPetalMask)
+  flowerAccentMaskAlpha = extractMaskAlpha(flowerAccentMask)
+  return !!flowerPetalMaskAlpha && !!flowerAccentMaskAlpha
+}
+
+const parseHexColor = (hex: string) => {
+  const cleaned = hex.replace("#", "")
+  if (cleaned.length !== 6) {
+    return [255, 255, 255] as const
+  }
+  const red = Number.parseInt(cleaned.slice(0, 2), 16)
+  const green = Number.parseInt(cleaned.slice(2, 4), 16)
+  const blue = Number.parseInt(cleaned.slice(4, 6), 16)
+  return [red, green, blue] as const
+}
+
+const buildGroundPatchCache = (world: WorldState) => {
+  const size = world.terrainMap.size
+  const cells = new Uint8Array(size * size)
+  const half = Math.floor(size * 0.5)
+
+  for (let gridY = 0; gridY < size; gridY += 1) {
+    for (let gridX = 0; gridX < size; gridX += 1) {
+      const cellX = gridX - half
+      const cellY = gridY - half
+      const centerX = cellX + GRASS_TILE_WORLD_SIZE * 0.5
+      const centerY = cellY + GRASS_TILE_WORLD_SIZE * 0.5
+      const terrain = terrainAt(world.terrainMap, centerX, centerY)
+      const terrainBias = terrain === "wild-grass"
+        ? 0.34
+        : terrain === "clover"
+          ? 0.14
+          : -0.06
+      const patchField = (
+        Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58
+        + Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
+      ) * 0.5 + 0.5
+      const grain = grassCellNoise(cellX, cellY, 0.31) * 0.16
+      cells[gridY * size + gridX] = patchField + terrainBias + grain > 0.56 ? 1 : 0
+    }
+  }
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    const smoothed = new Uint8Array(cells)
+    for (let gridY = 0; gridY < size; gridY += 1) {
+      for (let gridX = 0; gridX < size; gridX += 1) {
+        const neighbors = patchNeighborCount(cells, size, gridX, gridY)
+        if (neighbors >= 5) {
+          smoothed[gridY * size + gridX] = 1
+        } else if (neighbors <= 2) {
+          smoothed[gridY * size + gridX] = 0
+        }
+      }
+    }
+    cells.set(smoothed)
+  }
+
+  groundPatchCache = {
+    terrainMapRef: world.terrainMap,
+    size,
+    cells
+  }
+}
+
+const ensureGroundPatchCache = (world: WorldState) => {
+  if (groundPatchCache.terrainMapRef === world.terrainMap && groundPatchCache.size === world.terrainMap.size) {
+    return groundPatchCache
+  }
+  buildGroundPatchCache(world)
+  return groundPatchCache
+}
+
+const flowerSpriteForPalette = (color: string, accent: string) => {
+  if (!ensureFlowerMaskAlpha() || !flowerPetalMaskAlpha || !flowerAccentMaskAlpha) {
+    return null
+  }
+
+  const key = `${color}|${accent}`
+  const cached = flowerSpriteCache.get(key)
+  if (cached) {
+    return cached
+  }
+
+  const sprite = document.createElement("canvas")
+  sprite.width = FLOWER_SPRITE_PIXEL_SIZE
+  sprite.height = FLOWER_SPRITE_PIXEL_SIZE
+  const spriteContext = sprite.getContext("2d")
+  if (!spriteContext) {
+    return null
+  }
+
+  spriteContext.imageSmoothingEnabled = false
+  const imageData = spriteContext.createImageData(FLOWER_SPRITE_PIXEL_SIZE, FLOWER_SPRITE_PIXEL_SIZE)
+  const pixels = imageData.data
+
+  const [petalRed, petalGreen, petalBlue] = parseHexColor(color)
+  const accentColor = accent === "#29261f" ? "#6d5e42" : accent
+  const [accentRed, accentGreen, accentBlue] = parseHexColor(accentColor)
+
+  for (let index = 0; index < pixels.length; index += 4) {
+    const petalAlpha = flowerPetalMaskAlpha[index + 3]
+    if (petalAlpha > 0) {
+      pixels[index] = petalRed
+      pixels[index + 1] = petalGreen
+      pixels[index + 2] = petalBlue
+      pixels[index + 3] = petalAlpha
+    }
+
+    const accentAlpha = flowerAccentMaskAlpha[index + 3]
+    if (accentAlpha > 0) {
+      pixels[index] = accentRed
+      pixels[index + 1] = accentGreen
+      pixels[index + 2] = accentBlue
+      pixels[index + 3] = accentAlpha
+    }
+  }
+
+  spriteContext.putImageData(imageData, 0, 0)
+
+  flowerSpriteCache.set(key, sprite)
+  return sprite
+}
+
+const ensureFlowerLayerCache = (world: WorldState) => {
+  if (
+    flowerLayerCache.terrainMapRef === world.terrainMap
+    && flowerLayerCache.size === world.terrainMap.size
+    && flowerLayerCache.canvas
+    && flowerLayerCache.context
+  ) {
+    return flowerLayerCache
+  }
+
+  const size = world.terrainMap.size
+  const canvas = document.createElement("canvas")
+  canvas.width = size * FLOWER_LAYER_PIXELS_PER_TILE
+  canvas.height = size * FLOWER_LAYER_PIXELS_PER_TILE
+  const context = canvas.getContext("2d")
+  if (!context) {
+    flowerLayerCache = {
+      terrainMapRef: world.terrainMap,
+      size,
+      canvas,
+      context: null
+    }
+    return flowerLayerCache
+  }
+
+  context.imageSmoothingEnabled = false
+  context.clearRect(0, 0, canvas.width, canvas.height)
+
+  flowerLayerCache = {
+    terrainMapRef: world.terrainMap,
+    size,
+    canvas,
+    context
+  }
+
+  for (const flower of world.flowers) {
+    if (!flower.active) {
+      continue
+    }
+    if (!flower.renderDirty) {
+      flower.renderDirty = true
+      world.flowerDirtyCount += 1
+    }
+  }
+
+  return flowerLayerCache
+}
+
+const drawFlowerToLayer = (
+  layerContext: CanvasRenderingContext2D,
+  mapSize: number,
+  flower: WorldState["flowers"][number]
+) => {
+  const sprite = flowerSpriteForPalette(flower.color, flower.accent)
+  if (!sprite) {
+    return false
+  }
+
+  const halfMap = Math.floor(mapSize * 0.5)
+  const worldX = flower.position.x + halfMap
+  const worldY = flower.position.y + halfMap
+  if (worldX < 0 || worldY < 0 || worldX >= mapSize || worldY >= mapSize) {
+    return true
+  }
+
+  const pixelsPerWorld = FLOWER_LAYER_PIXELS_PER_TILE
+  const px = worldX * pixelsPerWorld
+  const py = worldY * pixelsPerWorld
+  const sizeWorld = Math.max(0.12, flower.size * 1.8)
+  const sizePx = sizeWorld * pixelsPerWorld
+  const drawX = px - sizePx * 0.5
+  const drawY = py - sizePx * 0.5
+  layerContext.drawImage(sprite, drawX, drawY, sizePx, sizePx)
+  return true
+}
+
+const flushFlowerLayer = (world: WorldState) => {
+  if (world.flowerDirtyCount <= 0) {
+    return
+  }
+
+  const layer = ensureFlowerLayerCache(world)
+  if (!layer.context) {
+    return
+  }
+
+  let budget = FLOWER_LAYER_FLUSH_LIMIT
+  for (const flower of world.flowers) {
+    if (!flower.active || !flower.renderDirty) {
+      continue
+    }
+
+    const drawn = drawFlowerToLayer(layer.context, layer.size, flower)
+    if (!drawn) {
+      continue
+    }
+
+    flower.renderDirty = false
+    world.flowerDirtyCount = Math.max(0, world.flowerDirtyCount - 1)
+    budget -= 1
+    if (budget <= 0) {
+      break
+    }
+  }
 }
 
 export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
@@ -107,10 +405,10 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.fillStyle = "#889684"
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 
-  renderArenaGround(context, world, grassWaveTime)
-
   const renderCameraX = world.camera.x + world.cameraOffset.x
   const renderCameraY = world.camera.y + world.cameraOffset.y
+
+  renderArenaGround(context, world, grassWaveTime, renderCameraX, renderCameraY)
 
   context.translate(VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5)
   context.scale(WORLD_SCALE, WORLD_SCALE)
@@ -122,7 +420,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.clip()
 
   renderMolotovZones(context, world)
-  renderFlowers(context, world)
+  renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
   renderPickups(context, world, dt)
   renderThrowables(context, world)
@@ -140,11 +438,17 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMenuCard(context, world)
 }
 
-const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState, waveTime: number) => {
+const renderArenaGround = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  waveTime: number,
+  renderCameraX: number,
+  renderCameraY: number
+) => {
   context.save()
   context.translate(VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5)
   context.scale(WORLD_SCALE, WORLD_SCALE)
-  context.translate(-world.camera.x, -world.camera.y)
+  context.translate(-renderCameraX, -renderCameraY)
 
   context.fillStyle = "#a3c784"
   context.beginPath()
@@ -158,71 +462,34 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState,
 
   const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
   const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minWorldX = world.camera.x - halfViewX - 3
-  const maxWorldX = world.camera.x + halfViewX + 3
-  const minWorldY = world.camera.y - halfViewY - 3
-  const maxWorldY = world.camera.y + halfViewY + 3
+  const minWorldX = renderCameraX - halfViewX - 3
+  const maxWorldX = renderCameraX + halfViewX + 3
+  const minWorldY = renderCameraY - halfViewY - 3
+  const maxWorldY = renderCameraY + halfViewY + 3
 
   const startCellX = Math.floor(minWorldX / GRASS_TILE_WORLD_SIZE) - 1
   const endCellX = Math.floor(maxWorldX / GRASS_TILE_WORLD_SIZE) + 1
   const startCellY = Math.floor(minWorldY / GRASS_TILE_WORLD_SIZE) - 1
   const endCellY = Math.floor(maxWorldY / GRASS_TILE_WORLD_SIZE) + 1
-  const gridWidth = endCellX - startCellX + 1
-  const gridHeight = endCellY - startCellY + 1
-
-  const patchCells = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => false))
-  for (let gy = 0; gy < gridHeight; gy += 1) {
-    for (let gx = 0; gx < gridWidth; gx += 1) {
-      const cellX = startCellX + gx
-      const cellY = startCellY + gy
-      const centerX = cellX * GRASS_TILE_WORLD_SIZE + GRASS_TILE_WORLD_SIZE * 0.5
-      const centerY = cellY * GRASS_TILE_WORLD_SIZE + GRASS_TILE_WORLD_SIZE * 0.5
-      const terrain = terrainAt(world.terrainMap, centerX, centerY)
-      const terrainBias = terrain === "wild-grass"
-        ? 0.34
-        : terrain === "clover"
-          ? 0.14
-          : -0.06
-      const patchField = (
-        Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58
-        + Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
-      ) * 0.5 + 0.5
-      const grain = grassCellNoise(cellX, cellY, 0.31) * 0.16
-      patchCells[gy][gx] = patchField + terrainBias + grain > 0.56
-    }
-  }
-
-  for (let pass = 0; pass < 2; pass += 1) {
-    const smoothed = patchCells.map((row) => [...row])
-    for (let gy = 0; gy < gridHeight; gy += 1) {
-      for (let gx = 0; gx < gridWidth; gx += 1) {
-        const neighborCount = countPatchNeighbors(patchCells, gx, gy)
-        if (neighborCount >= 5) {
-          smoothed[gy][gx] = true
-          continue
-        }
-        if (neighborCount <= 2) {
-          smoothed[gy][gx] = false
-          continue
-        }
-        smoothed[gy][gx] = patchCells[gy][gx]
-      }
-    }
-    for (let gy = 0; gy < gridHeight; gy += 1) {
-      for (let gx = 0; gx < gridWidth; gx += 1) {
-        patchCells[gy][gx] = smoothed[gy][gx]
-      }
-    }
-  }
+  const patchCache = ensureGroundPatchCache(world)
+  const patchCells = patchCache.cells
+  const patchSize = patchCache.size
+  const halfPatch = Math.floor(patchSize * 0.5)
 
   context.fillStyle = GRASS_BASE_COLOR
   context.fillRect(minWorldX, minWorldY, maxWorldX - minWorldX, maxWorldY - minWorldY)
 
   if (grassBaseTexture && grassBaseTextureLoaded) {
-    for (let gy = 0; gy < gridHeight; gy += 1) {
-      for (let gx = 0; gx < gridWidth; gx += 1) {
-        const cellX = startCellX + gx
-        const cellY = startCellY + gy
+    for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
+      const mapY = cellY + halfPatch
+      if (mapY < 0 || mapY >= patchSize) {
+        continue
+      }
+      for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
+        const mapX = cellX + halfPatch
+        if (mapX < 0 || mapX >= patchSize) {
+          continue
+        }
         const drawX = cellX * GRASS_TILE_WORLD_SIZE
         const drawY = cellY * GRASS_TILE_WORLD_SIZE
         context.drawImage(
@@ -237,16 +504,25 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState,
   }
 
   if (grassTransitionsTexture && grassTransitionsTextureLoaded) {
-    for (let gy = 0; gy < gridHeight; gy += 1) {
-      for (let gx = 0; gx < gridWidth; gx += 1) {
-        if (!patchCells[gy][gx]) {
+    for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
+      const mapY = cellY + halfPatch
+      if (mapY < 0 || mapY >= patchSize) {
+        continue
+      }
+      for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
+        const mapX = cellX + halfPatch
+        if (mapX < 0 || mapX >= patchSize) {
           continue
         }
 
-        const north = readPatch(patchCells, gx, gy - 1)
-        const east = readPatch(patchCells, gx + 1, gy)
-        const south = readPatch(patchCells, gx, gy + 1)
-        const west = readPatch(patchCells, gx - 1, gy)
+        if (!patchAt(patchCells, patchSize, mapX, mapY)) {
+          continue
+        }
+
+        const north = patchAt(patchCells, patchSize, mapX, mapY - 1)
+        const east = patchAt(patchCells, patchSize, mapX + 1, mapY)
+        const south = patchAt(patchCells, patchSize, mapX, mapY + 1)
+        const west = patchAt(patchCells, patchSize, mapX - 1, mapY)
         let mask = 0
         if (north) mask |= 1
         if (east) mask |= 2
@@ -257,8 +533,6 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState,
           mask = 15
         }
 
-        const cellX = startCellX + gx
-        const cellY = startCellY + gy
         const drawX = cellX * GRASS_TILE_WORLD_SIZE
         const drawY = cellY * GRASS_TILE_WORLD_SIZE
 
@@ -328,21 +602,32 @@ const renderArenaBoundary = (context: CanvasRenderingContext2D, world: WorldStat
   context.stroke()
 }
 
-const renderFlowers = (context: CanvasRenderingContext2D, world: WorldState) => {
-  for (const flower of world.flowers) {
-    if (!flower.active) {
-      continue
-    }
-
-    const size = Math.max(0.05, flower.size)
-    const petal = size
-    const center = size * 0.5
-    context.fillStyle = flower.color
-    context.fillRect(flower.position.x - petal, flower.position.y - center, petal * 2, center * 2)
-    context.fillRect(flower.position.x - center, flower.position.y - petal, center * 2, petal * 2)
-    context.fillStyle = flower.accent
-    context.fillRect(flower.position.x - 0.04, flower.position.y - 0.04, 0.08, 0.08)
+const renderFlowers = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  renderCameraX: number,
+  renderCameraY: number
+) => {
+  const renderedWithWebGl = renderFlowerInstances({
+    context,
+    world,
+    cameraX: renderCameraX,
+    cameraY: renderCameraY
+  })
+  if (renderedWithWebGl) {
+    return
   }
+
+  flushFlowerLayer(world)
+
+  const layer = ensureFlowerLayerCache(world)
+  if (!layer.canvas) {
+    return
+  }
+
+  const mapSize = layer.size
+  const halfMap = Math.floor(mapSize * 0.5)
+  context.drawImage(layer.canvas, -halfMap, -halfMap, mapSize, mapSize)
 }
 
 const pickupGlowColor = (weaponId: WorldState["pickups"][number]["weapon"]) => {

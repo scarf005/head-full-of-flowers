@@ -68,6 +68,8 @@ export interface WorldState {
   factions: FactionDescriptor[]
   factionFlowerCounts: Record<string, number>
   flowerDensityGrid: Uint16Array
+  flowerCellHead: Int32Array
+  flowerDirtyCount: number
   playerFlowerTotal: number
   nextPerkFlowerTarget: number
   perkChoices: PerkDefinition[]
@@ -83,6 +85,8 @@ export const createWorldState = (): WorldState => {
   const player = new Unit("player", true, "white")
   const bots = Array.from({ length: BOT_COUNT }, (_, index) => new Unit(`bot-${index + 1}`, false, "blue"))
   const terrainMap = createBarrenGardenMap(112)
+  const flowerCellHead = new Int32Array(terrainMap.size * terrainMap.size)
+  flowerCellHead.fill(-1)
 
   return {
     input: {
@@ -101,7 +105,11 @@ export const createWorldState = (): WorldState => {
     units: [player, ...bots],
     projectiles: Array.from({ length: PROJECTILE_POOL_SIZE }, () => new Projectile()),
     throwables: Array.from({ length: THROWABLE_POOL_SIZE }, () => new Throwable()),
-    flowers: Array.from({ length: FLOWER_POOL_SIZE }, () => new Flower()),
+    flowers: Array.from({ length: FLOWER_POOL_SIZE }, (_, index) => {
+      const flower = new Flower()
+      flower.slotIndex = index
+      return flower
+    }),
     damagePopups: Array.from({ length: DAMAGE_POPUP_POOL_SIZE }, () => new DamagePopup()),
     pickups: Array.from({ length: PICKUP_POOL_SIZE }, () => new Pickup()),
     molotovZones: Array.from({ length: MOLOTOV_POOL_SIZE }, () => new MolotovZone()),
@@ -133,6 +141,8 @@ export const createWorldState = (): WorldState => {
     factions,
     factionFlowerCounts: createFactionFlowerCounts(factions),
     flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
+    flowerCellHead,
+    flowerDirtyCount: 0,
     playerFlowerTotal: 0,
     nextPerkFlowerTarget: PERK_FLOWER_STEP,
     perkChoices: [],
