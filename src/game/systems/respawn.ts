@@ -96,13 +96,13 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
 }
 
 export const spawnAllUnits = (world: WorldState) => {
-  const octagonVertexCount = 8
-  const stepAngle = (Math.PI * 2) / octagonVertexCount
+  const spawnPointCount = Math.max(1, world.units.length)
+  const stepAngle = (Math.PI * 2) / spawnPointCount
   const startAngle = Math.random() * Math.PI * 2
 
   for (let index = 0; index < world.units.length; index += 1) {
     const unit = world.units[index]
-    const angle = startAngle + stepAngle * (index % octagonVertexCount)
+    const angle = startAngle + stepAngle * index
     const spawnRadius = Math.max(1, world.arenaRadius - unit.radius - 3)
     const spawn = new Vec2(Math.cos(angle) * spawnRadius, Math.sin(angle) * spawnRadius)
     unit.respawn(spawn)

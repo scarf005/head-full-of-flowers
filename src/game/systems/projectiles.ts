@@ -26,7 +26,7 @@ const distToSegmentSquared = (
 
 export interface ProjectileDeps {
   hitObstacle: (projectileIndex: number) => boolean
-  spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: "white" | "blue") => void
+  spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: Team) => void
   onTrailEnd?: (
     x: number,
     y: number,
@@ -124,6 +124,10 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
     for (const unit of world.units) {
       if (unit.id === projectile.ownerId) {
+        continue
+      }
+
+      if (unit.team === projectile.ownerTeam) {
         continue
       }
 

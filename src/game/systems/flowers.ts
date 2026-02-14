@@ -33,6 +33,7 @@ export interface FlowerSpawnDeps {
   allocFlower: () => WorldState["flowers"][number]
   playerId: string
   botPalette: (id: string) => { tone: string; edge: string }
+  factionColor: (id: string) => string | null
   onCoverageUpdated: () => void
 }
 
@@ -78,6 +79,7 @@ const shiftHex = (hex: string, offset: number) => {
 const flowerPalette = (
   world: WorldState,
   ownerId: string,
+  scoreOwnerId: string,
   deps: FlowerSpawnDeps,
   isBurnt: boolean
 ) => {
@@ -96,6 +98,18 @@ const flowerPalette = (
       color: BURNED_FLOWER_COLOR,
       accent: BURNED_FLOWER_ACCENT,
       fromPlayer: false
+    }
+  }
+
+  if (scoreOwnerId !== ownerId) {
+    const factionColor = deps.factionColor(scoreOwnerId)
+    if (factionColor) {
+      return {
+        team: scoreOwnerId,
+        color: pastelize(factionColor, 0.86, 0.08),
+        accent: pastelize(factionColor, 0.76, 0.18),
+        fromPlayer: scoreOwnerId === deps.playerId
+      }
     }
   }
 
@@ -263,6 +277,7 @@ const flowerOccupancyWeight = (targetSize: number) => {
 export const spawnFlowers = (
   world: WorldState,
   ownerId: string,
+  scoreOwnerId: string,
   x: number,
   y: number,
   dirX: number,
@@ -272,7 +287,7 @@ export const spawnFlowers = (
   deps: FlowerSpawnDeps,
   isBurnt = false
 ) => {
-  const palette = flowerPalette(world, ownerId, deps, isBurnt)
+  const palette = flowerPalette(world, ownerId, scoreOwnerId, deps, isBurnt)
   const dirLength = Math.hypot(dirX, dirY) || 1
   const nx = dirX / dirLength
   const ny = dirY / dirLength
@@ -336,7 +351,7 @@ export const spawnFlowers = (
       world.flowerDirtyCount += 1
     }
     flower.team = palette.team
-    flower.ownerId = ownerId
+    flower.ownerId = scoreOwnerId
     const colorVariantIndex = Math.floor(seeded01(flowerSeed + 6.43) * FLOWER_COLOR_VARIANTS.length) % FLOWER_COLOR_VARIANTS.length
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]
     flower.color = shiftHex(palette.color, colorOffset)
@@ -359,8 +374,8 @@ export const spawnFlowers = (
     flower.targetSize = targetSize
     flower.pop = 1
 
-    if (ownerId in world.factionFlowerCounts) {
-      world.factionFlowerCounts[ownerId] += 1
+    if (scoreOwnerId in world.factionFlowerCounts) {
+      world.factionFlowerCounts[scoreOwnerId] += 1
     }
   }
 

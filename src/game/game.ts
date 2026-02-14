@@ -3,25 +3,36 @@ import {
   clearMatchResultSignal,
   resetHudSignals,
   setMatchResultSignal,
-  setPauseSignal,
-  setCrosshairSignal,
   setFpsSignal,
-  setSecondaryWeaponSignal,
-  setStatusMessage,
   syncHudSignals,
   updateCoverageSignals,
   updatePlayerHpSignal,
   updatePlayerWeaponSignals
 } from "./adapters/hud-sync.ts"
-import { debugInfiniteReloadSignal, debugSkipToMatchEndSignal } from "./signals.ts"
+import {
+  crosshairSignal,
+  debugInfiniteReloadSignal,
+  debugSkipToMatchEndSignal,
+  duoTeamCountSignal,
+  ffaPlayerCountSignal,
+  menuVisibleSignal,
+  pausedSignal,
+  selectedGameModeSignal,
+  secondaryModeSignal,
+  squadTeamCountSignal,
+  statusMessageSignal,
+  tdmTeamSizeSignal
+} from "./signals.ts"
 import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
+  BOT_RADIUS,
   MATCH_DURATION_SECONDS,
   LOOT_PICKUP_INTERVAL_SECONDS,
   PLAYER_BASE_SPEED,
+  PLAYER_RADIUS,
   UNIT_BASE_HP,
   VIEW_HEIGHT,
   VIEW_WIDTH
@@ -63,9 +74,10 @@ import {
   BURNED_FACTION_ID,
   BURNED_FACTION_LABEL,
   botPalette,
-  createFactionFlowerCounts
+  createFactionFlowerCounts,
+  type FactionDescriptor
 } from "./factions.ts"
-import type { Team } from "./types.ts"
+import type { GameModeId, Team } from "./types.ts"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -73,6 +85,14 @@ import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - line
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
 const BULLET_TRAIL_COLOR = "#ff9e3a"
+const TEAM_COLOR_RAMP = [
+  "#ff6f7b",
+  "#68a8ff",
+  "#84d8a4",
+  "#f0bd6a",
+  "#c9a5ff",
+  "#ff9dd2"
+]
 
 export class FlowerArenaGame {
   private canvas: HTMLCanvasElement
@@ -84,6 +104,8 @@ export class FlowerArenaGame {
   private smoothedFps = 0
   private audioDirector = new AudioDirector(menuTrackUrl, gameplayTrackUrl)
   private sfx = new SfxSynth()
+  private currentMode: GameModeId = "ffa"
+  private botPool: Unit[]
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -96,6 +118,8 @@ export class FlowerArenaGame {
     this.canvas.width = VIEW_WIDTH
     this.canvas.height = VIEW_HEIGHT
     this.world = createWorldState()
+    this.botPool = [...this.world.bots]
+    this.applyMatchMode()
 
     this.setupWorld()
     this.setupInput()
@@ -126,6 +150,105 @@ export class FlowerArenaGame {
     )
   }
 
+  private playerCoverageId() {
+    return this.currentMode === "ffa" ? this.world.player.id : this.world.player.team
+  }
+
+  private resolveScoreOwnerId(ownerId: string) {
+    if (ownerId === BURNED_FACTION_ID || this.currentMode === "ffa") {
+      return ownerId
+    }
+
+    const owner = this.world.units.find((unit) => unit.id === ownerId)
+    return owner?.team ?? ownerId
+  }
+
+  private applyMatchMode() {
+    const mode = selectedGameModeSignal.value
+    const requestedPlayers = mode === "ffa"
+      ? clamp(Math.round(ffaPlayerCountSignal.value), 2, 8)
+      : mode === "tdm"
+        ? clamp(Math.round(tdmTeamSizeSignal.value), 2, 6) * 2
+        : mode === "duo"
+          ? clamp(Math.round(duoTeamCountSignal.value), 2, 6) * 2
+          : clamp(Math.round(squadTeamCountSignal.value), 2, 3) * 4
+    const botCount = clamp(requestedPlayers - 1, 1, this.botPool.length)
+    const totalPlayers = botCount + 1
+    const activeBots = this.botPool.slice(0, botCount)
+
+    this.currentMode = mode
+    if (mode === "ffa") {
+      ffaPlayerCountSignal.value = totalPlayers
+    }
+
+    if (mode === "tdm") {
+      tdmTeamSizeSignal.value = Math.floor(totalPlayers / 2)
+    }
+
+    if (mode === "duo") {
+      duoTeamCountSignal.value = Math.max(2, Math.floor(totalPlayers / 2))
+    }
+
+    if (mode === "squad") {
+      squadTeamCountSignal.value = Math.max(2, Math.floor(totalPlayers / 4))
+    }
+
+    this.world.bots = activeBots
+    this.world.units = [this.world.player, ...activeBots]
+
+    let factions: FactionDescriptor[] = []
+    if (mode === "ffa") {
+      this.world.player.team = this.world.player.id
+      factions = [{ id: this.world.player.id, label: "You", color: "#f2ffe8" }]
+      for (let index = 0; index < activeBots.length; index += 1) {
+        const bot = activeBots[index]
+        bot.team = bot.id
+        factions.push({
+          id: bot.id,
+          label: `Bot ${index + 1}`,
+          color: botPalette(bot.id).tone
+        })
+      }
+    } else if (mode === "tdm") {
+      const redSlots = Math.floor(totalPlayers / 2)
+      const redBotCount = Math.max(0, redSlots - 1)
+      this.world.player.team = "red"
+      for (let index = 0; index < activeBots.length; index += 1) {
+        activeBots[index].team = index < redBotCount ? "red" : "blue"
+      }
+
+      factions = [
+        { id: "red", label: "Red (You)", color: TEAM_COLOR_RAMP[0] },
+        { id: "blue", label: "Blue", color: TEAM_COLOR_RAMP[1] }
+      ]
+    } else {
+      const teamSize = mode === "duo" ? 2 : 4
+      const teamCount = Math.max(2, Math.ceil(totalPlayers / teamSize))
+      const teamIds = Array.from({ length: teamCount }, (_, index) => `team-${index + 1}`)
+      const units = [this.world.player, ...activeBots]
+
+      for (let index = 0; index < units.length; index += 1) {
+        const teamIndex = Math.min(teamIds.length - 1, Math.floor(index / teamSize))
+        units[index].team = teamIds[teamIndex]
+      }
+
+      factions = teamIds.map((teamId, index) => ({
+        id: teamId,
+        label: mode === "duo"
+          ? index === 0
+            ? "Duo 1 (You)"
+            : `Duo ${index + 1}`
+          : index === 0
+            ? "Squad 1 (You)"
+            : `Squad ${index + 1}`,
+        color: TEAM_COLOR_RAMP[index % TEAM_COLOR_RAMP.length]
+      }))
+    }
+
+    this.world.factions = factions
+    this.world.factionFlowerCounts = createFactionFlowerCounts(factions)
+  }
+
   private canSpawnFlamethrower() {
     return this.world.timeRemaining <= MATCH_DURATION_SECONDS * 0.5
   }
@@ -152,10 +275,13 @@ export class FlowerArenaGame {
     this.inputAdapter = setupInputAdapter(this.canvas, this.world, {
       onPrimeAudio: () => this.primeAudio(),
       onBeginMatch: () => this.beginMatch(),
+      onReturnToMenu: () => this.returnToMenu(),
       onTogglePause: () => this.togglePause(),
       onPrimaryDown: () => this.firePrimary(this.world.player.id),
       onSecondaryDown: () => this.throwSecondary(this.world.player.id),
-      onCrosshair: (x, y, visible) => setCrosshairSignal(x, y, visible)
+      onCrosshair: (x, y, visible) => {
+        crosshairSignal.value = { x, y, visible }
+      }
     })
   }
 
@@ -171,6 +297,7 @@ export class FlowerArenaGame {
   }
 
   private beginMatch() {
+    this.applyMatchMode()
     this.world.started = true
     this.world.running = true
     this.world.paused = false
@@ -193,6 +320,7 @@ export class FlowerArenaGame {
     const player = this.world.player
     player.maxHp = UNIT_BASE_HP
     player.hp = UNIT_BASE_HP
+    player.radius = PLAYER_RADIUS
     player.damageMultiplier = 1
     player.fireRateMultiplier = 1
     player.bulletSizeMultiplier = 1
@@ -203,6 +331,7 @@ export class FlowerArenaGame {
     for (const bot of this.world.bots) {
       bot.maxHp = UNIT_BASE_HP
       bot.hp = UNIT_BASE_HP
+      bot.radius = BOT_RADIUS
       bot.damageMultiplier = 1
       bot.fireRateMultiplier = 1
       bot.bulletSizeMultiplier = 1
@@ -261,10 +390,12 @@ export class FlowerArenaGame {
     this.world.cameraOffset.set(0, 0)
     this.world.hitStop = 0
 
+    updateCoverageSignals(this.world)
     syncHudSignals(this.world)
-    setPauseSignal(false)
+    menuVisibleSignal.value = false
+    pausedSignal.value = false
     clearMatchResultSignal()
-    setStatusMessage("")
+    statusMessageSignal.value = ""
     this.audioDirector.startGameplay()
   }
 
@@ -306,14 +437,14 @@ export class FlowerArenaGame {
       }))
 
     if (winner) {
-      const message = winner.id === this.world.player.id
+      const message = winner.id === this.playerCoverageId()
         ? "Time up. Your trail dominates the arena"
         : `Time up. ${winner.label} overwhelms the field`
-      setStatusMessage(message)
+      statusMessageSignal.value = message
 
       const winnerPercent = standingsWithPercent.find((entry) => entry.id === winner.id)?.percent ?? 0
       const runnerUpFlowers = factionStandings[1]?.flowers ?? 0
-      const playerRank = Math.max(1, factionStandings.findIndex((faction) => faction.id === this.world.player.id) + 1)
+      const playerRank = Math.max(1, factionStandings.findIndex((faction) => faction.id === this.playerCoverageId()) + 1)
       const factionCount = factionStandings.length
       const shotsFired = this.world.playerBulletsFired
       const shotsHit = this.world.playerBulletsHit
@@ -341,7 +472,21 @@ export class FlowerArenaGame {
       )
     }
 
-    setPauseSignal(false)
+    pausedSignal.value = false
+  }
+
+  private returnToMenu() {
+    this.world.running = false
+    this.world.paused = false
+    this.world.finished = false
+    this.world.started = false
+    this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
+    updateCoverageSignals(this.world)
+    menuVisibleSignal.value = true
+    pausedSignal.value = false
+    clearMatchResultSignal()
+    statusMessageSignal.value = "Click once to wake audio, then begin fighting"
+    this.audioDirector.startMenu()
   }
 
   private togglePause() {
@@ -350,7 +495,7 @@ export class FlowerArenaGame {
     }
 
     this.world.paused = !this.world.paused
-    setPauseSignal(this.world.paused)
+    pausedSignal.value = this.world.paused
   }
 
   private updateExplosions(dt: number) {
@@ -933,7 +1078,7 @@ export class FlowerArenaGame {
       allocThrowable: () => this.allocThrowable(),
       onPlayerThrow: (mode) => {
         this.sfx.shoot()
-        setSecondaryWeaponSignal(mode)
+        secondaryModeSignal.value = mode
       },
       onOtherThrow: () => this.sfx.shoot()
     })
@@ -959,10 +1104,12 @@ export class FlowerArenaGame {
     applyDamage(this.world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
       spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt) => {
-        spawnFlowers(this.world, ownerId, x, y, dirX, dirY, amountValue, sizeScale, {
+        const scoreOwnerId = this.resolveScoreOwnerId(ownerId)
+        spawnFlowers(this.world, ownerId, scoreOwnerId, x, y, dirX, dirY, amountValue, sizeScale, {
           allocFlower: () => this.allocFlower(),
-          playerId: this.world.player.id,
+          playerId: this.playerCoverageId(),
           botPalette: (id) => botPalette(id),
+          factionColor: (id) => this.world.factions.find((faction) => faction.id === id)?.color ?? null,
           onCoverageUpdated: () => updateCoverageSignals(this.world)
         }, isBurnt)
       },
@@ -1050,7 +1197,9 @@ export class FlowerArenaGame {
       collectNearbyPickup: () => {
         collectNearbyPickup(this.world, this.world.player, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
-          onPlayerPickup: (label) => setStatusMessage(`Picked up ${label}`)
+          onPlayerPickup: (label) => {
+            statusMessageSignal.value = `Picked up ${label}`
+          }
         })
       },
       updateCrosshairWorld: () => updateCrosshairWorld(this.world)
@@ -1091,7 +1240,7 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y)
+          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true)
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -1119,7 +1268,7 @@ export class FlowerArenaGame {
             onSfxHit: () => this.sfx.hit(),
             onSfxBreak: () => this.sfx.obstacleBreak(),
             onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-            onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY)
+            onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true)
           })
         },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius)

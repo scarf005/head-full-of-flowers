@@ -5,6 +5,7 @@ import type { WorldState } from "../world/state.ts"
 export interface InputAdapterHandlers {
   onPrimeAudio: () => void
   onBeginMatch: () => void
+  onReturnToMenu: () => void
   onTogglePause: () => void
   onPrimaryDown: () => void
   onSecondaryDown: () => void
@@ -20,6 +21,32 @@ export const setupInputAdapter = (
   world: WorldState,
   handlers: InputAdapterHandlers
 ): InputAdapter => {
+  let menuStartBlockUntilMs = 0
+
+  const isMenuStartTarget = (event: PointerEvent) => {
+    if (event.target instanceof Element && Boolean(event.target.closest(".menu-start-button"))) {
+      return true
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : []
+    for (const node of path) {
+      if (node instanceof Element && Boolean(node.closest(".menu-start-button"))) {
+        return true
+      }
+    }
+
+    const button = document.querySelector<HTMLButtonElement>(".menu-start-button")
+    if (!button) {
+      return false
+    }
+
+    const bounds = button.getBoundingClientRect()
+    return event.clientX >= bounds.left
+      && event.clientX <= bounds.right
+      && event.clientY >= bounds.top
+      && event.clientY <= bounds.bottom
+  }
+
   const isRematchButtonTarget = (event: PointerEvent) => {
     if (event.target instanceof Element && Boolean(event.target.closest(".match-result-rematch"))) {
       return true
@@ -62,7 +89,15 @@ export const setupInputAdapter = (
 
     if (event.key === "Enter" && (!world.started || world.finished)) {
       if (hadAudioPrimed) {
-        handlers.onBeginMatch()
+        if (world.finished) {
+          handlers.onReturnToMenu()
+          menuStartBlockUntilMs = performance.now() + 220
+        } else {
+          if (performance.now() < menuStartBlockUntilMs) {
+            return
+          }
+          handlers.onBeginMatch()
+        }
       }
       return
     }
@@ -91,22 +126,25 @@ export const setupInputAdapter = (
   }
 
   const onPointerDown = (event: PointerEvent) => {
-    const hadAudioPrimed = world.audioPrimed
+    if (performance.now() < menuStartBlockUntilMs) {
+      return
+    }
 
     if (!world.audioPrimed) {
       handlers.onPrimeAudio()
     }
 
-    if (!world.started || world.finished) {
-      if (!hadAudioPrimed) {
+    if (world.finished) {
+      if (event.button !== 0 || !isRematchButtonTarget(event)) {
         return
       }
+      handlers.onReturnToMenu()
+      menuStartBlockUntilMs = performance.now() + 220
+      return
+    }
 
-      if (world.finished && event.button !== 0) {
-        return
-      }
-
-      if (world.finished && !isRematchButtonTarget(event)) {
+    if (!world.started) {
+      if (event.button !== 0 || !isMenuStartTarget(event)) {
         return
       }
 

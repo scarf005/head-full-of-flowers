@@ -4,13 +4,13 @@ import {
   fpsSignal,
   hpSignal,
   matchResultSignal,
+  menuVisibleSignal,
   pausedSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
   primaryWeaponSignal,
-  secondaryWeaponIconSignal,
+  secondaryModeSignal,
   secondaryWeaponCooldownSignal,
-  secondaryWeaponSignal,
   statusMessageSignal,
   timeRemainingSignal
 } from "../signals.ts"
@@ -89,11 +89,11 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   primaryWeaponSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].name
   primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
-  secondaryWeaponSignal.value = "Grenade"
-  secondaryWeaponIconSignal.value = "grenade"
+  secondaryModeSignal.value = "grenade"
   secondaryWeaponCooldownSignal.value = "RMB to throw"
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
   statusMessageSignal.value = "Click once to wake audio, then begin fighting"
+  menuVisibleSignal.value = true
   crosshairSignal.value = {
     x: canvas.clientWidth * 0.5,
     y: canvas.clientHeight * 0.5,
@@ -147,27 +147,6 @@ export const updatePlayerHpSignal = (world: WorldState) => {
     hp: Math.round(world.player.hp),
     maxHp: Math.round(world.player.maxHp)
   }
-}
-
-export const setCrosshairSignal = (x: number, y: number, visible: boolean) => {
-  crosshairSignal.value = {
-    x,
-    y,
-    visible
-  }
-}
-
-export const setSecondaryWeaponSignal = (mode: "grenade" | "molotov") => {
-  secondaryWeaponSignal.value = mode === "grenade" ? "Grenade" : "Molotov"
-  secondaryWeaponIconSignal.value = mode
-}
-
-export const setStatusMessage = (message: string) => {
-  statusMessageSignal.value = message
-}
-
-export const setPauseSignal = (paused: boolean) => {
-  pausedSignal.value = paused
 }
 
 export const setMatchResultSignal = (

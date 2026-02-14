@@ -205,6 +205,10 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
 
     if (isGrenade) {
       for (const unit of world.units) {
+        if (unit.team === throwable.ownerTeam && unit.id !== throwable.ownerId) {
+          continue
+        }
+
         const hitRadius = throwable.radius + unit.radius
         if (distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <= hitRadius * hitRadius) {
           deps.applyDamage(
@@ -280,6 +284,9 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
   deps.spawnExplosion(throwable.position.x, throwable.position.y, explosionRadius)
 
   for (const unit of world.units) {
+    if (unit.team === throwable.ownerTeam && unit.id !== throwable.ownerId) {
+      continue
+    }
 
     const dsq = distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y)
     if (dsq > explosionRadiusSquared) {

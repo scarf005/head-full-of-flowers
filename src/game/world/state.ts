@@ -2,10 +2,10 @@ import { DamagePopup, FlightTrailSegment, Flower, MolotovZone, Obstacle, Obstacl
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
-  BOT_COUNT,
   DAMAGE_POPUP_POOL_SIZE,
   FLOWER_POOL_SIZE,
   MATCH_DURATION_SECONDS,
+  MAX_MATCH_PLAYERS,
   LOOT_PICKUP_INTERVAL_SECONDS,
   MOLOTOV_POOL_SIZE,
   OBSTACLE_POOL_SIZE,
@@ -86,9 +86,10 @@ export interface WorldState {
 }
 
 export const createWorldState = (): WorldState => {
-  const factions = buildFactions(BOT_COUNT)
+  const botPoolSize = MAX_MATCH_PLAYERS - 1
+  const factions = buildFactions(botPoolSize)
   const player = new Unit("player", true, "white")
-  const bots = Array.from({ length: BOT_COUNT }, (_, index) => new Unit(`bot-${index + 1}`, false, "blue"))
+  const bots = Array.from({ length: botPoolSize }, (_, index) => new Unit(`bot-${index + 1}`, false, "blue"))
   const terrainMap = createBarrenGardenMap(112)
   const flowerCellHead = new Int32Array(terrainMap.size * terrainMap.size)
   flowerCellHead.fill(-1)

@@ -231,6 +231,7 @@ export interface DamageDeps {
   allocPopup: () => WorldState["damagePopups"][number]
   spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number, isBurnt?: boolean) => void
   respawnUnit: (unitId: string) => void
+  onUnitKilled?: (target: Unit, isSuicide: boolean) => void
   onSfxHit: () => void
   onSfxDeath: () => void
   onSfxPlayerDeath: () => void
@@ -284,6 +285,15 @@ export const applyDamage = (
     return
   }
 
+  const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
+  const isBoundarySource = sourceId === "arena"
+  const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
+
+  if (!isBoundarySource && !isSelfHarm && resolvedSourceTeam === target.team) {
+    return
+  }
+
   const damage = Math.max(1, amount)
   target.hp = Math.max(0, target.hp - damage)
   target.hitFlash = 1
@@ -298,11 +308,7 @@ export const applyDamage = (
   popup.life = 0.62
 
   const hitSpeed = Math.hypot(impactX, impactY)
-  const sourceUnit = world.units.find((unit) => unit.id === sourceId)
   const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
-  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
-  const isBoundarySource = sourceId === "arena"
-  const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
   const sourceByNearestTeam = sourceUnit?.id
     ?? (!isBoundarySource && resolvedSourceTeam
       ? nearestUnitIdByTeam(world, resolvedSourceTeam, hitX, hitY, target.id)
@@ -328,8 +334,8 @@ export const applyDamage = (
     }
   }
     
-  const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : normalizedSourceId
-  const isBurntFlowers = isSelfHarm
+  const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
+  const isBurntFlowers = isSelfHarm || isBoundarySource
 
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
@@ -383,6 +389,7 @@ export const applyDamage = (
   world.cameraShake = Math.min(1.15, world.cameraShake + 0.08)
 
   if (isKilled) {
+    deps.onUnitKilled?.(target, isSelfHarm)
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()
     } else {

@@ -27,14 +27,21 @@ const updateBotAim = (
   bot.aim.y /= aimLength
 }
 
-const findNearestTarget = (world: WorldState, originId: string, x: number, y: number, maxDistance = Number.POSITIVE_INFINITY) => {
+const findNearestTarget = (
+  world: WorldState,
+  originId: string,
+  originTeam: string,
+  x: number,
+  y: number,
+  maxDistance = Number.POSITIVE_INFINITY
+) => {
   let targetId = ""
   let bestDistance = maxDistance
   let deltaX = 0
   let deltaY = 0
 
   for (const candidate of world.units) {
-    if (candidate.id === originId) {
+    if (candidate.id === originId || candidate.hp <= 0 || candidate.team === originTeam) {
       continue
     }
 
@@ -83,7 +90,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     let desiredVelocityY = bot.velocity.y
     const nowMs = deps.nowMs()
 
-    const nearestTarget = findNearestTarget(world, bot.id, bot.position.x, bot.position.y, 36)
+    const nearestTarget = findNearestTarget(world, bot.id, bot.team, bot.position.x, bot.position.y, 36)
     const hasTarget = nearestTarget.targetId !== ""
     const distanceToTarget = nearestTarget.distance
     const toTargetX = nearestTarget.deltaX

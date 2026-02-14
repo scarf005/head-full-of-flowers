@@ -54,10 +54,12 @@ const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radiu
 
 export interface PickupDeps {
   randomLootablePrimary: () => "assault" | "shotgun" | "flamethrower"
+  force?: boolean
 }
 
 export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
   const slot = world.pickups.find((pickup) => !pickup.active)
+    ?? (deps.force ? world.pickups[0] : undefined)
   if (!slot) {
     return
   }

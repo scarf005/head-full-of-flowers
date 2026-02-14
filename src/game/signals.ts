@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals"
 import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
-import type { PrimaryWeaponId, SecondaryMode } from "./types.ts"
+import type { GameModeId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
 
 export interface CoverageSlice {
   id: string
@@ -22,6 +22,13 @@ export const debugInfiniteHpSignal = signal(false)
 export const debugInfiniteReloadSignal = signal(false)
 export const debugSkipToMatchEndSignal = signal(false)
 
+export const selectedGameModeSignal = signal<GameModeId>("ffa")
+export const ffaPlayerCountSignal = signal(8)
+export const tdmTeamSizeSignal = signal(4)
+export const duoTeamCountSignal = signal(4)
+export const squadTeamCountSignal = signal(2)
+export const menuVisibleSignal = signal(true)
+
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
 export const fpsSignal = signal(0)
 export const pausedSignal = signal(false)
@@ -38,8 +45,7 @@ export const matchResultSignal = signal<MatchResultHud>({
 export const primaryWeaponSignal = signal("Pistol")
 export const primaryWeaponIconSignal = signal<WeaponHudIcon>("pistol")
 export const primaryAmmoSignal = signal("∞")
-export const secondaryWeaponSignal = signal("Grenade")
-export const secondaryWeaponIconSignal = signal<WeaponHudIcon>("grenade")
+export const secondaryModeSignal = signal<SecondaryMode>("grenade")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 

@@ -199,6 +199,28 @@ const parseHexColor = (hex: string) => {
   return [red, green, blue] as const
 }
 
+const toHex = (value: number) => {
+  return Math.round(clamp(value, 0, 255)).toString(16).padStart(2, "0")
+}
+
+const tintHex = (hex: string, multiplier: number, lift = 0) => {
+  const [red, green, blue] = parseHexColor(hex)
+  return `#${toHex(red * multiplier + lift)}${toHex(green * multiplier + lift)}${toHex(blue * multiplier + lift)}`
+}
+
+const paletteForUnit = (world: WorldState, unit: WorldState["units"][number]) => {
+  const isFfa = world.player.team === world.player.id
+  if (isFfa) {
+    return unit.isPlayer ? { tone: "#f6f2df", edge: "#b8b49a" } : botPalette(unit.id)
+  }
+
+  const teamColor = world.factions.find((faction) => faction.id === unit.team)?.color ?? "#d8e8cb"
+  return {
+    tone: tintHex(teamColor, 0.82, 22),
+    edge: tintHex(teamColor, 0.55, 4)
+  }
+}
+
 const buildGroundPatchCache = (world: WorldState) => {
   const size = world.terrainMap.size
   const cells = new Uint8Array(size * size)
@@ -469,7 +491,6 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
   renderAtmosphere(context)
-  renderMenuCard(context, world)
 }
 
 const renderArenaGround = (
@@ -1110,7 +1131,7 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     )
     context.fill()
 
-    const palette = unit.isPlayer ? { tone: "#f6f2df", edge: "#b8b49a" } : botPalette(unit.id)
+    const palette = paletteForUnit(world, unit)
     const tone = palette.tone
     const edge = palette.edge
     const earLeftX = drawX - body * 0.7
@@ -1197,7 +1218,7 @@ const renderOffscreenEnemyIndicators = (
     const markerX = centerX + cosine * edgeDistance
     const markerY = centerY + sine * edgeDistance
     const distanceMeters = Math.hypot(enemy.position.x - world.player.position.x, enemy.position.y - world.player.position.y)
-    const palette = botPalette(enemy.id)
+    const palette = paletteForUnit(world, enemy)
 
     context.save()
     context.translate(markerX, markerY)
@@ -1271,30 +1292,4 @@ const renderAtmosphere = (context: CanvasRenderingContext2D) => {
   gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")
   context.fillStyle = gradient
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-}
-
-const renderMenuCard = (context: CanvasRenderingContext2D, world: WorldState) => {
-  if (world.started) {
-    return
-  }
-
-  const centerX = VIEW_WIDTH * 0.5
-  const cardTop = VIEW_HEIGHT * 0.5 - 60
-  const cardHeight = 120
-
-  context.fillStyle = "rgba(20, 36, 22, 0.56)"
-  context.fillRect(centerX - 220, cardTop, 440, cardHeight)
-  context.strokeStyle = "#d6eaba"
-  context.lineWidth = 2
-  context.strokeRect(centerX - 220, cardTop, 440, cardHeight)
-
-  context.textAlign = "center"
-  context.fillStyle = "#edf7da"
-  context.font = "bold 24px monospace"
-  context.fillText("BadaBada", centerX, cardTop + 26)
-  context.font = "14px monospace"
-  const startHint = world.audioPrimed
-    ? "Click or press Enter to start 50m shrinking arena"
-    : "Click once to unlock music, then deploy"
-  context.fillText(startHint, centerX, cardTop + 56)
 }
