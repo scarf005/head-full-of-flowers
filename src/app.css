@@ -231,6 +231,7 @@
   display: grid;
   gap: 0.75rem;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
 }
 
 .match-result-title {
@@ -332,11 +333,31 @@
 }
 
 .match-result-rematch {
-  text-align: center;
-  color: #d6ebc4;
-  font-size: 0.62rem;
+  width: fit-content;
+  justify-self: center;
+  padding: 0.5rem 1.05rem;
+  border: 1px solid #d5ebc0;
+  color: #f2ffe8;
+  background: rgba(24, 44, 22, 0.72);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  font-size: 0.62rem;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+
+.match-result-rematch:focus-visible {
+  outline: 2px solid #f2ffe8;
+  outline-offset: 2px;
+}
+
+.match-result-rematch:hover {
+  background: rgba(38, 64, 34, 0.82);
+}
+
+.match-result-rematch:active {
+  transform: translateY(1px);
 }
 
 .crosshair {

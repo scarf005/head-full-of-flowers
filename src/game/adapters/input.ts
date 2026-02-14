@@ -20,6 +20,10 @@ export const setupInputAdapter = (
   world: WorldState,
   handlers: InputAdapterHandlers
 ): InputAdapter => {
+  const isRematchButtonTarget = (target: EventTarget | null) => {
+    return target instanceof Element && Boolean(target.closest(".match-result-rematch"))
+  }
+
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase()
     const hadAudioPrimed = world.audioPrimed
@@ -77,7 +81,17 @@ export const setupInputAdapter = (
       if (!hadAudioPrimed) {
         return
       }
+
+      if (world.finished && event.button !== 0) {
+        return
+      }
+
+      if (world.finished && !isRematchButtonTarget(event.target)) {
+        return
+      }
+
       handlers.onBeginMatch()
+      return
     }
 
     if (event.button === 0) {
