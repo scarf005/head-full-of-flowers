@@ -1,5 +1,6 @@
 import { signal } from "@preact/signals"
 import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
+import type { PrimaryWeaponId, SecondaryMode } from "./types.ts"
 
 export interface CoverageSlice {
   id: string
@@ -35,13 +36,14 @@ export const matchResultSignal = signal<MatchResultHud>({
 })
 
 export const primaryWeaponSignal = signal("Pistol")
-export const primaryWeaponIconSignal = signal("P")
+export const primaryWeaponIconSignal = signal<WeaponHudIcon>("pistol")
 export const primaryAmmoSignal = signal("∞")
 export const secondaryWeaponSignal = signal("Grenade")
-export const secondaryWeaponIconSignal = signal("G")
+export const secondaryWeaponIconSignal = signal<WeaponHudIcon>("grenade")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 
 export const statusMessageSignal = signal("Click to begin")
 
 export const crosshairSignal = signal({ x: 0, y: 0, visible: false })
+export type WeaponHudIcon = PrimaryWeaponId | SecondaryMode

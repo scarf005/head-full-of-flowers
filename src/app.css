@@ -212,14 +212,32 @@
 
 .weapon-icon {
   min-width: 1.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
   text-align: center;
+  border: 1px solid rgba(218, 238, 194, 0.72);
+  background: rgba(166, 202, 131, 0.22);
+  padding: 0;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.weapon-icon-fallback {
   font-size: 0.62rem;
   font-weight: 700;
   color: #f8ffd8;
-  border: 1px solid rgba(218, 238, 194, 0.72);
-  background: rgba(166, 202, 131, 0.22);
-  padding: 0.06rem 0.2rem;
   letter-spacing: 0.06em;
+}
+
+.weapon-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .weapon-value {

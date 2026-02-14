@@ -3,7 +3,7 @@ import type { PrimaryWeaponId } from "./types.ts"
 export interface PrimaryWeaponConfig {
   id: PrimaryWeaponId
   name: string
-  icon: string
+  icon: PrimaryWeaponId
   color: string
   cooldown: number
   damage: number
@@ -21,7 +21,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
   pistol: {
     id: "pistol",
     name: "Pistol",
-    icon: "P",
+    icon: "pistol",
     color: "#f9e8a8",
     cooldown: 0.22,
     damage: 2,
@@ -37,7 +37,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
   assault: {
     id: "assault",
     name: "Assault Rifle",
-    icon: "AR",
+    icon: "assault",
     color: "#ffd67a",
     cooldown: 0.1,
     damage: 3,
@@ -53,7 +53,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
   shotgun: {
     id: "shotgun",
     name: "Shotgun",
-    icon: "SG",
+    icon: "shotgun",
     color: "#ffc36f",
     cooldown: 0.5,
     damage: 2,
@@ -69,7 +69,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
   flamethrower: {
     id: "flamethrower",
     name: "Flamethrower",
-    icon: "FT",
+    icon: "flamethrower",
     color: "#ffab5d",
     cooldown: 0.06,
     damage: 1,

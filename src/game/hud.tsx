@@ -17,7 +17,60 @@ import {
   statusMessageSignal,
   timeRemainingSignal
 } from "./signals.ts"
+import type { WeaponHudIcon } from "./signals.ts"
 import type { CoverageSlice } from "./signals.ts"
+import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./render/pixel-art.ts"
+
+type WeaponIconSprite = WeaponHudIcon
+
+const SPRITE_PIXEL_SIZE = 2
+const SPRITE_SIZE = 8 * SPRITE_PIXEL_SIZE
+
+const spriteCache = new Map<WeaponIconSprite, string>()
+
+const weaponIconCache = (icon: WeaponIconSprite) => {
+  const cached = spriteCache.get(icon)
+  if (cached) {
+    return cached
+  }
+
+  if (typeof document === "undefined") {
+    return ""
+  }
+
+  const canvas = document.createElement("canvas")
+  canvas.width = SPRITE_SIZE
+  canvas.height = SPRITE_SIZE
+  const context = canvas.getContext("2d")
+  if (!context) {
+    return ""
+  }
+
+  context.imageSmoothingEnabled = false
+
+  const center = SPRITE_SIZE * 0.5
+
+  if (icon === "grenade") {
+    drawGrenadeSprite(context, center, center, SPRITE_PIXEL_SIZE)
+  } else if (icon === "molotov") {
+    drawFlameProjectileSprite(context, center, center, SPRITE_PIXEL_SIZE)
+  } else {
+    drawWeaponPickupSprite(context, icon, center, center, SPRITE_PIXEL_SIZE)
+  }
+
+  const dataUrl = canvas.toDataURL("image/png")
+  spriteCache.set(icon, dataUrl)
+  return dataUrl
+}
+
+const WeaponIcon = ({ icon, fallback }: { icon: WeaponIconSprite; fallback: string }) => {
+  const dataUrl = weaponIconCache(icon)
+  if (!dataUrl) {
+    return <div class="weapon-icon weapon-icon-fallback">{fallback}</div>
+  }
+
+  return <img src={dataUrl} class="weapon-icon" alt="" />
+}
 
 const formatTime = (seconds: number) => {
   const rounded = Math.max(0, Math.ceil(seconds))
@@ -100,7 +153,7 @@ export const GameHud = () => {
         <div class="weapon-card">
           <div class="weapon-title-row">
             <div class="weapon-title">Primary</div>
-            <div class="weapon-icon">{primaryWeaponIconSignal.value}</div>
+            <WeaponIcon icon={primaryWeaponIconSignal.value} fallback={primaryWeaponSignal.value.slice(0, 2).toUpperCase()} />
           </div>
           <div class="weapon-value compact">{primaryWeaponSignal.value}</div>
           <div class="weapon-sub">Ammo {primaryAmmoSignal.value}</div>
@@ -108,7 +161,10 @@ export const GameHud = () => {
         <div class="weapon-card">
           <div class="weapon-title-row">
             <div class="weapon-title">Secondary</div>
-            <div class="weapon-icon">{secondaryWeaponIconSignal.value}</div>
+            <WeaponIcon
+              icon={secondaryWeaponIconSignal.value}
+              fallback={secondaryWeaponSignal.value.slice(0, 2)}
+            />
           </div>
           <div class="weapon-value compact">{secondaryWeaponSignal.value}</div>
           <div class="weapon-sub">{secondaryWeaponCooldownSignal.value}</div>

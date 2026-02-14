@@ -90,7 +90,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
   secondaryWeaponSignal.value = "Grenade"
-  secondaryWeaponIconSignal.value = "G"
+  secondaryWeaponIconSignal.value = "grenade"
   secondaryWeaponCooldownSignal.value = "RMB to throw"
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
   statusMessageSignal.value = "Click once to wake audio, then begin fighting"
@@ -159,7 +159,7 @@ export const setCrosshairSignal = (x: number, y: number, visible: boolean) => {
 
 export const setSecondaryWeaponSignal = (mode: "grenade" | "molotov") => {
   secondaryWeaponSignal.value = mode === "grenade" ? "Grenade" : "Molotov"
-  secondaryWeaponIconSignal.value = mode === "grenade" ? "G" : "M"
+  secondaryWeaponIconSignal.value = mode
 }
 
 export const setStatusMessage = (message: string) => {
