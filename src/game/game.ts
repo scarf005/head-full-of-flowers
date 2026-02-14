@@ -138,8 +138,9 @@ export class FlowerArenaGame {
     return Math.random() > 0.5 ? "assault" : "shotgun"
   }
 
-  private spawnLootPickupAt(x: number, y: number) {
+  private spawnLootPickupAt(x: number, y: number, force = false) {
     spawnPickupAt(this.world, { x, y }, {
+      force,
       randomLootablePrimary: () => {
         const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
@@ -966,6 +967,13 @@ export class FlowerArenaGame {
         }, isBurnt)
       },
       respawnUnit: (id) => this.respawnUnit(id),
+      onUnitKilled: (target, isSuicide) => {
+        if (isSuicide) {
+          return
+        }
+
+        this.spawnLootPickupAt(target.position.x, target.position.y, true)
+      },
       onSfxHit: () => this.sfx.hit(),
       onSfxDeath: () => this.sfx.die(),
       onSfxPlayerDeath: () => this.sfx.playerDeath(),
