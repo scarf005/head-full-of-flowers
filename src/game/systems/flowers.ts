@@ -10,8 +10,6 @@ const FLOWER_POSITION_JITTER = 0.06
 const FLOWER_PUSH_ATTEMPTS = 9
 const FLOWER_PUSH_DISTANCE_STEP = 0.34
 const FLOWER_TILE_CAPACITY = 18
-const FLOWER_VISUAL_CAPACITY = FLOWER_TILE_CAPACITY + 6
-const FLOWER_RENDER_HARD_CAP = 7000
 const FLOWER_SIZE_MIN = 0.16
 const FLOWER_SIZE_MAX = 0.42
 
@@ -297,20 +295,6 @@ export const spawnFlowers = (
 
     if (bloomCell >= 0) {
       world.flowerDensityGrid[bloomCell] = Math.min(65535, world.flowerDensityGrid[bloomCell] + bloomWeight)
-    }
-
-    if (bloomCell >= 0 && world.flowerDensityGrid[bloomCell] > FLOWER_VISUAL_CAPACITY) {
-      if (ownerId in world.factionFlowerCounts) {
-        world.factionFlowerCounts[ownerId] += 1
-      }
-      continue
-    }
-
-    if (world.flowers.length >= FLOWER_RENDER_HARD_CAP) {
-      if (ownerId in world.factionFlowerCounts) {
-        world.factionFlowerCounts[ownerId] += 1
-      }
-      continue
     }
 
     const flower = deps.allocFlower()
