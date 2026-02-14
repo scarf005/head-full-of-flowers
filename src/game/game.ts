@@ -403,6 +403,7 @@ export class FlowerArenaGame {
       },
       respawnUnit: (id) => this.respawnUnit(id),
       onSfxHit: () => this.sfx.hit(),
+      onSfxDeath: () => this.sfx.die(),
       onPlayerHpChanged: () => updatePlayerHpSignal(this.world)
     })
   }
@@ -490,7 +491,9 @@ export class FlowerArenaGame {
         const projectile = this.world.projectiles[projectileIndex]
         return hitObstacle(this.world, projectile, {
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
-          breakObstacle: (obstacle) => this.breakObstacle(obstacle)
+          breakObstacle: (obstacle) => this.breakObstacle(obstacle),
+          onSfxHit: () => this.sfx.hit(),
+          onSfxDeath: () => this.sfx.die()
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -511,7 +514,9 @@ export class FlowerArenaGame {
           damageHouseByExplosion: (obstacle, x, y, radius) => {
             damageHouseByExplosion(obstacle, x, y, radius, {
               spawnExplosion: (sx, sy, rr) => this.spawnExplosion(sx, sy, rr),
-              breakObstacle: (ob) => this.breakObstacle(ob)
+              breakObstacle: (ob) => this.breakObstacle(ob),
+              onSfxHit: () => this.sfx.hit(),
+              onSfxDeath: () => this.sfx.die()
             })
           },
           breakObstacle: (obstacle) => this.breakObstacle(obstacle),

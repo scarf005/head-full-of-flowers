@@ -25,18 +25,21 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   const throwable = deps.allocThrowable()
   let throwDirX = shooter.aim.x
   let throwDirY = shooter.aim.y
+  let throwOffset = shooter.radius + 0.12
   let speed = mode === "grenade" ? 20 : 20
 
   if (mode === "grenade" && shooter.isPlayer) {
     const toCursorX = world.input.worldX - shooter.position.x
     const toCursorY = world.input.worldY - shooter.position.y
     const toCursorLength = Math.hypot(toCursorX, toCursorY) || 1
-    const clampedDistance = clamp(toCursorLength, 2.2, 14)
+    const clampedDistance = clamp(toCursorLength, 0, 14)
     const normalizedX = toCursorX / toCursorLength
     const normalizedY = toCursorY / toCursorLength
+    throwOffset = Math.min(throwOffset, clampedDistance)
     throwDirX = normalizedX
     throwDirY = normalizedY
-    speed = 10 + clampedDistance * 1.35
+    const travelDistance = Math.max(0, clampedDistance - throwOffset)
+    speed = travelDistance / 0.8
     throwable.velocity.x = normalizedX * speed
     throwable.velocity.y = normalizedY * speed
   }
@@ -45,15 +48,15 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.ownerId = shooter.id
   throwable.ownerTeam = shooter.team
   throwable.mode = mode
-  throwable.position.x = shooter.position.x + throwDirX * (shooter.radius + 0.12)
-  throwable.position.y = shooter.position.y + throwDirY * (shooter.radius + 0.12)
+  throwable.position.x = shooter.position.x + throwDirX * throwOffset
+  throwable.position.y = shooter.position.y + throwDirY * throwOffset
   if (!(mode === "grenade" && shooter.isPlayer)) {
     throwable.velocity.x = throwDirX * speed
     throwable.velocity.y = throwDirY * speed
   }
   throwable.life = mode === "grenade" ? 1.05 : 0.78
   throwable.radius = mode === "grenade" ? 0.36 : 0.3
-  throwable.rolled = false
+  throwable.rolled = mode === "grenade" && shooter.isPlayer
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer

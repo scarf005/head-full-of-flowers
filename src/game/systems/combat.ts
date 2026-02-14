@@ -167,6 +167,7 @@ export interface DamageDeps {
   spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number) => void
   respawnUnit: (unitId: string) => void
   onSfxHit: () => void
+  onSfxDeath: () => void
   onPlayerHpChanged: () => void
 }
 
@@ -228,6 +229,7 @@ export const applyDamage = (
   deps.onSfxHit()
 
   if (target.hp <= 0) {
+    deps.onSfxDeath()
     deps.respawnUnit(target.id)
   }
 

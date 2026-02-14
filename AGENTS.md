@@ -23,7 +23,7 @@
 ### **2.1. Environment**
 
 - **Background:** Pale light-green, stylized 2D tile map with subtle texture variation and faint parallax haze at far edges.
-- **Terrain:** Flat circular arena (50-meter equivalent diameter in world units) made from grass tiles.
+- **Terrain:** Flat circular arena (30-meter equivalent diameter in world units) made from grass tiles.
 
 ### **2.2. Characters**
 
