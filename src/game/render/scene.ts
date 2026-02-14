@@ -977,6 +977,8 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     const body = unit.radius * 1.2
     const ear = unit.radius * 0.42
 
+    renderUnitStatusRings(context, unit, drawX, drawY, body)
+
     const moveSpeed = Math.hypot(unit.velocity.x, unit.velocity.y)
     const skew = clamp(moveSpeed / 12, 0, 1)
     context.fillStyle = "rgba(0, 0, 0, 0.24)"
@@ -1029,8 +1031,6 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
       context.fillRect(earLeftX - body * 0.18, earY - body * 0.25, body * 1.36, body * 0.32)
       context.globalAlpha = 1
     }
-
-    renderUnitStatusRings(context, unit, drawX, drawY, body)
 
     const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
     context.fillStyle = "rgba(0, 0, 0, 0.4)"
