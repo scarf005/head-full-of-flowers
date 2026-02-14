@@ -605,7 +605,7 @@ export class FlowerArenaGame {
     const directionY = velocityY / speed
     const count = kind === "flame" ? 2 : 3
     for (let index = 0; index < count; index += 1) {
-      const jitterAngle = randomRange(-0.16, 0.16)
+      const jitterAngle = randomRange(-0.06, 0.06)
       const c = Math.cos(jitterAngle)
       const s = Math.sin(jitterAngle)
       const dirX = directionX * c - directionY * s
