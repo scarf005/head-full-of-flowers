@@ -18,6 +18,13 @@ Build production assets:
 $ deno task build
 ```
 
+### GitHub Pages CI
+
+This repo includes a GitHub Actions workflow at `.github/workflows/deploy-pages.yml`.
+On every push to `main`, it runs `deno task build` and deploys the `dist` output to
+GitHub Pages. Make sure Pages is configured to use the `github-pages` deployment
+source.
+
 ## Credits
 
 - [MY DIVINE PERVERSIONS / linear & gestalt](https://hellstarplus.bandcamp.com/album/my-divine-perversions-linear-gestalt) - by [hellstar.plus](https://hellstarplus.bandcamp.com)
