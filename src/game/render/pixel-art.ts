@@ -1,9 +1,10 @@
 import type { PrimaryWeaponId } from "../types.ts"
 
 type SpriteRow = string
-type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
+export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
 
 const ITEM_SPRITE_UNIT = 8
+const ITEM_WORLD_SCALE = 0.75
 const itemSpritePath: Record<ItemSpriteId, string> = {
   pistol: "/items/pistol.png",
   assault: "/items/assault.png",
@@ -11,6 +12,10 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   flamethrower: "/items/flamethrower.png",
   grenade: "/items/grenade.png",
   molotov: "/items/molotov.png"
+}
+
+export const getItemSpritePath = (id: ItemSpriteId) => {
+  return itemSpritePath[id]
 }
 
 const itemSpriteCache = new Map<ItemSpriteId, HTMLImageElement | null>()
@@ -27,7 +32,7 @@ const ensureItemSprite = (id: ItemSpriteId) => {
   }
 
   const image = new Image()
-  image.src = itemSpritePath[id]
+  image.src = getItemSpritePath(id)
   itemSpriteCache.set(id, image)
   return image
 }
@@ -44,7 +49,7 @@ const drawItemSpritePng = (
     return false
   }
 
-  const drawSize = ITEM_SPRITE_UNIT * size
+  const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
   const half = drawSize * 0.5
   const smoothBefore = context.imageSmoothingEnabled
   context.imageSmoothingEnabled = false
