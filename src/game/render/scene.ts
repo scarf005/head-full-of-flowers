@@ -31,13 +31,10 @@ const GRASS_MASK_TO_TILE_INDEX = new Map(GRASS_TRANSITION_MASK_ORDER.map((mask, 
 const FLOWER_SPRITE_PIXEL_SIZE = 16
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
 const FLOWER_LAYER_FLUSH_LIMIT = 1200
-const HP_RING_THICKNESS_WORLD = 3 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
-const SECONDARY_RELOAD_RING_THICKNESS_WORLD = 1 / WORLD_SCALE
-const UNIT_STATUS_RING_GAP_WORLD = 0.05
-const HP_RING_COLOR = "#ff8a80"
+const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.05
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
-const SECONDARY_RELOAD_RING_COLOR = "#4f5458"
+const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#a7adb3"
 
 let grassBaseTexture: HTMLImageElement | null = null
 let grassDarkTexture: HTMLImageElement | null = null
@@ -954,52 +951,25 @@ const renderUnitStatusRings = (
   drawY: number,
   body: number
 ) => {
-  const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
-  const hpRadius = body + HP_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
-  const primaryRadius = hpRadius + HP_RING_THICKNESS_WORLD * 0.45 + PRIMARY_RELOAD_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
-  const secondaryRadius = primaryRadius + PRIMARY_RELOAD_RING_THICKNESS_WORLD * 0.45 + SECONDARY_RELOAD_RING_THICKNESS_WORLD + UNIT_STATUS_RING_GAP_WORLD
+  if (!unit.isPlayer) {
+    return
+  }
+
+  const isReloading = unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0
+  const progress = isReloading
+    ? clamp(1 - unit.reloadCooldown / unit.reloadCooldownMax, 0, 1)
+    : Number.isFinite(unit.primaryAmmo) && Number.isFinite(unit.magazineSize) && unit.magazineSize > 0
+      ? clamp(unit.primaryAmmo / unit.magazineSize, 0, 1)
+      : 1
+  const radius = body + PRIMARY_RELOAD_RING_THICKNESS_WORLD * 0.55 + PRIMARY_RELOAD_RING_OFFSET_WORLD
 
   context.save()
   context.lineCap = "butt"
   context.beginPath()
-  context.arc(drawX, drawY, hpRadius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio)
-  context.strokeStyle = HP_RING_COLOR
-  context.lineWidth = HP_RING_THICKNESS_WORLD
+  context.arc(drawX, drawY, radius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * progress)
+  context.strokeStyle = isReloading ? PRIMARY_RELOAD_PROGRESS_RING_COLOR : PRIMARY_RELOAD_RING_COLOR
+  context.lineWidth = PRIMARY_RELOAD_RING_THICKNESS_WORLD
   context.stroke()
-
-  if (unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0) {
-    const primaryProgress = clamp(1 - unit.reloadCooldown / unit.reloadCooldownMax, 0, 1)
-    if (primaryProgress > 0) {
-      context.beginPath()
-      context.arc(
-        drawX,
-        drawY,
-        primaryRadius,
-        -Math.PI * 0.5,
-        -Math.PI * 0.5 + Math.PI * 2 * primaryProgress
-      )
-      context.strokeStyle = PRIMARY_RELOAD_RING_COLOR
-      context.lineWidth = PRIMARY_RELOAD_RING_THICKNESS_WORLD
-      context.stroke()
-    }
-  }
-
-  if (unit.secondaryCooldown > 0 && unit.secondaryCooldownMax > 0) {
-    const secondaryProgress = clamp(1 - unit.secondaryCooldown / unit.secondaryCooldownMax, 0, 1)
-    if (secondaryProgress > 0) {
-      context.beginPath()
-      context.arc(
-        drawX,
-        drawY,
-        secondaryRadius,
-        -Math.PI * 0.5,
-        -Math.PI * 0.5 + Math.PI * 2 * secondaryProgress
-      )
-      context.strokeStyle = SECONDARY_RELOAD_RING_COLOR
-      context.lineWidth = SECONDARY_RELOAD_RING_THICKNESS_WORLD
-      context.stroke()
-    }
-  }
 
   context.restore()
 }
