@@ -248,10 +248,13 @@ export const applyDamage = (
 
   const hitSpeed = Math.hypot(impactX, impactY)
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const fallbackSourceId = nearestEnemyId(world, target.id, target.team, target.position.x, target.position.y)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
   const flowerSourceId = isSelfHarm
     ? nearestEnemyId(world, target.id, sourceUnit.team, target.position.x, target.position.y) || sourceId
-    : sourceId
+    : sourceUnit
+    ? sourceId
+    : fallbackSourceId || sourceId
 
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
