@@ -22,8 +22,8 @@ const GRENADE_RICOCHET_RANDOM_RADIANS = 0.45
 const GRENADE_AIR_DRAG = 0.18
 const GRENADE_HIT_CAMERA_SHAKE = 0.55
 const GRENADE_HIT_STOP = 0.022
-const THROWABLE_SPIN_MIN = 3.8
-const THROWABLE_SPIN_MAX = 11.4
+const THROWABLE_SPIN_MIN = 7.2
+const THROWABLE_SPIN_MAX = 18.6
 
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
