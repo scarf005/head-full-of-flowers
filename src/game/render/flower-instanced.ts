@@ -1,11 +1,13 @@
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
+import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
+import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 
 const FLOWER_INSTANCE_STRIDE = 9
 const QUAD_INSTANCE_STRIDE = 8
 const TRAIL_INSTANCE_STRIDE = 10
-const FLOWER_PETAL_URL = "/flowers/flower-petal-mask.png"
-const FLOWER_CENTER_URL = "/flowers/flower-accent-mask.png"
+const FLOWER_PETAL_URL = flowerPetalMaskUrl
+const FLOWER_CENTER_URL = flowerAccentMaskUrl
 
 interface FlowerGpuState {
   canvas: HTMLCanvasElement

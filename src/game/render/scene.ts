@@ -3,6 +3,11 @@ import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInst
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
+import grassBaseTextureUrl from "../../assets/tiles/grass-base-24.png"
+import grassDarkTextureUrl from "../../assets/tiles/grass-dark-24.png"
+import grassTransitionsTextureUrl from "../../assets/tiles/grass-transitions-24.png"
+import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
+import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 import {
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_ROCK,
@@ -84,7 +89,7 @@ let flowerLayerCache: {
 
 if (typeof Image !== "undefined") {
   grassBaseTexture = new Image()
-  grassBaseTexture.src = "/tiles/grass-base-24.png"
+  grassBaseTexture.src = grassBaseTextureUrl
   grassBaseTexture.onload = () => {
     grassBaseTextureLoaded = true
   }
@@ -93,7 +98,7 @@ if (typeof Image !== "undefined") {
   }
 
   grassDarkTexture = new Image()
-  grassDarkTexture.src = "/tiles/grass-dark-24.png"
+  grassDarkTexture.src = grassDarkTextureUrl
   grassDarkTexture.onload = () => {
     grassDarkTextureLoaded = true
   }
@@ -102,7 +107,7 @@ if (typeof Image !== "undefined") {
   }
 
   grassTransitionsTexture = new Image()
-  grassTransitionsTexture.src = "/tiles/grass-transitions-24.png"
+  grassTransitionsTexture.src = grassTransitionsTextureUrl
   grassTransitionsTexture.onload = () => {
     grassTransitionsTextureLoaded = true
   }
@@ -111,7 +116,7 @@ if (typeof Image !== "undefined") {
   }
 
   flowerPetalMask = new Image()
-  flowerPetalMask.src = "/flowers/flower-petal-mask.png"
+  flowerPetalMask.src = flowerPetalMaskUrl
   flowerPetalMask.onload = () => {
     flowerPetalMaskLoaded = true
   }
@@ -120,7 +125,7 @@ if (typeof Image !== "undefined") {
   }
 
   flowerAccentMask = new Image()
-  flowerAccentMask.src = "/flowers/flower-accent-mask.png"
+  flowerAccentMask.src = flowerAccentMaskUrl
   flowerAccentMask.onload = () => {
     flowerAccentMaskLoaded = true
   }

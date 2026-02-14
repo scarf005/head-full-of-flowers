@@ -1,4 +1,10 @@
 import type { PrimaryWeaponId } from "../types.ts"
+import pistolSprite from "../../assets/items/pistol.png"
+import assaultSprite from "../../assets/items/assault.png"
+import shotgunSprite from "../../assets/items/shotgun.png"
+import flamethrowerSprite from "../../assets/items/flamethrower.png"
+import grenadeSpriteUrl from "../../assets/items/grenade.png"
+import molotovSpriteUrl from "../../assets/items/molotov.png"
 
 type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
@@ -6,12 +12,12 @@ export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
 const itemSpritePath: Record<ItemSpriteId, string> = {
-  pistol: "/items/pistol.png",
-  assault: "/items/assault.png",
-  shotgun: "/items/shotgun.png",
-  flamethrower: "/items/flamethrower.png",
-  grenade: "/items/grenade.png",
-  molotov: "/items/molotov.png",
+  pistol: pistolSprite,
+  assault: assaultSprite,
+  shotgun: shotgunSprite,
+  flamethrower: flamethrowerSprite,
+  grenade: grenadeSpriteUrl,
+  molotov: molotovSpriteUrl,
 }
 
 export const getItemSpritePath = (id: ItemSpriteId) => {

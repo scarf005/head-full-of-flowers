@@ -80,7 +80,7 @@ import {
 import type { GameModeId, Team } from "./types.ts"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
-import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
+import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
 
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
