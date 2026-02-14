@@ -23,6 +23,7 @@ export const setupInputAdapter = (
 ): InputAdapter => {
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase()
+    const hadAudioPrimed = world.audioPrimed
 
     if (!world.audioPrimed) {
       handlers.onPrimeAudio()
@@ -37,7 +38,9 @@ export const setupInputAdapter = (
     }
 
     if (event.key === "Enter" && (!world.started || world.finished)) {
-      handlers.onBeginMatch()
+      if (hadAudioPrimed) {
+        handlers.onBeginMatch()
+      }
       return
     }
 
@@ -64,15 +67,24 @@ export const setupInputAdapter = (
     world.input.worldX = world.camera.x + (world.input.canvasX - VIEW_WIDTH * 0.5) / WORLD_SCALE
     world.input.worldY = world.camera.y + (world.input.canvasY - VIEW_HEIGHT * 0.5) / WORLD_SCALE
 
+    if (!world.audioPrimed) {
+      handlers.onPrimeAudio()
+    }
+
     handlers.onCrosshair(world.input.screenX, world.input.screenY, true)
   }
 
   const onPointerDown = (event: PointerEvent) => {
+    const hadAudioPrimed = world.audioPrimed
+
     if (!world.audioPrimed) {
       handlers.onPrimeAudio()
     }
 
     if (!world.started || world.finished) {
+      if (!hadAudioPrimed) {
+        return
+      }
       handlers.onBeginMatch()
     }
 

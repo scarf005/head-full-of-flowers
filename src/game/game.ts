@@ -57,7 +57,7 @@ import { updateAI } from "./systems/ai.ts"
 import type { Unit } from "./entities.ts"
 import { botPalette } from "./factions.ts"
 
-import menuTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
+import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
 
 export class FlowerArenaGame {
