@@ -1167,22 +1167,30 @@ const renderMenuCard = (context: CanvasRenderingContext2D, world: WorldState) =>
     return
   }
 
+  const centerX = VIEW_WIDTH * 0.5
+  const cardTop = world.finished ? 14 : VIEW_HEIGHT * 0.5 - 60
+  const cardHeight = world.finished ? 74 : 120
+
   context.fillStyle = "rgba(20, 36, 22, 0.56)"
-  context.fillRect(VIEW_WIDTH * 0.5 - 220, VIEW_HEIGHT * 0.5 - 60, 440, 120)
+  context.fillRect(centerX - 220, cardTop, 440, cardHeight)
   context.strokeStyle = "#d6eaba"
   context.lineWidth = 2
-  context.strokeRect(VIEW_WIDTH * 0.5 - 220, VIEW_HEIGHT * 0.5 - 60, 440, 120)
+  context.strokeRect(centerX - 220, cardTop, 440, cardHeight)
 
   context.textAlign = "center"
   context.fillStyle = "#edf7da"
   context.font = "bold 24px monospace"
-  context.fillText("BadaBada", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 - 14)
+  context.fillText("BadaBada", centerX, cardTop + 26)
   context.font = "14px monospace"
-  const startHint = world.audioPrimed
-    ? "Click or press Enter to start 50m shrinking arena"
-    : "Click once to unlock music, then deploy"
-  context.fillText(startHint, VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 16)
+
+  if (!world.finished) {
+    const startHint = world.audioPrimed
+      ? "Click or press Enter to start 50m shrinking arena"
+      : "Click once to unlock music, then deploy"
+    context.fillText(startHint, centerX, cardTop + 56)
+  }
+
   if (world.finished) {
-    context.fillText("Match over. Click for rematch", VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5 + 38)
+    context.fillText("Match over. Click for rematch", centerX, cardTop + 52)
   }
 }
