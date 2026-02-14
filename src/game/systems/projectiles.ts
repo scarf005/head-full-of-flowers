@@ -8,7 +8,7 @@ const distToSegmentSquared = (
   startX: number,
   startY: number,
   endX: number,
-  endY: number
+  endY: number,
 ) => {
   const segmentX = endX - startX
   const segmentY = endY - startY
@@ -32,7 +32,7 @@ export interface ProjectileDeps {
     y: number,
     velocityX: number,
     velocityY: number,
-    kind: "ballistic" | "flame"
+    kind: "ballistic" | "flame",
   ) => void
   applyDamage: (
     targetId: string,
@@ -42,7 +42,7 @@ export interface ProjectileDeps {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) => void
 }
 
@@ -58,7 +58,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       projectile.position.y,
       projectile.velocity.x,
       projectile.velocity.y,
-      projectile.kind
+      projectile.kind,
     )
 
     const shouldSpawnPatch = projectile.kind === "flame" && createFlamePatch
@@ -132,14 +132,16 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       }
 
       const hitDistance = unit.radius + projectile.radius
-      if (distToSegmentSquared(
-        unit.position.x,
-        unit.position.y,
-        previousX,
-        previousY,
-        projectile.position.x,
-        projectile.position.y
-      ) <= hitDistance * hitDistance) {
+      if (
+        distToSegmentSquared(
+          unit.position.x,
+          unit.position.y,
+          previousX,
+          previousY,
+          projectile.position.x,
+          projectile.position.y,
+        ) <= hitDistance * hitDistance
+      ) {
         const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
         const impactDirX = projectile.velocity.x / impactLength
         const impactDirY = projectile.velocity.y / impactLength
@@ -153,7 +155,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           hitX,
           hitY,
           projectile.velocity.x,
-          projectile.velocity.y
+          projectile.velocity.y,
         )
         deactivateProjectile(projectileIndex, true)
         break

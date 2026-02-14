@@ -1,15 +1,9 @@
-import { Vec2, type Obstacle } from "../entities.ts"
+import { type Obstacle, Vec2 } from "../entities.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { buildObstacleGridFromMap, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
-import {
-  BOT_BASE_SPEED,
-  BOT_RADIUS,
-  PLAYER_BASE_SPEED,
-  PLAYER_RADIUS,
-  UNIT_BASE_HP
-} from "../world/constants.ts"
+import { BOT_BASE_SPEED, BOT_RADIUS, PLAYER_BASE_SPEED, PLAYER_RADIUS, UNIT_BASE_HP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
 const pointOverlapsRect = (
@@ -19,7 +13,7 @@ const pointOverlapsRect = (
   centerY: number,
   width: number,
   height: number,
-  radius: number
+  radius: number,
 ) => {
   const halfWidth = width * 0.5
   const halfHeight = height * 0.5
@@ -183,7 +177,7 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
 
 export const setupWorldUnits = (
   world: WorldState,
-  equipPrimary: (unitId: string, weaponId: PrimaryWeaponId, ammo: number) => void
+  equipPrimary: (unitId: string, weaponId: PrimaryWeaponId, ammo: number) => void,
 ) => {
   world.player.secondaryMode = "grenade"
   world.player.radius = PLAYER_RADIUS

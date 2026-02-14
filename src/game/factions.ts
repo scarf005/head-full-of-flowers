@@ -17,32 +17,32 @@ const BOT_PALETTES = [
   { tone: "#f7c276", edge: "#b88335" },
   { tone: "#c7a8ff", edge: "#7d59b7" },
   { tone: "#f3a7d8", edge: "#b36093" },
-  { tone: "#9fd4ff", edge: "#4f7fa8" }
+  { tone: "#9fd4ff", edge: "#4f7fa8" },
 ]
 
 export const playerFaction = (): FactionDescriptor => ({
   id: "player",
   label: "You",
-  color: "#f2ffe8"
+  color: "#f2ffe8",
 })
 
 export const botFaction = (index: number): FactionDescriptor => ({
   id: `bot-${index + 1}`,
   label: `Bot ${index + 1}`,
-  color: BOT_PALETTES[index % BOT_PALETTES.length].tone
+  color: BOT_PALETTES[index % BOT_PALETTES.length].tone,
 })
 
 export const buildFactions = (botCount: number): FactionDescriptor[] => {
   return [
     playerFaction(),
-    ...Array.from({ length: botCount }, (_, index) => botFaction(index))
+    ...Array.from({ length: botCount }, (_, index) => botFaction(index)),
   ]
 }
 
 export const createFactionFlowerCounts = (factions: FactionDescriptor[]): Record<string, number> => {
   return {
     ...Object.fromEntries(factions.map((faction) => [faction.id, 0])),
-    [BURNED_FACTION_ID]: 0
+    [BURNED_FACTION_ID]: 0,
   }
 }
 

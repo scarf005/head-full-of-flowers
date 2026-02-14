@@ -2,10 +2,7 @@ import type { Unit } from "../entities.ts"
 import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { WorldState } from "../world/state.ts"
-import {
-  LOOT_PICKUP_INTERVAL_MAX_SECONDS,
-  LOOT_PICKUP_INTERVAL_MIN_SECONDS
-} from "../world/constants.ts"
+import { LOOT_PICKUP_INTERVAL_MAX_SECONDS, LOOT_PICKUP_INTERVAL_MIN_SECONDS } from "../world/constants.ts"
 import { isObstacleCellSolid, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 
 const pointOverlapsRect = (
@@ -15,7 +12,7 @@ const pointOverlapsRect = (
   centerY: number,
   width: number,
   height: number,
-  radius: number
+  radius: number,
 ) => {
   const halfWidth = width * 0.5
   const halfHeight = height * 0.5
@@ -58,8 +55,8 @@ export interface PickupDeps {
 }
 
 export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
-  const slot = world.pickups.find((pickup) => !pickup.active)
-    ?? (deps.force ? world.pickups[0] : undefined)
+  const slot = world.pickups.find((pickup) => !pickup.active) ??
+    (deps.force ? world.pickups[0] : undefined)
   if (!slot) {
     return
   }

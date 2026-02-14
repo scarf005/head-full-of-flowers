@@ -11,6 +11,7 @@
     "jsxImportSource": "preact"
   },
   "exclude": [".vite"],
+  "fmt": { "semiColons": false, "lineWidth": 120, "proseWrap": "never" },
   "imports": {
     "@std/random": "jsr:@std/random@^0.1.5",
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",

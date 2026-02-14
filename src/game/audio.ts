@@ -174,7 +174,7 @@ export class SfxSynth {
     type: OscillatorType,
     gainPeak: number,
     impact = false,
-    delay = 0
+    delay = 0,
   ) {
     const now = context.currentTime
     const startTime = now + Math.max(0, delay)

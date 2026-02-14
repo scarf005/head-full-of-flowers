@@ -1,6 +1,6 @@
 import { clamp, limitToArena, randomInt } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
-import { BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR, BURNED_FACTION_ID } from "../factions.ts"
+import { BURNED_FACTION_ID, BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR } from "../factions.ts"
 
 const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.42
 const FLOWER_BACK_OFFSET = 0.26
@@ -81,14 +81,14 @@ const flowerPalette = (
   ownerId: string,
   scoreOwnerId: string,
   deps: FlowerSpawnDeps,
-  isBurnt: boolean
+  isBurnt: boolean,
 ) => {
   if (ownerId === deps.playerId) {
     return {
       team: "white" as const,
       color: "#f2f6ff",
       accent: "#d9e5ff",
-      fromPlayer: true
+      fromPlayer: true,
     }
   }
 
@@ -97,7 +97,7 @@ const flowerPalette = (
       team: "white" as const,
       color: BURNED_FLOWER_COLOR,
       accent: BURNED_FLOWER_ACCENT,
-      fromPlayer: false
+      fromPlayer: false,
     }
   }
 
@@ -108,7 +108,7 @@ const flowerPalette = (
         team: scoreOwnerId,
         color: pastelize(factionColor, 0.86, 0.08),
         accent: pastelize(factionColor, 0.76, 0.18),
-        fromPlayer: scoreOwnerId === deps.playerId
+        fromPlayer: scoreOwnerId === deps.playerId,
       }
     }
   }
@@ -120,7 +120,7 @@ const flowerPalette = (
       team: "white" as const,
       color: "#f0f0ea",
       accent: "#d1d0cc",
-      fromPlayer: false
+      fromPlayer: false,
     }
   }
 
@@ -129,7 +129,7 @@ const flowerPalette = (
     team: "blue" as const,
     color: pastelize(palette.tone, 0.9, 0.02),
     accent: pastelize(palette.edge, 0.86, 0.01),
-    fromPlayer: false
+    fromPlayer: false,
   }
 }
 
@@ -229,7 +229,7 @@ const pickFlowerPosition = (
   angle: number,
   angleDeltaNormalized: number,
   occupancyWeight: number,
-  seed: number
+  seed: number,
 ) => {
   const spreadX = Math.cos(angle)
   const spreadY = Math.sin(angle)
@@ -245,9 +245,9 @@ const pickFlowerPosition = (
     const rawDistanceFactor = seeded01(seed + attempt * 1.13)
     const biasedDistanceFactor = Math.pow(rawDistanceFactor, 0.65)
     const distance = (
-      FLOWER_DISTANCE_MIN
-      + biasedDistanceFactor * (FLOWER_DISTANCE_MAX - FLOWER_DISTANCE_MIN)
-    ) * directionalScale + attempt * FLOWER_PUSH_DISTANCE_STEP
+          FLOWER_DISTANCE_MIN +
+          biasedDistanceFactor * (FLOWER_DISTANCE_MAX - FLOWER_DISTANCE_MIN)
+        ) * directionalScale + attempt * FLOWER_PUSH_DISTANCE_STEP
     const forwardJitter = seededRange(seed + attempt * 2.31, -FLOWER_FORWARD_JITTER, FLOWER_FORWARD_JITTER)
     const lateralJitter = seededRange(seed + attempt * 3.41, -FLOWER_LATERAL_JITTER, FLOWER_LATERAL_JITTER)
     const candidateX = originX + spreadX * (distance + forwardJitter) + lateralX * lateralJitter
@@ -285,7 +285,7 @@ export const spawnFlowers = (
   amount: number,
   sizeScale: number,
   deps: FlowerSpawnDeps,
-  isBurnt = false
+  isBurnt = false,
 ) => {
   const palette = flowerPalette(world, ownerId, scoreOwnerId, deps, isBurnt)
   const dirLength = Math.hypot(dirX, dirY) || 1
@@ -295,13 +295,12 @@ export const spawnFlowers = (
   const originX = x + nx * FLOWER_BACK_OFFSET
   const originY = y + ny * FLOWER_BACK_OFFSET
   const bloomScale = clamp(sizeScale, FLOWER_SIZE_SCALE_MIN, FLOWER_SIZE_SCALE_MAX)
-  const baseSeed =
-    ownerSeed(ownerId) * 0.0001
-    + x * 0.73
-    + y * 1.17
-    + nx * 2.11
-    + ny * 2.67
-    + world.playerFlowerTotal * 0.0023
+  const baseSeed = ownerSeed(ownerId) * 0.0001 +
+    x * 0.73 +
+    y * 1.17 +
+    nx * 2.11 +
+    ny * 2.67 +
+    world.playerFlowerTotal * 0.0023
 
   for (let index = 0; index < amount; index += 1) {
     const flowerSeed = baseSeed + index * 0.619
@@ -318,7 +317,7 @@ export const spawnFlowers = (
       angle,
       angleOffset / FLOWER_SPAWN_CONE_HALF_ANGLE,
       bloomWeight,
-      flowerSeed + 2.03
+      flowerSeed + 2.03,
     )
     let spawnX = spawn.x
     let spawnY = spawn.y
@@ -352,14 +351,15 @@ export const spawnFlowers = (
     }
     flower.team = palette.team
     flower.ownerId = scoreOwnerId
-    const colorVariantIndex = Math.floor(seeded01(flowerSeed + 6.43) * FLOWER_COLOR_VARIANTS.length) % FLOWER_COLOR_VARIANTS.length
+    const colorVariantIndex = Math.floor(seeded01(flowerSeed + 6.43) * FLOWER_COLOR_VARIANTS.length) %
+      FLOWER_COLOR_VARIANTS.length
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]
     flower.color = shiftHex(palette.color, colorOffset)
     flower.accent = shiftHex(palette.accent, Math.round(colorOffset * 0.6))
     flower.scorched = isBurnt
     flower.position.set(
       spawnX,
-      spawnY
+      spawnY,
     )
     limitToArena(flower.position, 0.2, world.arenaRadius)
     flower.bloomWeight = bloomWeight
@@ -398,17 +398,20 @@ export const randomFlowerBurst = (damage: number, impactSpeed: number): FlowerBu
   const amountScale = clamp(
     1 + (speedFactor - 1) * 0.65 - (damageFactor - 1) * 0.5,
     FLOWER_COUNT_SCALE_MIN,
-    FLOWER_COUNT_SCALE_MAX
+    FLOWER_COUNT_SCALE_MAX,
   )
   const sizeScale = clamp(
     1 + (damageFactor - 1) * 0.7 - (speedFactor - 1) * 0.45,
     FLOWER_SIZE_SCALE_MIN,
-    FLOWER_SIZE_SCALE_MAX
+    FLOWER_SIZE_SCALE_MAX,
   )
 
   return {
-    amount: Math.max(2, Math.round(randomInt(FLOWER_AMOUNT_MIN, FLOWER_AMOUNT_MAX) * amountScale * FLOWER_AMOUNT_MULTIPLIER)),
-    sizeScale
+    amount: Math.max(
+      2,
+      Math.round(randomInt(FLOWER_AMOUNT_MIN, FLOWER_AMOUNT_MAX) * amountScale * FLOWER_AMOUNT_MULTIPLIER),
+    ),
+    sizeScale,
   }
 }
 

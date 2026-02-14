@@ -4,7 +4,11 @@ import { distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID, BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR } from "../factions.ts"
 
-export const igniteMolotov = (world: WorldState, throwable: Throwable, allocMolotovZone: () => WorldState["molotovZones"][number]) => {
+export const igniteMolotov = (
+  world: WorldState,
+  throwable: Throwable,
+  allocMolotovZone: () => WorldState["molotovZones"][number],
+) => {
   const zone = allocMolotovZone()
   zone.active = true
   zone.ownerId = throwable.ownerId
@@ -24,7 +28,7 @@ export const spawnFlamePatch = (
   y: number,
   ownerId: string,
   ownerTeam: Team,
-  allocMolotovZone: () => WorldState["molotovZones"][number]
+  allocMolotovZone: () => WorldState["molotovZones"][number],
 ) => {
   const zone = allocMolotovZone()
   zone.active = true
@@ -48,7 +52,7 @@ export interface MolotovDeps {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) => void
 }
 
@@ -84,7 +88,7 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
           unit.position.x,
           unit.position.y,
           unit.position.x - zone.position.x,
-          unit.position.y - zone.position.y
+          unit.position.y - zone.position.y,
         )
       }
 
@@ -106,7 +110,10 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
                   if (!flower.scorched) {
                     const previousOwner = flower.ownerId
                     if (previousOwner in world.factionFlowerCounts) {
-                      world.factionFlowerCounts[previousOwner] = Math.max(0, world.factionFlowerCounts[previousOwner] - 1)
+                      world.factionFlowerCounts[previousOwner] = Math.max(
+                        0,
+                        world.factionFlowerCounts[previousOwner] - 1,
+                      )
                     }
                     if (BURNED_FACTION_ID in world.factionFlowerCounts) {
                       world.factionFlowerCounts[BURNED_FACTION_ID] += 1

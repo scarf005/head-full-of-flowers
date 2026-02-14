@@ -51,7 +51,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     solid: new Uint8Array(cellCount),
     hp: new Float32Array(cellCount),
     material: new Uint8Array(cellCount),
-    flash: new Float32Array(cellCount)
+    flash: new Float32Array(cellCount),
   }
 }
 
@@ -69,7 +69,7 @@ export const worldToObstacleGrid = (size: number, worldX: number, worldY: number
   const half = Math.floor(size * 0.5)
   return {
     x: Math.floor(worldX) + half,
-    y: Math.floor(worldY) + half
+    y: Math.floor(worldY) + half,
   }
 }
 
@@ -77,7 +77,7 @@ export const obstacleGridToWorldCenter = (size: number, x: number, y: number) =>
   const half = Math.floor(size * 0.5)
   return {
     x: x - half + 0.5,
-    y: y - half + 0.5
+    y: y - half + 0.5,
   }
 }
 

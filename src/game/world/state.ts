@@ -1,19 +1,32 @@
-import { DamagePopup, FlightTrailSegment, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, ShellCasing, Throwable, Unit, Vec2 } from "../entities.ts"
+import {
+  DamagePopup,
+  FlightTrailSegment,
+  Flower,
+  MolotovZone,
+  Obstacle,
+  ObstacleDebris,
+  Pickup,
+  Projectile,
+  ShellCasing,
+  Throwable,
+  Unit,
+  Vec2,
+} from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
   DAMAGE_POPUP_POOL_SIZE,
   FLOWER_POOL_SIZE,
+  LOOT_PICKUP_INTERVAL_SECONDS,
   MATCH_DURATION_SECONDS,
   MAX_MATCH_PLAYERS,
-  LOOT_PICKUP_INTERVAL_SECONDS,
   MOLOTOV_POOL_SIZE,
   OBSTACLE_POOL_SIZE,
   PICKUP_POOL_SIZE,
   PROJECTILE_POOL_SIZE,
   THROWABLE_POOL_SIZE,
   VIEW_HEIGHT,
-  VIEW_WIDTH
+  VIEW_WIDTH,
 } from "./constants.ts"
 import { buildObstacleGridFromMap, type ObstacleGridState } from "./obstacle-grid.ts"
 import { createBarrenGardenMap, type TerrainMap } from "./wfc-map.ts"
@@ -104,7 +117,7 @@ export const createWorldState = (): WorldState => {
       screenX: VIEW_WIDTH * 0.5,
       screenY: VIEW_HEIGHT * 0.5,
       worldX: 0,
-      worldY: 0
+      worldY: 0,
     },
     player,
     bots,
@@ -131,7 +144,7 @@ export const createWorldState = (): WorldState => {
       active: false,
       position: new Vec2(),
       life: 0,
-      radius: 0
+      radius: 0,
     })),
     projectileCursor: 0,
     throwableCursor: 0,
@@ -162,6 +175,6 @@ export const createWorldState = (): WorldState => {
     hitStop: 0,
     arenaRadius: ARENA_START_RADIUS,
     terrainMap,
-    obstacleGrid: buildObstacleGridFromMap(terrainMap)
+    obstacleGrid: buildObstacleGridFromMap(terrainMap),
   }
 }

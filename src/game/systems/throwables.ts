@@ -1,11 +1,7 @@
 import { clamp, distSquared, limitToArena, randomRange } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
 import type { Team } from "../types.ts"
-import {
-  damageObstacleCell,
-  isObstacleCellSolid,
-  worldToObstacleGrid
-} from "../world/obstacle-grid.ts"
+import { damageObstacleCell, isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 
 const MOLOTOV_THROW_SPEED = 15
@@ -94,7 +90,7 @@ export interface ThrowableUpdateDeps {
     y: number,
     velocityX: number,
     velocityY: number,
-    mode: "grenade" | "molotov"
+    mode: "grenade" | "molotov",
   ) => void
   onExplosion: () => void
   applyDamage: (
@@ -105,7 +101,7 @@ export interface ThrowableUpdateDeps {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) => void
 }
 
@@ -174,11 +170,9 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
         const tangentVelocityX = throwable.velocity.x - normalVelocityX
         const tangentVelocityY = throwable.velocity.y - normalVelocityY
 
-        throwable.velocity.x =
-          -normalVelocityX * GRENADE_RICOCHET_RESTITUTION +
+        throwable.velocity.x = -normalVelocityX * GRENADE_RICOCHET_RESTITUTION +
           tangentVelocityX * GRENADE_RICOCHET_TANGENT_FRICTION
-        throwable.velocity.y =
-          -normalVelocityY * GRENADE_RICOCHET_RESTITUTION +
+        throwable.velocity.y = -normalVelocityY * GRENADE_RICOCHET_RESTITUTION +
           tangentVelocityY * GRENADE_RICOCHET_TANGENT_FRICTION
 
         const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_RICOCHET_RANDOM_RADIANS
@@ -210,7 +204,10 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
         }
 
         const hitRadius = throwable.radius + unit.radius
-        if (distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <= hitRadius * hitRadius) {
+        if (
+          distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <=
+            hitRadius * hitRadius
+        ) {
           deps.applyDamage(
             unit.id,
             GRENADE_BULLET_DAMAGE,
@@ -219,7 +216,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
             unit.position.x,
             unit.position.y,
             throwable.velocity.x,
-            throwable.velocity.y
+            throwable.velocity.y,
           )
           shouldExplode = true
           throwable.life = 0
@@ -238,7 +235,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
       throwable.position.y,
       throwable.velocity.x,
       throwable.velocity.y,
-      throwable.mode
+      throwable.mode,
     )
     if (isGrenade) {
       if (shouldExplode) {
@@ -267,7 +264,7 @@ export interface GrenadeExplosionDeps {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) => void
   damageObstaclesByExplosion: (x: number, y: number, radius: number) => void
   spawnExplosion: (x: number, y: number, radius: number) => void
@@ -304,7 +301,7 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
       unit.position.x,
       unit.position.y,
       unit.position.x - throwable.position.x,
-      unit.position.y - throwable.position.y
+      unit.position.y - throwable.position.y,
     )
   }
 

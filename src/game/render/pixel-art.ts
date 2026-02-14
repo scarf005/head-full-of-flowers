@@ -11,7 +11,7 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   shotgun: "/items/shotgun.png",
   flamethrower: "/items/flamethrower.png",
   grenade: "/items/grenade.png",
-  molotov: "/items/molotov.png"
+  molotov: "/items/molotov.png",
 }
 
 export const getItemSpritePath = (id: ItemSpriteId) => {
@@ -42,7 +42,7 @@ const drawItemSpritePng = (
   spriteId: ItemSpriteId,
   x: number,
   y: number,
-  size: number
+  size: number,
 ) => {
   const image = ensureItemSprite(spriteId)
   if (!image || !image.complete || image.naturalWidth <= 0) {
@@ -70,7 +70,7 @@ const palette = {
   x: "#4a3a2a",
   X: "#7a5a3e",
   W: "#9b704a",
-  r: "#8f3a2e"
+  r: "#8f3a2e",
 }
 
 const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
@@ -82,7 +82,7 @@ const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
     "...kMk..",
     "...kmy..",
     "....k...",
-    "........"
+    "........",
   ],
   assault: [
     "........",
@@ -92,7 +92,7 @@ const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
     "..kMMkkk",
     "...ky...",
     "...k....",
-    "........"
+    "........",
   ],
   shotgun: [
     "........",
@@ -102,7 +102,7 @@ const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
     "..kMMMk.",
     "...kWy..",
     "...k....",
-    "........"
+    "........",
   ],
   flamethrower: [
     "........",
@@ -112,8 +112,8 @@ const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
     "..kMMMk.",
     "...kry..",
     "...k....",
-    "........"
-  ]
+    "........",
+  ],
 }
 
 const grenadeSprite: SpriteRow[] = [
@@ -124,7 +124,7 @@ const grenadeSprite: SpriteRow[] = [
   "..kGGk..",
   "...kkk..",
   "....k...",
-  "........"
+  "........",
 ]
 
 const molotovSprite: SpriteRow[] = [
@@ -135,7 +135,7 @@ const molotovSprite: SpriteRow[] = [
   "..krMk..",
   "..krrk..",
   "...kk...",
-  "........"
+  "........",
 ]
 
 const flameProjectileSprite: SpriteRow[] = [
@@ -146,7 +146,7 @@ const flameProjectileSprite: SpriteRow[] = [
   "..rCCr..",
   "...rr...",
   "....r...",
-  "........"
+  "........",
 ]
 
 const draw = (
@@ -154,7 +154,7 @@ const draw = (
   sprite: SpriteRow[],
   x: number,
   y: number,
-  pixelSize: number
+  pixelSize: number,
 ) => {
   const size = sprite.length
   const half = (size * pixelSize) * 0.5
@@ -176,7 +176,7 @@ const draw = (
         x - half + col * pixelSize,
         y - half + row * pixelSize,
         pixelSize,
-        pixelSize
+        pixelSize,
       )
     }
   }
@@ -187,7 +187,7 @@ export const drawWeaponPickupSprite = (
   weaponId: PrimaryWeaponId,
   x: number,
   y: number,
-  size = 0.1
+  size = 0.1,
 ) => {
   if (drawItemSpritePng(context, weaponId, x, y, size)) {
     return
@@ -200,7 +200,7 @@ export const drawGrenadeSprite = (
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size = 0.08
+  size = 0.08,
 ) => {
   if (drawItemSpritePng(context, "grenade", x, y, size)) {
     return
@@ -213,7 +213,7 @@ export const drawMolotovSprite = (
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size = 0.08
+  size = 0.08,
 ) => {
   if (drawItemSpritePng(context, "molotov", x, y, size)) {
     return
@@ -226,7 +226,7 @@ export const drawFlameProjectileSprite = (
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size = 0.07
+  size = 0.07,
 ) => {
   draw(context, flameProjectileSprite, x, y, size)
 }

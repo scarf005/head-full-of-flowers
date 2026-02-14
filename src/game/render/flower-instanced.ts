@@ -132,7 +132,7 @@ const createTexture = (gl: WebGL2RenderingContext) => {
     0,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
-    new Uint8Array([255, 255, 255, 255])
+    new Uint8Array([255, 255, 255, 255]),
   )
 
   return texture
@@ -205,7 +205,7 @@ const initFlowerGpuState = () => {
     preserveDrawingBuffer: false,
     depth: false,
     stencil: false,
-    premultipliedAlpha: true
+    premultipliedAlpha: true,
   })
 
   if (!gl) {
@@ -397,17 +397,17 @@ void main() {
   const petalTexture = createTexture(gl)
   const centerTexture = createTexture(gl)
   if (
-    !vao
-    || !quadBuffer
-    || !instanceBuffer
-    || !quadVao
-    || !quadStaticBuffer
-    || !quadInstanceBuffer
-    || !trailVao
-    || !trailStaticBuffer
-    || !trailInstanceBuffer
-    || !petalTexture
-    || !centerTexture
+    !vao ||
+    !quadBuffer ||
+    !instanceBuffer ||
+    !quadVao ||
+    !quadStaticBuffer ||
+    !quadInstanceBuffer ||
+    !trailVao ||
+    !trailStaticBuffer ||
+    !trailInstanceBuffer ||
+    !petalTexture ||
+    !centerTexture
   ) {
     return null
   }
@@ -422,15 +422,15 @@ void main() {
   const trailUniformView = gl.getUniformLocation(trailProgram, "uView")
   const trailUniformScale = gl.getUniformLocation(trailProgram, "uScale")
   if (
-    !uniformCamera
-    || !uniformView
-    || !uniformScale
-    || !quadUniformCamera
-    || !quadUniformView
-    || !quadUniformScale
-    || !trailUniformCamera
-    || !trailUniformView
-    || !trailUniformScale
+    !uniformCamera ||
+    !uniformView ||
+    !uniformScale ||
+    !quadUniformCamera ||
+    !quadUniformView ||
+    !quadUniformScale ||
+    !trailUniformCamera ||
+    !trailUniformView ||
+    !trailUniformScale
   ) {
     return null
   }
@@ -438,12 +438,20 @@ void main() {
   gl.bindVertexArray(vao)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -1, -1,
-    1, -1,
-    -1, 1,
-    1, 1
-  ]), gl.STATIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1,
+      -1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+    ]),
+    gl.STATIC_DRAW,
+  )
   gl.enableVertexAttribArray(0)
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
 
@@ -472,12 +480,20 @@ void main() {
   gl.bindVertexArray(quadVao)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, quadStaticBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -1, -1,
-    1, -1,
-    -1, 1,
-    1, 1
-  ]), gl.STATIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1,
+      -1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+    ]),
+    gl.STATIC_DRAW,
+  )
   gl.enableVertexAttribArray(0)
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
 
@@ -510,12 +526,20 @@ void main() {
   gl.bindVertexArray(trailVao)
 
   gl.bindBuffer(gl.ARRAY_BUFFER, trailStaticBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-    -1, -1,
-    1, -1,
-    -1, 1,
-    1, 1
-  ]), gl.STATIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1,
+      -1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+    ]),
+    gl.STATIC_DRAW,
+  )
   gl.enableVertexAttribArray(0)
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
 
@@ -600,7 +624,7 @@ void main() {
     quadUniformScale,
     trailUniformCamera,
     trailUniformView,
-    trailUniformScale
+    trailUniformScale,
   }
 
   return flowerGpuState
@@ -685,7 +709,11 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
 
   gl.bindVertexArray(state.vao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, state.instanceData.subarray(0, instanceCount * FLOWER_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    state.instanceData.subarray(0, instanceCount * FLOWER_INSTANCE_STRIDE),
+    gl.DYNAMIC_DRAW,
+  )
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 
@@ -789,7 +817,11 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
 
   gl.bindVertexArray(state.quadVao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.quadInstanceBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, state.quadInstanceData.subarray(0, instanceCount * QUAD_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    state.quadInstanceData.subarray(0, instanceCount * QUAD_INSTANCE_STRIDE),
+    gl.DYNAMIC_DRAW,
+  )
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 
@@ -874,7 +906,11 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
 
   gl.bindVertexArray(state.trailVao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.trailInstanceBuffer)
-  gl.bufferData(gl.ARRAY_BUFFER, state.trailInstanceData.subarray(0, instanceCount * TRAIL_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    state.trailInstanceData.subarray(0, instanceCount * TRAIL_INSTANCE_STRIDE),
+    gl.DYNAMIC_DRAW,
+  )
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 

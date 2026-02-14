@@ -12,7 +12,7 @@ import {
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
   statusMessageSignal,
-  timeRemainingSignal
+  timeRemainingSignal,
 } from "../signals.ts"
 import { BURNED_FACTION_COLOR, BURNED_FACTION_ID, BURNED_FACTION_LABEL } from "../factions.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
@@ -25,7 +25,7 @@ const defaultMatchResult = {
   winnerColor: "#f2ffe8",
   pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
   stats: [],
-  standings: []
+  standings: [],
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -33,7 +33,7 @@ const buildCoverageSlices = (world: WorldState) => {
     id: faction.id,
     label: faction.label,
     color: faction.color,
-    count: world.factionFlowerCounts[faction.id] ?? 0
+    count: world.factionFlowerCounts[faction.id] ?? 0,
   }))
 
   const burntCount = world.factionFlowerCounts[BURNED_FACTION_ID] ?? 0
@@ -42,7 +42,7 @@ const buildCoverageSlices = (world: WorldState) => {
       id: BURNED_FACTION_ID,
       label: BURNED_FACTION_LABEL,
       color: BURNED_FACTION_COLOR,
-      count: burntCount
+      count: burntCount,
     })
   }
 
@@ -57,7 +57,7 @@ const buildCoverageSlices = (world: WorldState) => {
       id: entry.id,
       label: entry.label,
       color: entry.color,
-      percent
+      percent,
     }))
   }
 
@@ -65,7 +65,7 @@ const buildCoverageSlices = (world: WorldState) => {
     id: entry.id,
     label: entry.label,
     color: entry.color,
-    percent: (100 * entry.count) / total
+    percent: (100 * entry.count) / total,
   }))
 }
 
@@ -97,7 +97,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   crosshairSignal.value = {
     x: canvas.clientWidth * 0.5,
     y: canvas.clientHeight * 0.5,
-    visible: false
+    visible: false,
   }
 }
 
@@ -119,7 +119,9 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   }
 
   primaryAmmoSignal.value = Number.isFinite(world.player.primaryAmmo)
-    ? `${Math.floor(world.player.primaryAmmo)} / ${Number.isFinite(world.player.reserveAmmo) ? Math.floor(world.player.reserveAmmo) : "∞"}`
+    ? `${Math.floor(world.player.primaryAmmo)} / ${
+      Number.isFinite(world.player.reserveAmmo) ? Math.floor(world.player.reserveAmmo) : "∞"
+    }`
     : "∞"
 }
 
@@ -136,7 +138,7 @@ export const syncHudSignals = (world: WorldState) => {
   timeRemainingSignal.value = world.timeRemaining
   hpSignal.value = {
     hp: Math.round(world.player.hp),
-    maxHp: Math.round(world.player.maxHp)
+    maxHp: Math.round(world.player.maxHp),
   }
   updatePlayerWeaponSignals(world)
   updateSecondaryCooldownSignal(world)
@@ -145,7 +147,7 @@ export const syncHudSignals = (world: WorldState) => {
 export const updatePlayerHpSignal = (world: WorldState) => {
   hpSignal.value = {
     hp: Math.round(world.player.hp),
-    maxHp: Math.round(world.player.maxHp)
+    maxHp: Math.round(world.player.maxHp),
   }
 }
 
@@ -153,7 +155,7 @@ export const setMatchResultSignal = (
   winner: { label: string; color: string },
   slices: { color: string; percent: number }[],
   stats: { label: string; value: string }[],
-  standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
+  standings: { id: string; label: string; color: string; flowers: number; percent: number }[],
 ) => {
   matchResultSignal.value = {
     visible: true,
@@ -161,10 +163,10 @@ export const setMatchResultSignal = (
     winnerColor: winner.color,
     pieGradient: buildPieGradient(slices),
     stats,
-    standings
+    standings,
   }
 }
-  
+
 export const clearMatchResultSignal = () => {
   matchResultSignal.value = defaultMatchResult
 }

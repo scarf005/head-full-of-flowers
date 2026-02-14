@@ -39,7 +39,7 @@ export const matchResultSignal = signal<MatchResultHud>({
   winnerColor: "#f2ffe8",
   pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
   stats: [],
-  standings: []
+  standings: [],
 })
 
 export const primaryWeaponSignal = signal("Pistol")

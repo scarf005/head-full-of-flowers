@@ -1,13 +1,13 @@
 import type { Projectile, Unit } from "../entities.ts"
 import { clamp, distSquared, lerp, limitToArena } from "../utils.ts"
 import {
-  OBSTACLE_MATERIAL_NONE,
-  OBSTACLE_MATERIAL_BOX,
   damageObstacleCell,
   decayObstacleFlash,
   isObstacleCellSolid,
+  OBSTACLE_MATERIAL_BOX,
+  OBSTACLE_MATERIAL_NONE,
   obstacleGridToWorldCenter,
-  worldToObstacleGrid
+  worldToObstacleGrid,
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 import { ARENA_BORDER_DAMAGE, ARENA_BORDER_DAMAGE_COOLDOWN } from "../world/constants.ts"
@@ -22,7 +22,7 @@ export interface ArenaBoundaryDamageDeps {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) => void
 }
 
@@ -159,7 +159,7 @@ export const constrainUnitsToArena = (world: WorldState, dt: number, deps: Arena
       unit.position.x - normalX * unit.radius,
       unit.position.y - normalY * unit.radius,
       normalX,
-      normalY
+      normalY,
     )
   }
 }
@@ -176,7 +176,7 @@ const sampleObstacleRay = (
   fromX: number,
   fromY: number,
   toX: number,
-  toY: number
+  toY: number,
 ) => {
   const dx = toX - fromX
   const dy = toY - fromY
@@ -232,7 +232,7 @@ export const damageObstaclesByExplosion = (
   x: number,
   y: number,
   radius: number,
-  deps: ObstacleDamageDeps
+  deps: ObstacleDamageDeps,
 ) => {
   const grid = world.obstacleGrid
   let tookDamage = false

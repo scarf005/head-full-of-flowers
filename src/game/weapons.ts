@@ -32,7 +32,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     bulletRadius: 0.24,
     pickupAmmo: Infinity,
     magazineSize: 8,
-    reload: 0.75
+    reload: 0.75,
   },
   assault: {
     id: "assault",
@@ -48,7 +48,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     bulletRadius: 0.24,
     pickupAmmo: 80,
     magazineSize: 20,
-    reload: 0.6
+    reload: 0.6,
   },
   shotgun: {
     id: "shotgun",
@@ -64,7 +64,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     bulletRadius: 0.26,
     pickupAmmo: 36,
     magazineSize: 6,
-    reload: 0.8
+    reload: 0.8,
   },
   flamethrower: {
     id: "flamethrower",
@@ -80,8 +80,8 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     bulletRadius: 0.18,
     pickupAmmo: 180,
     magazineSize: 45,
-    reload: 0.9
-  }
+    reload: 0.9,
+  },
 }
 
 export const LOOTABLE_PRIMARY_IDS: PrimaryWeaponId[] = ["assault", "shotgun", "flamethrower"]

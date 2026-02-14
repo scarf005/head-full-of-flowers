@@ -109,6 +109,7 @@ src/game/
 - Verify app still builds with `deno task build`
 
 Exit criteria:
+
 - Baseline build passes
 - Scope boundaries agreed
 
@@ -119,6 +120,7 @@ Exit criteria:
 - Keep `game.ts` behavior unchanged, but read/write through world object
 
 Exit criteria:
+
 - No gameplay behavior change
 - `game.ts` still large but state ownership centralized
 
@@ -131,6 +133,7 @@ Exit criteria:
 - Keep orchestration order in `game.ts`
 
 Exit criteria:
+
 - `game.ts` mostly orchestration calls
 - Systems have narrow imports and no signal usage
 
@@ -144,6 +147,7 @@ Exit criteria:
 - `game.ts` calls a single `renderScene(world, ctx, dt)`
 
 Exit criteria:
+
 - Render code no longer interleaved with sim logic
 - Visual output remains equivalent
 
@@ -154,6 +158,7 @@ Exit criteria:
 - Keep audio in adapter boundary (`adapters/audio.ts`)
 
 Exit criteria:
+
 - Systems do not import signals or DOM APIs
 - Side effects isolated to adapters
 
@@ -164,6 +169,7 @@ Exit criteria:
 - Enforce one module family per agent task
 
 Exit criteria:
+
 - 3+ parallel tasks can be executed with low conflict risk
 - Merge process is documented and repeatable
 

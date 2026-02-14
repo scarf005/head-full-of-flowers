@@ -8,7 +8,7 @@ const updateBotAim = (
   distanceToTarget: number,
   dt: number,
   nowMs: number,
-  panic = 0
+  panic = 0,
 ) => {
   const botIndex = Number(bot.id.replace("bot-", "")) || 0
   const baseAngle = Math.atan2(toTargetY, toTargetX)
@@ -33,7 +33,7 @@ const findNearestTarget = (
   originTeam: string,
   x: number,
   y: number,
-  maxDistance = Number.POSITIVE_INFINITY
+  maxDistance = Number.POSITIVE_INFINITY,
 ) => {
   let targetId = ""
   let bestDistance = maxDistance
@@ -62,7 +62,7 @@ const findNearestTarget = (
     targetId,
     distance: bestDistance,
     deltaX,
-    deltaY
+    deltaY,
   }
 }
 

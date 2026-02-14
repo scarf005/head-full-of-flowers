@@ -19,7 +19,7 @@ export interface InputAdapter {
 export const setupInputAdapter = (
   canvas: HTMLCanvasElement,
   world: WorldState,
-  handlers: InputAdapterHandlers
+  handlers: InputAdapterHandlers,
 ): InputAdapter => {
   let menuStartBlockUntilMs = 0
 
@@ -41,10 +41,10 @@ export const setupInputAdapter = (
     }
 
     const bounds = button.getBoundingClientRect()
-    return event.clientX >= bounds.left
-      && event.clientX <= bounds.right
-      && event.clientY >= bounds.top
-      && event.clientY <= bounds.bottom
+    return event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom
   }
 
   const isRematchButtonTarget = (event: PointerEvent) => {
@@ -65,10 +65,10 @@ export const setupInputAdapter = (
     }
 
     const bounds = button.getBoundingClientRect()
-    return event.clientX >= bounds.left
-      && event.clientX <= bounds.right
-      && event.clientY >= bounds.top
-      && event.clientY <= bounds.bottom
+    return event.clientX >= bounds.left &&
+      event.clientX <= bounds.right &&
+      event.clientY >= bounds.top &&
+      event.clientY <= bounds.bottom
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -101,7 +101,6 @@ export const setupInputAdapter = (
       }
       return
     }
-
   }
 
   const onKeyUp = (event: KeyboardEvent) => {
@@ -205,6 +204,6 @@ export const setupInputAdapter = (
       window.removeEventListener("contextmenu", onContextMenu)
       canvas.removeEventListener("pointerleave", onPointerLeave)
       canvas.removeEventListener("contextmenu", onContextMenu)
-    }
+    },
   }
 }

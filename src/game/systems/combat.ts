@@ -82,7 +82,7 @@ export const equipPrimary = (
   world: WorldState,
   weaponId: PrimaryWeaponId,
   ammo: number,
-  onPlayerWeaponUpdate: () => void
+  onPlayerWeaponUpdate: () => void,
 ) => {
   const unit = world.units.find((candidate) => candidate.id === unitId)
   if (!unit) {
@@ -201,9 +201,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     projectile.maxRange = weapon.range
     projectile.traveled = 0
     projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
-    projectile.glow = shooter.primaryWeapon === "flamethrower"
-      ? randomRange(0.5, 0.95)
-      : randomRange(0.4, 0.9)
+    projectile.glow = shooter.primaryWeapon === "flamethrower" ? randomRange(0.5, 0.95) : randomRange(0.4, 0.9)
     projectile.trailCooldown = 0
     projectile.trailX = projectile.position.x
     projectile.trailY = projectile.position.y
@@ -229,7 +227,16 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
 export interface DamageDeps {
   allocPopup: () => WorldState["damagePopups"][number]
-  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number, isBurnt?: boolean) => void
+  spawnFlowers: (
+    ownerId: string,
+    x: number,
+    y: number,
+    dirX: number,
+    dirY: number,
+    amount: number,
+    sizeScale: number,
+    isBurnt?: boolean,
+  ) => void
   respawnUnit: (unitId: string) => void
   onUnitKilled?: (target: Unit, isSuicide: boolean) => void
   onSfxHit: () => void
@@ -246,7 +253,7 @@ const nearestUnitIdByTeam = (
   team: Team,
   originX: number,
   originY: number,
-  excludedUnitId: string
+  excludedUnitId: string,
 ) => {
   let nearestId = ""
   let nearestDistance = Number.POSITIVE_INFINITY
@@ -278,7 +285,7 @@ export const applyDamage = (
   hitY: number,
   impactX: number,
   impactY: number,
-  deps: DamageDeps
+  deps: DamageDeps,
 ) => {
   const target = world.units.find((unit) => unit.id === targetId)
   if (!target) {
@@ -309,17 +316,13 @@ export const applyDamage = (
 
   const hitSpeed = Math.hypot(impactX, impactY)
   const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
-  const sourceByNearestTeam = sourceUnit?.id
-    ?? (!isBoundarySource && resolvedSourceTeam
+  const sourceByNearestTeam = sourceUnit?.id ??
+    (!isBoundarySource && resolvedSourceTeam
       ? nearestUnitIdByTeam(world, resolvedSourceTeam, hitX, hitY, target.id)
       : "")
-  let normalizedSourceId = isPlayerSource
-    ? world.player.id
-    : sourceByNearestTeam || sourceId
+  let normalizedSourceId = isPlayerSource ? world.player.id : sourceByNearestTeam || sourceId
 
-  const sourceIdIsUnit = sourceId.length > 0
-    ? world.units.some((unit) => unit.id === sourceId)
-    : false
+  const sourceIdIsUnit = sourceId.length > 0 ? world.units.some((unit) => unit.id === sourceId) : false
   const normalizedSourceIdIsUnit = normalizedSourceId.length > 0
     ? world.units.some((unit) => unit.id === normalizedSourceId)
     : false
@@ -333,7 +336,7 @@ export const applyDamage = (
       normalizedSourceId = fallbackId
     }
   }
-    
+
   const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfHarm || isBoundarySource
 
@@ -346,7 +349,7 @@ export const applyDamage = (
     impactY,
     flowerBurst.amount,
     flowerBurst.sizeScale,
-    isBurntFlowers
+    isBurntFlowers,
   )
 
   if (target.isPlayer && debugInfiniteHpSignal.value) {
@@ -368,7 +371,7 @@ export const applyDamage = (
       Math.sin(extraDir),
       Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
       Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST),
-      isBurntFlowers
+      isBurntFlowers,
     )
   }
 

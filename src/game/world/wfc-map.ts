@@ -32,7 +32,7 @@ export interface TerrainMap {
 const TILE_IDS: TerrainTile[] = [
   "grass",
   "clover",
-  "wild-grass"
+  "wild-grass",
 ]
 
 const WEIGHTS: Record<TerrainTile, number> = {
@@ -43,7 +43,7 @@ const WEIGHTS: Record<TerrainTile, number> = {
   "dirt-road": 6,
   "road-edge": 5,
   gravel: 2,
-  concrete: 1
+  concrete: 1,
 }
 
 const ALLOWED: Record<TerrainTile, TerrainTile[]> = {
@@ -54,7 +54,7 @@ const ALLOWED: Record<TerrainTile, TerrainTile[]> = {
   "dirt-road": ["dirt", "dirt-road", "road-edge", "gravel", "concrete"],
   "road-edge": ["grass", "clover", "wild-grass", "dirt", "dirt-road", "road-edge", "gravel"],
   gravel: ["grass", "wild-grass", "dirt", "dirt-road", "road-edge", "gravel", "concrete"],
-  concrete: ["dirt", "dirt-road", "gravel", "concrete"]
+  concrete: ["dirt", "dirt-road", "gravel", "concrete"],
 }
 
 const randomInt = (min: number, max: number) => Math.floor(min + Math.random() * (max - min + 1))
@@ -159,7 +159,7 @@ const circleFitsArena = (gridX: number, gridY: number, size: number, margin: num
 const rectsOverlap = (
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number },
-  padding: number
+  padding: number,
 ) => {
   return !(
     a.x + a.width * 0.5 + padding <= b.x - b.width * 0.5 ||
@@ -187,7 +187,7 @@ const rectTouchesMask = (
   top: number,
   width: number,
   height: number,
-  padding: number
+  padding: number,
 ) => {
   for (let y = top - padding; y < top + height + padding; y += 1) {
     if (y < 0 || y >= mask.length) {
@@ -213,7 +213,7 @@ const gridRectToWorldRect = (left: number, top: number, width: number, height: n
     x: gridToWorldOrigin(left, size) + width * 0.5,
     y: gridToWorldOrigin(top, size) + height * 0.5,
     width,
-    height
+    height,
   }
 }
 
@@ -229,9 +229,9 @@ const applyRoadNetwork = (tiles: TerrainTile[][]) => {
       }
 
       if (
-        hasNeighbor(roads, x, y)
-        && (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass")
-        && Math.random() > 0.42
+        hasNeighbor(roads, x, y) &&
+        (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass") &&
+        Math.random() > 0.42
       ) {
         tiles[y][x] = "road-edge"
       }
@@ -265,10 +265,10 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
       continue
     }
 
-    const tiles = Array.from({ length: height }, (_, row) =>
-      Array.from({ length: width }, (_, col) =>
-        row === 0 || col === 0 || row === height - 1 || col === width - 1
-      )
+    const tiles = Array.from(
+      { length: height },
+      (_, row) =>
+        Array.from({ length: width }, (_, col) => row === 0 || col === 0 || row === height - 1 || col === width - 1),
     )
     const entrance = randomInt(0, 3)
     if (entrance === 0) {
@@ -290,7 +290,7 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
       y: worldRect.y,
       width,
       height,
-      tiles
+      tiles,
     })
   }
 
@@ -332,7 +332,7 @@ const createWarehouseLootBlueprints = (size: number, warehouses: MapObstacleBlue
       y: gridToWorld(gridY, size),
       width: 1,
       height: 1,
-      tiles: []
+      tiles: [],
     })
   }
 
@@ -360,16 +360,16 @@ const createRoadsideStructureBlueprints = (size: number, paths: boolean[][], blo
     }
 
     const worldRect = gridRectToWorldRect(left, top, width, height, size)
-    const blockedByStructures = blocked.some((structure) => rectsOverlap(worldRect, structure, 2.2))
-      || compounds.some((existing) => rectsOverlap(worldRect, existing, 2.2))
+    const blockedByStructures = blocked.some((structure) => rectsOverlap(worldRect, structure, 2.2)) ||
+      compounds.some((existing) => rectsOverlap(worldRect, existing, 2.2))
     if (blockedByStructures) {
       continue
     }
 
-    const tiles = Array.from({ length: height }, (_, row) =>
-      Array.from({ length: width }, (_, col) =>
-        row === 0 || col === 0 || row === height - 1 || col === width - 1
-      )
+    const tiles = Array.from(
+      { length: height },
+      (_, row) =>
+        Array.from({ length: width }, (_, col) => row === 0 || col === 0 || row === height - 1 || col === width - 1),
     )
 
     const firstEntrance = randomInt(0, 3)
@@ -417,7 +417,7 @@ const createRoadsideStructureBlueprints = (size: number, paths: boolean[][], blo
       y: worldRect.y,
       width,
       height,
-      tiles
+      tiles,
     })
   }
 
@@ -505,7 +505,9 @@ const createWallBlueprints = (size: number, paths: boolean[][], blockedStructure
     }
 
     const wallRect = gridRectToWorldRect(left, top, width, height, size)
-    const blockedByStructure = blockedStructures.some((structure) => rectsOverlap(wallRect, structure, onRoad ? 0.35 : 0.55))
+    const blockedByStructure = blockedStructures.some((structure) =>
+      rectsOverlap(wallRect, structure, onRoad ? 0.35 : 0.55)
+    )
     if (blockedByStructure) {
       continue
     }
@@ -525,7 +527,7 @@ const createWallBlueprints = (size: number, paths: boolean[][], blockedStructure
       y: wallRect.y,
       width,
       height,
-      tiles: []
+      tiles: [],
     })
   }
 
@@ -553,7 +555,7 @@ const createRockBlueprints = (size: number, paths: boolean[][], blocked: MapObst
       y: gridToWorld(gridY, size),
       width: 1,
       height: 1,
-      tiles: [] as boolean[][]
+      tiles: [] as boolean[][],
     }
 
     const overlapsBlocked = blocked.some((obstacle) => rectsOverlap(rock, obstacle, 0.9))
@@ -637,9 +639,7 @@ const neighbors = (x: number, y: number, size: number) => {
 }
 
 export const createBarrenGardenMap = (size: number) => {
-  const wave = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => new Set<TerrainTile>(TILE_IDS))
-  )
+  const wave = Array.from({ length: size }, () => Array.from({ length: size }, () => new Set<TerrainTile>(TILE_IDS)))
 
   const collapse = (startX: number, startY: number) => {
     const queue: [number, number][] = [[startX, startY]]
@@ -706,8 +706,9 @@ export const createBarrenGardenMap = (size: number) => {
     collapse(pickX, pickY)
   }
 
-  const tiles = Array.from({ length: size }, (_, y) =>
-    Array.from({ length: size }, (_, x) => [...wave[y][x]][0] ?? "grass")
+  const tiles = Array.from(
+    { length: size },
+    (_, y) => Array.from({ length: size }, (_, x) => [...wave[y][x]][0] ?? "grass"),
   )
 
   const roads = applyRoadNetwork(tiles)
@@ -716,8 +717,19 @@ export const createBarrenGardenMap = (size: number) => {
   const warehouseLootBlueprints = createWarehouseLootBlueprints(size, warehouseBlueprints)
   const roadsideStructureBlueprints = createRoadsideStructureBlueprints(size, paths, warehouseBlueprints)
   const wallBlueprints = createWallBlueprints(size, paths, [...warehouseBlueprints, ...roadsideStructureBlueprints])
-  const rockBlueprints = createRockBlueprints(size, paths, [...warehouseBlueprints, ...roadsideStructureBlueprints, ...warehouseLootBlueprints, ...wallBlueprints])
-  const structuralObstacles = [...warehouseBlueprints, ...roadsideStructureBlueprints, ...warehouseLootBlueprints, ...wallBlueprints, ...rockBlueprints]
+  const rockBlueprints = createRockBlueprints(size, paths, [
+    ...warehouseBlueprints,
+    ...roadsideStructureBlueprints,
+    ...warehouseLootBlueprints,
+    ...wallBlueprints,
+  ])
+  const structuralObstacles = [
+    ...warehouseBlueprints,
+    ...roadsideStructureBlueprints,
+    ...warehouseLootBlueprints,
+    ...wallBlueprints,
+    ...rockBlueprints,
+  ]
   const obstacles = structuralObstacles
   const pickupSpawnPoints = createPickupSpawnPoints(size, paths, structuralObstacles)
 
@@ -725,7 +737,7 @@ export const createBarrenGardenMap = (size: number) => {
     size,
     tiles,
     obstacles,
-    pickupSpawnPoints
+    pickupSpawnPoints,
   } satisfies TerrainMap
 }
 

@@ -8,7 +8,7 @@ import {
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
-  obstacleGridToWorldCenter
+  obstacleGridToWorldCenter,
 } from "../world/obstacle-grid.ts"
 import { terrainAt, type TerrainTile } from "../world/wfc-map.ts"
 import type { WorldState } from "../world/state.ts"
@@ -36,7 +36,7 @@ const TERRAIN_TINTS: Record<TerrainTile, string> = {
   "dirt-road": "#9f8965",
   "road-edge": "#8f8a6b",
   gravel: "#9a9a8f",
-  concrete: "#8b908c"
+  concrete: "#8b908c",
 }
 const FLOWER_SPRITE_PIXEL_SIZE = 16
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
@@ -67,7 +67,7 @@ let groundPatchCache: {
 } = {
   terrainMapRef: null,
   size: 0,
-  cells: new Uint8Array(0)
+  cells: new Uint8Array(0),
 }
 
 let flowerLayerCache: {
@@ -79,7 +79,7 @@ let flowerLayerCache: {
   terrainMapRef: null,
   size: 0,
   canvas: null,
-  context: null
+  context: null,
 }
 
 if (typeof Image !== "undefined") {
@@ -217,7 +217,7 @@ const paletteForUnit = (world: WorldState, unit: WorldState["units"][number]) =>
   const teamColor = world.factions.find((faction) => faction.id === unit.team)?.color ?? "#d8e8cb"
   return {
     tone: tintHex(teamColor, 0.82, 22),
-    edge: tintHex(teamColor, 0.55, 4)
+    edge: tintHex(teamColor, 0.55, 4),
   }
 }
 
@@ -236,14 +236,14 @@ const buildGroundPatchCache = (world: WorldState) => {
       const terrainBias = terrain === "wild-grass"
         ? 0.34
         : terrain === "clover"
-          ? 0.14
-          : terrain === "grass"
-            ? -0.06
-            : -0.38
+        ? 0.14
+        : terrain === "grass"
+        ? -0.06
+        : -0.38
       const patchField = (
-        Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58
-        + Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
-      ) * 0.5 + 0.5
+            Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58 +
+            Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
+          ) * 0.5 + 0.5
       const grain = grassCellNoise(cellX, cellY, 0.31) * 0.16
       cells[gridY * size + gridX] = patchField + terrainBias + grain > 0.56 ? 1 : 0
     }
@@ -267,7 +267,7 @@ const buildGroundPatchCache = (world: WorldState) => {
   groundPatchCache = {
     terrainMapRef: world.terrainMap,
     size,
-    cells
+    cells,
   }
 }
 
@@ -332,10 +332,10 @@ const flowerSpriteForPalette = (color: string, accent: string) => {
 
 const ensureFlowerLayerCache = (world: WorldState) => {
   if (
-    flowerLayerCache.terrainMapRef === world.terrainMap
-    && flowerLayerCache.size === world.terrainMap.size
-    && flowerLayerCache.canvas
-    && flowerLayerCache.context
+    flowerLayerCache.terrainMapRef === world.terrainMap &&
+    flowerLayerCache.size === world.terrainMap.size &&
+    flowerLayerCache.canvas &&
+    flowerLayerCache.context
   ) {
     return flowerLayerCache
   }
@@ -350,7 +350,7 @@ const ensureFlowerLayerCache = (world: WorldState) => {
       terrainMapRef: world.terrainMap,
       size,
       canvas,
-      context: null
+      context: null,
     }
     return flowerLayerCache
   }
@@ -362,7 +362,7 @@ const ensureFlowerLayerCache = (world: WorldState) => {
     terrainMapRef: world.terrainMap,
     size,
     canvas,
-    context
+    context,
   }
 
   for (const flower of world.flowers) {
@@ -381,7 +381,7 @@ const ensureFlowerLayerCache = (world: WorldState) => {
 const drawFlowerToLayer = (
   layerContext: CanvasRenderingContext2D,
   mapSize: number,
-  flower: WorldState["flowers"][number]
+  flower: WorldState["flowers"][number],
 ) => {
   const sprite = flowerSpriteForPalette(flower.color, flower.accent)
   if (!sprite) {
@@ -466,7 +466,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
     context,
     world,
     cameraX: renderCameraX,
-    cameraY: renderCameraY
+    cameraY: renderCameraY,
   })
   if (!renderedObstacleFxWithWebGl) {
     renderObstacleDebris(context, world)
@@ -477,7 +477,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
     context,
     world,
     cameraX: renderCameraX,
-    cameraY: renderCameraY
+    cameraY: renderCameraY,
   })
   renderThrowables(context, world, !renderedFlightTrailsWithWebGl)
   renderProjectiles(context, world, !renderedFlightTrailsWithWebGl)
@@ -498,7 +498,7 @@ const renderArenaGround = (
   world: WorldState,
   waveTime: number,
   renderCameraX: number,
-  renderCameraY: number
+  renderCameraY: number,
 ) => {
   context.save()
   context.translate(VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5)
@@ -552,7 +552,7 @@ const renderArenaGround = (
           drawX,
           drawY,
           GRASS_TILE_WORLD_SIZE,
-          GRASS_TILE_WORLD_SIZE
+          GRASS_TILE_WORLD_SIZE,
         )
       }
     }
@@ -603,7 +603,7 @@ const renderArenaGround = (
             drawX,
             drawY,
             GRASS_TILE_WORLD_SIZE,
-            GRASS_TILE_WORLD_SIZE
+            GRASS_TILE_WORLD_SIZE,
           )
           continue
         }
@@ -624,7 +624,7 @@ const renderArenaGround = (
           drawX,
           drawY,
           GRASS_TILE_WORLD_SIZE,
-          GRASS_TILE_WORLD_SIZE
+          GRASS_TILE_WORLD_SIZE,
         )
       }
     }
@@ -693,13 +693,13 @@ const renderFlowers = (
   context: CanvasRenderingContext2D,
   world: WorldState,
   renderCameraX: number,
-  renderCameraY: number
+  renderCameraY: number,
 ) => {
   const renderedWithWebGl = renderFlowerInstances({
     context,
     world,
     cameraX: renderCameraX,
-    cameraY: renderCameraY
+    cameraY: renderCameraY,
   })
   if (renderedWithWebGl) {
     return
@@ -782,7 +782,7 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, 
             0.05 + spread * 0.7,
             0,
             0,
-            Math.PI * 2
+            Math.PI * 2,
           )
           context.fill()
         }
@@ -967,7 +967,7 @@ const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState) 
         explosion.position.x - explosion.radius * pulse,
         explosion.position.y - explosion.radius * pulse,
         explosion.radius * 2 * pulse,
-        explosion.radius * 2 * pulse
+        explosion.radius * 2 * pulse,
       )
       continue
     }
@@ -985,7 +985,7 @@ const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState) 
         explosion.position.x + Math.cos(angle) * spike - 0.08,
         explosion.position.y + Math.sin(angle) * spike - 0.08,
         0.16,
-        0.16
+        0.16,
       )
     }
   }
@@ -1006,7 +1006,15 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState,
 
     context.fillStyle = "rgba(0, 0, 0, 0.26)"
     context.beginPath()
-    context.ellipse(projectile.position.x, projectile.position.y + 0.26, projectile.radius * 0.8, projectile.radius * 0.45, 0, 0, Math.PI * 2)
+    context.ellipse(
+      projectile.position.x,
+      projectile.position.y + 0.26,
+      projectile.radius * 0.8,
+      projectile.radius * 0.45,
+      0,
+      0,
+      Math.PI * 2,
+    )
     context.fill()
 
     if (projectile.kind === "flame") {
@@ -1029,9 +1037,7 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState,
       const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
       for (let index = 0; index < 6; index += 1) {
         const t = index / 5
-        const alpha = projectile.kind === "flame"
-          ? (1 - t) * 0.2
-          : (1 - t) * 0.22
+        const alpha = projectile.kind === "flame" ? (1 - t) * 0.2 : (1 - t) * 0.22
         context.fillStyle = projectile.kind === "flame"
           ? `rgba(255, 177, 122, ${alpha})`
           : `rgba(255, 230, 170, ${alpha})`
@@ -1043,7 +1049,7 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState,
           width * (0.56 - t * 0.24),
           0,
           0,
-          Math.PI * 2
+          Math.PI * 2,
         )
         context.fill()
       }
@@ -1086,14 +1092,14 @@ const renderUnitStatusRings = (
   unit: WorldState["units"][number],
   drawX: number,
   drawY: number,
-  body: number
+  body: number,
 ) => {
   const isReloading = unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0
   const progress = isReloading
     ? clamp(1 - unit.reloadCooldown / unit.reloadCooldownMax, 0, 1)
     : Number.isFinite(unit.primaryAmmo) && Number.isFinite(unit.magazineSize) && unit.magazineSize > 0
-      ? clamp(unit.primaryAmmo / unit.magazineSize, 0, 1)
-      : 1
+    ? clamp(unit.primaryAmmo / unit.magazineSize, 0, 1)
+    : 1
   const radius = body + PRIMARY_RELOAD_RING_OFFSET_WORLD
 
   context.save()
@@ -1127,7 +1133,7 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
       body * (0.37 - skew * 0.05),
       0,
       0,
-      Math.PI * 2
+      Math.PI * 2,
     )
     context.fill()
 
@@ -1180,7 +1186,7 @@ const renderOffscreenEnemyIndicators = (
   context: CanvasRenderingContext2D,
   world: WorldState,
   renderCameraX: number,
-  renderCameraY: number
+  renderCameraY: number,
 ) => {
   if (!world.running || world.finished) {
     return
@@ -1217,7 +1223,10 @@ const renderOffscreenEnemyIndicators = (
     const edgeDistance = Math.min(edgeScaleX, edgeScaleY)
     const markerX = centerX + cosine * edgeDistance
     const markerY = centerY + sine * edgeDistance
-    const distanceMeters = Math.hypot(enemy.position.x - world.player.position.x, enemy.position.y - world.player.position.y)
+    const distanceMeters = Math.hypot(
+      enemy.position.x - world.player.position.x,
+      enemy.position.y - world.player.position.y,
+    )
     const palette = paletteForUnit(world, enemy)
 
     context.save()
@@ -1286,7 +1295,7 @@ const renderAtmosphere = (context: CanvasRenderingContext2D) => {
     60,
     VIEW_WIDTH * 0.5,
     VIEW_HEIGHT * 0.5,
-    VIEW_WIDTH * 0.75
+    VIEW_WIDTH * 0.75,
   )
   gradient.addColorStop(0, "rgba(212, 216, 214, 0)")
   gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")

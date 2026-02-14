@@ -2,12 +2,12 @@ import { AudioDirector, SfxSynth } from "./audio.ts"
 import {
   clearMatchResultSignal,
   resetHudSignals,
-  setMatchResultSignal,
   setFpsSignal,
+  setMatchResultSignal,
   syncHudSignals,
   updateCoverageSignals,
   updatePlayerHpSignal,
-  updatePlayerWeaponSignals
+  updatePlayerWeaponSignals,
 } from "./adapters/hud-sync.ts"
 import {
   crosshairSignal,
@@ -17,65 +17,65 @@ import {
   ffaPlayerCountSignal,
   menuVisibleSignal,
   pausedSignal,
-  selectedGameModeSignal,
   secondaryModeSignal,
+  selectedGameModeSignal,
   squadTeamCountSignal,
   statusMessageSignal,
-  tdmTeamSizeSignal
+  tdmTeamSizeSignal,
 } from "./signals.ts"
-import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
+import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   BOT_RADIUS,
-  MATCH_DURATION_SECONDS,
   LOOT_PICKUP_INTERVAL_SECONDS,
+  MATCH_DURATION_SECONDS,
   PLAYER_BASE_SPEED,
   PLAYER_RADIUS,
   UNIT_BASE_HP,
   VIEW_HEIGHT,
-  VIEW_WIDTH
+  VIEW_WIDTH,
 } from "./world/constants.ts"
 import { createWorldState, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
   applyDamage,
   equipPrimary,
-  firePrimary,
   finishReload,
+  firePrimary,
   randomLootablePrimary,
-  startReload
+  startReload,
 } from "./systems/combat.ts"
 import {
   constrainUnitsToArena,
   damageObstaclesByExplosion,
   hitObstacle,
   resolveUnitCollisions,
-  updateObstacleFlash
+  updateObstacleFlash,
 } from "./systems/collisions.ts"
 import {
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
-  OBSTACLE_MATERIAL_WAREHOUSE
+  OBSTACLE_MATERIAL_WAREHOUSE,
 } from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
-import { spawnFlamePatch, updateMolotovZones, igniteMolotov } from "./systems/molotov.ts"
+import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
 import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
-import { updatePlayer, updateCombatFeel, updateCrosshairWorld } from "./systems/player.ts"
+import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
 import {
+  botPalette,
   BURNED_FACTION_COLOR,
   BURNED_FACTION_ID,
   BURNED_FACTION_LABEL,
-  botPalette,
   createFactionFlowerCounts,
-  type FactionDescriptor
+  type FactionDescriptor,
 } from "./factions.ts"
 import type { GameModeId, Team } from "./types.ts"
 
@@ -91,7 +91,7 @@ const TEAM_COLOR_RAMP = [
   "#84d8a4",
   "#f0bd6a",
   "#c9a5ff",
-  "#ff9dd2"
+  "#ff9dd2",
 ]
 
 export class FlowerArenaGame {
@@ -146,7 +146,8 @@ export class FlowerArenaGame {
   private setupWorld() {
     setupWorldUnits(
       this.world,
-      (unitId, weaponId, ammo) => equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
+      (unitId, weaponId, ammo) =>
+        equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world)),
     )
   }
 
@@ -168,10 +169,10 @@ export class FlowerArenaGame {
     const requestedPlayers = mode === "ffa"
       ? clamp(Math.round(ffaPlayerCountSignal.value), 2, 8)
       : mode === "tdm"
-        ? clamp(Math.round(tdmTeamSizeSignal.value), 2, 6) * 2
-        : mode === "duo"
-          ? clamp(Math.round(duoTeamCountSignal.value), 2, 6) * 2
-          : clamp(Math.round(squadTeamCountSignal.value), 2, 3) * 4
+      ? clamp(Math.round(tdmTeamSizeSignal.value), 2, 6) * 2
+      : mode === "duo"
+      ? clamp(Math.round(duoTeamCountSignal.value), 2, 6) * 2
+      : clamp(Math.round(squadTeamCountSignal.value), 2, 3) * 4
     const botCount = clamp(requestedPlayers - 1, 1, this.botPool.length)
     const totalPlayers = botCount + 1
     const activeBots = this.botPool.slice(0, botCount)
@@ -206,7 +207,7 @@ export class FlowerArenaGame {
         factions.push({
           id: bot.id,
           label: `Bot ${index + 1}`,
-          color: botPalette(bot.id).tone
+          color: botPalette(bot.id).tone,
         })
       }
     } else if (mode === "tdm") {
@@ -219,7 +220,7 @@ export class FlowerArenaGame {
 
       factions = [
         { id: "red", label: "Red (You)", color: TEAM_COLOR_RAMP[0] },
-        { id: "blue", label: "Blue", color: TEAM_COLOR_RAMP[1] }
+        { id: "blue", label: "Blue", color: TEAM_COLOR_RAMP[1] },
       ]
     } else {
       const teamSize = mode === "duo" ? 2 : 4
@@ -235,13 +236,11 @@ export class FlowerArenaGame {
       factions = teamIds.map((teamId, index) => ({
         id: teamId,
         label: mode === "duo"
-          ? index === 0
-            ? "Duo 1 (You)"
-            : `Duo ${index + 1}`
+          ? index === 0 ? "Duo 1 (You)" : `Duo ${index + 1}`
           : index === 0
-            ? "Squad 1 (You)"
-            : `Squad ${index + 1}`,
-        color: TEAM_COLOR_RAMP[index % TEAM_COLOR_RAMP.length]
+          ? "Squad 1 (You)"
+          : `Squad ${index + 1}`,
+        color: TEAM_COLOR_RAMP[index % TEAM_COLOR_RAMP.length],
       }))
     }
 
@@ -267,7 +266,7 @@ export class FlowerArenaGame {
       randomLootablePrimary: () => {
         const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
-      }
+      },
     })
   }
 
@@ -281,7 +280,7 @@ export class FlowerArenaGame {
       onSecondaryDown: () => this.throwSecondary(this.world.player.id),
       onCrosshair: (x, y, visible) => {
         crosshairSignal.value = { x, y, visible }
-      }
+      },
     })
   }
 
@@ -383,7 +382,7 @@ export class FlowerArenaGame {
     spawnObstacles(this.world)
     spawnAllUnits(this.world)
     spawnMapLoot(this.world, {
-      spawnPickupAt: (x, y) => this.spawnLootPickupAt(x, y)
+      spawnPickupAt: (x, y) => this.spawnLootPickupAt(x, y),
     })
 
     this.world.cameraShake = 0
@@ -410,7 +409,7 @@ export class FlowerArenaGame {
         id: faction.id,
         label: faction.label,
         color: faction.color,
-        flowers: this.world.factionFlowerCounts[faction.id] ?? 0
+        flowers: this.world.factionFlowerCounts[faction.id] ?? 0,
       }))
       .sort((left, right) => right.flowers - left.flowers)
 
@@ -425,7 +424,7 @@ export class FlowerArenaGame {
         id: BURNED_FACTION_ID,
         label: BURNED_FACTION_LABEL,
         color: BURNED_FACTION_COLOR,
-        flowers: burntCount
+        flowers: burntCount,
       })
     }
 
@@ -433,7 +432,7 @@ export class FlowerArenaGame {
       .sort((left, right) => right.flowers - left.flowers)
       .map((faction) => ({
         ...faction,
-        percent: total > 0 ? (100 * faction.flowers) / total : 100 / Math.max(1, standings.length)
+        percent: total > 0 ? (100 * faction.flowers) / total : 100 / Math.max(1, standings.length),
       }))
 
     if (winner) {
@@ -444,7 +443,10 @@ export class FlowerArenaGame {
 
       const winnerPercent = standingsWithPercent.find((entry) => entry.id === winner.id)?.percent ?? 0
       const runnerUpFlowers = factionStandings[1]?.flowers ?? 0
-      const playerRank = Math.max(1, factionStandings.findIndex((faction) => faction.id === this.playerCoverageId()) + 1)
+      const playerRank = Math.max(
+        1,
+        factionStandings.findIndex((faction) => faction.id === this.playerCoverageId()) + 1,
+      )
       const factionCount = factionStandings.length
       const shotsFired = this.world.playerBulletsFired
       const shotsHit = this.world.playerBulletsHit
@@ -458,17 +460,17 @@ export class FlowerArenaGame {
         { label: "Bullets Hit", value: shotsHit.toLocaleString() },
         { label: "Hit Rate", value: `${hitRate.toFixed(1)}%` },
         { label: "Player Kills", value: this.world.playerKills.toString() },
-        { label: "Damage", value: Math.round(this.world.playerDamageDealt).toLocaleString() }
+        { label: "Damage", value: Math.round(this.world.playerDamageDealt).toLocaleString() },
       ]
 
       setMatchResultSignal(
         { label: winner.label, color: winner.color },
         standingsWithPercent.map((entry) => ({
           color: entry.color,
-          percent: entry.percent
+          percent: entry.percent,
         })),
         stats,
-        standingsWithPercent
+        standingsWithPercent,
       )
     }
 
@@ -581,7 +583,7 @@ export class FlowerArenaGame {
     slot.active = true
     slot.position.set(
       unit.position.x - unit.aim.x * 0.12 + randomRange(-0.07, 0.07),
-      unit.position.y - unit.aim.y * 0.12 + randomRange(-0.07, 0.07)
+      unit.position.y - unit.aim.y * 0.12 + randomRange(-0.07, 0.07),
     )
     slot.velocity.set(Math.cos(angle) * baseSpeed, Math.sin(angle) * baseSpeed)
     slot.rotation = randomRange(0, Math.PI * 2)
@@ -638,7 +640,7 @@ export class FlowerArenaGame {
     width: number,
     color: string,
     alpha: number,
-    life: number
+    life: number,
   ) {
     const magnitude = Math.hypot(directionX, directionY)
     if (magnitude <= 0.00001 || life <= 0.001 || alpha <= 0.001) {
@@ -724,7 +726,7 @@ export class FlowerArenaGame {
           (0.085 + speedFactor * 0.024) * BULLET_TRAIL_WIDTH_SCALE,
           "#ffd8af",
           0.4,
-          0.11 + speedFactor * 0.05
+          0.11 + speedFactor * 0.05,
         )
       } else {
         this.emitFlightTrailSegment(
@@ -736,7 +738,7 @@ export class FlowerArenaGame {
           (0.028 + speedFactor * 0.01) * BULLET_TRAIL_WIDTH_SCALE,
           BULLET_TRAIL_COLOR,
           0.9,
-          0.14 + speedFactor * 0.08
+          0.14 + speedFactor * 0.08,
         )
       }
 
@@ -816,7 +818,7 @@ export class FlowerArenaGame {
           (0.058 + speedFactor * 0.024) * SECONDARY_TRAIL_WIDTH_SCALE,
           "#f7faee",
           0.54,
-          0.16 + speedFactor * 0.07
+          0.16 + speedFactor * 0.07,
         )
       } else {
         this.emitFlightTrailSegment(
@@ -828,7 +830,7 @@ export class FlowerArenaGame {
           (0.066 + speedFactor * 0.018) * SECONDARY_TRAIL_WIDTH_SCALE,
           "#ffd2a2",
           0.42,
-          0.13 + speedFactor * 0.05
+          0.13 + speedFactor * 0.05,
         )
       }
 
@@ -847,7 +849,7 @@ export class FlowerArenaGame {
     y: number,
     velocityX: number,
     velocityY: number,
-    kind: "ballistic" | "flame"
+    kind: "ballistic" | "flame",
   ) {
     const speed = Math.hypot(velocityX, velocityY)
     if (speed <= 0.04) {
@@ -869,7 +871,7 @@ export class FlowerArenaGame {
           0.1 * BULLET_TRAIL_WIDTH_SCALE,
           "#ffd4a8",
           0.32,
-          0.09
+          0.09,
         )
         continue
       }
@@ -883,7 +885,7 @@ export class FlowerArenaGame {
         0.038 * BULLET_TRAIL_WIDTH_SCALE,
         BULLET_TRAIL_COLOR,
         0.76 - index * 0.22,
-        0.1 + index * 0.03
+        0.1 + index * 0.03,
       )
     }
   }
@@ -893,7 +895,7 @@ export class FlowerArenaGame {
     y: number,
     velocityX: number,
     velocityY: number,
-    mode: "grenade" | "molotov"
+    mode: "grenade" | "molotov",
   ) {
     const speed = Math.hypot(velocityX, velocityY)
     if (speed <= 0.05) {
@@ -912,7 +914,7 @@ export class FlowerArenaGame {
         0.09 * SECONDARY_TRAIL_WIDTH_SCALE,
         "#f5f8ea",
         0.5,
-        0.16
+        0.16,
       )
       return
     }
@@ -926,7 +928,7 @@ export class FlowerArenaGame {
       0.1 * SECONDARY_TRAIL_WIDTH_SCALE,
       "#ffd2a2",
       0.4,
-      0.12
+      0.12,
     )
   }
 
@@ -1069,7 +1071,7 @@ export class FlowerArenaGame {
       onPlayerBulletsFired: (count: number) => {
         this.world.playerBulletsFired += count
       },
-      onOtherShoot: () => this.sfx.shoot()
+      onOtherShoot: () => this.sfx.shoot(),
     })
   }
 
@@ -1080,14 +1082,14 @@ export class FlowerArenaGame {
         this.sfx.shoot()
         secondaryModeSignal.value = mode
       },
-      onOtherThrow: () => this.sfx.shoot()
+      onOtherThrow: () => this.sfx.shoot(),
     })
   }
 
   private respawnUnit(unitId: string) {
     respawnUnit(this.world, unitId, {
       equipPrimary: (id, weaponId, ammo) => this.equipPrimary(id, weaponId, ammo),
-      randomLootablePrimary: () => this.randomLootablePrimaryForMatch()
+      randomLootablePrimary: () => this.randomLootablePrimaryForMatch(),
     })
   }
 
@@ -1099,7 +1101,7 @@ export class FlowerArenaGame {
     hitX: number,
     hitY: number,
     impactX: number,
-    impactY: number
+    impactY: number,
   ) {
     applyDamage(this.world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
@@ -1110,7 +1112,7 @@ export class FlowerArenaGame {
           playerId: this.playerCoverageId(),
           botPalette: (id) => botPalette(id),
           factionColor: (id) => this.world.factions.find((faction) => faction.id === id)?.color ?? null,
-          onCoverageUpdated: () => updateCoverageSignals(this.world)
+          onCoverageUpdated: () => updateCoverageSignals(this.world),
         }, isBurnt)
       },
       respawnUnit: (id) => this.respawnUnit(id),
@@ -1132,7 +1134,7 @@ export class FlowerArenaGame {
       onPlayerKill: () => {
         this.world.playerKills += 1
       },
-      onPlayerHpChanged: () => updatePlayerHpSignal(this.world)
+      onPlayerHpChanged: () => updatePlayerHpSignal(this.world),
     })
   }
 
@@ -1142,9 +1144,7 @@ export class FlowerArenaGame {
     this.previousTime = time
 
     const instantFps = realDt > 0 ? 1 / realDt : 0
-    this.smoothedFps = this.smoothedFps <= 0
-      ? instantFps
-      : lerp(this.smoothedFps, instantFps, 0.18)
+    this.smoothedFps = this.smoothedFps <= 0 ? instantFps : lerp(this.smoothedFps, instantFps, 0.18)
     setFpsSignal(this.smoothedFps)
 
     this.update(dt)
@@ -1199,10 +1199,10 @@ export class FlowerArenaGame {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
           onPlayerPickup: (label) => {
             statusMessageSignal.value = `Picked up ${label}`
-          }
+          },
         })
       },
-      updateCrosshairWorld: () => updateCrosshairWorld(this.world)
+      updateCrosshairWorld: () => updateCrosshairWorld(this.world),
     })
 
     if (this.world.player.reloadCooldown <= 0) {
@@ -1220,17 +1220,17 @@ export class FlowerArenaGame {
         }
         collectNearbyPickup(this.world, bot, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
-          onPlayerPickup: () => {}
+          onPlayerPickup: () => {},
         })
       },
-      nowMs: () => performance.now()
+      nowMs: () => performance.now(),
     })
 
     resolveUnitCollisions(this.world)
     constrainUnitsToArena(this.world, simDt, {
       onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
         this.applyDamage(targetId, amount, sourceId, this.world.player.team, hitX, hitY, impactX, impactY)
-      }
+      },
     })
 
     updateProjectiles(this.world, simDt, {
@@ -1240,7 +1240,7 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true)
+          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true),
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -1251,7 +1251,7 @@ export class FlowerArenaGame {
       },
       applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
         this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
-      }
+      },
     })
 
     updateThrowables(this.world, simDt, {
@@ -1264,14 +1264,14 @@ export class FlowerArenaGame {
             this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
           },
           damageObstaclesByExplosion: (x, y, radius) => {
-          damageObstaclesByExplosion(this.world, x, y, radius, {
-            onSfxHit: () => this.sfx.hit(),
-            onSfxBreak: () => this.sfx.obstacleBreak(),
-            onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-            onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true)
-          })
-        },
-          spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius)
+            damageObstaclesByExplosion(this.world, x, y, radius, {
+              onSfxHit: () => this.sfx.hit(),
+              onSfxBreak: () => this.sfx.obstacleBreak(),
+              onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
+              onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true),
+            })
+          },
+          spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
         })
       },
       igniteMolotov: (throwableIndex) => {
@@ -1284,13 +1284,13 @@ export class FlowerArenaGame {
       onTrailEnd: (x, y, velocityX, velocityY, mode) => {
         this.emitThrowableTrailEnd(x, y, velocityX, velocityY, mode)
       },
-      onExplosion: () => this.sfx.explosion()
+      onExplosion: () => this.sfx.explosion(),
     })
 
     updateMolotovZones(this.world, simDt, {
       applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
         this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
-      }
+      },
     })
 
     updateFlowers(this.world, simDt)
@@ -1304,7 +1304,7 @@ export class FlowerArenaGame {
       randomLootablePrimary: () => {
         const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
-      }
+      },
     })
 
     this.updateExplosions(simDt)
