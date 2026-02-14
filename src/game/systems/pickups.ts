@@ -2,6 +2,7 @@ import type { Unit } from "../entities.ts"
 import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { WorldState } from "../world/state.ts"
+import { LOOT_PICKUP_INTERVAL_SECONDS } from "../world/constants.ts"
 
 export interface PickupDeps {
   randomLootablePrimary: () => "assault" | "shotgun" | "flamethrower"
@@ -21,24 +22,23 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
 }
 
 export const spawnPickup = (world: WorldState, deps: PickupDeps) => {
-  spawnPickupAt(world, randomPointInArena(world.arenaRadius), deps)
+  const spawnRadius = Math.max(0, world.arenaRadius * 0.5)
+  spawnPickupAt(world, randomPointInArena(spawnRadius, 0), deps)
 }
 
 export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps) => {
   world.pickupTimer -= dt
 
-  let activeCount = 0
   for (const pickup of world.pickups) {
     if (!pickup.active) {
       continue
     }
-    activeCount += 1
     pickup.bob += dt * 2.3
   }
 
-  if (activeCount < 3 && world.pickupTimer <= 0) {
+  if (world.pickupTimer <= 0) {
     spawnPickup(world, deps)
-    world.pickupTimer = randomRange(4.8, 7.3)
+    world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
   }
 }
 

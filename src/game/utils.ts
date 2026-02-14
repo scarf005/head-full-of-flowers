@@ -11,9 +11,9 @@ export const randomRange = (min: number, max: number) => min + Math.random() * (
 
 export const randomInt = (min: number, max: number) => Math.floor(randomRange(min, max + 1))
 
-export const randomPointInArena = (radius: number) => {
+export const randomPointInArena = (radius: number, borderPadding = 2) => {
   const angle = Math.random() * Math.PI * 2
-  const distance = Math.sqrt(Math.random()) * Math.max(1, radius - 2)
+  const distance = Math.sqrt(Math.random()) * Math.max(1, radius - borderPadding)
   return new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance)
 }
 

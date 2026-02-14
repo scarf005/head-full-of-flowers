@@ -19,6 +19,7 @@ import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   MATCH_DURATION_SECONDS,
+  LOOT_PICKUP_INTERVAL_SECONDS,
   PLAYER_BASE_SPEED,
   UNIT_BASE_HP,
   VIEW_HEIGHT,
@@ -50,7 +51,13 @@ import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacl
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
-import { botPalette } from "./factions.ts"
+import {
+  BURNED_FACTION_COLOR,
+  BURNED_FACTION_ID,
+  BURNED_FACTION_LABEL,
+  botPalette,
+  createFactionFlowerCounts
+} from "./factions.ts"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -157,8 +164,8 @@ export class FlowerArenaGame {
     this.world.finished = false
     this.world.timeRemaining = MATCH_DURATION_SECONDS
     this.world.arenaRadius = ARENA_START_RADIUS
-    this.world.pickupTimer = 1.5
-    this.world.factionFlowerCounts = Object.fromEntries(this.world.factions.map((faction) => [faction.id, 0]))
+    this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
+    this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
     this.world.playerFlowerTotal = 0
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
@@ -234,50 +241,60 @@ export class FlowerArenaGame {
     this.world.finished = true
     this.audioDirector.startMenu()
 
-    const winner = this.world.factions.reduce((best, faction) => {
-      const count = this.world.factionFlowerCounts[faction.id] ?? 0
-      if (!best || count > best.count) {
-        return { faction, count }
-      }
-      return best
-    }, null as { faction: WorldState["factions"][number]; count: number } | null)
+    const factionStandings = this.world.factions
+      .map((faction) => ({
+        id: faction.id,
+        label: faction.label,
+        color: faction.color,
+        flowers: this.world.factionFlowerCounts[faction.id] ?? 0
+      }))
+      .sort((left, right) => right.flowers - left.flowers)
+
+    const winner = factionStandings[0]
+
+    const burntCount = this.world.factionFlowerCounts[BURNED_FACTION_ID] ?? 0
+    const total = factionStandings.reduce((sum, faction) => sum + faction.flowers, 0) + burntCount
+
+    const standings = [...factionStandings]
+    if (burntCount > 0) {
+      standings.push({
+        id: BURNED_FACTION_ID,
+        label: BURNED_FACTION_LABEL,
+        color: BURNED_FACTION_COLOR,
+        flowers: burntCount
+      })
+    }
+
+    const standingsWithPercent = standings
+      .sort((left, right) => right.flowers - left.flowers)
+      .map((faction) => ({
+        ...faction,
+        percent: total > 0 ? (100 * faction.flowers) / total : 100 / Math.max(1, standings.length)
+      }))
 
     if (winner) {
-      const message = winner.faction.id === this.world.player.id
+      const message = winner.id === this.world.player.id
         ? "Time up. Your trail dominates the arena"
-        : `Time up. ${winner.faction.label} overwhelms the field`
+        : `Time up. ${winner.label} overwhelms the field`
       setStatusMessage(message)
 
-      const standings = this.world.factions
-        .map((faction) => ({
-          id: faction.id,
-          label: faction.label,
-          color: faction.color,
-          flowers: this.world.factionFlowerCounts[faction.id] ?? 0
-        }))
-        .sort((left, right) => right.flowers - left.flowers)
-      const total = standings.reduce((sum, faction) => sum + faction.flowers, 0)
-      const standingsWithPercent = standings.map((faction) => ({
-        ...faction,
-        percent: total > 0 ? (100 * faction.flowers) / total : 100 / this.world.factions.length
-      }))
-      const pieSlices = standingsWithPercent.map((faction) => ({
-        color: faction.color,
-        percent: faction.percent
-      }))
-      const winnerPercent = standingsWithPercent[0]?.percent ?? 0
-      const runnerUpFlowers = standingsWithPercent[1]?.flowers ?? 0
-      const playerRank = Math.max(1, standingsWithPercent.findIndex((faction) => faction.id === this.world.player.id) + 1)
+      const winnerPercent = standingsWithPercent.find((entry) => entry.id === winner.id)?.percent ?? 0
+      const runnerUpFlowers = factionStandings[1]?.flowers ?? 0
+      const playerRank = Math.max(1, factionStandings.findIndex((faction) => faction.id === this.world.player.id) + 1)
+      const factionCount = factionStandings.length
       const stats = [
         { label: "Total Flowers", value: total.toLocaleString() },
         { label: "Winner Share", value: `${winnerPercent.toFixed(1)}%` },
-        { label: "Your Place", value: `${playerRank}/${standingsWithPercent.length}` },
-        { label: "Lead Margin", value: `${Math.max(0, winner.count - runnerUpFlowers)} flowers` }
+        { label: "Your Place", value: `${playerRank}/${factionCount}` },
+        { label: "Lead Margin", value: `${Math.max(0, winner.flowers - runnerUpFlowers)} flowers` }
       ]
 
       setMatchResultSignal(
-        { label: winner.faction.label, color: winner.faction.color },
-        pieSlices,
+        { label: winner.label, color: winner.color },
+        standingsWithPercent.map((entry) => ({
+          color: entry.color,
+          percent: entry.percent
+        })),
         stats,
         standingsWithPercent
       )

@@ -38,8 +38,9 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   const throwable = deps.allocThrowable()
   const throwDirX = shooter.aim.x
   const throwDirY = shooter.aim.y
-  const throwOffset = shooter.radius + 0.12
   const speed = mode === "grenade" ? GRENADE_BULLET_SPEED : MOLOTOV_THROW_SPEED
+  const throwableRadius = mode === "grenade" ? 0.36 : 0.3
+  const throwOffset = shooter.radius + throwableRadius + 0.06
 
   throwable.active = true
   throwable.ownerId = shooter.id
@@ -50,7 +51,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.velocity.x = throwDirX * speed
   throwable.velocity.y = throwDirY * speed
   throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
-  throwable.radius = mode === "grenade" ? 0.36 : 0.3
+  throwable.radius = throwableRadius
   throwable.ricochets = 0
   throwable.rolled = false
 

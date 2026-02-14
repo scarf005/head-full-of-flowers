@@ -2,6 +2,7 @@ import type { Team } from "../types.ts"
 import type { Throwable } from "../entities.ts"
 import { distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
 
 export const igniteMolotov = (world: WorldState, throwable: Throwable, allocMolotovZone: () => WorldState["molotovZones"][number]) => {
   const zone = allocMolotovZone()
@@ -96,8 +97,18 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
               if (flower.active) {
                 const dsq = distSquared(flower.position.x, flower.position.y, zone.position.x, zone.position.y)
                 if (dsq <= radiusSquared) {
-                  if (!flower.scorched || flower.color !== "#4a453d" || flower.accent !== "#29261f") {
+                  if (!flower.scorched) {
+                    const previousOwner = flower.ownerId
+                    if (previousOwner in world.factionFlowerCounts) {
+                      world.factionFlowerCounts[previousOwner] = Math.max(0, world.factionFlowerCounts[previousOwner] - 1)
+                    }
+                    if (BURNED_FACTION_ID in world.factionFlowerCounts) {
+                      world.factionFlowerCounts[BURNED_FACTION_ID] += 1
+                    }
                     flower.scorched = true
+                  }
+
+                  if (flower.color !== "#4a453d" || flower.accent !== "#29261f") {
                     flower.color = "#4a453d"
                     flower.accent = "#29261f"
                     if (!flower.renderDirty) {

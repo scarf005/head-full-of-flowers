@@ -4,6 +4,10 @@ export interface FactionDescriptor {
   color: string
 }
 
+export const BURNED_FACTION_ID = "burnt"
+export const BURNED_FACTION_LABEL = "Burnt"
+export const BURNED_FACTION_COLOR = "#4a453d"
+
 const BOT_PALETTES = [
   { tone: "#7aa6ff", edge: "#3d67bf" },
   { tone: "#ff9c8e", edge: "#c95a5f" },
@@ -34,7 +38,10 @@ export const buildFactions = (botCount: number): FactionDescriptor[] => {
 }
 
 export const createFactionFlowerCounts = (factions: FactionDescriptor[]): Record<string, number> => {
-  return Object.fromEntries(factions.map((faction) => [faction.id, 0]))
+  return {
+    ...Object.fromEntries(factions.map((faction) => [faction.id, 0])),
+    [BURNED_FACTION_ID]: 0
+  }
 }
 
 export const botPalette = (id: string) => {

@@ -14,6 +14,7 @@ import {
   statusMessageSignal,
   timeRemainingSignal
 } from "../signals.ts"
+import { BURNED_FACTION_COLOR, BURNED_FACTION_ID, BURNED_FACTION_LABEL } from "../factions.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { MATCH_DURATION_SECONDS } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
@@ -28,25 +29,43 @@ const defaultMatchResult = {
 }
 
 const buildCoverageSlices = (world: WorldState) => {
-  const total = world.factions.reduce((sum, faction) => {
-    return sum + (world.factionFlowerCounts[faction.id] ?? 0)
+  const entries = world.factions.map((faction) => ({
+    id: faction.id,
+    label: faction.label,
+    color: faction.color,
+    count: world.factionFlowerCounts[faction.id] ?? 0
+  }))
+
+  const burntCount = world.factionFlowerCounts[BURNED_FACTION_ID] ?? 0
+  if (burntCount > 0) {
+    entries.push({
+      id: BURNED_FACTION_ID,
+      label: BURNED_FACTION_LABEL,
+      color: BURNED_FACTION_COLOR,
+      count: burntCount
+    })
+  }
+
+  const total = entries.reduce((sum, entry) => {
+    return sum + entry.count
   }, 0)
 
   if (total <= 0) {
-    const percent = 100 / Math.max(1, world.factions.length)
-    return world.factions.map((faction) => ({
-      id: faction.id,
-      label: faction.label,
-      color: faction.color,
+    const defaultSliceCount = Math.max(1, entries.length)
+    const percent = 100 / defaultSliceCount
+    return entries.map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      color: entry.color,
       percent
     }))
   }
 
-  return world.factions.map((faction) => ({
-    id: faction.id,
-    label: faction.label,
-    color: faction.color,
-    percent: (100 * (world.factionFlowerCounts[faction.id] ?? 0)) / total
+  return entries.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    color: entry.color,
+    percent: (100 * entry.count) / total
   }))
 }
 

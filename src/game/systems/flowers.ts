@@ -1,5 +1,6 @@
 import { clamp, limitToArena, randomInt } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
 
 const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.95
 const FLOWER_BACK_OFFSET = 0.26
@@ -102,6 +103,10 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
     accent: pastelize(palette.edge, 0.86, 0.01),
     fromPlayer: false
   }
+}
+
+const flowerScoreBucket = (flower: WorldState["flowers"][number]) => {
+  return flower.scorched ? BURNED_FACTION_ID : flower.ownerId
 }
 
 const ownerSeed = (ownerId: string) => {
@@ -296,8 +301,9 @@ export const spawnFlowers = (
     const flower = deps.allocFlower()
     if (flower.active) {
       const previousOwner = flower.ownerId
-      if (previousOwner in world.factionFlowerCounts) {
-        world.factionFlowerCounts[previousOwner] = Math.max(0, world.factionFlowerCounts[previousOwner] - 1)
+      const previousBucket = flowerScoreBucket(flower)
+      if (previousBucket in world.factionFlowerCounts) {
+        world.factionFlowerCounts[previousBucket] = Math.max(0, world.factionFlowerCounts[previousBucket] - 1)
       }
       removeFlowerFromDensity(world, flower)
     }
