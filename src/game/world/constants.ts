@@ -13,7 +13,6 @@ export const OBSTACLE_POOL_SIZE = 220
 
 export const BOT_COUNT = 7
 export const MATCH_DURATION_SECONDS = 90
-export const PERK_FLOWER_STEP = 130
 export const PLAYER_BASE_SPEED = 10
 export const BOT_BASE_SPEED = PLAYER_BASE_SPEED
 export const UNIT_BASE_HP = 10

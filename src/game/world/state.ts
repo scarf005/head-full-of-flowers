@@ -1,6 +1,5 @@
 import { DamagePopup, Flower, MolotovZone, Obstacle, Pickup, Projectile, Throwable, Unit, Vec2 } from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
-import type { PerkDefinition } from "../perks.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
   BOT_COUNT,
@@ -9,7 +8,6 @@ import {
   MATCH_DURATION_SECONDS,
   MOLOTOV_POOL_SIZE,
   OBSTACLE_POOL_SIZE,
-  PERK_FLOWER_STEP,
   PICKUP_POOL_SIZE,
   PROJECTILE_POOL_SIZE,
   THROWABLE_POOL_SIZE,
@@ -71,8 +69,6 @@ export interface WorldState {
   flowerCellHead: Int32Array
   flowerDirtyCount: number
   playerFlowerTotal: number
-  nextPerkFlowerTarget: number
-  perkChoices: PerkDefinition[]
   cameraShake: number
   hitStop: number
   arenaRadius: number
@@ -144,8 +140,6 @@ export const createWorldState = (): WorldState => {
     flowerCellHead,
     flowerDirtyCount: 0,
     playerFlowerTotal: 0,
-    nextPerkFlowerTarget: PERK_FLOWER_STEP,
-    perkChoices: [],
     cameraShake: 0,
     hitStop: 0,
     arenaRadius: ARENA_START_RADIUS,

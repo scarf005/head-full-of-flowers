@@ -5,7 +5,6 @@ import {
   hpSignal,
   matchResultSignal,
   pausedSignal,
-  perkOptionsSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
   primaryWeaponSignal,
@@ -73,7 +72,6 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   secondaryWeaponIconSignal.value = "G"
   secondaryWeaponCooldownSignal.value = "RMB to throw"
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
-  perkOptionsSignal.value = []
   statusMessageSignal.value = "Click once to wake audio, then begin fighting"
   crosshairSignal.value = {
     x: canvas.clientWidth * 0.5,
@@ -162,15 +160,7 @@ export const setMatchResultSignal = (
     pieGradient: buildPieGradient(slices)
   }
 }
-
+  
 export const clearMatchResultSignal = () => {
   matchResultSignal.value = defaultMatchResult
-}
-
-export const clearPerkOptions = () => {
-  perkOptionsSignal.value = []
-}
-
-export const setPerkOptions = (options: { id: string; name: string; description: string }[]) => {
-  perkOptionsSignal.value = options
 }

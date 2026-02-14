@@ -43,7 +43,6 @@ src/game/
     molotov.ts
     flowers.ts
     pickups.ts
-    perks.ts
     respawn.ts
   render/
     scene.ts
@@ -94,7 +93,6 @@ src/game/
 - `updateMolotovZones(world, dt)`
 - `updateFlowers(world, dt)`
 - `updatePickups(world, dt)`
-- `updatePerkProgress(world)`
 
 ### Adapters
 
@@ -107,7 +105,7 @@ src/game/
 ### Phase 0: Baseline and Guardrails
 
 - Add architecture doc comments in `PLAN.md` and define folder layout
-- Record baseline behavior notes (timers, fire rates, damage, perk cadence)
+- Record baseline behavior notes (timers, fire rates, damage, spawn pacing)
 - Verify app still builds with `deno task build`
 
 Exit criteria:
@@ -208,7 +206,7 @@ Exit criteria:
 ## Verification Checklist per Phase
 
 - `deno task build` passes
-- Controls still work (WASD, mouse aim/fire, RMB throw, 1/2/3 perk)
+- Controls still work (WASD, mouse aim/fire, RMB throw)
 - Match timer, shrinking arena, respawns, and scoring still work
 - No major FPS regression observed in browser
 - HUD values remain in sync with gameplay state

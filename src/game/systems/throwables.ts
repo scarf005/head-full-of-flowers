@@ -12,6 +12,9 @@ const GRENADE_BULLET_DAMAGE = 10
 const GRENADE_BULLET_SPEED = 20
 const GRENADE_BULLET_RANGE = 30
 const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED
+const GRENADE_MAX_RICOCHETS = 2
+const GRENADE_RICOCHET_DAMPING = 0.84
+const GRENADE_RICOCHET_JITTER_RADIANS = 0.2
 const GRENADE_HIT_CAMERA_SHAKE = 0.55
 const GRENADE_HIT_STOP = 0.022
 
@@ -48,6 +51,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.velocity.y = throwDirY * speed
   throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
   throwable.radius = mode === "grenade" ? 0.36 : 0.3
+  throwable.ricochets = 0
   throwable.rolled = false
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
@@ -88,6 +92,8 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
 
     const isGrenade = throwable.mode === "grenade"
     let shouldExplode = isGrenade
+    const previousX = throwable.position.x
+    const previousY = throwable.position.y
 
     throwable.life -= dt
     throwable.position.x += throwable.velocity.x * dt
@@ -102,16 +108,40 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     if (isObstacleCellSolid(world.obstacleGrid, hitCell.x, hitCell.y)) {
       const damage = throwable.mode === "grenade" ? 3 : 1.5
       damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, damage)
-      shouldExplode = isGrenade
-      throwable.life = 0
+
+      if (isGrenade && throwable.ricochets < GRENADE_MAX_RICOCHETS) {
+        const xCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, previousY)
+        const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, throwable.position.y)
+        const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
+        const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
+
+        throwable.position.x = previousX
+        throwable.position.y = previousY
+
+        if (blockedX || !blockedY) {
+          throwable.velocity.x *= -1
+        }
+        if (blockedY || !blockedX) {
+          throwable.velocity.y *= -1
+        }
+
+        const jitter = (Math.random() * 2 - 1) * GRENADE_RICOCHET_JITTER_RADIANS
+        const cos = Math.cos(jitter)
+        const sin = Math.sin(jitter)
+        const ricochetX = throwable.velocity.x * cos - throwable.velocity.y * sin
+        const ricochetY = throwable.velocity.x * sin + throwable.velocity.y * cos
+        throwable.velocity.x = ricochetX * GRENADE_RICOCHET_DAMPING
+        throwable.velocity.y = ricochetY * GRENADE_RICOCHET_DAMPING
+
+        throwable.ricochets += 1
+      } else {
+        shouldExplode = isGrenade
+        throwable.life = 0
+      }
     }
 
     if (isGrenade) {
       for (const unit of world.units) {
-        if (unit.id === throwable.ownerId) {
-          continue
-        }
-
         const hitRadius = throwable.radius + unit.radius
         if (distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <= hitRadius * hitRadius) {
           deps.applyDamage(unit.id, GRENADE_BULLET_DAMAGE, throwable.ownerId, unit.position.x, unit.position.y, throwable.velocity.x, throwable.velocity.y)

@@ -1,10 +1,8 @@
 import { sample } from "@std/random"
 
-import { randomPerkChoices } from "../perks.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
-import { PERK_FLOWER_STEP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 
@@ -284,52 +282,4 @@ export const applyDamage = (
   if (target.isPlayer) {
     deps.onPlayerHpChanged()
   }
-}
-
-export const checkPerkProgress = (
-  world: WorldState,
-  onPerkReady: (options: { id: string; name: string; description: string }[]) => void
-) => {
-  if (world.perkChoices.length > 0) {
-    return
-  }
-
-  if (world.playerFlowerTotal < world.nextPerkFlowerTarget) {
-    return
-  }
-
-  world.nextPerkFlowerTarget += PERK_FLOWER_STEP
-  world.perkChoices = randomPerkChoices(3)
-  onPerkReady(world.perkChoices.map((perk) => ({
-    id: perk.id,
-    name: perk.name,
-    description: perk.description
-  })))
-}
-
-export const consumePerkChoice = (
-  world: WorldState,
-  index: number,
-  onApplied: (feedback: string) => void,
-  onPlayerHpChanged: () => void,
-  onClearChoices: () => void
-) => {
-  if (index < 0 || index > 2) {
-    return
-  }
-
-  if (world.perkChoices.length === 0) {
-    return
-  }
-
-  const choice = world.perkChoices[index]
-  if (!choice) {
-    return
-  }
-
-  const feedback = choice.apply(world.player)
-  world.perkChoices = []
-  onClearChoices()
-  onApplied(feedback)
-  onPlayerHpChanged()
 }

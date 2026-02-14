@@ -32,7 +32,6 @@ export interface FlowerSpawnDeps {
   allocFlower: () => WorldState["flowers"][number]
   playerId: string
   botPalette: (id: string) => { tone: string; edge: string }
-  onPerkProgress: () => void
   onCoverageUpdated: () => void
 }
 
@@ -339,7 +338,6 @@ export const spawnFlowers = (
 
   if (palette.fromPlayer) {
     world.playerFlowerTotal += amount
-    deps.onPerkProgress()
   }
 
   deps.onCoverageUpdated()

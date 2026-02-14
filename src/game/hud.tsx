@@ -5,7 +5,6 @@ import {
   hpSignal,
   matchResultSignal,
   pausedSignal,
-  perkOptionsSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
   primaryWeaponSignal,
@@ -25,7 +24,6 @@ const formatTime = (seconds: number) => {
 }
 
 export const GameHud = () => {
-  const perkChoices = perkOptionsSignal.value
   const hp = hpSignal.value
   const slices: CoverageSlice[] = coverageSlicesSignal.value
   const result = matchResultSignal.value
@@ -85,14 +83,6 @@ export const GameHud = () => {
           <div class="weapon-sub">{hp.hp} / {hp.maxHp}</div>
         </div>
       </div>
-
-      {perkChoices.length > 0 ? (
-        <div class="hud perk-overlay">
-          <span>Press 1: {perkChoices[0]?.name}</span>
-          <span>Press 2: {perkChoices[1]?.name}</span>
-          <span>Press 3: {perkChoices[2]?.name}</span>
-        </div>
-      ) : null}
 
       {result.visible ? (
         <div class="hud match-result" role="status" aria-live="polite">

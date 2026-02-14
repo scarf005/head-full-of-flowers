@@ -1,13 +1,11 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
 import {
   clearMatchResultSignal,
-  clearPerkOptions,
   resetHudSignals,
   setMatchResultSignal,
   setPauseSignal,
   setCrosshairSignal,
   setFpsSignal,
-  setPerkOptions,
   setSecondaryWeaponSignal,
   setStatusMessage,
   syncHudSignals,
@@ -21,7 +19,6 @@ import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   MATCH_DURATION_SECONDS,
-  PERK_FLOWER_STEP,
   PLAYER_BASE_SPEED,
   UNIT_BASE_HP,
   VIEW_HEIGHT,
@@ -31,8 +28,6 @@ import { createWorldState, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
   applyDamage,
-  checkPerkProgress,
-  consumePerkChoice,
   equipPrimary,
   firePrimary,
   finishReload,
@@ -138,7 +133,6 @@ export class FlowerArenaGame {
       onPrimeAudio: () => this.primeAudio(),
       onBeginMatch: () => this.beginMatch(),
       onTogglePause: () => this.togglePause(),
-      onConsumePerk: (index) => this.consumePerkChoice(index),
       onPrimaryDown: () => this.firePrimary(this.world.player.id),
       onSecondaryDown: () => this.throwSecondary(this.world.player.id),
       onCrosshair: (x, y, visible) => setCrosshairSignal(x, y, visible)
@@ -166,7 +160,6 @@ export class FlowerArenaGame {
     this.world.pickupTimer = 1.5
     this.world.factionFlowerCounts = Object.fromEntries(this.world.factions.map((faction) => [faction.id, 0]))
     this.world.playerFlowerTotal = 0
-    this.world.nextPerkFlowerTarget = PERK_FLOWER_STEP
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
     this.world.flowerCellHead = new Int32Array(this.world.terrainMap.size * this.world.terrainMap.size)
@@ -223,8 +216,6 @@ export class FlowerArenaGame {
     spawnMapLoot(this.world, {
       spawnPickupAt: (x, y) => this.spawnLootPickupAt(x, y)
     })
-    this.world.perkChoices = []
-    clearPerkOptions()
 
     this.world.cameraShake = 0
     this.world.cameraOffset.set(0, 0)
@@ -268,19 +259,6 @@ export class FlowerArenaGame {
     }
 
     setPauseSignal(false)
-
-    clearPerkOptions()
-    this.world.perkChoices = []
-  }
-
-  private consumePerkChoice(index: number) {
-    consumePerkChoice(
-      this.world,
-      index,
-      (feedback) => setStatusMessage(feedback),
-      () => updatePlayerHpSignal(this.world),
-      () => clearPerkOptions()
-    )
   }
 
   private togglePause() {
@@ -424,12 +402,6 @@ export class FlowerArenaGame {
           allocFlower: () => this.allocFlower(),
           playerId: this.world.player.id,
           botPalette: (id) => botPalette(id),
-          onPerkProgress: () => {
-            checkPerkProgress(this.world, (options) => {
-              setPerkOptions(options)
-              setStatusMessage("Perk ready. Press 1, 2, or 3")
-            })
-          },
           onCoverageUpdated: () => updateCoverageSignals(this.world)
         })
       },

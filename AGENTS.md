@@ -15,7 +15,7 @@
 - Free-for-all coverage race: 1 player + 7 bots, each with own faction slot.
 - Win by flower coverage: highest total flowers at match end.
 - On 0 HP: instant safe respawn, infinite lives.
-- Controls: WASD move, mouse aim, LMB shoot, RMB grenade/molotov, `1/2/3` perks.
+- Controls: WASD move, mouse aim, LMB shoot, RMB grenade/molotov.
 - Weapons: infinite pistol fallback, assault/shotgun/flamethrower pickups, grenade + molotov secondary.
 - Grenade/Molotov are cooldown based; ammo intentionally low.
 - AI states: wander, aggro, flee (low HP).
@@ -26,13 +26,12 @@
 - On hit spawn 10–20 flower sprites behind impact, in cone/radial spread.
 - Player damage flowers are white; bot damage flowers use that bot's faction palette.
 - Flowers pop from 0 to full quickly.
-- Perk prompts appear every `PERK_FLOWER_STEP` player flowers; choose `1/2/3` without pausing.
+- Flower coverage score reflects all flowers spawned by each faction.
 
 ## **4) UI (Preact + Signals)**
 
 - Top bar: 90s timer and FFA coverage strips by faction (with legend).
 - Bottom-left: primary icon + ammo, secondary icon.
-- Bottom-center: perk options: `Press 1/2/3`.
 - Center: crosshair + floating damage popups in world space.
 
 ## **5) Workflow**

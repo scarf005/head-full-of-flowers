@@ -1,12 +1,6 @@
 import { signal } from "@preact/signals"
 import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 
-export interface PerkOption {
-  id: string
-  name: string
-  description: string
-}
-
 export interface CoverageSlice {
   id: string
   label: string
@@ -40,7 +34,6 @@ export const secondaryWeaponIconSignal = signal("G")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 
-export const perkOptionsSignal = signal<PerkOption[]>([])
 export const statusMessageSignal = signal("Click to begin")
 
 export const crosshairSignal = signal({ x: 0, y: 0, visible: false })

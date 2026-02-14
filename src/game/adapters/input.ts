@@ -6,7 +6,6 @@ export interface InputAdapterHandlers {
   onPrimeAudio: () => void
   onBeginMatch: () => void
   onTogglePause: () => void
-  onConsumePerk: (index: number) => void
   onPrimaryDown: () => void
   onSecondaryDown: () => void
   onCrosshair: (x: number, y: number, visible: boolean) => void
@@ -44,9 +43,6 @@ export const setupInputAdapter = (
       return
     }
 
-    if (event.key === "1" || event.key === "2" || event.key === "3") {
-      handlers.onConsumePerk(Number(event.key) - 1)
-    }
   }
 
   const onKeyUp = (event: KeyboardEvent) => {
