@@ -67,6 +67,7 @@ export interface WorldState {
   pickupTimer: number
   factions: FactionDescriptor[]
   factionFlowerCounts: Record<string, number>
+  flowerDensityGrid: Uint16Array
   playerFlowerTotal: number
   nextPerkFlowerTarget: number
   perkChoices: PerkDefinition[]
@@ -131,6 +132,7 @@ export const createWorldState = (): WorldState => {
     pickupTimer: 2.5,
     factions,
     factionFlowerCounts: createFactionFlowerCounts(factions),
+    flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
     playerFlowerTotal: 0,
     nextPerkFlowerTarget: PERK_FLOWER_STEP,
     perkChoices: [],

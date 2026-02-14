@@ -6,6 +6,9 @@ const FLOWER_BACK_OFFSET = 0.26
 const FLOWER_DISTANCE_MIN = 0.08
 const FLOWER_DISTANCE_MAX = 1.85
 const FLOWER_POSITION_JITTER = 0.06
+const FLOWER_PUSH_ATTEMPTS = 9
+const FLOWER_PUSH_DISTANCE_STEP = 0.34
+const FLOWER_TILE_CAPACITY = 10
 const FLOWER_SIZE_MIN = 0.16
 const FLOWER_SIZE_MAX = 0.42
 
@@ -87,6 +90,55 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
   }
 }
 
+const flowerCellIndexAt = (world: WorldState, x: number, y: number) => {
+  const size = world.terrainMap.size
+  const half = Math.floor(size * 0.5)
+  const gridX = Math.floor(x) + half
+  const gridY = Math.floor(y) + half
+  if (gridX < 0 || gridY < 0 || gridX >= size || gridY >= size) {
+    return -1
+  }
+
+  return gridY * size + gridX
+}
+
+const removeFlowerFromDensity = (world: WorldState, flower: WorldState["flowers"][number]) => {
+  if (flower.bloomCell < 0 || flower.bloomCell >= world.flowerDensityGrid.length) {
+    flower.bloomCell = -1
+    return
+  }
+
+  world.flowerDensityGrid[flower.bloomCell] = Math.max(0, world.flowerDensityGrid[flower.bloomCell] - 1)
+  flower.bloomCell = -1
+}
+
+const pickFlowerPosition = (world: WorldState, originX: number, originY: number, angle: number) => {
+  const spreadX = Math.cos(angle)
+  const spreadY = Math.sin(angle)
+  let chosenX = originX + spreadX * FLOWER_DISTANCE_MAX
+  let chosenY = originY + spreadY * FLOWER_DISTANCE_MAX
+  let lowestCount = Number.POSITIVE_INFINITY
+
+  for (let attempt = 0; attempt < FLOWER_PUSH_ATTEMPTS; attempt += 1) {
+    const distance = randomRange(FLOWER_DISTANCE_MIN, FLOWER_DISTANCE_MAX) + attempt * FLOWER_PUSH_DISTANCE_STEP
+    const candidateX = originX + spreadX * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
+    const candidateY = originY + spreadY * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
+    const cellIndex = flowerCellIndexAt(world, candidateX, candidateY)
+    const cellCount = cellIndex < 0 ? 0 : world.flowerDensityGrid[cellIndex]
+    if (cellCount < lowestCount) {
+      lowestCount = cellCount
+      chosenX = candidateX
+      chosenY = candidateY
+    }
+
+    if (cellCount < FLOWER_TILE_CAPACITY) {
+      return { x: candidateX, y: candidateY }
+    }
+  }
+
+  return { x: chosenX, y: chosenY }
+}
+
 export const spawnFlowers = (
   world: WorldState,
   ownerId: string,
@@ -114,10 +166,11 @@ export const spawnFlowers = (
       if (previousOwner in world.factionFlowerCounts) {
         world.factionFlowerCounts[previousOwner] = Math.max(0, world.factionFlowerCounts[previousOwner] - 1)
       }
+      removeFlowerFromDensity(world, flower)
     }
 
     const angle = baseAngle + randomRange(-FLOWER_SPAWN_CONE_HALF_ANGLE, FLOWER_SPAWN_CONE_HALF_ANGLE)
-    const distance = randomRange(FLOWER_DISTANCE_MIN, FLOWER_DISTANCE_MAX)
+    const spawn = pickFlowerPosition(world, originX, originY, angle)
     flower.active = true
     flower.team = palette.team
     flower.ownerId = ownerId
@@ -125,10 +178,14 @@ export const spawnFlowers = (
     flower.accent = palette.accent
     flower.scorched = false
     flower.position.set(
-      originX + Math.cos(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER),
-      originY + Math.sin(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
+      spawn.x,
+      spawn.y
     )
     limitToArena(flower.position, 0.2, world.arenaRadius)
+    flower.bloomCell = flowerCellIndexAt(world, flower.position.x, flower.position.y)
+    if (flower.bloomCell >= 0) {
+      world.flowerDensityGrid[flower.bloomCell] = Math.min(65535, world.flowerDensityGrid[flower.bloomCell] + 1)
+    }
     flower.size = 0
     flower.targetSize = randomRange(FLOWER_SIZE_MIN, FLOWER_SIZE_MAX) * bloomScale
     flower.pop = 0

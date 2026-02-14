@@ -168,6 +168,8 @@ export interface DamageDeps {
   respawnUnit: (unitId: string) => void
   onSfxHit: () => void
   onSfxDeath: () => void
+  onSfxPlayerDeath: () => void
+  onSfxPlayerKill: () => void
   onPlayerHpChanged: () => void
 }
 
@@ -226,11 +228,20 @@ export const applyDamage = (
   target.velocity.x += (impactX / impactLength) * 2.7
   target.velocity.y += (impactY / impactLength) * 2.7
 
-  deps.onSfxHit()
+  world.cameraShake = Math.min(1.15, world.cameraShake + 0.08)
 
   if (target.hp <= 0) {
-    deps.onSfxDeath()
+    if (target.isPlayer) {
+      deps.onSfxPlayerDeath()
+    } else {
+      deps.onSfxDeath()
+    }
+    if (sourceId === world.player.id && target.id !== world.player.id) {
+      deps.onSfxPlayerKill()
+    }
     deps.respawnUnit(target.id)
+  } else {
+    deps.onSfxHit()
   }
 
   if (target.isPlayer) {

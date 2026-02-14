@@ -7,6 +7,12 @@ import {
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 
+const MOLOTOV_THROW_SPEED = 15
+const GRENADE_BULLET_DAMAGE = 10
+const GRENADE_BULLET_SPEED = 20
+const GRENADE_BULLET_RANGE = 30
+const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED
+
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
   onPlayerThrow: (mode: "grenade" | "molotov") => void
@@ -25,26 +31,10 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   }
 
   const throwable = deps.allocThrowable()
-  let throwDirX = shooter.aim.x
-  let throwDirY = shooter.aim.y
-  let throwOffset = shooter.radius + 0.12
-  let speed = mode === "grenade" ? 20 : 20
-
-  if (mode === "grenade" && shooter.isPlayer) {
-    const toCursorX = world.input.worldX - shooter.position.x
-    const toCursorY = world.input.worldY - shooter.position.y
-    const toCursorLength = Math.hypot(toCursorX, toCursorY) || 1
-    const clampedDistance = clamp(toCursorLength, 0, 14)
-    const normalizedX = toCursorX / toCursorLength
-    const normalizedY = toCursorY / toCursorLength
-    throwOffset = Math.min(throwOffset, clampedDistance)
-    throwDirX = normalizedX
-    throwDirY = normalizedY
-    const travelDistance = Math.max(0, clampedDistance - throwOffset)
-    speed = travelDistance / 0.8
-    throwable.velocity.x = normalizedX * speed
-    throwable.velocity.y = normalizedY * speed
-  }
+  const throwDirX = shooter.aim.x
+  const throwDirY = shooter.aim.y
+  const throwOffset = shooter.radius + 0.12
+  const speed = mode === "grenade" ? GRENADE_BULLET_SPEED : MOLOTOV_THROW_SPEED
 
   throwable.active = true
   throwable.ownerId = shooter.id
@@ -52,13 +42,11 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.mode = mode
   throwable.position.x = shooter.position.x + throwDirX * throwOffset
   throwable.position.y = shooter.position.y + throwDirY * throwOffset
-  if (!(mode === "grenade" && shooter.isPlayer)) {
-    throwable.velocity.x = throwDirX * speed
-    throwable.velocity.y = throwDirY * speed
-  }
-  throwable.life = mode === "grenade" ? 1.05 : 0.78
+  throwable.velocity.x = throwDirX * speed
+  throwable.velocity.y = throwDirY * speed
+  throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
   throwable.radius = mode === "grenade" ? 0.36 : 0.3
-  throwable.rolled = mode === "grenade" && shooter.isPlayer
+  throwable.rolled = false
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
@@ -76,6 +64,15 @@ export interface ThrowableUpdateDeps {
   explodeGrenade: (throwableIndex: number) => void
   igniteMolotov: (throwableIndex: number) => void
   onExplosion: () => void
+  applyDamage: (
+    targetId: string,
+    amount: number,
+    sourceId: string,
+    hitX: number,
+    hitY: number,
+    impactX: number,
+    impactY: number
+  ) => void
 }
 
 export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableUpdateDeps) => {
@@ -85,40 +82,59 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
       continue
     }
 
+    const isGrenade = throwable.mode === "grenade"
+    let shouldExplode = isGrenade
+
     throwable.life -= dt
     throwable.position.x += throwable.velocity.x * dt
     throwable.position.y += throwable.velocity.y * dt
-    throwable.velocity.x *= clamp(1 - dt * 0.55, 0, 1)
-    throwable.velocity.y *= clamp(1 - dt * 0.55, 0, 1)
+    if (throwable.mode === "molotov") {
+      throwable.velocity.x *= clamp(1 - dt * 0.55, 0, 1)
+      throwable.velocity.y *= clamp(1 - dt * 0.55, 0, 1)
+    }
     limitToArena(throwable.position, throwable.radius, world.arenaRadius)
 
     const hitCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, throwable.position.y)
     if (isObstacleCellSolid(world.obstacleGrid, hitCell.x, hitCell.y)) {
       const damage = throwable.mode === "grenade" ? 3 : 1.5
       damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, damage)
+      shouldExplode = isGrenade
       throwable.life = 0
+    }
+
+    if (isGrenade) {
+      for (const unit of world.units) {
+        if (unit.id === throwable.ownerId || unit.team === throwable.ownerTeam) {
+          continue
+        }
+
+        const hitRadius = throwable.radius + unit.radius
+        if (distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <= hitRadius * hitRadius) {
+          deps.applyDamage(unit.id, GRENADE_BULLET_DAMAGE, throwable.ownerId, unit.position.x, unit.position.y, throwable.velocity.x, throwable.velocity.y)
+          shouldExplode = true
+          throwable.life = 0
+          break
+        }
+      }
     }
 
     if (throwable.life > 0) {
       continue
     }
 
-    if (throwable.mode === "grenade" && !throwable.rolled) {
-      throwable.rolled = true
-      throwable.life = 0.2
-      const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
-      const directionLength = speed || 1
-      throwable.velocity.x = throwable.velocity.x / directionLength * (speed + 4.5)
-      throwable.velocity.y = throwable.velocity.y / directionLength * (speed + 4.5)
+    throwable.active = false
+    if (isGrenade) {
+      if (shouldExplode) {
+        deps.explodeGrenade(throwableIndex)
+        world.cameraShake = Math.min(1.15, world.cameraShake + 0.16)
+        world.hitStop = Math.max(world.hitStop, 0.006)
+        deps.onExplosion()
+      }
+
       continue
     }
 
-    throwable.active = false
-    if (throwable.mode === "grenade") {
-      deps.explodeGrenade(throwableIndex)
-    } else {
-      deps.igniteMolotov(throwableIndex)
-    }
+    deps.igniteMolotov(throwableIndex)
     world.cameraShake = Math.min(1.15, world.cameraShake + 0.16)
     world.hitStop = Math.max(world.hitStop, 0.006)
     deps.onExplosion()

@@ -141,6 +141,7 @@ export class Flower {
   active = false
   team: Team = "white"
   ownerId = ""
+  bloomCell = -1
   color = "#f7ffef"
   accent = "#e5efcf"
   scorched = false

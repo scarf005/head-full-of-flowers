@@ -6,6 +6,7 @@ import {
   setMatchResultSignal,
   setPauseSignal,
   setCrosshairSignal,
+  setFpsSignal,
   setPerkOptions,
   setSecondaryWeaponSignal,
   setStatusMessage,
@@ -17,7 +18,6 @@ import {
 import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp } from "./utils.ts"
-import { PRIMARY_WEAPONS } from "./weapons.ts"
 import {
   BOT_BASE_SPEED,
   MATCH_DURATION_SECONDS,
@@ -67,6 +67,7 @@ export class FlowerArenaGame {
   private inputAdapter: InputAdapter | null = null
   private raf = 0
   private previousTime = 0
+  private smoothedFps = 0
   private audioDirector = new AudioDirector(menuTrackUrl, gameplayTrackUrl)
   private sfx = new SfxSynth()
 
@@ -89,6 +90,11 @@ export class FlowerArenaGame {
   }
 
   start() {
+    void this.audioDirector.tryAutoplayMenu().then((started) => {
+      if (started) {
+        this.world.audioPrimed = true
+      }
+    })
     this.previousTime = performance.now()
     this.raf = requestAnimationFrame(this.loop)
   }
@@ -102,7 +108,6 @@ export class FlowerArenaGame {
   private setupWorld() {
     setupWorldUnits(
       this.world,
-      () => this.randomLootablePrimaryForMatch(),
       (unitId, weaponId, ammo) => equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
     )
   }
@@ -117,6 +122,15 @@ export class FlowerArenaGame {
     }
 
     return Math.random() > 0.5 ? "assault" : "shotgun"
+  }
+
+  private spawnLootPickupAt(x: number, y: number) {
+    spawnPickupAt(this.world, { x, y }, {
+      randomLootablePrimary: () => {
+        const id = this.randomLootablePrimaryForMatch()
+        return id === "pistol" ? "assault" : id
+      }
+    })
   }
 
   private setupInput() {
@@ -154,6 +168,7 @@ export class FlowerArenaGame {
     this.world.playerFlowerTotal = 0
     this.world.nextPerkFlowerTarget = PERK_FLOWER_STEP
     this.world.terrainMap = createBarrenGardenMap(112)
+    this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
 
     const player = this.world.player
     player.maxHp = UNIT_BASE_HP
@@ -173,14 +188,16 @@ export class FlowerArenaGame {
       bot.bulletSizeMultiplier = 1
       bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
-      const weaponId = this.randomLootablePrimaryForMatch()
-      this.equipPrimary(bot.id, weaponId, PRIMARY_WEAPONS[weaponId].pickupAmmo)
+      this.equipPrimary(bot.id, "pistol", Number.POSITIVE_INFINITY)
       bot.secondaryMode = Math.random() > 0.58 ? "molotov" : "grenade"
     }
 
     for (const projectile of this.world.projectiles) projectile.active = false
     for (const throwable of this.world.throwables) throwable.active = false
-    for (const flower of this.world.flowers) flower.active = false
+    for (const flower of this.world.flowers) {
+      flower.active = false
+      flower.bloomCell = -1
+    }
     for (const popup of this.world.damagePopups) popup.active = false
     for (const pickup of this.world.pickups) pickup.active = false
     for (const zone of this.world.molotovZones) zone.active = false
@@ -193,14 +210,7 @@ export class FlowerArenaGame {
     spawnObstacles(this.world)
     spawnAllUnits(this.world)
     spawnMapLoot(this.world, {
-      spawnPickupAt: (x, y) => {
-        spawnPickupAt(this.world, { x, y }, {
-          randomLootablePrimary: () => {
-            const id = this.randomLootablePrimaryForMatch()
-            return id === "pistol" ? "assault" : id
-          }
-        })
-      }
+      spawnPickupAt: (x, y) => this.spawnLootPickupAt(x, y)
     })
     this.world.perkChoices = []
     clearPerkOptions()
@@ -397,13 +407,22 @@ export class FlowerArenaGame {
       respawnUnit: (id) => this.respawnUnit(id),
       onSfxHit: () => this.sfx.hit(),
       onSfxDeath: () => this.sfx.die(),
+      onSfxPlayerDeath: () => this.sfx.playerDeath(),
+      onSfxPlayerKill: () => this.sfx.playerKill(),
       onPlayerHpChanged: () => updatePlayerHpSignal(this.world)
     })
   }
 
   private loop = (time: number) => {
-    const dt = Math.min(0.033, (time - this.previousTime) / 1000)
+    const realDt = Math.max(0, (time - this.previousTime) / 1000)
+    const dt = Math.min(0.033, realDt)
     this.previousTime = time
+
+    const instantFps = realDt > 0 ? 1 / realDt : 0
+    this.smoothedFps = this.smoothedFps <= 0
+      ? instantFps
+      : lerp(this.smoothedFps, instantFps, 0.18)
+    setFpsSignal(this.smoothedFps)
 
     this.update(dt)
     renderScene({ context: this.context, world: this.world, dt: this.world.paused ? 0 : dt })
@@ -489,7 +508,8 @@ export class FlowerArenaGame {
         const projectile = this.world.projectiles[projectileIndex]
         return hitObstacle(this.world, projectile, {
           onSfxHit: () => this.sfx.hit(),
-          onSfxDeath: () => this.sfx.die()
+          onSfxBreak: () => this.sfx.obstacleBreak(),
+          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y)
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -501,17 +521,21 @@ export class FlowerArenaGame {
     })
 
     updateThrowables(this.world, simDt, {
+      applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+      },
       explodeGrenade: (throwableIndex) => {
         explodeGrenade(this.world, throwableIndex, {
           applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
             this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
           },
           damageObstaclesByExplosion: (x, y, radius) => {
-            damageObstaclesByExplosion(this.world, x, y, radius, {
-              onSfxHit: () => this.sfx.hit(),
-              onSfxDeath: () => this.sfx.die()
-            })
-          },
+          damageObstaclesByExplosion(this.world, x, y, radius, {
+            onSfxHit: () => this.sfx.hit(),
+            onSfxBreak: () => this.sfx.obstacleBreak(),
+            onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY)
+          })
+        },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius)
         })
       },

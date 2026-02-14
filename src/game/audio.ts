@@ -23,6 +23,28 @@ export class AudioDirector {
     this.gameplayTrack.load()
   }
 
+  async tryAutoplayMenu() {
+    if (this.mode === "menu") {
+      return true
+    }
+
+    this.gameplayTrack.pause()
+    this.gameplayTrack.currentTime = 0
+    this.gameplayTrack.muted = true
+    this.menuTrack.muted = false
+
+    try {
+      await this.menuTrack.play()
+      this.unlocked = true
+      this.mode = "menu"
+      return true
+    } catch {
+      this.menuTrack.pause()
+      this.menuTrack.currentTime = 0
+      return false
+    }
+  }
+
   startMenu() {
     if (!this.unlocked || this.mode === "menu") {
       return
@@ -32,8 +54,11 @@ export class AudioDirector {
     this.gameplayTrack.currentTime = 0
     this.gameplayTrack.muted = true
     this.menuTrack.muted = false
-    this.menuTrack.play().catch(() => {})
-    this.mode = "menu"
+    this.menuTrack.play()
+      .then(() => {
+        this.mode = "menu"
+      })
+      .catch(() => {})
   }
 
   startGameplay() {
@@ -45,8 +70,11 @@ export class AudioDirector {
     this.menuTrack.currentTime = 0
     this.menuTrack.muted = true
     this.gameplayTrack.muted = false
-    this.gameplayTrack.play().catch(() => {})
-    this.mode = "gameplay"
+    this.gameplayTrack.play()
+      .then(() => {
+        this.mode = "gameplay"
+      })
+      .catch(() => {})
   }
 
   stopAll() {
@@ -110,8 +138,27 @@ export class SfxSynth {
 
   die() {
     const context = this.ensureContext()
-    this.chirp(context, 360, 120, 0.09, "triangle", 0.78, true)
-    this.chirp(context, 260, 52, 0.16, "sine", 0.68, true, 0.03)
+    this.chirp(context, 980, 280, 0.045, "square", 0.42)
+    this.chirp(context, 420, 74, 0.2, "sawtooth", 0.86)
+    this.chirp(context, 240, 44, 0.28, "triangle", 0.74, false, 0.018)
+  }
+
+  obstacleBreak() {
+    const context = this.ensureContext()
+    this.chirp(context, 220, 150, 0.05, "triangle", 0.18, true)
+    this.chirp(context, 150, 110, 0.09, "sine", 0.14, true, 0.008)
+  }
+
+  playerKill() {
+    const context = this.ensureContext()
+    this.chirp(context, 740, 1480, 0.075, "square", 0.44)
+    this.chirp(context, 1480, 2220, 0.055, "triangle", 0.31, false, 0.024)
+  }
+
+  playerDeath() {
+    const context = this.ensureContext()
+    this.chirp(context, 520, 140, 0.1, "sawtooth", 0.64)
+    this.chirp(context, 260, 60, 0.2, "triangle", 0.52, false, 0.016)
   }
 
   explosion() {
