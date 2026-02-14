@@ -1,5 +1,6 @@
 import { clamp, distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
+import type { Team } from "../types.ts"
 
 const distToSegmentSquared = (
   pointX: number,
@@ -37,6 +38,7 @@ export interface ProjectileDeps {
     targetId: string,
     amount: number,
     sourceId: string,
+    sourceTeam: Team,
     hitX: number,
     hitY: number,
     impactX: number,
@@ -143,6 +145,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           unit.id,
           projectile.damage,
           projectile.ownerId,
+          projectile.ownerTeam,
           hitX,
           hitY,
           projectile.velocity.x,

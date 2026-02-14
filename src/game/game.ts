@@ -65,6 +65,7 @@ import {
   botPalette,
   createFactionFlowerCounts
 } from "./factions.ts"
+import type { Team } from "./types.ts"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -948,12 +949,13 @@ export class FlowerArenaGame {
     targetId: string,
     amount: number,
     sourceId: string,
+    sourceTeam: Team,
     hitX: number,
     hitY: number,
     impactX: number,
     impactY: number
   ) {
-    applyDamage(this.world, targetId, amount, sourceId, hitX, hitY, impactX, impactY, {
+    applyDamage(this.world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
       spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt) => {
         spawnFlowers(this.world, ownerId, x, y, dirX, dirY, amountValue, sizeScale, {
@@ -1070,7 +1072,7 @@ export class FlowerArenaGame {
     resolveUnitCollisions(this.world)
     constrainUnitsToArena(this.world, simDt, {
       onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+        this.applyDamage(targetId, amount, sourceId, this.world.player.team, hitX, hitY, impactX, impactY)
       }
     })
 
@@ -1090,19 +1092,19 @@ export class FlowerArenaGame {
       onTrailEnd: (x, y, velocityX, velocityY, kind) => {
         this.emitProjectileTrailEnd(x, y, velocityX, velocityY, kind)
       },
-      applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
       }
     })
 
     updateThrowables(this.world, simDt, {
-      applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
       },
       explodeGrenade: (throwableIndex) => {
         explodeGrenade(this.world, throwableIndex, {
-          applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-            this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+          applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+            this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
           },
           damageObstaclesByExplosion: (x, y, radius) => {
           damageObstaclesByExplosion(this.world, x, y, radius, {
@@ -1129,8 +1131,8 @@ export class FlowerArenaGame {
     })
 
     updateMolotovZones(this.world, simDt, {
-      applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
       }
     })
 

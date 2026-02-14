@@ -1,6 +1,7 @@
 import { sample } from "@std/random"
 
 import type { PrimaryWeaponId } from "../types.ts"
+import type { Team } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { Unit } from "../entities.ts"
@@ -239,11 +240,44 @@ export interface DamageDeps {
   onPlayerHpChanged: () => void
 }
 
+const nearestUnitIdByTeam = (
+  world: WorldState,
+  team: Team,
+  originX: number,
+  originY: number,
+  excludedUnitId: string
+) => {
+  let nearestId = ""
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const unit of world.units) {
+    if (unit.team !== team || unit.id === excludedUnitId) {
+      continue
+    }
+
+    const distance = (unit.position.x - originX) ** 2 + (unit.position.y - originY) ** 2
+    if (distance >= nearestDistance) {
+      continue
+    }
+
+    nearestDistance = distance
+    nearestId = unit.id
+  }
+
+  return nearestId
+}
+
+const nearestEnemyId = (world: WorldState, sourceTeam: Team, originX: number, originY: number, excludedUnitId: string) => {
+  const hostileTeam = sourceTeam === "white" ? "blue" : "white"
+  return nearestUnitIdByTeam(world, hostileTeam, originX, originY, excludedUnitId)
+}
+
 export const applyDamage = (
   world: WorldState,
   targetId: string,
   amount: number,
   sourceId: string,
+  sourceTeam: Team,
   hitX: number,
   hitY: number,
   impactX: number,
@@ -271,10 +305,22 @@ export const applyDamage = (
   const hitSpeed = Math.hypot(impactX, impactY)
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
   const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
+  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
+  const isBoundarySource = sourceId === "arena"
+  const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
+  const sourceByNearestSameTeam = sourceUnit?.id
+    ?? (!isBoundarySource && resolvedSourceTeam
+      ? nearestUnitIdByTeam(world, resolvedSourceTeam, hitX, hitY, target.id)
+      : "")
+  const sourceByNearestEnemy = !isBoundarySource
+    ? (sourceByNearestSameTeam
+      ? sourceByNearestSameTeam
+      : nearestEnemyId(world, resolvedSourceTeam ?? target.team, hitX, hitY, target.id))
+    : sourceId
   const normalizedSourceId = isPlayerSource
     ? world.player.id
-    : sourceUnit?.id ?? sourceId
-  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
+    : sourceByNearestEnemy || sourceId
+    
   const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfHarm
 

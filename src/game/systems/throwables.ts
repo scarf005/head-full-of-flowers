@@ -1,5 +1,6 @@
 import { clamp, distSquared, limitToArena } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
+import type { Team } from "../types.ts"
 import {
   damageObstacleCell,
   isObstacleCellSolid,
@@ -96,6 +97,7 @@ export interface ThrowableUpdateDeps {
     targetId: string,
     amount: number,
     sourceId: string,
+    sourceTeam: Team,
     hitX: number,
     hitY: number,
     impactX: number,
@@ -200,7 +202,16 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
       for (const unit of world.units) {
         const hitRadius = throwable.radius + unit.radius
         if (distSquared(unit.position.x, unit.position.y, throwable.position.x, throwable.position.y) <= hitRadius * hitRadius) {
-          deps.applyDamage(unit.id, GRENADE_BULLET_DAMAGE, throwable.ownerId, unit.position.x, unit.position.y, throwable.velocity.x, throwable.velocity.y)
+          deps.applyDamage(
+            unit.id,
+            GRENADE_BULLET_DAMAGE,
+            throwable.ownerId,
+            throwable.ownerTeam,
+            unit.position.x,
+            unit.position.y,
+            throwable.velocity.x,
+            throwable.velocity.y
+          )
           shouldExplode = true
           throwable.life = 0
           break
@@ -243,6 +254,7 @@ export interface GrenadeExplosionDeps {
     targetId: string,
     amount: number,
     sourceId: string,
+    sourceTeam: Team,
     hitX: number,
     hitY: number,
     impactX: number,
@@ -276,6 +288,7 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
       unit.id,
       damage,
       throwable.ownerId,
+      throwable.ownerTeam,
       unit.position.x,
       unit.position.y,
       unit.position.x - throwable.position.x,
