@@ -1,22 +1,66 @@
 import {
-  blueCoverageSignal,
+  coverageSlicesSignal,
   crosshairSignal,
   hpSignal,
+  matchResultSignal,
+  pausedSignal,
   perkOptionsSignal,
   primaryAmmoSignal,
   primaryWeaponSignal,
   secondaryWeaponSignal,
   statusMessageSignal,
-  timeRemainingSignal,
-  whiteCoverageSignal
+  timeRemainingSignal
 } from "../signals.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
+import { MATCH_DURATION_SECONDS } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
+const defaultMatchResult = {
+  visible: false,
+  winnerLabel: "",
+  winnerColor: "#f2ffe8",
+  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)"
+}
+
+const buildCoverageSlices = (world: WorldState) => {
+  const total = world.factions.reduce((sum, faction) => {
+    return sum + (world.factionFlowerCounts[faction.id] ?? 0)
+  }, 0)
+
+  if (total <= 0) {
+    const percent = 100 / Math.max(1, world.factions.length)
+    return world.factions.map((faction) => ({
+      id: faction.id,
+      label: faction.label,
+      color: faction.color,
+      percent
+    }))
+  }
+
+  return world.factions.map((faction) => ({
+    id: faction.id,
+    label: faction.label,
+    color: faction.color,
+    percent: (100 * (world.factionFlowerCounts[faction.id] ?? 0)) / total
+  }))
+}
+
+const buildPieGradient = (slices: { color: string; percent: number }[]) => {
+  let angle = 0
+  const stops = slices.map((slice) => {
+    const start = angle
+    angle += (slice.percent / 100) * 360
+    return `${slice.color} ${start.toFixed(2)}deg ${angle.toFixed(2)}deg`
+  })
+
+  return `conic-gradient(${stops.join(", ")})`
+}
+
 export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) => {
-  timeRemainingSignal.value = 90
-  whiteCoverageSignal.value = 50
-  blueCoverageSignal.value = 50
+  timeRemainingSignal.value = MATCH_DURATION_SECONDS
+  pausedSignal.value = false
+  coverageSlicesSignal.value = buildCoverageSlices(world)
+  matchResultSignal.value = defaultMatchResult
   primaryWeaponSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].name
   primaryAmmoSignal.value = "∞"
   secondaryWeaponSignal.value = "Grenade"
@@ -31,16 +75,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
 }
 
 export const updateCoverageSignals = (world: WorldState) => {
-  const total = world.whiteFlowers + world.blueFlowers
-  if (total <= 0) {
-    whiteCoverageSignal.value = 50
-    blueCoverageSignal.value = 50
-    return
-  }
-
-  const white = (world.whiteFlowers / total) * 100
-  whiteCoverageSignal.value = white
-  blueCoverageSignal.value = 100 - white
+  coverageSlicesSignal.value = buildCoverageSlices(world)
 }
 
 export const updatePlayerWeaponSignals = (world: WorldState) => {
@@ -86,6 +121,26 @@ export const setSecondaryWeaponSignal = (mode: "grenade" | "molotov") => {
 
 export const setStatusMessage = (message: string) => {
   statusMessageSignal.value = message
+}
+
+export const setPauseSignal = (paused: boolean) => {
+  pausedSignal.value = paused
+}
+
+export const setMatchResultSignal = (
+  winner: { label: string; color: string },
+  slices: { color: string; percent: number }[]
+) => {
+  matchResultSignal.value = {
+    visible: true,
+    winnerLabel: winner.label,
+    winnerColor: winner.color,
+    pieGradient: buildPieGradient(slices)
+  }
+}
+
+export const clearMatchResultSignal = () => {
+  matchResultSignal.value = defaultMatchResult
 }
 
 export const clearPerkOptions = () => {

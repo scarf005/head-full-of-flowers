@@ -1,4 +1,5 @@
 import type { AIState, PrimaryWeaponId, SecondaryMode, Team } from "./types.ts"
+import { UNIT_BASE_HP } from "./world/constants.ts"
 
 export class Vec2 {
   x: number
@@ -68,8 +69,8 @@ export class Unit {
   aim = new Vec2(1, 0)
   radius = 14
   speed = 175
-  maxHp = 5
-  hp = 5
+  maxHp = UNIT_BASE_HP
+  hp = UNIT_BASE_HP
   shootCooldown = 0
   secondaryCooldown = 0
   reloadCooldown = 0

@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals"
+import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 
 export interface PerkOption {
   id: string
@@ -6,14 +7,34 @@ export interface PerkOption {
   description: string
 }
 
-export const timeRemainingSignal = signal(90)
-export const whiteCoverageSignal = signal(50)
-export const blueCoverageSignal = signal(50)
+export interface CoverageSlice {
+  id: string
+  label: string
+  color: string
+  percent: number
+}
+
+export interface MatchResultHud {
+  visible: boolean
+  winnerLabel: string
+  winnerColor: string
+  pieGradient: string
+}
+
+export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
+export const pausedSignal = signal(false)
+export const coverageSlicesSignal = signal<CoverageSlice[]>([])
+export const matchResultSignal = signal<MatchResultHud>({
+  visible: false,
+  winnerLabel: "",
+  winnerColor: "#f2ffe8",
+  pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)"
+})
 
 export const primaryWeaponSignal = signal("Pistol")
 export const primaryAmmoSignal = signal("∞")
 export const secondaryWeaponSignal = signal("Grenade")
-export const hpSignal = signal({ hp: 10, maxHp: 10 })
+export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 
 export const perkOptionsSignal = signal<PerkOption[]>([])
 export const statusMessageSignal = signal("Click to begin")

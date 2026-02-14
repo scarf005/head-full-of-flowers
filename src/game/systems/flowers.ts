@@ -1,6 +1,28 @@
 import { clamp, lerp, limitToArena, randomInt, randomRange } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 
+const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.95
+const FLOWER_BACK_OFFSET = 0.26
+const FLOWER_DISTANCE_MIN = 0.08
+const FLOWER_DISTANCE_MAX = 1.85
+const FLOWER_POSITION_JITTER = 0.06
+const FLOWER_SIZE_MIN = 0.16
+const FLOWER_SIZE_MAX = 0.42
+
+const FLOWER_AMOUNT_MIN = 10
+const FLOWER_AMOUNT_MAX = 20
+const FLOWER_DAMAGE_REFERENCE = 2.1
+const FLOWER_IMPACT_SPEED_REFERENCE = 40
+const FLOWER_COUNT_SCALE_MIN = 0.55
+const FLOWER_COUNT_SCALE_MAX = 1.75
+const FLOWER_SIZE_SCALE_MIN = 0.6
+const FLOWER_SIZE_SCALE_MAX = 1.9
+
+export interface FlowerBurstProfile {
+  amount: number
+  sizeScale: number
+}
+
 export interface FlowerSpawnDeps {
   allocFlower: () => WorldState["flowers"][number]
   playerId: string
@@ -36,41 +58,45 @@ export const spawnFlowers = (
   dirX: number,
   dirY: number,
   amount: number,
+  sizeScale: number,
   deps: FlowerSpawnDeps
 ) => {
   const palette = flowerPalette(world, ownerId, deps)
-  const baseAngle = Math.atan2(dirY, dirX)
+  const dirLength = Math.hypot(dirX, dirY) || 1
+  const nx = dirX / dirLength
+  const ny = dirY / dirLength
+  const baseAngle = Math.atan2(ny, nx)
+  const originX = x + nx * FLOWER_BACK_OFFSET
+  const originY = y + ny * FLOWER_BACK_OFFSET
+  const bloomScale = clamp(sizeScale, FLOWER_SIZE_SCALE_MIN, FLOWER_SIZE_SCALE_MAX)
 
   for (let index = 0; index < amount; index += 1) {
     const flower = deps.allocFlower()
     if (flower.active) {
-      if (flower.team === "white") {
-        world.whiteFlowers = Math.max(0, world.whiteFlowers - 1)
-      } else {
-        world.blueFlowers = Math.max(0, world.blueFlowers - 1)
+      const previousOwner = flower.ownerId
+      if (previousOwner in world.factionFlowerCounts) {
+        world.factionFlowerCounts[previousOwner] = Math.max(0, world.factionFlowerCounts[previousOwner] - 1)
       }
     }
 
-    const angle = baseAngle + randomRange(-0.95, 0.95)
-    const distance = randomRange(0.1, 1.9)
+    const angle = baseAngle + randomRange(-FLOWER_SPAWN_CONE_HALF_ANGLE, FLOWER_SPAWN_CONE_HALF_ANGLE)
+    const distance = randomRange(FLOWER_DISTANCE_MIN, FLOWER_DISTANCE_MAX)
     flower.active = true
     flower.team = palette.team
     flower.ownerId = ownerId
     flower.color = palette.color
     flower.accent = palette.accent
     flower.position.set(
-      x + Math.cos(angle) * distance + randomRange(-0.06, 0.06),
-      y + Math.sin(angle) * distance + randomRange(-0.06, 0.06)
+      originX + Math.cos(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER),
+      originY + Math.sin(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)
     )
     limitToArena(flower.position, 0.2, world.arenaRadius)
     flower.size = 0
-    flower.targetSize = randomRange(0.16, 0.42)
+    flower.targetSize = randomRange(FLOWER_SIZE_MIN, FLOWER_SIZE_MAX) * bloomScale
     flower.pop = 0
 
-    if (palette.team === "white") {
-      world.whiteFlowers += 1
-    } else {
-      world.blueFlowers += 1
+    if (ownerId in world.factionFlowerCounts) {
+      world.factionFlowerCounts[ownerId] += 1
     }
   }
 
@@ -93,6 +119,27 @@ export const updateFlowers = (world: WorldState, dt: number) => {
   }
 }
 
+export const randomFlowerBurst = (damage: number, impactSpeed: number): FlowerBurstProfile => {
+  const damageFactor = clamp(damage / FLOWER_DAMAGE_REFERENCE, 0.35, 2.4)
+  const speedFactor = clamp(impactSpeed / FLOWER_IMPACT_SPEED_REFERENCE, 0.2, 2.2)
+
+  const amountScale = clamp(
+    1 + (speedFactor - 1) * 0.65 - (damageFactor - 1) * 0.5,
+    FLOWER_COUNT_SCALE_MIN,
+    FLOWER_COUNT_SCALE_MAX
+  )
+  const sizeScale = clamp(
+    1 + (damageFactor - 1) * 0.7 - (speedFactor - 1) * 0.45,
+    FLOWER_SIZE_SCALE_MIN,
+    FLOWER_SIZE_SCALE_MAX
+  )
+
+  return {
+    amount: Math.max(2, Math.round(randomInt(FLOWER_AMOUNT_MIN, FLOWER_AMOUNT_MAX) * amountScale)),
+    sizeScale
+  }
+}
+
 export const updateDamagePopups = (world: WorldState, dt: number) => {
   for (const popup of world.damagePopups) {
     if (!popup.active) {
@@ -110,5 +157,3 @@ export const updateDamagePopups = (world: WorldState, dt: number) => {
     }
   }
 }
-
-export const randomFlowerAmount = () => randomInt(10, 20)

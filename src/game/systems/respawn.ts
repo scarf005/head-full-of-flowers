@@ -2,7 +2,15 @@ import type { Obstacle, Vec2 } from "../entities.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena, randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
-import { BOT_BASE_SPEED, PLAYER_BASE_SPEED } from "../world/constants.ts"
+import {
+  BOT_BASE_SPEED,
+  BOT_RADIUS,
+  OBSTACLE_COUNT_MAX,
+  OBSTACLE_COUNT_MIN,
+  PLAYER_BASE_SPEED,
+  PLAYER_RADIUS,
+  UNIT_BASE_HP
+} from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
 export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
@@ -52,7 +60,7 @@ export const breakObstacle = (obstacle: Obstacle, deps: BreakObstacleDeps) => {
 }
 
 export const spawnObstacles = (world: WorldState) => {
-  const obstacleCount = randomInt(7, 11)
+  const obstacleCount = randomInt(OBSTACLE_COUNT_MIN, OBSTACLE_COUNT_MAX)
   const occupied = world.units.map((unit) => unit.position)
   let cursor = 0
 
@@ -136,17 +144,17 @@ export const setupWorldUnits = (
   equipPrimary: (unitId: string, weaponId: PrimaryWeaponId, ammo: number) => void
 ) => {
   world.player.secondaryMode = "grenade"
-  world.player.radius = 0.3
+  world.player.radius = PLAYER_RADIUS
   world.player.speed = PLAYER_BASE_SPEED
-  world.player.maxHp = 5
-  world.player.hp = 5
+  world.player.maxHp = UNIT_BASE_HP
+  world.player.hp = UNIT_BASE_HP
   equipPrimary(world.player.id, "pistol", Number.POSITIVE_INFINITY)
 
   for (const bot of world.bots) {
     bot.speed = BOT_BASE_SPEED
-    bot.radius = 0.28
-    bot.maxHp = 5
-    bot.hp = 5
+    bot.radius = BOT_RADIUS
+    bot.maxHp = UNIT_BASE_HP
+    bot.hp = UNIT_BASE_HP
     const weapon = randomWeapon()
     equipPrimary(bot.id, weapon, PRIMARY_WEAPONS[weapon].pickupAmmo)
   }

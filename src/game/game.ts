@@ -1,7 +1,10 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
 import {
+  clearMatchResultSignal,
   clearPerkOptions,
   resetHudSignals,
+  setMatchResultSignal,
+  setPauseSignal,
   setCrosshairSignal,
   setPerkOptions,
   setSecondaryWeaponSignal,
@@ -15,7 +18,15 @@ import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp } from "./utils.ts"
 import { PRIMARY_WEAPONS } from "./weapons.ts"
-import { BOT_BASE_SPEED, PERK_FLOWER_STEP, PLAYER_BASE_SPEED, VIEW_HEIGHT, VIEW_WIDTH } from "./world/constants.ts"
+import {
+  BOT_BASE_SPEED,
+  MATCH_DURATION_SECONDS,
+  PERK_FLOWER_STEP,
+  PLAYER_BASE_SPEED,
+  UNIT_BASE_HP,
+  VIEW_HEIGHT,
+  VIEW_WIDTH
+} from "./world/constants.ts"
 import { createWorldState, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
@@ -38,6 +49,7 @@ import { breakObstacle, respawnUnit, setupWorldUnits, spawnAllUnits, spawnObstac
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import type { Obstacle, Unit } from "./entities.ts"
+import { botPalette } from "./factions.ts"
 
 import menuTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -93,6 +105,7 @@ export class FlowerArenaGame {
     this.inputAdapter = setupInputAdapter(this.canvas, this.world, {
       onPrimeAudio: () => this.primeAudio(),
       onBeginMatch: () => this.beginMatch(),
+      onTogglePause: () => this.togglePause(),
       onConsumePerk: (index) => this.consumePerkChoice(index),
       onPrimaryDown: () => this.firePrimary(this.world.player.id),
       onSecondaryDown: () => this.throwSecondary(this.world.player.id),
@@ -114,19 +127,19 @@ export class FlowerArenaGame {
   private beginMatch() {
     this.world.started = true
     this.world.running = true
+    this.world.paused = false
     this.world.finished = false
-    this.world.timeRemaining = 90
+    this.world.timeRemaining = MATCH_DURATION_SECONDS
     this.world.arenaRadius = ARENA_START_RADIUS
     this.world.pickupTimer = 1.5
-    this.world.whiteFlowers = 0
-    this.world.blueFlowers = 0
+    this.world.factionFlowerCounts = Object.fromEntries(this.world.factions.map((faction) => [faction.id, 0]))
     this.world.playerFlowerTotal = 0
     this.world.nextPerkFlowerTarget = PERK_FLOWER_STEP
     this.world.terrainMap = createBarrenGardenMap(112)
 
     const player = this.world.player
-    player.maxHp = 10
-    player.hp = 10
+    player.maxHp = UNIT_BASE_HP
+    player.hp = UNIT_BASE_HP
     player.damageMultiplier = 1
     player.fireRateMultiplier = 1
     player.bulletSizeMultiplier = 1
@@ -135,8 +148,8 @@ export class FlowerArenaGame {
     this.equipPrimary(player.id, "pistol", Number.POSITIVE_INFINITY)
 
     for (const bot of this.world.bots) {
-      bot.maxHp = 10
-      bot.hp = 10
+      bot.maxHp = UNIT_BASE_HP
+      bot.hp = UNIT_BASE_HP
       bot.damageMultiplier = 1
       bot.fireRateMultiplier = 1
       bot.bulletSizeMultiplier = 1
@@ -170,20 +183,43 @@ export class FlowerArenaGame {
     this.world.hitStop = 0
 
     syncHudSignals(this.world)
+    setPauseSignal(false)
+    clearMatchResultSignal()
     setStatusMessage("Fight for map coverage")
     this.audioDirector.startGameplay()
   }
 
   private finishMatch() {
     this.world.running = false
+    this.world.paused = false
     this.world.finished = true
     this.audioDirector.startMenu()
 
-    if (this.world.whiteFlowers >= this.world.blueFlowers) {
-      setStatusMessage("Time up. Your trail dominates the arena")
-    } else {
-      setStatusMessage("Time up. Rival bloom overwhelms the field")
+    const winner = this.world.factions.reduce((best, faction) => {
+      const count = this.world.factionFlowerCounts[faction.id] ?? 0
+      if (!best || count > best.count) {
+        return { faction, count }
+      }
+      return best
+    }, null as { faction: WorldState["factions"][number]; count: number } | null)
+
+    if (winner) {
+      const message = winner.faction.id === this.world.player.id
+        ? "Time up. Your trail dominates the arena"
+        : `Time up. ${winner.faction.label} overwhelms the field`
+      setStatusMessage(message)
+
+      const total = this.world.factions.reduce((sum, faction) => {
+        return sum + (this.world.factionFlowerCounts[faction.id] ?? 0)
+      }, 0)
+      const pieSlices = this.world.factions.map((faction) => ({
+        color: faction.color,
+        percent: total > 0 ? (100 * (this.world.factionFlowerCounts[faction.id] ?? 0)) / total : 100 / this.world.factions.length
+      }))
+      setMatchResultSignal({ label: winner.faction.label, color: winner.faction.color }, pieSlices)
     }
+
+    setPauseSignal(false)
 
     clearPerkOptions()
     this.world.perkChoices = []
@@ -197,6 +233,15 @@ export class FlowerArenaGame {
       () => updatePlayerHpSignal(this.world),
       () => clearPerkOptions()
     )
+  }
+
+  private togglePause() {
+    if (!this.world.running || this.world.finished) {
+      return
+    }
+
+    this.world.paused = !this.world.paused
+    setPauseSignal(this.world.paused)
   }
 
   private updateExplosions(dt: number) {
@@ -322,23 +367,11 @@ export class FlowerArenaGame {
   ) {
     applyDamage(this.world, targetId, amount, sourceId, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
-      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue) => {
-        spawnFlowers(this.world, ownerId, x, y, dirX, dirY, amountValue, {
+      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale) => {
+        spawnFlowers(this.world, ownerId, x, y, dirX, dirY, amountValue, sizeScale, {
           allocFlower: () => this.allocFlower(),
           playerId: this.world.player.id,
-          botPalette: (id) => {
-            const palettes = [
-              { tone: "#7aa6ff", edge: "#3d67bf" },
-              { tone: "#ff9c8e", edge: "#c95a5f" },
-              { tone: "#89d7b7", edge: "#2f9b7c" },
-              { tone: "#f7c276", edge: "#b88335" },
-              { tone: "#c7a8ff", edge: "#7d59b7" },
-              { tone: "#f3a7d8", edge: "#b36093" },
-              { tone: "#9fd4ff", edge: "#4f7fa8" }
-            ]
-            const index = Number(id.replace("bot-", ""))
-            return palettes[index % palettes.length]
-          },
+          botPalette: (id) => botPalette(id),
           onPerkProgress: () => {
             checkPerkProgress(this.world, (options) => {
               setPerkOptions(options)
@@ -359,12 +392,18 @@ export class FlowerArenaGame {
     this.previousTime = time
 
     this.update(dt)
-    renderScene({ context: this.context, world: this.world, dt })
+    renderScene({ context: this.context, world: this.world, dt: this.world.paused ? 0 : dt })
 
     this.raf = requestAnimationFrame(this.loop)
   }
 
   private update(dt: number) {
+    if (this.world.paused) {
+      updateCrosshairWorld(this.world)
+      syncHudSignals(this.world)
+      return
+    }
+
     this.world.camera.x = lerp(this.world.camera.x, this.world.player.position.x, clamp(dt * 10, 0, 1))
     this.world.camera.y = lerp(this.world.camera.y, this.world.player.position.y, clamp(dt * 10, 0, 1))
     updateCombatFeel(this.world, dt)
@@ -386,7 +425,7 @@ export class FlowerArenaGame {
       this.finishMatch()
     }
 
-    const shrinkProgress = 1 - this.world.timeRemaining / 90
+    const shrinkProgress = 1 - this.world.timeRemaining / MATCH_DURATION_SECONDS
     this.world.arenaRadius = lerp(ARENA_START_RADIUS, ARENA_END_RADIUS, clamp(shrinkProgress, 0, 1))
 
     updatePlayer(this.world, dt, {

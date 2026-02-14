@@ -1,15 +1,17 @@
 import {
-  blueCoverageSignal,
+  coverageSlicesSignal,
   crosshairSignal,
   hpSignal,
+  matchResultSignal,
+  pausedSignal,
   perkOptionsSignal,
   primaryAmmoSignal,
   primaryWeaponSignal,
   secondaryWeaponSignal,
   statusMessageSignal,
-  timeRemainingSignal,
-  whiteCoverageSignal
+  timeRemainingSignal
 } from "./signals.ts"
+import type { CoverageSlice } from "./signals.ts"
 
 const formatTime = (seconds: number) => {
   const rounded = Math.max(0, Math.ceil(seconds))
@@ -21,19 +23,32 @@ const formatTime = (seconds: number) => {
 export const GameHud = () => {
   const perkChoices = perkOptionsSignal.value
   const hp = hpSignal.value
+  const slices: CoverageSlice[] = coverageSlicesSignal.value
+  const result = matchResultSignal.value
 
   return (
     <>
       <div class="hud hud-top">
         <div class="hud-pill">Time {formatTime(timeRemainingSignal.value)}</div>
+        {pausedSignal.value ? <div class="hud-pill hud-pill-warn">Paused</div> : null}
         <div class="score-panel" aria-label="Coverage score">
-          <div class="score-track">
-            <div class="score-white" style={{ width: `${whiteCoverageSignal.value}%` }} />
-            <div class="score-blue" style={{ width: `${blueCoverageSignal.value}%` }} />
+          <div class="score-track score-track-ffa">
+            {slices.map((slice) => (
+              <div
+                key={slice.id}
+                class="score-slice"
+                style={{ width: `${slice.percent}%`, background: slice.color }}
+                title={`${slice.label} ${slice.percent.toFixed(1)}%`}
+              />
+            ))}
           </div>
-          <div class="score-meta">
-            <span>White {whiteCoverageSignal.value.toFixed(1)}%</span>
-            <span>Blue {blueCoverageSignal.value.toFixed(1)}%</span>
+          <div class="score-meta score-meta-ffa">
+            {slices.map((slice) => (
+              <span key={`${slice.id}-label`}>
+                <i style={{ background: slice.color }} />
+                {slice.label} {slice.percent.toFixed(1)}%
+              </span>
+            ))}
           </div>
         </div>
       </div>
@@ -65,6 +80,14 @@ export const GameHud = () => {
           <span>Press 1: {perkChoices[0]?.name}</span>
           <span>Press 2: {perkChoices[1]?.name}</span>
           <span>Press 3: {perkChoices[2]?.name}</span>
+        </div>
+      ) : null}
+
+      {result.visible ? (
+        <div class="hud match-result" role="status" aria-live="polite">
+          <div class="match-result-title">Winner</div>
+          <div class="match-result-name" style={{ color: result.winnerColor }}>{result.winnerLabel}</div>
+          <div class="match-result-pie" style={{ background: result.pieGradient }} />
         </div>
       ) : null}
 

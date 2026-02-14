@@ -5,6 +5,7 @@ import type { WorldState } from "../world/state.ts"
 export interface InputAdapterHandlers {
   onPrimeAudio: () => void
   onBeginMatch: () => void
+  onTogglePause: () => void
   onConsumePerk: (index: number) => void
   onPrimaryDown: () => void
   onSecondaryDown: () => void
@@ -21,11 +22,19 @@ export const setupInputAdapter = (
   handlers: InputAdapterHandlers
 ): InputAdapter => {
   const onKeyDown = (event: KeyboardEvent) => {
+    const key = event.key.toLowerCase()
+
     if (!world.audioPrimed) {
       handlers.onPrimeAudio()
     }
 
-    world.input.keys.add(event.key.toLowerCase())
+    world.input.keys.add(key)
+
+    if (key === "escape" || key === "p") {
+      event.preventDefault()
+      handlers.onTogglePause()
+      return
+    }
 
     if (event.key === "Enter" && (!world.started || world.finished)) {
       handlers.onBeginMatch()
@@ -69,7 +78,7 @@ export const setupInputAdapter = (
 
     if (event.button === 0) {
       world.input.leftDown = true
-      if (world.running) {
+      if (world.running && !world.paused) {
         handlers.onPrimaryDown()
       }
     }
@@ -77,7 +86,7 @@ export const setupInputAdapter = (
     if (event.button === 2) {
       event.preventDefault()
       world.input.rightDown = true
-      if (world.running) {
+      if (world.running && !world.paused) {
         handlers.onSecondaryDown()
       }
     }

@@ -1,23 +1,9 @@
 import { drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
 import { clamp, randomRange } from "../utils.ts"
+import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import { terrainAt } from "../world/wfc-map.ts"
 import type { WorldState } from "../world/state.ts"
-
-export const botPalette = (id: string) => {
-  const palettes = [
-    { tone: "#7aa6ff", edge: "#3d67bf" },
-    { tone: "#ff9c8e", edge: "#c95a5f" },
-    { tone: "#89d7b7", edge: "#2f9b7c" },
-    { tone: "#f7c276", edge: "#b88335" },
-    { tone: "#c7a8ff", edge: "#7d59b7" },
-    { tone: "#f3a7d8", edge: "#b36093" },
-    { tone: "#9fd4ff", edge: "#4f7fa8" }
-  ]
-
-  const index = Number(id.replace("bot-", ""))
-  return palettes[index % palettes.length]
-}
 
 export interface RenderSceneArgs {
   context: CanvasRenderingContext2D

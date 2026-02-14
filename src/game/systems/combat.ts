@@ -4,8 +4,9 @@ import { randomPerkChoices } from "../perks.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
+import { PERK_FLOWER_STEP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
-import { randomFlowerAmount } from "./flowers.ts"
+import { randomFlowerBurst } from "./flowers.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
   return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
@@ -160,7 +161,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
 export interface DamageDeps {
   allocPopup: () => WorldState["damagePopups"][number]
-  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number) => void
+  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number) => void
   respawnUnit: (unitId: string) => void
   onSfxHit: () => void
   onPlayerHpChanged: () => void
@@ -195,7 +196,17 @@ export const applyDamage = (
   popup.color = target.isPlayer ? "#8fc8ff" : "#fff6cc"
   popup.life = 0.62
 
-  deps.spawnFlowers(sourceId, hitX, hitY, -impactX, -impactY, randomFlowerAmount())
+  const hitSpeed = Math.hypot(impactX, impactY)
+  const flowerBurst = randomFlowerBurst(damage, hitSpeed)
+  deps.spawnFlowers(
+    sourceId,
+    target.position.x,
+    target.position.y,
+    -impactX,
+    -impactY,
+    flowerBurst.amount,
+    flowerBurst.sizeScale
+  )
 
   if (sourceId === world.player.id) {
     world.cameraShake = Math.min(1.2, world.cameraShake + 0.12)
@@ -234,7 +245,7 @@ export const checkPerkProgress = (
     return
   }
 
-  world.nextPerkFlowerTarget += 130
+  world.nextPerkFlowerTarget += PERK_FLOWER_STEP
   world.perkChoices = randomPerkChoices(3)
   onPerkReady(world.perkChoices.map((perk) => ({
     id: perk.id,

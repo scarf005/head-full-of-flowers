@@ -12,6 +12,13 @@ export const MOLOTOV_POOL_SIZE = 36
 export const OBSTACLE_POOL_SIZE = 36
 
 export const BOT_COUNT = 7
+export const MATCH_DURATION_SECONDS = 90
 export const PERK_FLOWER_STEP = 130
 export const PLAYER_BASE_SPEED = 9.5
 export const BOT_BASE_SPEED = 8.4
+export const UNIT_BASE_HP = 10
+export const PLAYER_RADIUS = 0.3
+export const BOT_RADIUS = 0.28
+
+export const OBSTACLE_COUNT_MIN = 7
+export const OBSTACLE_COUNT_MAX = 11

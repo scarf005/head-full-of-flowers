@@ -1,10 +1,12 @@
 import { DamagePopup, Flower, MolotovZone, Obstacle, Pickup, Projectile, Throwable, Unit, Vec2 } from "../entities.ts"
+import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import type { PerkDefinition } from "../perks.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
   BOT_COUNT,
   DAMAGE_POPUP_POOL_SIZE,
   FLOWER_POOL_SIZE,
+  MATCH_DURATION_SECONDS,
   MOLOTOV_POOL_SIZE,
   OBSTACLE_POOL_SIZE,
   PERK_FLOWER_STEP,
@@ -57,12 +59,13 @@ export interface WorldState {
   cameraOffset: Vec2
   started: boolean
   running: boolean
+  paused: boolean
   finished: boolean
   audioPrimed: boolean
   timeRemaining: number
   pickupTimer: number
-  whiteFlowers: number
-  blueFlowers: number
+  factions: FactionDescriptor[]
+  factionFlowerCounts: Record<string, number>
   playerFlowerTotal: number
   nextPerkFlowerTarget: number
   perkChoices: PerkDefinition[]
@@ -73,6 +76,7 @@ export interface WorldState {
 }
 
 export const createWorldState = (): WorldState => {
+  const factions = buildFactions(BOT_COUNT)
   const player = new Unit("player", true, "white")
   const bots = Array.from({ length: BOT_COUNT }, (_, index) => new Unit(`bot-${index + 1}`, false, "blue"))
 
@@ -117,12 +121,13 @@ export const createWorldState = (): WorldState => {
     cameraOffset: new Vec2(),
     started: false,
     running: false,
+    paused: false,
     finished: false,
     audioPrimed: false,
-    timeRemaining: 90,
+    timeRemaining: MATCH_DURATION_SECONDS,
     pickupTimer: 2.5,
-    whiteFlowers: 0,
-    blueFlowers: 0,
+    factions,
+    factionFlowerCounts: createFactionFlowerCounts(factions),
     playerFlowerTotal: 0,
     nextPerkFlowerTarget: PERK_FLOWER_STEP,
     perkChoices: [],
