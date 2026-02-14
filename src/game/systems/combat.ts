@@ -6,6 +6,7 @@ import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
 import { randomFlowerBurst } from "./flowers.ts"
+import { debugInfiniteHpSignal } from "../signals.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
   return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
@@ -301,6 +302,10 @@ export const applyDamage = (
     flowerBurst.amount,
     flowerBurst.sizeScale
   )
+
+  if (target.isPlayer && debugInfiniteHpSignal.value) {
+    target.hp = target.maxHp
+  }
 
   const isKilled = target.hp <= 0
   if (sourceId === world.player.id && target.id !== world.player.id) {

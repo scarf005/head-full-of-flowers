@@ -13,6 +13,7 @@ import {
   updatePlayerHpSignal,
   updatePlayerWeaponSignals
 } from "./adapters/hud-sync.ts"
+import { debugInfiniteReloadSignal, debugSkipToMatchEndSignal } from "./signals.ts"
 import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "./utils.ts"
@@ -471,6 +472,30 @@ export class FlowerArenaGame {
     slot.life = 0.24
   }
 
+  private applyDebugOverrides() {
+    if (debugInfiniteReloadSignal.value) {
+      const player = this.world.player
+
+      player.reloadCooldown = 0
+      player.reloadCooldownMax = 0
+
+      if (Number.isFinite(player.magazineSize) && Number.isFinite(player.primaryAmmo)) {
+        player.primaryAmmo = player.magazineSize
+        player.reserveAmmo = Number.POSITIVE_INFINITY
+      }
+    }
+
+    if (!this.world.running || this.world.finished) {
+      debugSkipToMatchEndSignal.value = false
+      return
+    }
+
+    if (debugSkipToMatchEndSignal.value) {
+      this.world.timeRemaining = 0
+      debugSkipToMatchEndSignal.value = false
+    }
+  }
+
   private allocProjectile() {
     const slot = this.world.projectiles[this.world.projectileCursor]
     this.world.projectileCursor = (this.world.projectileCursor + 1) % this.world.projectiles.length
@@ -632,6 +657,8 @@ export class FlowerArenaGame {
     this.world.camera.y = lerp(this.world.camera.y, this.world.player.position.y, clamp(dt * 10, 0, 1))
     updateCombatFeel(this.world, dt)
     updateObstacleFlash(this.world, dt)
+
+    this.applyDebugOverrides()
 
     const simDt = this.world.hitStop > 0 ? dt * 0.12 : dt
     this.world.hitStop = Math.max(0, this.world.hitStop - dt)

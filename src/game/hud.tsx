@@ -1,4 +1,7 @@
 import {
+  debugInfiniteHpSignal,
+  debugInfiniteReloadSignal,
+  debugSkipToMatchEndSignal,
   coverageSlicesSignal,
   crosshairSignal,
   fpsSignal,
@@ -27,6 +30,7 @@ export const GameHud = () => {
   const hp = hpSignal.value
   const slices: CoverageSlice[] = coverageSlicesSignal.value
   const result = matchResultSignal.value
+  const showDebugPanel = ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) ?? false
 
   return (
     <>
@@ -55,6 +59,40 @@ export const GameHud = () => {
         </div>
         <div class="hud-pill hud-pill-fps">FPS {Math.round(fpsSignal.value)}</div>
       </div>
+
+      {showDebugPanel ? (
+        <div class="hud debug-panel">
+          <label class="debug-row">
+            <input
+              checked={debugInfiniteHpSignal.value}
+              type="checkbox"
+              onChange={(event) => {
+                debugInfiniteHpSignal.value = event.currentTarget.checked
+              }}
+            />
+            <span>Infinite HP</span>
+          </label>
+          <label class="debug-row">
+            <input
+              checked={debugInfiniteReloadSignal.value}
+              type="checkbox"
+              onChange={(event) => {
+                debugInfiniteReloadSignal.value = event.currentTarget.checked
+              }}
+            />
+            <span>Infinite Reload</span>
+          </label>
+          <button
+            class="debug-skip"
+            type="button"
+            onClick={() => {
+              debugSkipToMatchEndSignal.value = true
+            }}
+          >
+            Skip to Match End
+          </button>
+        </div>
+      ) : null}
 
       <div class="hud status-text">{statusMessageSignal.value}</div>
 

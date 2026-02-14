@@ -17,6 +17,10 @@ export interface MatchResultHud {
   standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
 }
 
+export const debugInfiniteHpSignal = signal(false)
+export const debugInfiniteReloadSignal = signal(false)
+export const debugSkipToMatchEndSignal = signal(false)
+
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
 export const fpsSignal = signal(0)
 export const pausedSignal = signal(false)
