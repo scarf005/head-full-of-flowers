@@ -113,7 +113,6 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
     if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
       deps.startReload(shooter.id)
-      return
     }
 
     return
@@ -157,8 +156,6 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
     if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
       deps.startReload(shooter.id)
-    } else {
-      deps.equipPrimary(shooter.id, "pistol", Number.POSITIVE_INFINITY)
     }
   }
 
