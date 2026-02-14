@@ -212,8 +212,8 @@
 
 .weapon-icon {
   min-width: 1.2rem;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.95rem;
+  height: 1.95rem;
   text-align: center;
   border: 1px solid rgba(218, 238, 194, 0.72);
   background: rgba(166, 202, 131, 0.22);
@@ -238,6 +238,13 @@
   object-fit: contain;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+}
+
+@media (max-width: 760px) {
+  .weapon-icon {
+    width: 1.65rem;
+    height: 1.65rem;
+  }
 }
 
 .weapon-value {
