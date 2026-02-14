@@ -12,6 +12,8 @@ const GRENADE_BULLET_DAMAGE = 10
 const GRENADE_BULLET_SPEED = 20
 const GRENADE_BULLET_RANGE = 30
 const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED
+const GRENADE_HIT_CAMERA_SHAKE = 0.55
+const GRENADE_HIT_STOP = 0.022
 
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
@@ -126,8 +128,8 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     if (isGrenade) {
       if (shouldExplode) {
         deps.explodeGrenade(throwableIndex)
-        world.cameraShake = Math.min(1.15, world.cameraShake + 0.16)
-        world.hitStop = Math.max(world.hitStop, 0.006)
+        world.cameraShake = Math.min(1.4, world.cameraShake + GRENADE_HIT_CAMERA_SHAKE)
+        world.hitStop = Math.max(world.hitStop, GRENADE_HIT_STOP)
         deps.onExplosion()
       }
 
