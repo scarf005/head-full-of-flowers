@@ -32,12 +32,7 @@ export interface TerrainMap {
 const TILE_IDS: TerrainTile[] = [
   "grass",
   "clover",
-  "wild-grass",
-  "dirt",
-  "dirt-road",
-  "road-edge",
-  "gravel",
-  "concrete"
+  "wild-grass"
 ]
 
 const WEIGHTS: Record<TerrainTile, number> = {
@@ -651,8 +646,8 @@ export const createBarrenGardenMap = (size: number) => {
     Array.from({ length: size }, (_, x) => [...wave[y][x]][0] ?? "grass")
   )
 
-  const roads = applyRoadNetwork(tiles)
-  const mazePaths = applyMazeGarden(tiles)
+  const roads = buildRoadNetworkMask(size)
+  const mazePaths = createMazePathMask(size)
   const paths = mergeMasks(roads, mazePaths)
   const warehouseBlueprints = createWarehouseBlueprints(size, paths)
   const wallBlueprints = createWallBlueprints(size, paths, warehouseBlueprints)

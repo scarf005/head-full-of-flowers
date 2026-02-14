@@ -3,6 +3,7 @@ import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import {
+  OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
@@ -17,14 +18,96 @@ export interface RenderSceneArgs {
   dt: number
 }
 
+let grassWaveTime = Math.random() * Math.PI * 2
+
+const GRASS_BASE_COLOR = "#8fa684"
+const GRASS_TILE_PIXEL_SIZE = 24
+const GRASS_TILE_WORLD_SIZE = 1
+const GRASS_TRANSITION_COLS = 5
+const GRASS_DARK_VARIANTS = 3
+const GRASS_TRANSITION_MASK_ORDER = [1, 2, 4, 8, 3, 6, 12, 9, 5, 10, 7, 14, 13, 11, 15]
+const GRASS_MASK_TO_TILE_INDEX = new Map(GRASS_TRANSITION_MASK_ORDER.map((mask, index) => [mask, index]))
+
+let grassBaseTexture: HTMLImageElement | null = null
+let grassDarkTexture: HTMLImageElement | null = null
+let grassTransitionsTexture: HTMLImageElement | null = null
+let grassBaseTextureLoaded = false
+let grassDarkTextureLoaded = false
+let grassTransitionsTextureLoaded = false
+
+if (typeof Image !== "undefined") {
+  grassBaseTexture = new Image()
+  grassBaseTexture.src = "/tiles/grass-base-24.png"
+  grassBaseTexture.onload = () => {
+    grassBaseTextureLoaded = true
+  }
+  if (grassBaseTexture.complete && grassBaseTexture.naturalWidth > 0) {
+    grassBaseTextureLoaded = true
+  }
+
+  grassDarkTexture = new Image()
+  grassDarkTexture.src = "/tiles/grass-dark-24.png"
+  grassDarkTexture.onload = () => {
+    grassDarkTextureLoaded = true
+  }
+  if (grassDarkTexture.complete && grassDarkTexture.naturalWidth > 0) {
+    grassDarkTextureLoaded = true
+  }
+
+  grassTransitionsTexture = new Image()
+  grassTransitionsTexture.src = "/tiles/grass-transitions-24.png"
+  grassTransitionsTexture.onload = () => {
+    grassTransitionsTextureLoaded = true
+  }
+  if (grassTransitionsTexture.complete && grassTransitionsTexture.naturalWidth > 0) {
+    grassTransitionsTextureLoaded = true
+  }
+}
+
+const grassCellNoise = (x: number, y: number, seed: number) => {
+  const value = Math.sin(x * 127.1 + y * 311.7 + seed * 73.17) * 43758.5453123
+  return value - Math.floor(value)
+}
+
+const readPatch = (cells: boolean[][], x: number, y: number) => {
+  if (y < 0 || y >= cells.length) {
+    return false
+  }
+  if (x < 0 || x >= cells[y].length) {
+    return false
+  }
+  return cells[y][x]
+}
+
+const countPatchNeighbors = (cells: boolean[][], x: number, y: number) => {
+  let count = 0
+  for (let oy = -1; oy <= 1; oy += 1) {
+    for (let ox = -1; ox <= 1; ox += 1) {
+      if (ox === 0 && oy === 0) {
+        continue
+      }
+      if (readPatch(cells, x + ox, y + oy)) {
+        count += 1
+      }
+    }
+  }
+  return count
+}
+
+const grassVariantIndex = (cellX: number, cellY: number) => {
+  return Math.floor(grassCellNoise(cellX, cellY, 0.93) * GRASS_DARK_VARIANTS) % GRASS_DARK_VARIANTS
+}
+
 export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
+  grassWaveTime += dt * 0.18
+
   context.save()
   context.imageSmoothingEnabled = false
 
-  context.fillStyle = "#c6ddb7"
+  context.fillStyle = "#889684"
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 
-  renderArenaGround(context, world)
+  renderArenaGround(context, world, grassWaveTime)
 
   const renderCameraX = world.camera.x + world.cameraOffset.x
   const renderCameraY = world.camera.y + world.cameraOffset.y
@@ -32,6 +115,12 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.translate(VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5)
   context.scale(WORLD_SCALE, WORLD_SCALE)
   context.translate(-renderCameraX, -renderCameraY)
+
+  context.save()
+  context.beginPath()
+  context.arc(0, 0, Math.max(0.1, world.arenaRadius - 0.05), 0, Math.PI * 2)
+  context.clip()
+
   renderMolotovZones(context, world)
   renderFlowers(context, world)
   renderObstacles(context, world)
@@ -41,6 +130,8 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderUnits(context, world)
   renderExplosions(context, world)
   renderDamagePopups(context, world)
+
+  context.restore()
   renderArenaBoundary(context, world)
   context.restore()
 
@@ -49,7 +140,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMenuCard(context, world)
 }
 
-const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState, waveTime: number) => {
   context.save()
   context.translate(VIEW_WIDTH * 0.5, VIEW_HEIGHT * 0.5)
   context.scale(WORLD_SCALE, WORLD_SCALE)
@@ -65,42 +156,158 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState)
   context.arc(0, 0, world.arenaRadius - 0.12, 0, Math.PI * 2)
   context.clip()
 
-  const tile = 1
   const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
   const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minX = Math.floor((world.camera.x - halfViewX) / tile) - 2
-  const maxX = Math.floor((world.camera.x + halfViewX) / tile) + 2
-  const minY = Math.floor((world.camera.y - halfViewY) / tile) - 2
-  const maxY = Math.floor((world.camera.y + halfViewY) / tile) + 2
+  const minWorldX = world.camera.x - halfViewX - 3
+  const maxWorldX = world.camera.x + halfViewX + 3
+  const minWorldY = world.camera.y - halfViewY - 3
+  const maxWorldY = world.camera.y + halfViewY + 3
 
-  for (let y = minY; y <= maxY; y += 1) {
-    for (let x = minX; x <= maxX; x += 1) {
-      const worldX = x * tile
-      const worldY = y * tile
-      if (worldX * worldX + worldY * worldY > world.arenaRadius * world.arenaRadius) {
-        continue
-      }
+  const startCellX = Math.floor(minWorldX / GRASS_TILE_WORLD_SIZE) - 1
+  const endCellX = Math.floor(maxWorldX / GRASS_TILE_WORLD_SIZE) + 1
+  const startCellY = Math.floor(minWorldY / GRASS_TILE_WORLD_SIZE) - 1
+  const endCellY = Math.floor(maxWorldY / GRASS_TILE_WORLD_SIZE) + 1
+  const gridWidth = endCellX - startCellX + 1
+  const gridHeight = endCellY - startCellY + 1
 
-      const terrain = terrainAt(world.terrainMap, worldX, worldY)
-      if (terrain === "grass") context.fillStyle = "#82957e"
-      if (terrain === "clover") context.fillStyle = "#798d76"
-      if (terrain === "wild-grass") context.fillStyle = "#72876f"
-      if (terrain === "dirt") context.fillStyle = "#8a7f70"
-      if (terrain === "dirt-road") context.fillStyle = "#7f7568"
-      if (terrain === "road-edge") context.fillStyle = "#7f8b78"
-      if (terrain === "gravel") context.fillStyle = "#8a887f"
-      if (terrain === "concrete") context.fillStyle = "#94968f"
-      context.fillRect(worldX, worldY, tile, tile)
-      if (terrain === "grass") context.fillStyle = "#90a48b"
-      if (terrain === "clover") context.fillStyle = "#879c84"
-      if (terrain === "wild-grass") context.fillStyle = "#80967e"
-      if (terrain === "dirt") context.fillStyle = "#988c7c"
-      if (terrain === "dirt-road") context.fillStyle = "#8d8173"
-      if (terrain === "road-edge") context.fillStyle = "#8d9b86"
-      if (terrain === "gravel") context.fillStyle = "#9a978d"
-      if (terrain === "concrete") context.fillStyle = "#a4a69f"
-      context.fillRect(worldX + 0.05, worldY + 0.05, tile - 0.18, tile - 0.18)
+  const patchCells = Array.from({ length: gridHeight }, () => Array.from({ length: gridWidth }, () => false))
+  for (let gy = 0; gy < gridHeight; gy += 1) {
+    for (let gx = 0; gx < gridWidth; gx += 1) {
+      const cellX = startCellX + gx
+      const cellY = startCellY + gy
+      const centerX = cellX * GRASS_TILE_WORLD_SIZE + GRASS_TILE_WORLD_SIZE * 0.5
+      const centerY = cellY * GRASS_TILE_WORLD_SIZE + GRASS_TILE_WORLD_SIZE * 0.5
+      const terrain = terrainAt(world.terrainMap, centerX, centerY)
+      const terrainBias = terrain === "wild-grass"
+        ? 0.34
+        : terrain === "clover"
+          ? 0.14
+          : -0.06
+      const patchField = (
+        Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58
+        + Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
+      ) * 0.5 + 0.5
+      const grain = grassCellNoise(cellX, cellY, 0.31) * 0.16
+      patchCells[gy][gx] = patchField + terrainBias + grain > 0.56
     }
+  }
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    const smoothed = patchCells.map((row) => [...row])
+    for (let gy = 0; gy < gridHeight; gy += 1) {
+      for (let gx = 0; gx < gridWidth; gx += 1) {
+        const neighborCount = countPatchNeighbors(patchCells, gx, gy)
+        if (neighborCount >= 5) {
+          smoothed[gy][gx] = true
+          continue
+        }
+        if (neighborCount <= 2) {
+          smoothed[gy][gx] = false
+          continue
+        }
+        smoothed[gy][gx] = patchCells[gy][gx]
+      }
+    }
+    for (let gy = 0; gy < gridHeight; gy += 1) {
+      for (let gx = 0; gx < gridWidth; gx += 1) {
+        patchCells[gy][gx] = smoothed[gy][gx]
+      }
+    }
+  }
+
+  context.fillStyle = GRASS_BASE_COLOR
+  context.fillRect(minWorldX, minWorldY, maxWorldX - minWorldX, maxWorldY - minWorldY)
+
+  if (grassBaseTexture && grassBaseTextureLoaded) {
+    for (let gy = 0; gy < gridHeight; gy += 1) {
+      for (let gx = 0; gx < gridWidth; gx += 1) {
+        const cellX = startCellX + gx
+        const cellY = startCellY + gy
+        const drawX = cellX * GRASS_TILE_WORLD_SIZE
+        const drawY = cellY * GRASS_TILE_WORLD_SIZE
+        context.drawImage(
+          grassBaseTexture,
+          drawX,
+          drawY,
+          GRASS_TILE_WORLD_SIZE,
+          GRASS_TILE_WORLD_SIZE
+        )
+      }
+    }
+  }
+
+  if (grassTransitionsTexture && grassTransitionsTextureLoaded) {
+    for (let gy = 0; gy < gridHeight; gy += 1) {
+      for (let gx = 0; gx < gridWidth; gx += 1) {
+        if (!patchCells[gy][gx]) {
+          continue
+        }
+
+        const north = readPatch(patchCells, gx, gy - 1)
+        const east = readPatch(patchCells, gx + 1, gy)
+        const south = readPatch(patchCells, gx, gy + 1)
+        const west = readPatch(patchCells, gx - 1, gy)
+        let mask = 0
+        if (north) mask |= 1
+        if (east) mask |= 2
+        if (south) mask |= 4
+        if (west) mask |= 8
+
+        if (mask === 0) {
+          mask = 15
+        }
+
+        const cellX = startCellX + gx
+        const cellY = startCellY + gy
+        const drawX = cellX * GRASS_TILE_WORLD_SIZE
+        const drawY = cellY * GRASS_TILE_WORLD_SIZE
+
+        if (mask === 15 && grassDarkTexture && grassDarkTextureLoaded) {
+          const variant = grassVariantIndex(cellX, cellY)
+          const srcX = variant * GRASS_TILE_PIXEL_SIZE
+          context.drawImage(
+            grassDarkTexture,
+            srcX,
+            0,
+            GRASS_TILE_PIXEL_SIZE,
+            GRASS_TILE_PIXEL_SIZE,
+            drawX,
+            drawY,
+            GRASS_TILE_WORLD_SIZE,
+            GRASS_TILE_WORLD_SIZE
+          )
+          continue
+        }
+
+        const tileIndex = GRASS_MASK_TO_TILE_INDEX.get(mask)
+        if (tileIndex === undefined) {
+          continue
+        }
+
+        const srcX = (tileIndex % GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
+        const srcY = Math.floor(tileIndex / GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
+        context.drawImage(
+          grassTransitionsTexture,
+          srcX,
+          srcY,
+          GRASS_TILE_PIXEL_SIZE,
+          GRASS_TILE_PIXEL_SIZE,
+          drawX,
+          drawY,
+          GRASS_TILE_WORLD_SIZE,
+          GRASS_TILE_WORLD_SIZE
+        )
+      }
+    }
+
+    context.globalAlpha = 0.08
+    const stripeHeight = 2.4
+    for (let stripeY = minWorldY - stripeHeight; stripeY < maxWorldY + stripeHeight; stripeY += stripeHeight) {
+      const alpha = clamp((Math.sin(stripeY * 0.34 + waveTime * 0.7) * 0.5 + 0.5) * 0.16, 0.03, 0.16)
+      context.fillStyle = `rgba(81, 99, 75, ${alpha})`
+      context.fillRect(minWorldX - 1, stripeY, maxWorldX - minWorldX + 2, stripeHeight)
+    }
+    context.globalAlpha = 1
   }
 
   context.restore()
@@ -108,13 +315,13 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState)
 }
 
 const renderArenaBoundary = (context: CanvasRenderingContext2D, world: WorldState) => {
-  context.strokeStyle = "#cfe6bc"
+  context.strokeStyle = "#bcc1bd"
   context.lineWidth = 0.45
   context.beginPath()
   context.arc(0, 0, world.arenaRadius, 0, Math.PI * 2)
   context.stroke()
 
-  context.strokeStyle = "#84af63"
+  context.strokeStyle = "#7e8681"
   context.lineWidth = 0.2
   context.beginPath()
   context.arc(0, 0, world.arenaRadius - 0.5, 0, Math.PI * 2)
@@ -138,6 +345,16 @@ const renderFlowers = (context: CanvasRenderingContext2D, world: WorldState) => 
   }
 }
 
+const pickupGlowColor = (weaponId: WorldState["pickups"][number]["weapon"]) => {
+  if (weaponId === "assault") {
+    return "255, 208, 112"
+  }
+  if (weaponId === "shotgun") {
+    return "255, 140, 92"
+  }
+  return "122, 255, 208"
+}
+
 const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt: number) => {
   for (const pickup of world.pickups) {
     if (!pickup.active) {
@@ -145,6 +362,20 @@ const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt:
     }
 
     const bobOffset = Math.sin(pickup.bob + dt * 4) * 0.14
+    const pulse = 0.35 + (Math.sin(pickup.bob * 1.6) * 0.5 + 0.5) * 0.35
+    const glow = pickupGlowColor(pickup.weapon)
+
+    context.fillStyle = `rgba(${glow}, ${0.18 + pulse * 0.2})`
+    context.beginPath()
+    context.arc(pickup.position.x, pickup.position.y + bobOffset, 0.68 + pulse * 0.22, 0, Math.PI * 2)
+    context.fill()
+
+    context.strokeStyle = `rgba(${glow}, ${0.28 + pulse * 0.35})`
+    context.lineWidth = 0.08
+    context.beginPath()
+    context.arc(pickup.position.x, pickup.position.y + bobOffset, 0.5 + pulse * 0.14, 0, Math.PI * 2)
+    context.stroke()
+
     context.fillStyle = "rgba(0, 0, 0, 0.2)"
     context.beginPath()
     context.ellipse(pickup.position.x, pickup.position.y + 0.55, 0.45, 0.2, 0, 0, Math.PI * 2)
@@ -271,6 +502,17 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
         context.fillStyle = "#6e3528"
         context.fillRect(tileX + 0.06, tileY + 0.46, 0.88, 0.08)
+      } else if (material === OBSTACLE_MATERIAL_BOX) {
+        context.fillStyle = "#6f2d2b"
+        context.fillRect(tileX, tileY, 1, 1)
+        context.fillStyle = "#df6f3f"
+        context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
+        context.fillStyle = "#ffd36e"
+        context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.24)
+        context.fillStyle = "#f6e5a8"
+        context.fillRect(tileX + 0.44, tileY + 0.08, 0.12, 0.84)
+        context.fillStyle = "#a1402e"
+        context.fillRect(tileX + 0.08, tileY + 0.54, 0.84, 0.1)
       } else if (material === OBSTACLE_MATERIAL_ROCK) {
         context.fillStyle = "#676a64"
         context.fillRect(tileX, tileY, 1, 1)
@@ -593,8 +835,8 @@ const renderAtmosphere = (context: CanvasRenderingContext2D) => {
     VIEW_HEIGHT * 0.5,
     VIEW_WIDTH * 0.75
   )
-  gradient.addColorStop(0, "rgba(210, 236, 196, 0)")
-  gradient.addColorStop(1, "rgba(133, 168, 120, 0.28)")
+  gradient.addColorStop(0, "rgba(212, 216, 214, 0)")
+  gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")
   context.fillStyle = gradient
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 }

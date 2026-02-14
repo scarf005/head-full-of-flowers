@@ -4,6 +4,7 @@ export const OBSTACLE_MATERIAL_NONE = 0
 export const OBSTACLE_MATERIAL_WALL = 1
 export const OBSTACLE_MATERIAL_WAREHOUSE = 2
 export const OBSTACLE_MATERIAL_ROCK = 3
+export const OBSTACLE_MATERIAL_BOX = 4
 
 export interface ObstacleGridState {
   size: number
@@ -23,6 +24,9 @@ const hpForMaterial = (material: number) => {
   if (material === OBSTACLE_MATERIAL_ROCK) {
     return 8
   }
+  if (material === OBSTACLE_MATERIAL_BOX) {
+    return 8
+  }
 
   return 0
 }
@@ -35,7 +39,7 @@ const materialForKind = (kind: MapObstacleBlueprint["kind"]) => {
     return OBSTACLE_MATERIAL_WAREHOUSE
   }
   if (kind === "box") {
-    return OBSTACLE_MATERIAL_ROCK
+    return OBSTACLE_MATERIAL_BOX
   }
   return OBSTACLE_MATERIAL_NONE
 }
@@ -128,10 +132,11 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
 
 export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number, amount: number) => {
   if (!isObstacleCellSolid(grid, x, y)) {
-    return { damaged: false, destroyed: false }
+    return { damaged: false, destroyed: false, destroyedMaterial: OBSTACLE_MATERIAL_NONE }
   }
 
   const index = obstacleGridIndex(grid.size, x, y)
+  const material = grid.material[index]
   const hpBefore = grid.hp[index]
   grid.hp[index] = Math.max(0, grid.hp[index] - amount)
   grid.flash[index] = 1
@@ -141,7 +146,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
     grid.solid[index] = 0
     grid.material[index] = OBSTACLE_MATERIAL_NONE
   }
-  return { damaged: true, destroyed }
+  return { damaged: true, destroyed, destroyedMaterial: destroyed ? material : OBSTACLE_MATERIAL_NONE }
 }
 
 export const decayObstacleFlash = (grid: ObstacleGridState, dt: number) => {
