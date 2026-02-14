@@ -367,13 +367,12 @@ out vec4 outColor;
 
 void main() {
   float centered = abs(vUv.y * 2.0 - 1.0);
-  float taper = mix(0.12, 1.0, pow(vUv.x, 0.82));
-  if (centered > taper) {
-    discard;
-  }
-  float sideFade = 1.0 - smoothstep(taper * 0.62, taper, centered);
-  float alongFade = smoothstep(0.0, 0.72, vUv.x);
-  float alpha = vAlpha * sideFade * alongFade;
+  float tailTaper = smoothstep(0.0, 0.55, vUv.x);
+  float halfWidth = mix(0.18, 1.0, tailTaper);
+  float sideFade = 1.0 - smoothstep(halfWidth * 0.72, halfWidth, centered);
+  float headFade = smoothstep(1.0, 0.9, vUv.x);
+  float tailFade = smoothstep(0.0, 0.28, vUv.x);
+  float alpha = vAlpha * sideFade * headFade * tailFade;
   if (alpha <= 0.01) {
     discard;
   }
@@ -851,8 +850,8 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
     state.trailInstanceData[writeIndex + 1] = trail.position.y
     state.trailInstanceData[writeIndex + 2] = trail.direction.x
     state.trailInstanceData[writeIndex + 3] = trail.direction.y
-    state.trailInstanceData[writeIndex + 4] = trail.length * (0.74 + lifeRatio * 0.26)
-    state.trailInstanceData[writeIndex + 5] = trail.width * (0.68 + lifeRatio * 0.32)
+    state.trailInstanceData[writeIndex + 4] = trail.length
+    state.trailInstanceData[writeIndex + 5] = trail.width
     state.trailInstanceData[writeIndex + 6] = red
     state.trailInstanceData[writeIndex + 7] = green
     state.trailInstanceData[writeIndex + 8] = blue

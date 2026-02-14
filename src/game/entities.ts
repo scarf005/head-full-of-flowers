@@ -128,6 +128,9 @@ export class Projectile {
   ttl = 0
   glow = 0.5
   trailCooldown = 0
+  trailX = 0
+  trailY = 0
+  trailReady = false
 }
 
 export class Throwable {
@@ -143,6 +146,9 @@ export class Throwable {
   ricochets = 0
   rolled = false
   trailCooldown = 0
+  trailX = 0
+  trailY = 0
+  trailReady = false
 }
 
 export class FlightTrailSegment {

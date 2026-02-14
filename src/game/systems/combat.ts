@@ -204,6 +204,9 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
       ? randomRange(0.5, 0.95)
       : randomRange(0.4, 0.9)
     projectile.trailCooldown = 0
+    projectile.trailX = projectile.position.x
+    projectile.trailY = projectile.position.y
+    projectile.trailReady = false
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {

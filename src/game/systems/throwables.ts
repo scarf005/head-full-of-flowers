@@ -56,6 +56,9 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.ricochets = 0
   throwable.rolled = false
   throwable.trailCooldown = 0
+  throwable.trailX = throwable.position.x
+  throwable.trailY = throwable.position.y
+  throwable.trailReady = false
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
