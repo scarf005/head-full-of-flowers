@@ -23,7 +23,7 @@ import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } 
 
 type WeaponIconSprite = WeaponHudIcon
 
-const SPRITE_PIXEL_SIZE = 3
+const SPRITE_PIXEL_SIZE = 4
 const SPRITE_SIZE = 8 * SPRITE_PIXEL_SIZE
 
 const spriteCache = new Map<WeaponIconSprite, string>()
@@ -110,8 +110,8 @@ export const GameHud = () => {
             ))}
           </div>
         </div>
-        <div class="hud-pill hud-pill-fps">FPS {Math.round(fpsSignal.value)}</div>
-      </div>
+          <div class="hud-pill hud-pill-fps">FPS {Math.round(fpsSignal.value)}</div>
+        </div>
 
       {showDebugPanel ? (
         <div class="hud debug-panel">
