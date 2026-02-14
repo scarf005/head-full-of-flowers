@@ -118,6 +118,7 @@ export interface FirePrimaryDeps {
   onOtherShoot: () => void
   onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
+  onShellEjected?: (shooter: Unit) => void
 }
 
 const swapToPistolIfNeeded = (world: WorldState, shooter: Unit, onPrimaryWeaponChanged?: (unitId: string) => void) => {
@@ -176,6 +177,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   if (shooter.isPlayer) {
     deps.onPlayerBulletsFired?.(pelletCount)
   }
+  deps.onShellEjected?.(shooter)
   for (let pellet = 0; pellet < pelletCount; pellet += 1) {
     const projectile = deps.allocProjectile()
     const spread = randomRange(-weapon.spread, weapon.spread)
@@ -284,13 +286,10 @@ export const applyDamage = (
 
   const hitSpeed = Math.hypot(impactX, impactY)
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
-  const fallbackSourceId = nearestEnemyId(world, target.id, target.team, target.position.x, target.position.y)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
   const flowerSourceId = isSelfHarm
     ? nearestEnemyId(world, target.id, sourceUnit.team, target.position.x, target.position.y) || sourceId
-    : sourceUnit
-    ? sourceId
-    : fallbackSourceId || sourceId
+    : sourceId
 
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
