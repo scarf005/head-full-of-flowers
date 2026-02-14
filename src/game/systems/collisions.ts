@@ -92,7 +92,6 @@ export const constrainUnitsToArena = (world: WorldState) => {
 }
 
 export interface ObstacleDamageDeps {
-  spawnExplosion: (x: number, y: number, radius: number) => void
   onSfxHit?: () => void
   onSfxDeath?: () => void
 }
@@ -138,8 +137,6 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
     return false
   }
 
-  const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
-  deps.spawnExplosion(center.x, center.y, 0.14)
   deps.onSfxHit?.()
   if (result.destroyed) {
     deps.onSfxDeath?.()
@@ -177,7 +174,6 @@ export const damageObstaclesByExplosion = (
 
       const result = damageObstacleCell(grid, gx, gy, 2.5)
       if (result.damaged) {
-        deps.spawnExplosion(center.x, center.y, 0.16)
         tookDamage = true
         if (result.destroyed) {
           destroyedAny = true

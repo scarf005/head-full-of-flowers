@@ -484,7 +484,6 @@ export class FlowerArenaGame {
       hitObstacle: (projectileIndex) => {
         const projectile = this.world.projectiles[projectileIndex]
         return hitObstacle(this.world, projectile, {
-          spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
           onSfxHit: () => this.sfx.hit(),
           onSfxDeath: () => this.sfx.die()
         })
@@ -505,7 +504,6 @@ export class FlowerArenaGame {
           },
           damageObstaclesByExplosion: (x, y, radius) => {
             damageObstaclesByExplosion(this.world, x, y, radius, {
-              spawnExplosion: (sx, sy, rr) => this.spawnExplosion(sx, sy, rr),
               onSfxHit: () => this.sfx.hit(),
               onSfxDeath: () => this.sfx.die()
             })
