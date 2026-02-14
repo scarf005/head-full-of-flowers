@@ -23,7 +23,7 @@ import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } 
 
 type WeaponIconSprite = WeaponHudIcon
 
-const SPRITE_PIXEL_SIZE = 4
+const SPRITE_PIXEL_SIZE = 8
 const SPRITE_SIZE = 8 * SPRITE_PIXEL_SIZE
 
 const spriteCache = new Map<WeaponIconSprite, string>()
