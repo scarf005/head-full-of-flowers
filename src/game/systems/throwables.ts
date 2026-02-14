@@ -12,9 +12,13 @@ const GRENADE_BULLET_DAMAGE = 10
 const GRENADE_BULLET_SPEED = 20
 const GRENADE_BULLET_RANGE = 30
 const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED
+const GRENADE_THROW_INACCURACY_RADIANS = 0.11
 const GRENADE_MAX_RICOCHETS = 2
-const GRENADE_RICOCHET_DAMPING = 0.84
-const GRENADE_RICOCHET_JITTER_RADIANS = 0.2
+const GRENADE_RICOCHET_RESTITUTION = 0.58
+const GRENADE_RICOCHET_TANGENT_FRICTION = 0.78
+const GRENADE_RICOCHET_MIN_SPEED = 2.8
+const GRENADE_RICOCHET_RANDOM_RADIANS = 0.45
+const GRENADE_AIR_DRAG = 0.18
 const GRENADE_HIT_CAMERA_SHAKE = 0.55
 const GRENADE_HIT_STOP = 0.022
 
@@ -36,8 +40,11 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   }
 
   const throwable = deps.allocThrowable()
-  const throwDirX = shooter.aim.x
-  const throwDirY = shooter.aim.y
+  const aimAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
+  const throwSpread = mode === "grenade" ? (Math.random() * 2 - 1) * GRENADE_THROW_INACCURACY_RADIANS : 0
+  const throwAngle = aimAngle + throwSpread
+  const throwDirX = Math.cos(throwAngle)
+  const throwDirY = Math.sin(throwAngle)
   const speed = mode === "grenade" ? GRENADE_BULLET_SPEED : MOLOTOV_THROW_SPEED
   const throwableRadius = mode === "grenade" ? 0.36 : 0.3
   const throwOffset = shooter.radius + throwableRadius + 0.06
@@ -114,6 +121,9 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     if (throwable.mode === "molotov") {
       throwable.velocity.x *= clamp(1 - dt * 0.55, 0, 1)
       throwable.velocity.y *= clamp(1 - dt * 0.55, 0, 1)
+    } else {
+      throwable.velocity.x *= clamp(1 - dt * GRENADE_AIR_DRAG, 0, 1)
+      throwable.velocity.y *= clamp(1 - dt * GRENADE_AIR_DRAG, 0, 1)
     }
     limitToArena(throwable.position, throwable.radius, world.arenaRadius)
 
@@ -127,24 +137,57 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
         const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, throwable.position.y)
         const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
         const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
+        const moveX = throwable.position.x - previousX
+        const moveY = throwable.position.y - previousY
+        const moveLength = Math.hypot(moveX, moveY) || 1
+        const moveDirX = moveX / moveLength
+        const moveDirY = moveY / moveLength
 
         throwable.position.x = previousX
         throwable.position.y = previousY
 
-        if (blockedX || !blockedY) {
-          throwable.velocity.x *= -1
-        }
-        if (blockedY || !blockedX) {
-          throwable.velocity.y *= -1
+        let normalX = 0
+        let normalY = 0
+        if (blockedX && !blockedY) {
+          normalX = moveDirX > 0 ? -1 : 1
+        } else if (blockedY && !blockedX) {
+          normalY = moveDirY > 0 ? -1 : 1
+        } else {
+          normalX = -moveDirX
+          normalY = -moveDirY
         }
 
-        const jitter = (Math.random() * 2 - 1) * GRENADE_RICOCHET_JITTER_RADIANS
-        const cos = Math.cos(jitter)
-        const sin = Math.sin(jitter)
-        const ricochetX = throwable.velocity.x * cos - throwable.velocity.y * sin
-        const ricochetY = throwable.velocity.x * sin + throwable.velocity.y * cos
-        throwable.velocity.x = ricochetX * GRENADE_RICOCHET_DAMPING
-        throwable.velocity.y = ricochetY * GRENADE_RICOCHET_DAMPING
+        const normalLength = Math.hypot(normalX, normalY) || 1
+        normalX /= normalLength
+        normalY /= normalLength
+
+        const velocityDotNormal = throwable.velocity.x * normalX + throwable.velocity.y * normalY
+        const normalVelocityX = velocityDotNormal * normalX
+        const normalVelocityY = velocityDotNormal * normalY
+        const tangentVelocityX = throwable.velocity.x - normalVelocityX
+        const tangentVelocityY = throwable.velocity.y - normalVelocityY
+
+        throwable.velocity.x =
+          -normalVelocityX * GRENADE_RICOCHET_RESTITUTION +
+          tangentVelocityX * GRENADE_RICOCHET_TANGENT_FRICTION
+        throwable.velocity.y =
+          -normalVelocityY * GRENADE_RICOCHET_RESTITUTION +
+          tangentVelocityY * GRENADE_RICOCHET_TANGENT_FRICTION
+
+        const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_RICOCHET_RANDOM_RADIANS
+        const jitterCos = Math.cos(ricochetJitter)
+        const jitterSin = Math.sin(ricochetJitter)
+        const jitteredVelocityX = throwable.velocity.x * jitterCos - throwable.velocity.y * jitterSin
+        const jitteredVelocityY = throwable.velocity.x * jitterSin + throwable.velocity.y * jitterCos
+        throwable.velocity.x = jitteredVelocityX
+        throwable.velocity.y = jitteredVelocityY
+
+        throwable.position.x += normalX * 0.02
+        throwable.position.y += normalY * 0.02
+
+        if (Math.hypot(throwable.velocity.x, throwable.velocity.y) < GRENADE_RICOCHET_MIN_SPEED) {
+          throwable.ricochets = GRENADE_MAX_RICOCHETS
+        }
 
         throwable.ricochets += 1
       } else {

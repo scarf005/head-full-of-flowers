@@ -19,7 +19,7 @@ import {
 } from "./signals.ts"
 import type { WeaponHudIcon } from "./signals.ts"
 import type { CoverageSlice } from "./signals.ts"
-import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./render/pixel-art.ts"
+import { drawGrenadeSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./render/pixel-art.ts"
 
 type WeaponIconSprite = WeaponHudIcon
 
@@ -53,7 +53,7 @@ const weaponIconCache = (icon: WeaponIconSprite) => {
   if (icon === "grenade") {
     drawGrenadeSprite(context, center, center, SPRITE_PIXEL_SIZE)
   } else if (icon === "molotov") {
-    drawFlameProjectileSprite(context, center, center, SPRITE_PIXEL_SIZE)
+    drawMolotovSprite(context, center, center, SPRITE_PIXEL_SIZE)
   } else {
     drawWeaponPickupSprite(context, icon, center, center, SPRITE_PIXEL_SIZE)
   }

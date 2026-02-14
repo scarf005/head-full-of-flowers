@@ -1,4 +1,4 @@
-import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
+import { drawFlameProjectileSprite, drawGrenadeSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
 import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
@@ -733,10 +733,7 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, 
     context.beginPath()
     context.ellipse(throwable.position.x, throwable.position.y + 0.2, 0.18, 0.1, 0, 0, Math.PI * 2)
     context.fill()
-    context.fillStyle = "#8f3a2e"
-    context.fillRect(throwable.position.x - 0.12, throwable.position.y - 0.12, 0.24, 0.24)
-    context.fillStyle = "#f88a3a"
-    context.fillRect(throwable.position.x - 0.08, throwable.position.y - 0.08, 0.16, 0.16)
+    drawMolotovSprite(context, throwable.position.x, throwable.position.y, 0.08)
   }
 }
 

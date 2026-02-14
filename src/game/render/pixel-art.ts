@@ -1,6 +1,57 @@
 import type { PrimaryWeaponId } from "../types.ts"
 
 type SpriteRow = string
+type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
+
+const ITEM_SPRITE_UNIT = 8
+const itemSpritePath: Record<ItemSpriteId, string> = {
+  pistol: "/items/pistol.png",
+  assault: "/items/assault.png",
+  shotgun: "/items/shotgun.png",
+  flamethrower: "/items/flamethrower.png",
+  grenade: "/items/grenade.png",
+  molotov: "/items/molotov.png"
+}
+
+const itemSpriteCache = new Map<ItemSpriteId, HTMLImageElement | null>()
+
+const ensureItemSprite = (id: ItemSpriteId) => {
+  const cached = itemSpriteCache.get(id)
+  if (cached !== undefined) {
+    return cached
+  }
+
+  if (typeof Image === "undefined") {
+    itemSpriteCache.set(id, null)
+    return null
+  }
+
+  const image = new Image()
+  image.src = itemSpritePath[id]
+  itemSpriteCache.set(id, image)
+  return image
+}
+
+const drawItemSpritePng = (
+  context: CanvasRenderingContext2D,
+  spriteId: ItemSpriteId,
+  x: number,
+  y: number,
+  size: number
+) => {
+  const image = ensureItemSprite(spriteId)
+  if (!image || !image.complete || image.naturalWidth <= 0) {
+    return false
+  }
+
+  const drawSize = ITEM_SPRITE_UNIT * size
+  const half = drawSize * 0.5
+  const smoothBefore = context.imageSmoothingEnabled
+  context.imageSmoothingEnabled = false
+  context.drawImage(image, x - half, y - half, drawSize, drawSize)
+  context.imageSmoothingEnabled = smoothBefore
+  return true
+}
 
 const palette = {
   k: "#1e1b22",
@@ -71,14 +122,25 @@ const grenadeSprite: SpriteRow[] = [
   "........"
 ]
 
+const molotovSprite: SpriteRow[] = [
+  "...y....",
+  "..yyy...",
+  "...k....",
+  "..krrk..",
+  "..krMk..",
+  "..krrk..",
+  "...kk...",
+  "........"
+]
+
 const flameProjectileSprite: SpriteRow[] = [
-  "....C...",
-  "...cCc..",
-  "..cCCc..",
-  ".cCyyCc.",
-  "..cCCc..",
-  "...cCc..",
-  "....c...",
+  "........",
+  "...r....",
+  "..rrr...",
+  ".rCCyyr.",
+  "..rCCr..",
+  "...rr...",
+  "....r...",
   "........"
 ]
 
@@ -122,6 +184,10 @@ export const drawWeaponPickupSprite = (
   y: number,
   size = 0.1
 ) => {
+  if (drawItemSpritePng(context, weaponId, x, y, size)) {
+    return
+  }
+
   draw(context, weaponSprites[weaponId], x, y, size)
 }
 
@@ -131,7 +197,24 @@ export const drawGrenadeSprite = (
   y: number,
   size = 0.08
 ) => {
+  if (drawItemSpritePng(context, "grenade", x, y, size)) {
+    return
+  }
+
   draw(context, grenadeSprite, x, y, size)
+}
+
+export const drawMolotovSprite = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size = 0.08
+) => {
+  if (drawItemSpritePng(context, "molotov", x, y, size)) {
+    return
+  }
+
+  draw(context, molotovSprite, x, y, size)
 }
 
 export const drawFlameProjectileSprite = (

@@ -270,8 +270,12 @@ export const applyDamage = (
 
   const hitSpeed = Math.hypot(impactX, impactY)
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
+  const normalizedSourceId = isPlayerSource
+    ? world.player.id
+    : sourceUnit?.id ?? sourceId
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
-  const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : sourceId
+  const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfHarm
 
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
@@ -291,7 +295,7 @@ export const applyDamage = (
   }
 
   const isKilled = target.hp <= 0
-  if (sourceId === world.player.id && target.id !== world.player.id) {
+  if (isPlayerSource && target.id !== world.player.id) {
     deps.onPlayerHit?.(target.id, damage)
   }
   if (isKilled) {
@@ -309,7 +313,7 @@ export const applyDamage = (
     )
   }
 
-  if (sourceId === world.player.id) {
+  if (isPlayerSource) {
     world.cameraShake = Math.min(1.2, world.cameraShake + 0.12)
     world.hitStop = Math.max(world.hitStop, 0.012)
   }
@@ -331,10 +335,10 @@ export const applyDamage = (
     } else {
       deps.onSfxDeath()
     }
-    if (sourceId === world.player.id && target.id !== world.player.id) {
+    if (isPlayerSource && target.id !== world.player.id) {
       deps.onSfxPlayerKill()
     }
-    if (sourceId === world.player.id && target.id !== world.player.id) {
+    if (isPlayerSource && target.id !== world.player.id) {
       deps.onPlayerKill?.(target.id)
     }
     deps.respawnUnit(target.id)
