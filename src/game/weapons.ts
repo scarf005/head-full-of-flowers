@@ -30,7 +30,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.045,
     pellets: 1,
     bulletRadius: 0.24,
-    pickupAmmo: 24,
+    pickupAmmo: Infinity,
     magazineSize: 8,
     reload: 1.5
   },

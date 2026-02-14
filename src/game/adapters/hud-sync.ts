@@ -100,7 +100,7 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   }
 
   primaryAmmoSignal.value = Number.isFinite(world.player.primaryAmmo)
-    ? `${Math.floor(world.player.primaryAmmo)} / ${Math.floor(world.player.reserveAmmo)}`
+    ? `${Math.floor(world.player.primaryAmmo)} / ${Number.isFinite(world.player.reserveAmmo) ? Math.floor(world.player.reserveAmmo) : "∞"}`
     : "∞"
 }
 

@@ -17,11 +17,12 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
   }
 
   const weapon = PRIMARY_WEAPONS[unit.primaryWeapon]
-  if (!Number.isFinite(unit.primaryAmmo) || !Number.isFinite(unit.reserveAmmo)) {
+  if (!Number.isFinite(unit.primaryAmmo)) {
     return
   }
 
-  if (unit.primaryAmmo >= unit.magazineSize || unit.reserveAmmo <= 0) {
+  const hasReserve = !Number.isFinite(unit.reserveAmmo) || unit.reserveAmmo > 0
+  if (unit.primaryAmmo >= unit.magazineSize || !hasReserve) {
     return
   }
 
@@ -42,19 +43,26 @@ export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUp
     return
   }
 
-  if (!Number.isFinite(unit.primaryAmmo) || !Number.isFinite(unit.reserveAmmo)) {
+  if (!Number.isFinite(unit.primaryAmmo)) {
     return
   }
 
   const room = Math.max(0, unit.magazineSize - unit.primaryAmmo)
-  if (room <= 0 || unit.reserveAmmo <= 0) {
+  if (room <= 0) {
     unit.reloadCooldownMax = 0
     return
   }
 
-  const moved = Math.min(room, unit.reserveAmmo)
+  if (Number.isFinite(unit.reserveAmmo) && unit.reserveAmmo <= 0) {
+    unit.reloadCooldownMax = 0
+    return
+  }
+
+  const moved = Number.isFinite(unit.reserveAmmo) ? Math.min(room, unit.reserveAmmo) : room
   unit.primaryAmmo += moved
-  unit.reserveAmmo -= moved
+  if (Number.isFinite(unit.reserveAmmo)) {
+    unit.reserveAmmo -= moved
+  }
   unit.reloadCooldown = 0
   unit.reloadCooldownMax = 0
   if (unit.isPlayer) {
@@ -81,7 +89,10 @@ export const equipPrimary = (
   unit.reloadCooldownMax = 0
 
   const normalizedAmmo = Number.isFinite(ammo) ? ammo : config.pickupAmmo
-  if (Number.isFinite(normalizedAmmo) && Number.isFinite(config.magazineSize)) {
+  if (Number.isFinite(config.magazineSize) && !Number.isFinite(normalizedAmmo)) {
+    unit.primaryAmmo = config.magazineSize
+    unit.reserveAmmo = Number.POSITIVE_INFINITY
+  } else if (Number.isFinite(normalizedAmmo) && Number.isFinite(config.magazineSize)) {
     unit.reserveAmmo = Math.max(0, normalizedAmmo)
     const loaded = Math.min(unit.magazineSize, unit.reserveAmmo)
     unit.primaryAmmo = loaded
@@ -110,7 +121,8 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
-    if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
+    const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
+    if (hasReserve) {
       if (shooter.reloadCooldownMax <= 0) {
         deps.startReload(shooter.id)
       }
@@ -155,7 +167,8 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
-    if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
+    const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
+    if (hasReserve) {
       deps.startReload(shooter.id)
     }
   }
