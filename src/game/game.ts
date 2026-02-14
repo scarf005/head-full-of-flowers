@@ -384,7 +384,6 @@ export class FlowerArenaGame {
     firePrimary(this.world, unitId, {
       allocProjectile: () => this.allocProjectile(),
       startReload: (id) => this.startReload(id),
-      equipPrimary: (id, weaponId, ammo) => this.equipPrimary(id, weaponId, ammo),
       onPlayerShoot: () => {
         this.sfx.shoot()
         updatePlayerWeaponSignals(this.world)

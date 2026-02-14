@@ -99,7 +99,6 @@ export const equipPrimary = (
 export interface FirePrimaryDeps {
   allocProjectile: () => WorldState["projectiles"][number]
   startReload: (unitId: string) => void
-  equipPrimary: (unitId: string, weaponId: PrimaryWeaponId, ammo: number) => void
   onPlayerShoot: () => void
   onOtherShoot: () => void
 }
@@ -112,7 +111,9 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
     if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
-      deps.startReload(shooter.id)
+      if (shooter.reloadCooldownMax <= 0) {
+        deps.startReload(shooter.id)
+      }
     }
 
     return
