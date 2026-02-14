@@ -64,6 +64,7 @@ export class SfxSynth {
   private context: AudioContext | null = null
   private bus: DynamicsCompressorNode | null = null
   private masterGain: GainNode | null = null
+  private impactGain: GainNode | null = null
 
   private ensureContext() {
     if (!this.context) {
@@ -77,7 +78,12 @@ export class SfxSynth {
 
       this.masterGain = this.context.createGain()
       this.masterGain.gain.value = 1
+
+      this.impactGain = this.context.createGain()
+      this.impactGain.gain.value = 1.5
+
       this.bus.connect(this.masterGain)
+      this.impactGain.connect(this.context.destination)
       this.masterGain.connect(this.context.destination)
     }
 
@@ -99,12 +105,13 @@ export class SfxSynth {
 
   hit() {
     const context = this.ensureContext()
-    this.chirp(context, 260, 70, 0.1, "triangle", 0.32)
+    this.chirp(context, 340, 90, 0.11, "triangle", 0.85, true)
   }
 
   die() {
     const context = this.ensureContext()
-    this.chirp(context, 180, 38, 0.22, "sawtooth", 0.52)
+    this.chirp(context, 480, 140, 0.08, "square", 1.05, true)
+    this.chirp(context, 260, 48, 0.2, "sawtooth", 1.25, true, 0.04)
   }
 
   explosion() {
@@ -118,24 +125,28 @@ export class SfxSynth {
     to: number,
     duration: number,
     type: OscillatorType,
-    gainPeak: number
+    gainPeak: number,
+    impact = false,
+    delay = 0
   ) {
     const now = context.currentTime
+    const startTime = now + Math.max(0, delay)
     const oscillator = context.createOscillator()
     const gain = context.createGain()
 
     oscillator.type = type
-    oscillator.frequency.setValueAtTime(from, now)
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, to), now + duration)
+    oscillator.frequency.setValueAtTime(from, startTime)
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, to), startTime + duration)
 
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(gainPeak, now + duration * 0.15)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration)
+    gain.gain.setValueAtTime(0.0001, startTime)
+    gain.gain.exponentialRampToValueAtTime(gainPeak, startTime + duration * 0.15)
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
 
     oscillator.connect(gain)
-    gain.connect(this.bus ?? this.masterGain ?? context.destination)
+    const output = impact ? this.impactGain : (this.bus ?? this.masterGain)
+    gain.connect(output ?? context.destination)
 
-    oscillator.start(now)
-    oscillator.stop(now + duration)
+    oscillator.start(startTime)
+    oscillator.stop(startTime + duration + 0.01)
   }
 }
