@@ -1,5 +1,6 @@
 import { sample } from "@std/random"
 
+import { drawGrenadeSprite, drawWeaponPickupSprite } from "./render/pixel-art.ts"
 import { AudioDirector, SfxSynth } from "./audio.ts"
 import {
   DamagePopup,
@@ -43,24 +44,26 @@ import {
   randomPointInArena,
   randomRange
 } from "./utils.ts"
+import {
+  BOT_BASE_SPEED,
+  BOT_COUNT,
+  DAMAGE_POPUP_POOL_SIZE,
+  FLOWER_POOL_SIZE,
+  MOLOTOV_POOL_SIZE,
+  OBSTACLE_POOL_SIZE,
+  PERK_FLOWER_STEP,
+  PICKUP_POOL_SIZE,
+  PLAYER_BASE_SPEED,
+  PROJECTILE_POOL_SIZE,
+  THROWABLE_POOL_SIZE,
+  VIEW_HEIGHT,
+  VIEW_WIDTH,
+  WORLD_SCALE
+} from "./world/constants.ts"
+import { createBarrenGardenMap, terrainAt, type TerrainMap } from "./world/wfc-map.ts"
 
 import menuTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
-
-const VIEW_WIDTH = 960
-const VIEW_HEIGHT = 540
-const WORLD_SCALE = VIEW_WIDTH / 25
-const FLOWER_POOL_SIZE = 5000
-const PROJECTILE_POOL_SIZE = 480
-const THROWABLE_POOL_SIZE = 96
-const DAMAGE_POPUP_POOL_SIZE = 200
-const PICKUP_POOL_SIZE = 12
-const MOLOTOV_POOL_SIZE = 36
-const OBSTACLE_POOL_SIZE = 36
-const BOT_COUNT = 7
-const PERK_FLOWER_STEP = 130
-const PLAYER_BASE_SPEED = 9.5
-const BOT_BASE_SPEED = 8.4
 
 interface ExplosionFx {
   active: boolean
@@ -143,6 +146,7 @@ export class FlowerArenaGame {
   private cameraOffset = new Vec2()
   private hitStop = 0
   private arenaRadius = ARENA_START_RADIUS
+  private terrainMap: TerrainMap = createBarrenGardenMap(112)
 
   private audioDirector = new AudioDirector(menuTrackUrl, gameplayTrackUrl)
   private sfx = new SfxSynth()
@@ -349,6 +353,7 @@ export class FlowerArenaGame {
     this.blueFlowers = 0
     this.playerFlowerTotal = 0
     this.nextPerkFlowerTarget = PERK_FLOWER_STEP
+    this.terrainMap = createBarrenGardenMap(112)
 
     this.player.maxHp = 10
     this.player.hp = 10
@@ -1800,21 +1805,30 @@ export class FlowerArenaGame {
           continue
         }
 
-        const grain = this.tileNoise(x, y)
-        this.context.fillStyle = grain > 0.5 ? "#98bf78" : "#92ba74"
+        const terrain = terrainAt(this.terrainMap, worldX, worldY)
+        if (terrain === "dust") this.context.fillStyle = "#b8b290"
+        if (terrain === "cracked") this.context.fillStyle = "#a99f7f"
+        if (terrain === "dead-grass") this.context.fillStyle = "#98a173"
+        if (terrain === "stone") this.context.fillStyle = "#8f9086"
+        if (terrain === "rubble") this.context.fillStyle = "#7f7b6f"
+        if (terrain === "thorns") this.context.fillStyle = "#646d4f"
+        if (terrain === "shrub") this.context.fillStyle = "#7e8664"
+        if (terrain === "fence") this.context.fillStyle = "#6c695d"
         this.context.fillRect(worldX, worldY, tile, tile)
-        this.context.fillStyle = grain > 0.5 ? "#a7cc86" : "#9dc47f"
+        if (terrain === "dust") this.context.fillStyle = "#c3bb99"
+        if (terrain === "cracked") this.context.fillStyle = "#b2a88a"
+        if (terrain === "dead-grass") this.context.fillStyle = "#a6ad7c"
+        if (terrain === "stone") this.context.fillStyle = "#a1a299"
+        if (terrain === "rubble") this.context.fillStyle = "#948f84"
+        if (terrain === "thorns") this.context.fillStyle = "#778059"
+        if (terrain === "shrub") this.context.fillStyle = "#8e966c"
+        if (terrain === "fence") this.context.fillStyle = "#7f7c70"
         this.context.fillRect(worldX + 0.05, worldY + 0.05, tile - 0.18, tile - 0.18)
       }
     }
 
     this.context.restore()
     this.context.restore()
-  }
-
-  private tileNoise(x: number, y: number) {
-    const value = Math.sin(x * 92.11 + y * 37.41) * 43758.5453
-    return value - Math.floor(value)
   }
 
   private renderArenaBoundary() {
@@ -1855,15 +1869,18 @@ export class FlowerArenaGame {
       }
 
       const bobOffset = Math.sin(pickup.bob + dt * 4) * 0.14
-      const weapon = PRIMARY_WEAPONS[pickup.weapon]
-      this.context.fillStyle = "#2f4f2a"
-      this.context.fillRect(pickup.position.x - 0.62, pickup.position.y - 0.72 + bobOffset, 1.24, 1.24)
-      this.context.fillStyle = "#d9e8be"
-      this.context.fillRect(pickup.position.x - 0.5, pickup.position.y - 0.6 + bobOffset, 1, 1)
-      this.context.fillStyle = "#19331c"
-      this.context.font = "0.45px monospace"
-      this.context.textAlign = "center"
-      this.context.fillText(weapon.icon, pickup.position.x, pickup.position.y + 0.18 + bobOffset)
+      this.context.fillStyle = "rgba(0, 0, 0, 0.2)"
+      this.context.beginPath()
+      this.context.ellipse(pickup.position.x, pickup.position.y + 0.55, 0.45, 0.2, 0, 0, Math.PI * 2)
+      this.context.fill()
+
+      drawWeaponPickupSprite(
+        this.context,
+        pickup.weapon,
+        pickup.position.x,
+        pickup.position.y + bobOffset,
+        0.1
+      )
     }
   }
 
@@ -1873,10 +1890,15 @@ export class FlowerArenaGame {
         continue
       }
 
-      this.context.fillStyle = throwable.mode === "grenade" ? "#dce551" : "#f88a3a"
-      this.context.beginPath()
-      this.context.arc(throwable.position.x, throwable.position.y, throwable.radius, 0, Math.PI * 2)
-      this.context.fill()
+      if (throwable.mode === "grenade") {
+        drawGrenadeSprite(this.context, throwable.position.x, throwable.position.y, 0.08)
+        continue
+      }
+
+      this.context.fillStyle = "#8f3a2e"
+      this.context.fillRect(throwable.position.x - 0.12, throwable.position.y - 0.12, 0.24, 0.24)
+      this.context.fillStyle = "#f88a3a"
+      this.context.fillRect(throwable.position.x - 0.08, throwable.position.y - 0.08, 0.16, 0.16)
     }
   }
 
@@ -1929,13 +1951,16 @@ export class FlowerArenaGame {
         this.context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
         this.context.fillStyle = "#c3d7a2"
         this.context.fillRect(obstacle.position.x - halfWidth + 0.08, obstacle.position.y - halfHeight + 0.08, obstacle.width - 0.16, obstacle.height - 0.16)
+
+        this.context.fillStyle = "#7a5a3e"
+        const cuts = Math.max(2, Math.floor(obstacle.width * 2.2))
+        for (let i = 0; i < cuts; i += 1) {
+          const t = i / Math.max(1, cuts - 1)
+          const px = obstacle.position.x - halfWidth + 0.14 + t * (obstacle.width - 0.28)
+          this.context.fillRect(px, obstacle.position.y - halfHeight + 0.16, 0.04, obstacle.height - 0.32)
+        }
       }
 
-      const ratio = clamp(obstacle.hp / obstacle.maxHp, 0, 1)
-      this.context.fillStyle = "rgba(0, 0, 0, 0.4)"
-      this.context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight - 0.35, obstacle.width, 0.18)
-      this.context.fillStyle = "#f4fddf"
-      this.context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight - 0.35, obstacle.width * ratio, 0.18)
     }
   }
 
