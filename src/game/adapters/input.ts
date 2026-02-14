@@ -32,7 +32,16 @@ export const setupInputAdapter = (
       }
     }
 
-    return false
+    const button = document.querySelector<HTMLButtonElement>(".match-result-rematch")
+    if (!button) {
+      return false
+    }
+
+    const bounds = button.getBoundingClientRect()
+    return event.clientX >= bounds.left
+      && event.clientX <= bounds.right
+      && event.clientY >= bounds.top
+      && event.clientY <= bounds.bottom
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
