@@ -1,6 +1,7 @@
 import type { Projectile, Unit } from "../entities.ts"
 import { clamp, distSquared, lerp, limitToArena } from "../utils.ts"
 import {
+  OBSTACLE_MATERIAL_NONE,
   OBSTACLE_MATERIAL_BOX,
   damageObstacleCell,
   decayObstacleFlash,
@@ -167,6 +168,7 @@ export interface ObstacleDamageDeps {
   onSfxHit?: () => void
   onSfxBreak?: () => void
   onBoxDestroyed?: (x: number, y: number) => void
+  onObstacleDestroyed?: (x: number, y: number, material: number) => void
 }
 
 const sampleObstacleRay = (
@@ -213,6 +215,10 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
   deps.onSfxHit?.()
   if (result.destroyed) {
     deps.onSfxBreak?.()
+    if (result.destroyedMaterial !== OBSTACLE_MATERIAL_NONE) {
+      const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
+      deps.onObstacleDestroyed?.(center.x, center.y, result.destroyedMaterial)
+    }
     if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
       const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
       deps.onBoxDestroyed?.(center.x, center.y)
@@ -254,6 +260,9 @@ export const damageObstaclesByExplosion = (
         tookDamage = true
         if (result.destroyed) {
           destroyedAny = true
+          if (result.destroyedMaterial !== OBSTACLE_MATERIAL_NONE) {
+            deps.onObstacleDestroyed?.(center.x, center.y, result.destroyedMaterial)
+          }
           if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
             const center = obstacleGridToWorldCenter(grid.size, gx, gy)
             deps.onBoxDestroyed?.(center.x, center.y)

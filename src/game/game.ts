@@ -15,7 +15,7 @@ import {
 } from "./adapters/hud-sync.ts"
 import { setupInputAdapter, type InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
-import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp } from "./utils.ts"
+import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   MATCH_DURATION_SECONDS,
@@ -42,6 +42,12 @@ import {
   resolveUnitCollisions,
   updateObstacleFlash
 } from "./systems/collisions.ts"
+import {
+  OBSTACLE_MATERIAL_BOX,
+  OBSTACLE_MATERIAL_ROCK,
+  OBSTACLE_MATERIAL_WALL,
+  OBSTACLE_MATERIAL_WAREHOUSE
+} from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { spawnFlamePatch, updateMolotovZones, igniteMolotov } from "./systems/molotov.ts"
 import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
@@ -166,6 +172,10 @@ export class FlowerArenaGame {
     this.world.arenaRadius = ARENA_START_RADIUS
     this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
     this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
+    this.world.playerBulletsFired = 0
+    this.world.playerBulletsHit = 0
+    this.world.playerKills = 0
+    this.world.playerDamageDealt = 0
     this.world.playerFlowerTotal = 0
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
@@ -216,6 +226,7 @@ export class FlowerArenaGame {
       obstacle.active = false
       obstacle.lootDropped = false
     }
+    for (const debris of this.world.obstacleDebris) debris.active = false
     for (const explosion of this.world.explosions) explosion.active = false
 
     spawnObstacles(this.world)
@@ -282,11 +293,19 @@ export class FlowerArenaGame {
       const runnerUpFlowers = factionStandings[1]?.flowers ?? 0
       const playerRank = Math.max(1, factionStandings.findIndex((faction) => faction.id === this.world.player.id) + 1)
       const factionCount = factionStandings.length
+      const shotsFired = this.world.playerBulletsFired
+      const shotsHit = this.world.playerBulletsHit
+      const hitRate = shotsFired > 0 ? Math.min(100, (shotsHit / shotsFired) * 100) : 0
       const stats = [
         { label: "Total Flowers", value: total.toLocaleString() },
         { label: "Winner Share", value: `${winnerPercent.toFixed(1)}%` },
         { label: "Your Place", value: `${playerRank}/${factionCount}` },
-        { label: "Lead Margin", value: `${Math.max(0, winner.flowers - runnerUpFlowers)} flowers` }
+        { label: "Lead Margin", value: `${Math.max(0, winner.flowers - runnerUpFlowers)} flowers` },
+        { label: "Bullets Fired", value: shotsFired.toLocaleString() },
+        { label: "Bullets Hit", value: shotsHit.toLocaleString() },
+        { label: "Hit Rate", value: `${hitRate.toFixed(1)}%` },
+        { label: "Player Kills", value: this.world.playerKills.toString() },
+        { label: "Damage", value: Math.round(this.world.playerDamageDealt).toLocaleString() }
       ]
 
       setMatchResultSignal(
@@ -322,6 +341,63 @@ export class FlowerArenaGame {
       if (explosion.life <= 0) {
         explosion.active = false
       }
+    }
+  }
+
+  private obstacleDebrisPalette(material: number) {
+    if (material === OBSTACLE_MATERIAL_BOX) {
+      return ["#df6f3f", "#f6e5a8", "#6f2d2b"]
+    }
+    if (material === OBSTACLE_MATERIAL_WALL) {
+      return ["#ab6850", "#874b39", "#6e3528"]
+    }
+    if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
+      return ["#9ca293", "#757b70", "#5f655d"]
+    }
+    if (material === OBSTACLE_MATERIAL_ROCK) {
+      return ["#8f948b", "#676a64", "#5d605a"]
+    }
+    return ["#b9beb5", "#8f948b", "#696f67"]
+  }
+
+  private spawnObstacleDebris(x: number, y: number, material: number) {
+    const palette = this.obstacleDebrisPalette(material)
+    const pieces = material === OBSTACLE_MATERIAL_BOX ? 12 : 8
+
+    for (let index = 0; index < pieces; index += 1) {
+      const slot = this.world.obstacleDebris.find((debris) => !debris.active) ?? this.world.obstacleDebris[0]
+      const angle = Math.random() * Math.PI * 2
+      const speed = randomRange(2.5, 7.8)
+      slot.active = true
+      slot.position.set(x + randomRange(-0.22, 0.22), y + randomRange(-0.22, 0.22))
+      slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.2, 1.4))
+      slot.rotation = Math.random() * Math.PI * 2
+      slot.angularVelocity = randomRange(-7.2, 7.2)
+      slot.size = randomRange(0.08, 0.2)
+      slot.maxLife = randomRange(0.24, 0.52)
+      slot.life = slot.maxLife
+      slot.color = palette[Math.floor(Math.random() * palette.length)]
+    }
+  }
+
+  private updateObstacleDebris(dt: number) {
+    const drag = clamp(1 - dt * 5.6, 0, 1)
+    for (const debris of this.world.obstacleDebris) {
+      if (!debris.active) {
+        continue
+      }
+
+      debris.life -= dt
+      if (debris.life <= 0) {
+        debris.active = false
+        continue
+      }
+
+      debris.velocity.x *= drag
+      debris.velocity.y = debris.velocity.y * drag + dt * 12.5
+      debris.position.x += debris.velocity.x * dt
+      debris.position.y += debris.velocity.y * dt
+      debris.rotation += debris.angularVelocity * dt
     }
   }
 
@@ -405,6 +481,9 @@ export class FlowerArenaGame {
         this.sfx.shoot()
         updatePlayerWeaponSignals(this.world)
       },
+      onPlayerBulletsFired: (count: number) => {
+        this.world.playerBulletsFired += count
+      },
       onOtherShoot: () => this.sfx.shoot()
     })
   }
@@ -451,6 +530,13 @@ export class FlowerArenaGame {
       onSfxDeath: () => this.sfx.die(),
       onSfxPlayerDeath: () => this.sfx.playerDeath(),
       onSfxPlayerKill: () => this.sfx.playerKill(),
+      onPlayerHit: (targetId, damage) => {
+        this.world.playerBulletsHit += 1
+        this.world.playerDamageDealt += damage
+      },
+      onPlayerKill: () => {
+        this.world.playerKills += 1
+      },
       onPlayerHpChanged: () => updatePlayerHpSignal(this.world)
     })
   }
@@ -490,6 +576,7 @@ export class FlowerArenaGame {
     if (!this.world.running) {
       updateFlowers(this.world, simDt)
       updateDamagePopups(this.world, simDt)
+      this.updateObstacleDebris(simDt)
       this.updateExplosions(simDt)
       updateCrosshairWorld(this.world)
       return
@@ -551,6 +638,7 @@ export class FlowerArenaGame {
         return hitObstacle(this.world, projectile, {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
+          onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
           onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y)
         })
       },
@@ -575,6 +663,7 @@ export class FlowerArenaGame {
           damageObstaclesByExplosion(this.world, x, y, radius, {
             onSfxHit: () => this.sfx.hit(),
             onSfxBreak: () => this.sfx.obstacleBreak(),
+            onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
             onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY)
           })
         },
@@ -599,6 +688,7 @@ export class FlowerArenaGame {
 
     updateFlowers(this.world, simDt)
     updateDamagePopups(this.world, simDt)
+    this.updateObstacleDebris(simDt)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {

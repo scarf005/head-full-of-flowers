@@ -426,6 +426,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMolotovZones(context, world)
   renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
+  renderObstacleDebris(context, world)
   renderPickups(context, world, dt)
   renderThrowables(context, world)
   renderProjectiles(context, world)
@@ -818,6 +819,28 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         context.fillRect(tileX + 0.04, tileY + 0.04, 0.92, 0.92)
       }
     }
+  }
+}
+
+const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldState) => {
+  for (const debris of world.obstacleDebris) {
+    if (!debris.active || debris.maxLife <= 0) {
+      continue
+    }
+
+    const lifeRatio = clamp(debris.life / debris.maxLife, 0, 1)
+    const alpha = lifeRatio * lifeRatio
+    const size = debris.size * (0.7 + (1 - lifeRatio) * 0.5)
+
+    context.save()
+    context.globalAlpha = alpha
+    context.translate(debris.position.x, debris.position.y)
+    context.rotate(debris.rotation)
+    context.fillStyle = debris.color
+    context.fillRect(-size * 0.5, -size * 0.5, size, size)
+    context.fillStyle = "rgba(24, 18, 16, 0.34)"
+    context.fillRect(-size * 0.5, size * 0.1, size, size * 0.2)
+    context.restore()
   }
 }
 

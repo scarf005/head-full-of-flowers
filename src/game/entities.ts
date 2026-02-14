@@ -203,3 +203,15 @@ export class Obstacle {
   lootDropped = false
   tiles: boolean[][] = []
 }
+
+export class ObstacleDebris {
+  active = false
+  position = new Vec2()
+  velocity = new Vec2()
+  rotation = 0
+  angularVelocity = 0
+  size = 0.12
+  life = 0
+  maxLife = 0
+  color = "#ffffff"
+}

@@ -116,6 +116,7 @@ export interface FirePrimaryDeps {
   startReload: (unitId: string) => void
   onPlayerShoot: () => void
   onOtherShoot: () => void
+  onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
 }
 
@@ -172,6 +173,9 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
   const baseAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
   const pelletCount = weapon.pellets
+  if (shooter.isPlayer) {
+    deps.onPlayerBulletsFired?.(pelletCount)
+  }
   for (let pellet = 0; pellet < pelletCount; pellet += 1) {
     const projectile = deps.allocProjectile()
     const spread = randomRange(-weapon.spread, weapon.spread)
@@ -222,6 +226,8 @@ export interface DamageDeps {
   onSfxDeath: () => void
   onSfxPlayerDeath: () => void
   onSfxPlayerKill: () => void
+  onPlayerHit?: (targetId: string, damage: number) => void
+  onPlayerKill?: (targetId: string) => void
   onPlayerHpChanged: () => void
 }
 
@@ -298,6 +304,9 @@ export const applyDamage = (
   )
 
   const isKilled = target.hp <= 0
+  if (sourceId === world.player.id && target.id !== world.player.id) {
+    deps.onPlayerHit?.(target.id, damage)
+  }
   if (isKilled) {
     const deathBurst = randomFlowerBurst(damage, hitSpeed)
     const extraDir = randomRange(0, Math.PI * 2)
@@ -336,6 +345,9 @@ export const applyDamage = (
     }
     if (sourceId === world.player.id && target.id !== world.player.id) {
       deps.onSfxPlayerKill()
+    }
+    if (sourceId === world.player.id && target.id !== world.player.id) {
+      deps.onPlayerKill?.(target.id)
     }
     deps.respawnUnit(target.id)
   } else {

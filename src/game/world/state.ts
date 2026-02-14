@@ -1,4 +1,4 @@
-import { DamagePopup, Flower, MolotovZone, Obstacle, Pickup, Projectile, Throwable, Unit, Vec2 } from "../entities.ts"
+import { DamagePopup, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, Throwable, Unit, Vec2 } from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
@@ -49,6 +49,7 @@ export interface WorldState {
   pickups: Pickup[]
   molotovZones: MolotovZone[]
   obstacles: Obstacle[]
+  obstacleDebris: ObstacleDebris[]
   explosions: ExplosionFx[]
   projectileCursor: number
   throwableCursor: number
@@ -66,6 +67,10 @@ export interface WorldState {
   pickupTimer: number
   factions: FactionDescriptor[]
   factionFlowerCounts: Record<string, number>
+  playerBulletsFired: number
+  playerBulletsHit: number
+  playerKills: number
+  playerDamageDealt: number
   flowerDensityGrid: Uint16Array
   flowerCellHead: Int32Array
   flowerDirtyCount: number
@@ -115,6 +120,7 @@ export const createWorldState = (): WorldState => {
       obstacle.id = `obstacle-${index + 1}`
       return obstacle
     }),
+    obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
     explosions: Array.from({ length: 24 }, () => ({
       active: false,
       position: new Vec2(),
@@ -137,6 +143,10 @@ export const createWorldState = (): WorldState => {
     pickupTimer: LOOT_PICKUP_INTERVAL_SECONDS,
     factions,
     factionFlowerCounts: createFactionFlowerCounts(factions),
+    playerBulletsFired: 0,
+    playerBulletsHit: 0,
+    playerKills: 0,
+    playerDamageDealt: 0,
     flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
     flowerCellHead,
     flowerDirtyCount: 0,
