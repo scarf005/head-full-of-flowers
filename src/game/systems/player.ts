@@ -21,16 +21,19 @@ export const updateCombatFeel = (world: WorldState, dt: number) => {
     unit.recoil = Math.max(0, unit.recoil - dt * 8.5)
   }
 
-  world.cameraShake = Math.max(0, world.cameraShake - dt * 5)
-  const shakePower = world.cameraShake * world.cameraShake
-  world.cameraOffset.x = randomRange(-1, 1) * shakePower * 0.24
-  world.cameraOffset.y = randomRange(-1, 1) * shakePower * 0.18
+  world.cameraShake = Math.max(0, world.cameraShake - dt * 3.8)
+  const shakePower = Math.pow(clamp(world.cameraShake, 0, 1.5), 1.15)
+  world.cameraOffset.x = randomRange(-1, 1) * shakePower * 0.46
+  world.cameraOffset.y = randomRange(-1, 1) * shakePower * 0.36
 }
 
 export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDeps) => {
   const player = world.player
   player.shootCooldown = Math.max(0, player.shootCooldown - dt)
   player.secondaryCooldown = Math.max(0, player.secondaryCooldown - dt)
+  if (player.secondaryCooldown <= 0) {
+    player.secondaryCooldownMax = 0
+  }
   player.reloadCooldown = Math.max(0, player.reloadCooldown - dt)
 
   let moveX = 0

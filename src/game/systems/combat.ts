@@ -27,7 +27,12 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
     return
   }
 
+  if (weapon.reload <= 0) {
+    return
+  }
+
   unit.reloadCooldown = weapon.reload
+  unit.reloadCooldownMax = weapon.reload
   if (unit.isPlayer) {
     onPlayerReloading()
   }
@@ -35,7 +40,7 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
 
 export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUpdate: () => void) => {
   const unit = world.units.find((candidate) => candidate.id === unitId)
-  if (!unit || unit.reloadCooldown > 0) {
+  if (!unit || unit.reloadCooldown > 0 || unit.reloadCooldownMax <= 0) {
     return
   }
 
@@ -45,12 +50,15 @@ export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUp
 
   const room = Math.max(0, unit.magazineSize - unit.primaryAmmo)
   if (room <= 0 || unit.reserveAmmo <= 0) {
+    unit.reloadCooldownMax = 0
     return
   }
 
   const moved = Math.min(room, unit.reserveAmmo)
   unit.primaryAmmo += moved
   unit.reserveAmmo -= moved
+  unit.reloadCooldown = 0
+  unit.reloadCooldownMax = 0
   if (unit.isPlayer) {
     onPlayerWeaponUpdate()
   }
@@ -72,6 +80,7 @@ export const equipPrimary = (
   unit.primaryWeapon = weaponId
   unit.magazineSize = config.magazineSize
   unit.reloadCooldown = 0
+  unit.reloadCooldownMax = 0
 
   if (Number.isFinite(ammo) && Number.isFinite(config.magazineSize)) {
     unit.reserveAmmo = Math.max(0, ammo)

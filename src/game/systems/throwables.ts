@@ -52,6 +52,8 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
+  shooter.secondaryCooldownMax = shooter.secondaryCooldown
+  shooter.secondaryMode = mode
   shooter.recoil = Math.min(1, shooter.recoil + 0.5)
 
   if (shooter.isPlayer) {

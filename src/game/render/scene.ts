@@ -31,6 +31,12 @@ const GRASS_MASK_TO_TILE_INDEX = new Map(GRASS_TRANSITION_MASK_ORDER.map((mask, 
 const FLOWER_SPRITE_PIXEL_SIZE = 16
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
 const FLOWER_LAYER_FLUSH_LIMIT = 1200
+const HP_RING_THICKNESS_WORLD = 3 / WORLD_SCALE
+const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
+const SECONDARY_RELOAD_RING_THICKNESS_WORLD = 1 / WORLD_SCALE
+const HP_RING_COLOR = "#ff8a80"
+const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
+const SECONDARY_RELOAD_RING_COLOR = "#4f5458"
 
 let grassBaseTexture: HTMLImageElement | null = null
 let grassDarkTexture: HTMLImageElement | null = null
@@ -940,6 +946,62 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState)
   }
 }
 
+const renderUnitStatusRings = (
+  context: CanvasRenderingContext2D,
+  unit: WorldState["units"][number],
+  drawX: number,
+  drawY: number,
+  body: number
+) => {
+  const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
+  const hpRadius = body + HP_RING_THICKNESS_WORLD * 0.72
+  const primaryRadius = hpRadius + HP_RING_THICKNESS_WORLD + PRIMARY_RELOAD_RING_THICKNESS_WORLD * 0.85
+  const secondaryRadius = primaryRadius + PRIMARY_RELOAD_RING_THICKNESS_WORLD + SECONDARY_RELOAD_RING_THICKNESS_WORLD * 0.85
+
+  context.save()
+  context.beginPath()
+  context.arc(drawX, drawY, hpRadius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpRatio)
+  context.strokeStyle = HP_RING_COLOR
+  context.lineWidth = HP_RING_THICKNESS_WORLD
+  context.stroke()
+
+  if (unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0) {
+    const primaryProgress = clamp(1 - unit.reloadCooldown / unit.reloadCooldownMax, 0, 1)
+    if (primaryProgress > 0) {
+      context.beginPath()
+      context.arc(
+        drawX,
+        drawY,
+        primaryRadius,
+        -Math.PI * 0.5,
+        -Math.PI * 0.5 + Math.PI * 2 * primaryProgress
+      )
+      context.strokeStyle = PRIMARY_RELOAD_RING_COLOR
+      context.lineWidth = PRIMARY_RELOAD_RING_THICKNESS_WORLD
+      context.stroke()
+    }
+  }
+
+  if (unit.secondaryCooldown > 0 && unit.secondaryCooldownMax > 0) {
+    const secondaryProgress = clamp(1 - unit.secondaryCooldown / unit.secondaryCooldownMax, 0, 1)
+    if (secondaryProgress > 0) {
+      context.beginPath()
+      context.arc(
+        drawX,
+        drawY,
+        secondaryRadius,
+        -Math.PI * 0.5,
+        -Math.PI * 0.5 + Math.PI * 2 * secondaryProgress
+      )
+      context.strokeStyle = SECONDARY_RELOAD_RING_COLOR
+      context.lineWidth = SECONDARY_RELOAD_RING_THICKNESS_WORLD
+      context.stroke()
+    }
+  }
+
+  context.restore()
+}
+
 const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
   for (const unit of world.units) {
     const drawX = unit.position.x - unit.aim.x * unit.recoil * 0.32
@@ -1000,11 +1062,7 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
       context.globalAlpha = 1
     }
 
-    const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
-    context.fillStyle = "rgba(0, 0, 0, 0.4)"
-    context.fillRect(drawX - body, drawY - body * 1.28, body * 2, body * 0.24)
-    context.fillStyle = unit.isPlayer ? "#e8ffdb" : "#8fc0ff"
-    context.fillRect(drawX - body, drawY - body * 1.28, body * 2 * hpRatio, body * 0.24)
+    renderUnitStatusRings(context, unit, drawX, drawY, body)
   }
 }
 

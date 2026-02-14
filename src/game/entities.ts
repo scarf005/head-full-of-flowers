@@ -73,7 +73,9 @@ export class Unit {
   hp = UNIT_BASE_HP
   shootCooldown = 0
   secondaryCooldown = 0
+  secondaryCooldownMax = 0
   reloadCooldown = 0
+  reloadCooldownMax = 0
   primaryWeapon: PrimaryWeaponId = "pistol"
   primaryAmmo = Number.POSITIVE_INFINITY
   reserveAmmo = Number.POSITIVE_INFINITY
@@ -102,7 +104,9 @@ export class Unit {
     this.hp = this.maxHp
     this.shootCooldown = 0
     this.secondaryCooldown = 0
+    this.secondaryCooldownMax = 0
     this.reloadCooldown = 0
+    this.reloadCooldownMax = 0
     this.aiDecisionTimer = 0
     this.hitFlash = 0
     this.recoil = 0
@@ -134,6 +138,7 @@ export class Throwable {
   velocity = new Vec2()
   life = 0.9
   radius = 7
+  ricochets = 0
   rolled = false
 }
 

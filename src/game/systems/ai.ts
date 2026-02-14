@@ -71,6 +71,9 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
   for (const bot of world.bots) {
     bot.shootCooldown = Math.max(0, bot.shootCooldown - dt)
     bot.secondaryCooldown = Math.max(0, bot.secondaryCooldown - dt)
+    if (bot.secondaryCooldown <= 0) {
+      bot.secondaryCooldownMax = 0
+    }
     bot.reloadCooldown = Math.max(0, bot.reloadCooldown - dt)
     if (bot.reloadCooldown <= 0) {
       deps.finishReload(bot.id)

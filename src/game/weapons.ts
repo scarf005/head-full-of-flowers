@@ -31,8 +31,8 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     pellets: 1,
     bulletRadius: 0.24,
     pickupAmmo: Number.POSITIVE_INFINITY,
-    magazineSize: Number.POSITIVE_INFINITY,
-    reload: 0
+    magazineSize: 8,
+    reload: 1.5
   },
   assault: {
     id: "assault",
@@ -40,14 +40,14 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "AR",
     color: "#ffd67a",
     cooldown: 0.1,
-    damage: 2,
-    speed: 47,
+    damage: 3,
+    speed: 50,
     range: 30,
     spread: 0.085,
     pellets: 1,
-    bulletRadius: 0.22,
-    pickupAmmo: 96,
-    magazineSize: 24,
+    bulletRadius: 0.24,
+    pickupAmmo: 80,
+    magazineSize: 20,
     reload: 1.2
   },
   shotgun: {
