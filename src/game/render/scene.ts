@@ -1159,13 +1159,13 @@ const renderAtmosphere = (context: CanvasRenderingContext2D) => {
 }
 
 const renderMenuCard = (context: CanvasRenderingContext2D, world: WorldState) => {
-  if (world.started && !world.finished) {
+  if (world.started) {
     return
   }
 
   const centerX = VIEW_WIDTH * 0.5
-  const cardTop = world.finished ? 14 : VIEW_HEIGHT * 0.5 - 60
-  const cardHeight = world.finished ? 74 : 120
+  const cardTop = VIEW_HEIGHT * 0.5 - 60
+  const cardHeight = 120
 
   context.fillStyle = "rgba(20, 36, 22, 0.56)"
   context.fillRect(centerX - 220, cardTop, 440, cardHeight)
@@ -1178,15 +1178,8 @@ const renderMenuCard = (context: CanvasRenderingContext2D, world: WorldState) =>
   context.font = "bold 24px monospace"
   context.fillText("BadaBada", centerX, cardTop + 26)
   context.font = "14px monospace"
-
-  if (!world.finished) {
-    const startHint = world.audioPrimed
-      ? "Click or press Enter to start 50m shrinking arena"
-      : "Click once to unlock music, then deploy"
-    context.fillText(startHint, centerX, cardTop + 56)
-  }
-
-  if (world.finished) {
-    context.fillText("Match over. Click for rematch", centerX, cardTop + 52)
-  }
+  const startHint = world.audioPrimed
+    ? "Click or press Enter to start 50m shrinking arena"
+    : "Click once to unlock music, then deploy"
+  context.fillText(startHint, centerX, cardTop + 56)
 }

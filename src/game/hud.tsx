@@ -114,6 +114,7 @@ export const GameHud = () => {
               </div>
             ))}
           </div>
+          <div class="match-result-rematch">Click anywhere to rematch</div>
         </div>
       ) : null}
 
