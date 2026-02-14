@@ -71,6 +71,7 @@ import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - line
 
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
+const BULLET_TRAIL_COLOR = "#ff9e3a"
 
 export class FlowerArenaGame {
   private canvas: HTMLCanvasElement
@@ -586,7 +587,7 @@ export class FlowerArenaGame {
           smoothDirY,
           0.34 + speedFactor * 0.22,
           (0.028 + speedFactor * 0.01) * BULLET_TRAIL_WIDTH_SCALE,
-          "#fffdf4",
+          BULLET_TRAIL_COLOR,
           0.9,
           0.14 + speedFactor * 0.08
         )
@@ -733,7 +734,7 @@ export class FlowerArenaGame {
         directionY,
         0.42 - index * 0.12,
         0.038 * BULLET_TRAIL_WIDTH_SCALE,
-        "#fffdf2",
+        BULLET_TRAIL_COLOR,
         0.76 - index * 0.22,
         0.1 + index * 0.03
       )
