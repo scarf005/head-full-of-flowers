@@ -147,7 +147,7 @@ export const GameHud = () => {
         </div>
       ) : null}
 
-      <div class="hud status-text">{statusMessageSignal.value}</div>
+      {statusMessageSignal.value ? <div class="hud status-text">{statusMessageSignal.value}</div> : null}
 
       <div class="hud hud-left">
         <div class="weapon-card">

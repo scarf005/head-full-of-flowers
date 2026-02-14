@@ -262,7 +262,7 @@ export class FlowerArenaGame {
     syncHudSignals(this.world)
     setPauseSignal(false)
     clearMatchResultSignal()
-    setStatusMessage("Fight for map coverage")
+    setStatusMessage("")
     this.audioDirector.startGameplay()
   }
 

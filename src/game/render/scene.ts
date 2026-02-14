@@ -1074,14 +1074,13 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     context.fillRect(drawX - body * 0.68, drawY - body * 0.82, body * 1.36, body * 1.64)
 
     const gunLength = unit.radius * 1.25 + unit.recoil * 0.24
-    const gunX = drawX + unit.aim.x * gunLength
-    const gunY = drawY + unit.aim.y * gunLength
-    context.strokeStyle = unit.isPlayer ? "#f0e6ad" : "#a2d0ff"
-    context.lineWidth = 0.24
-    context.beginPath()
-    context.moveTo(drawX, drawY)
-    context.lineTo(gunX, gunY)
-    context.stroke()
+    const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
+    const weaponScale = Math.max(0.09, unit.radius * 0.36)
+    context.save()
+    context.translate(drawX, drawY)
+    context.rotate(weaponAngle)
+    drawWeaponPickupSprite(context, unit.primaryWeapon, gunLength, 0, weaponScale)
+    context.restore()
 
     if (unit.hitFlash > 0) {
       const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
