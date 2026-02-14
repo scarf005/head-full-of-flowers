@@ -1,0 +1,412 @@
+import { sample } from "@std/random"
+
+import type { PrimaryWeaponId } from "../types.ts"
+import type { Team } from "../types.ts"
+import { randomInt, randomRange } from "../utils.ts"
+import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
+import type { Unit } from "../entities.ts"
+import type { WorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
+import { randomFlowerBurst } from "./flowers.ts"
+import { debugInfiniteHpSignal } from "../signals.ts"
+
+export const randomLootablePrimary = (): PrimaryWeaponId => {
+  return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
+}
+
+const DEATH_FLOWER_AMOUNT_MULTIPLIER = 2
+const DEATH_FLOWER_SIZE_SCALE_BOOST = 0.25
+
+export const startReload = (unitId: string, world: WorldState, onPlayerReloading: () => void) => {
+  const unit = world.units.find((candidate) => candidate.id === unitId)
+  if (!unit || unit.reloadCooldown > 0) {
+    return
+  }
+
+  const weapon = PRIMARY_WEAPONS[unit.primaryWeapon]
+  if (!Number.isFinite(unit.primaryAmmo)) {
+    return
+  }
+
+  const hasReserve = !Number.isFinite(unit.reserveAmmo) || unit.reserveAmmo > 0
+  if (unit.primaryAmmo >= unit.magazineSize || !hasReserve) {
+    return
+  }
+
+  if (weapon.reload <= 0) {
+    return
+  }
+
+  unit.reloadCooldown = weapon.reload
+  unit.reloadCooldownMax = weapon.reload
+  if (unit.isPlayer) {
+    onPlayerReloading()
+  }
+}
+
+export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUpdate: () => void) => {
+  const unit = world.units.find((candidate) => candidate.id === unitId)
+  if (!unit || unit.reloadCooldown > 0 || unit.reloadCooldownMax <= 0) {
+    return
+  }
+
+  if (!Number.isFinite(unit.primaryAmmo)) {
+    return
+  }
+
+  const room = Math.max(0, unit.magazineSize - unit.primaryAmmo)
+  if (room <= 0) {
+    unit.reloadCooldownMax = 0
+    return
+  }
+
+  if (Number.isFinite(unit.reserveAmmo) && unit.reserveAmmo <= 0) {
+    unit.reloadCooldownMax = 0
+    return
+  }
+
+  const moved = Number.isFinite(unit.reserveAmmo) ? Math.min(room, unit.reserveAmmo) : room
+  unit.primaryAmmo += moved
+  if (Number.isFinite(unit.reserveAmmo)) {
+    unit.reserveAmmo -= moved
+  }
+  unit.reloadCooldown = 0
+  unit.reloadCooldownMax = 0
+  if (unit.isPlayer) {
+    onPlayerWeaponUpdate()
+  }
+}
+
+export const equipPrimary = (
+  unitId: string,
+  world: WorldState,
+  weaponId: PrimaryWeaponId,
+  ammo: number,
+  onPlayerWeaponUpdate: () => void
+) => {
+  const unit = world.units.find((candidate) => candidate.id === unitId)
+  if (!unit) {
+    return
+  }
+
+  const config = PRIMARY_WEAPONS[weaponId]
+  unit.primaryWeapon = weaponId
+  unit.magazineSize = config.magazineSize
+  unit.reloadCooldown = 0
+  unit.reloadCooldownMax = 0
+
+  const normalizedAmmo = Number.isFinite(ammo) ? ammo : config.pickupAmmo
+  if (Number.isFinite(config.magazineSize) && !Number.isFinite(normalizedAmmo)) {
+    unit.primaryAmmo = config.magazineSize
+    unit.reserveAmmo = Number.POSITIVE_INFINITY
+  } else if (Number.isFinite(normalizedAmmo) && Number.isFinite(config.magazineSize)) {
+    unit.reserveAmmo = Math.max(0, normalizedAmmo)
+    const loaded = Math.min(unit.magazineSize, unit.reserveAmmo)
+    unit.primaryAmmo = loaded
+    unit.reserveAmmo -= loaded
+  } else {
+    unit.primaryAmmo = Number.POSITIVE_INFINITY
+    unit.reserveAmmo = Number.POSITIVE_INFINITY
+  }
+
+  if (unit.isPlayer) {
+    onPlayerWeaponUpdate()
+  }
+}
+
+export interface FirePrimaryDeps {
+  allocProjectile: () => WorldState["projectiles"][number]
+  startReload: (unitId: string) => void
+  onPlayerShoot: () => void
+  onOtherShoot: () => void
+  onPlayerBulletsFired?: (count: number) => void
+  onPrimaryWeaponChanged?: (unitId: string) => void
+  onShellEjected?: (shooter: Unit) => void
+}
+
+const swapToPistolIfNeeded = (world: WorldState, shooter: Unit, onPrimaryWeaponChanged?: (unitId: string) => void) => {
+  if (shooter.primaryWeapon === "pistol") {
+    return
+  }
+
+  if (!Number.isFinite(shooter.primaryAmmo)) {
+    return
+  }
+
+  if (shooter.primaryAmmo > 0) {
+    return
+  }
+
+  if (Number.isFinite(shooter.reserveAmmo) && shooter.reserveAmmo > 0) {
+    return
+  }
+
+  equipPrimary(shooter.id, world, "pistol", Number.POSITIVE_INFINITY, () => {
+    if (shooter.isPlayer && onPrimaryWeaponChanged) {
+      onPrimaryWeaponChanged(shooter.id)
+    }
+  })
+}
+
+export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrimaryDeps) => {
+  const shooter = world.units.find((unit) => unit.id === shooterId)
+  if (!shooter || shooter.shootCooldown > 0 || shooter.reloadCooldown > 0) {
+    return
+  }
+
+  if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
+    swapToPistolIfNeeded(world, shooter, deps.onPrimaryWeaponChanged)
+
+    const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
+    if (hasReserve) {
+      if (shooter.reloadCooldownMax <= 0) {
+        deps.startReload(shooter.id)
+      }
+    }
+
+    return
+  }
+
+  const weapon = PRIMARY_WEAPONS[shooter.primaryWeapon]
+
+  shooter.shootCooldown = weapon.cooldown / shooter.fireRateMultiplier
+  shooter.recoil = Math.min(1, shooter.recoil + 0.38 + weapon.pellets * 0.05)
+  if (Number.isFinite(shooter.primaryAmmo)) {
+    shooter.primaryAmmo = Math.max(0, shooter.primaryAmmo - 1)
+  }
+
+  const baseAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
+  const pelletCount = weapon.pellets
+  if (shooter.isPlayer) {
+    deps.onPlayerBulletsFired?.(pelletCount)
+  }
+  deps.onShellEjected?.(shooter)
+  for (let pellet = 0; pellet < pelletCount; pellet += 1) {
+    const projectile = deps.allocProjectile()
+    const spread = randomRange(-weapon.spread, weapon.spread)
+    const angle = baseAngle + spread
+    const dirX = Math.cos(angle)
+    const dirY = Math.sin(angle)
+
+    projectile.active = true
+    projectile.kind = shooter.primaryWeapon === "flamethrower" ? "flame" : "ballistic"
+    projectile.ownerId = shooter.id
+    projectile.ownerTeam = shooter.team
+    projectile.position.x = shooter.position.x
+    projectile.position.y = shooter.position.y
+    projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
+    projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
+    projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
+    projectile.damage = weapon.damage * shooter.damageMultiplier
+    projectile.maxRange = weapon.range
+    projectile.traveled = 0
+    projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
+    projectile.glow = shooter.primaryWeapon === "flamethrower"
+      ? randomRange(0.5, 0.95)
+      : randomRange(0.4, 0.9)
+    projectile.trailCooldown = 0
+    projectile.trailX = projectile.position.x
+    projectile.trailY = projectile.position.y
+    projectile.trailReady = false
+  }
+
+  if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
+    swapToPistolIfNeeded(world, shooter, deps.onPrimaryWeaponChanged)
+
+    const hasReserve = !Number.isFinite(shooter.reserveAmmo) || shooter.reserveAmmo > 0
+    if (hasReserve) {
+      deps.startReload(shooter.id)
+    }
+  }
+
+  if (shooter.isPlayer) {
+    world.cameraShake = Math.min(1.1, world.cameraShake + 0.09)
+    deps.onPlayerShoot()
+  } else if (Math.random() > 0.82) {
+    deps.onOtherShoot()
+  }
+}
+
+export interface DamageDeps {
+  allocPopup: () => WorldState["damagePopups"][number]
+  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number, isBurnt?: boolean) => void
+  respawnUnit: (unitId: string) => void
+  onUnitKilled?: (target: Unit, isSuicide: boolean) => void
+  onSfxHit: () => void
+  onSfxDeath: () => void
+  onSfxPlayerDeath: () => void
+  onSfxPlayerKill: () => void
+  onPlayerHit?: (targetId: string, damage: number) => void
+  onPlayerKill?: (targetId: string) => void
+  onPlayerHpChanged: () => void
+}
+
+const nearestUnitIdByTeam = (
+  world: WorldState,
+  team: Team,
+  originX: number,
+  originY: number,
+  excludedUnitId: string
+) => {
+  let nearestId = ""
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  for (const unit of world.units) {
+    if (unit.team !== team || unit.id === excludedUnitId) {
+      continue
+    }
+
+    const distance = (unit.position.x - originX) ** 2 + (unit.position.y - originY) ** 2
+    if (distance >= nearestDistance) {
+      continue
+    }
+
+    nearestDistance = distance
+    nearestId = unit.id
+  }
+
+  return nearestId
+}
+
+export const applyDamage = (
+  world: WorldState,
+  targetId: string,
+  amount: number,
+  sourceId: string,
+  sourceTeam: Team,
+  hitX: number,
+  hitY: number,
+  impactX: number,
+  impactY: number,
+  deps: DamageDeps
+) => {
+  const target = world.units.find((unit) => unit.id === targetId)
+  if (!target) {
+    return
+  }
+
+  const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
+  const isBoundarySource = sourceId === "arena"
+  const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
+
+  if (!isBoundarySource && !isSelfHarm && resolvedSourceTeam === target.team) {
+    return
+  }
+
+  const damage = Math.max(1, amount)
+  target.hp = Math.max(0, target.hp - damage)
+  target.hitFlash = 1
+  target.recoil = Math.min(1, target.recoil + 0.45)
+
+  const popup = deps.allocPopup()
+  popup.active = true
+  popup.position.set(target.position.x + randomRange(-0.4, 0.4), target.position.y - randomRange(0.6, 1.1))
+  popup.velocity.set(randomRange(-1.3, 1.3), randomRange(2.8, 4.3))
+  popup.text = `${Math.round(damage)}`
+  popup.color = target.isPlayer ? "#8fc8ff" : "#fff6cc"
+  popup.life = 0.62
+
+  const hitSpeed = Math.hypot(impactX, impactY)
+  const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
+  const sourceByNearestTeam = sourceUnit?.id
+    ?? (!isBoundarySource && resolvedSourceTeam
+      ? nearestUnitIdByTeam(world, resolvedSourceTeam, hitX, hitY, target.id)
+      : "")
+  let normalizedSourceId = isPlayerSource
+    ? world.player.id
+    : sourceByNearestTeam || sourceId
+
+  const sourceIdIsUnit = sourceId.length > 0
+    ? world.units.some((unit) => unit.id === sourceId)
+    : false
+  const normalizedSourceIdIsUnit = normalizedSourceId.length > 0
+    ? world.units.some((unit) => unit.id === normalizedSourceId)
+    : false
+
+  if (!isPlayerSource && !isBoundarySource && !sourceIdIsUnit && !normalizedSourceIdIsUnit) {
+    const fallbackId = resolvedSourceTeam === world.player.team
+      ? world.player.id
+      : world.units.find((unit) => unit.team === resolvedSourceTeam && !unit.isPlayer)?.id
+
+    if (fallbackId) {
+      normalizedSourceId = fallbackId
+    }
+  }
+    
+  const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
+  const isBurntFlowers = isSelfHarm || isBoundarySource
+
+  const flowerBurst = randomFlowerBurst(damage, hitSpeed)
+  deps.spawnFlowers(
+    flowerSourceId,
+    hitX,
+    hitY,
+    impactX,
+    impactY,
+    flowerBurst.amount,
+    flowerBurst.sizeScale,
+    isBurntFlowers
+  )
+
+  if (target.isPlayer && debugInfiniteHpSignal.value) {
+    target.hp = target.maxHp
+  }
+
+  const isKilled = target.hp <= 0
+  if (isPlayerSource && target.id !== world.player.id) {
+    deps.onPlayerHit?.(target.id, damage)
+  }
+  if (isKilled) {
+    const deathBurst = randomFlowerBurst(damage, hitSpeed)
+    const extraDir = randomRange(0, Math.PI * 2)
+    deps.spawnFlowers(
+      flowerSourceId,
+      target.position.x,
+      target.position.y,
+      Math.cos(extraDir),
+      Math.sin(extraDir),
+      Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
+      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST),
+      isBurntFlowers
+    )
+  }
+
+  if (isPlayerSource) {
+    world.cameraShake = Math.min(1.2, world.cameraShake + 0.12)
+    world.hitStop = Math.max(world.hitStop, 0.012)
+  }
+
+  if (target.isPlayer) {
+    world.cameraShake = Math.min(1.25, world.cameraShake + 0.18)
+    world.hitStop = Math.max(world.hitStop, 0.016)
+  }
+
+  const impactLength = Math.hypot(impactX, impactY) || 1
+  target.velocity.x += (impactX / impactLength) * 2.7
+  target.velocity.y += (impactY / impactLength) * 2.7
+
+  world.cameraShake = Math.min(1.15, world.cameraShake + 0.08)
+
+  if (isKilled) {
+    deps.onUnitKilled?.(target, isSelfHarm)
+    if (target.isPlayer) {
+      deps.onSfxPlayerDeath()
+    } else {
+      deps.onSfxDeath()
+    }
+    if (isPlayerSource && target.id !== world.player.id) {
+      deps.onSfxPlayerKill()
+    }
+    if (isPlayerSource && target.id !== world.player.id) {
+      deps.onPlayerKill?.(target.id)
+    }
+    deps.respawnUnit(target.id)
+  } else {
+    deps.onSfxHit()
+  }
+
+  if (target.isPlayer) {
+    deps.onPlayerHpChanged()
+  }
+}

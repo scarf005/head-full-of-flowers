@@ -1,0 +1,28 @@
+export const VIEW_WIDTH = 960
+export const VIEW_HEIGHT = 540
+export const VISIBLE_WORLD_WIDTH_METERS = 25
+export const WORLD_SCALE = VIEW_WIDTH / VISIBLE_WORLD_WIDTH_METERS
+
+export const FLOWER_POOL_SIZE = 5000
+export const PROJECTILE_POOL_SIZE = 480
+export const THROWABLE_POOL_SIZE = 96
+export const DAMAGE_POPUP_POOL_SIZE = 200
+export const PICKUP_POOL_SIZE = 12
+export const MOLOTOV_POOL_SIZE = 36
+export const OBSTACLE_POOL_SIZE = 220
+
+export const MAX_MATCH_PLAYERS = 12
+export const MATCH_DURATION_SECONDS = 90
+export const LOOT_PICKUP_INTERVAL_MIN_SECONDS = 8
+export const LOOT_PICKUP_INTERVAL_MAX_SECONDS = 12
+export const LOOT_PICKUP_INTERVAL_SECONDS = 10
+export const PLAYER_BASE_SPEED = 10
+export const BOT_BASE_SPEED = PLAYER_BASE_SPEED
+export const UNIT_BASE_HP = 10
+export const PLAYER_RADIUS = 0.3
+export const BOT_RADIUS = 0.28
+export const ARENA_BORDER_DAMAGE = 1
+export const ARENA_BORDER_DAMAGE_COOLDOWN = 0.16
+
+export const OBSTACLE_COUNT_MIN = 7
+export const OBSTACLE_COUNT_MAX = 11
