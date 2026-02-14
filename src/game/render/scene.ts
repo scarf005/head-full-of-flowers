@@ -1,5 +1,5 @@
 import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
-import { renderFlowerInstances } from "./flower-instanced.ts"
+import { renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
@@ -426,7 +426,16 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMolotovZones(context, world)
   renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
-  renderObstacleDebris(context, world)
+  const renderedObstacleFxWithWebGl = renderObstacleFxInstances({
+    context,
+    world,
+    cameraX: renderCameraX,
+    cameraY: renderCameraY
+  })
+  if (!renderedObstacleFxWithWebGl) {
+    renderObstacleDebris(context, world)
+    renderShellCasings(context, world)
+  }
   renderPickups(context, world, dt)
   renderThrowables(context, world)
   renderProjectiles(context, world)
@@ -840,6 +849,25 @@ const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldSta
     context.fillRect(-size * 0.5, -size * 0.5, size, size)
     context.fillStyle = "rgba(24, 18, 16, 0.34)"
     context.fillRect(-size * 0.5, size * 0.1, size, size * 0.2)
+    context.restore()
+  }
+}
+
+const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState) => {
+  for (const casing of world.shellCasings) {
+    if (!casing.active || casing.maxLife <= 0) {
+      continue
+    }
+
+    const lifeRatio = clamp(casing.life / casing.maxLife, 0, 1)
+    context.save()
+    context.globalAlpha = lifeRatio * 0.9
+    context.translate(casing.position.x, casing.position.y)
+    context.rotate(casing.rotation)
+    context.fillStyle = "#e7c66a"
+    context.fillRect(-casing.size * 0.5, -casing.size * 0.28, casing.size, casing.size * 0.56)
+    context.fillStyle = "#b18b34"
+    context.fillRect(-casing.size * 0.5, casing.size * 0.03, casing.size, casing.size * 0.16)
     context.restore()
   }
 }

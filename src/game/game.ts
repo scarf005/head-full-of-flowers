@@ -227,6 +227,7 @@ export class FlowerArenaGame {
       obstacle.lootDropped = false
     }
     for (const debris of this.world.obstacleDebris) debris.active = false
+    for (const casing of this.world.shellCasings) casing.active = false
     for (const explosion of this.world.explosions) explosion.active = false
 
     spawnObstacles(this.world)
@@ -401,6 +402,67 @@ export class FlowerArenaGame {
     }
   }
 
+  private spawnShellCasing(unit: Unit) {
+    if (unit.primaryWeapon === "flamethrower") {
+      return
+    }
+
+    const slot = this.world.shellCasings.find((casing) => !casing.active) ?? this.world.shellCasings[0]
+    const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
+    const side = Math.random() > 0.5 ? 1 : -1
+    const angle = aimAngle + side * Math.PI * 0.5 + randomRange(-0.4, 0.4)
+    const baseSpeed = unit.primaryWeapon === "shotgun" ? 7.6 : unit.primaryWeapon === "assault" ? 6.4 : 5.2
+    slot.active = true
+    slot.position.set(
+      unit.position.x - unit.aim.x * 0.12 + randomRange(-0.07, 0.07),
+      unit.position.y - unit.aim.y * 0.12 + randomRange(-0.07, 0.07)
+    )
+    slot.velocity.set(Math.cos(angle) * baseSpeed, Math.sin(angle) * baseSpeed)
+    slot.rotation = randomRange(0, Math.PI * 2)
+    slot.angularVelocity = randomRange(-12, 12)
+    slot.size = randomRange(0.048, 0.084)
+    slot.maxLife = randomRange(0.55, 1.1)
+    slot.life = slot.maxLife
+    slot.bounceCount = 0
+  }
+
+  private updateShellCasings(dt: number) {
+    const drag = clamp(1 - dt * 4.8, 0, 1)
+    for (const casing of this.world.shellCasings) {
+      if (!casing.active) {
+        continue
+      }
+
+      casing.life -= dt
+      if (casing.life <= 0) {
+        casing.active = false
+        continue
+      }
+
+      casing.velocity.x *= drag
+      casing.velocity.y *= drag
+      casing.position.x += casing.velocity.x * dt
+      casing.position.y += casing.velocity.y * dt
+      casing.rotation += casing.angularVelocity * dt
+      casing.angularVelocity *= drag
+
+      const distance = Math.hypot(casing.position.x, casing.position.y) || 1
+      const maxDistance = this.world.arenaRadius - casing.size * 0.5
+      if (distance > maxDistance && casing.bounceCount < 3) {
+        const normalX = casing.position.x / distance
+        const normalY = casing.position.y / distance
+        casing.position.x = normalX * maxDistance
+        casing.position.y = normalY * maxDistance
+        const reflected = casing.velocity.x * normalX + casing.velocity.y * normalY
+        casing.velocity.x -= normalX * reflected * 1.8
+        casing.velocity.y -= normalY * reflected * 1.8
+        casing.velocity.x *= 0.52
+        casing.velocity.y *= 0.52
+        casing.bounceCount += 1
+      }
+    }
+  }
+
   private spawnExplosion(x: number, y: number, radius: number) {
     const slot = this.world.explosions.find((explosion) => !explosion.active) ?? this.world.explosions[0]
     slot.active = true
@@ -477,6 +539,7 @@ export class FlowerArenaGame {
     firePrimary(this.world, unitId, {
       allocProjectile: () => this.allocProjectile(),
       startReload: (id) => this.startReload(id),
+      onShellEjected: (shooter) => this.spawnShellCasing(shooter),
       onPlayerShoot: () => {
         this.sfx.shoot()
         updatePlayerWeaponSignals(this.world)
@@ -577,6 +640,7 @@ export class FlowerArenaGame {
       updateFlowers(this.world, simDt)
       updateDamagePopups(this.world, simDt)
       this.updateObstacleDebris(simDt)
+      this.updateShellCasings(simDt)
       this.updateExplosions(simDt)
       updateCrosshairWorld(this.world)
       return
@@ -689,6 +753,7 @@ export class FlowerArenaGame {
     updateFlowers(this.world, simDt)
     updateDamagePopups(this.world, simDt)
     this.updateObstacleDebris(simDt)
+    this.updateShellCasings(simDt)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {

@@ -215,3 +215,15 @@ export class ObstacleDebris {
   maxLife = 0
   color = "#ffffff"
 }
+
+export class ShellCasing {
+  active = false
+  position = new Vec2()
+  velocity = new Vec2()
+  rotation = 0
+  angularVelocity = 0
+  size = 0.08
+  life = 0
+  maxLife = 0
+  bounceCount = 0
+}

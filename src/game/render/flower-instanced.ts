@@ -2,6 +2,7 @@ import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
 const FLOWER_INSTANCE_STRIDE = 9
+const QUAD_INSTANCE_STRIDE = 8
 const FLOWER_PETAL_URL = "/flowers/flower-petal-mask.png"
 const FLOWER_CENTER_URL = "/flowers/flower-accent-mask.png"
 
@@ -14,11 +15,20 @@ interface FlowerGpuState {
   instanceBuffer: WebGLBuffer
   petalTexture: WebGLTexture
   centerTexture: WebGLTexture
+  quadProgram: WebGLProgram
+  quadVao: WebGLVertexArrayObject
+  quadStaticBuffer: WebGLBuffer
+  quadInstanceBuffer: WebGLBuffer
   instanceData: Float32Array
+  quadInstanceData: Float32Array
   capacity: number
+  quadCapacity: number
   uniformCamera: WebGLUniformLocation
   uniformView: WebGLUniformLocation
   uniformScale: WebGLUniformLocation
+  quadUniformCamera: WebGLUniformLocation
+  quadUniformView: WebGLUniformLocation
+  quadUniformScale: WebGLUniformLocation
 }
 
 let flowerGpuState: FlowerGpuState | null = null
@@ -141,6 +151,20 @@ const ensureCapacity = (state: FlowerGpuState, needed: number) => {
   state.instanceData = new Float32Array(state.capacity * FLOWER_INSTANCE_STRIDE)
 }
 
+const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
+  if (needed <= state.quadCapacity) {
+    return
+  }
+
+  let nextCapacity = state.quadCapacity
+  while (nextCapacity < needed) {
+    nextCapacity = Math.max(256, nextCapacity * 2)
+  }
+
+  state.quadCapacity = nextCapacity
+  state.quadInstanceData = new Float32Array(state.quadCapacity * QUAD_INSTANCE_STRIDE)
+}
+
 const initFlowerGpuState = () => {
   if (flowerGpuState || flowerGpuInitTried || typeof document === "undefined") {
     return flowerGpuState
@@ -220,19 +244,80 @@ void main() {
     return null
   }
 
+  const quadVertexSource = `#version 300 es
+layout(location = 0) in vec2 aCorner;
+layout(location = 1) in vec2 iPosition;
+layout(location = 2) in float iSize;
+layout(location = 3) in float iRotation;
+layout(location = 4) in vec3 iColor;
+layout(location = 5) in float iAlpha;
+
+uniform vec2 uCamera;
+uniform vec2 uView;
+uniform float uScale;
+
+out vec2 vUv;
+out vec3 vColor;
+out float vAlpha;
+
+void main() {
+  float c = cos(iRotation);
+  float s = sin(iRotation);
+  vec2 rotated = vec2(
+    aCorner.x * c - aCorner.y * s,
+    aCorner.x * s + aCorner.y * c
+  );
+  vec2 world = iPosition + rotated * iSize;
+  vec2 screen = (world - uCamera) * uScale + uView * 0.5;
+  vec2 clip = screen / uView * 2.0 - 1.0;
+  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+  vUv = aCorner * 0.5 + 0.5;
+  vColor = iColor;
+  vAlpha = iAlpha;
+}
+`
+
+  const quadFragmentSource = `#version 300 es
+precision mediump float;
+
+in vec2 vUv;
+in vec3 vColor;
+in float vAlpha;
+
+out vec4 outColor;
+
+void main() {
+  vec3 color = vColor;
+  float stripe = smoothstep(0.54, 0.62, vUv.y) * (1.0 - smoothstep(0.76, 0.84, vUv.y));
+  color = mix(color, color * 0.52, stripe);
+  outColor = vec4(color, vAlpha);
+}
+`
+
+  const quadProgram = createProgram(gl, quadVertexSource, quadFragmentSource)
+  if (!quadProgram) {
+    return null
+  }
+
   const vao = gl.createVertexArray()
   const quadBuffer = gl.createBuffer()
   const instanceBuffer = gl.createBuffer()
+  const quadVao = gl.createVertexArray()
+  const quadStaticBuffer = gl.createBuffer()
+  const quadInstanceBuffer = gl.createBuffer()
   const petalTexture = createTexture(gl)
   const centerTexture = createTexture(gl)
-  if (!vao || !quadBuffer || !instanceBuffer || !petalTexture || !centerTexture) {
+  if (!vao || !quadBuffer || !instanceBuffer || !quadVao || !quadStaticBuffer || !quadInstanceBuffer || !petalTexture || !centerTexture) {
     return null
   }
 
   const uniformCamera = gl.getUniformLocation(program, "uCamera")
   const uniformView = gl.getUniformLocation(program, "uView")
   const uniformScale = gl.getUniformLocation(program, "uScale")
-  if (!uniformCamera || !uniformView || !uniformScale) {
+  const quadUniformCamera = gl.getUniformLocation(quadProgram, "uCamera")
+  const quadUniformView = gl.getUniformLocation(quadProgram, "uView")
+  const quadUniformScale = gl.getUniformLocation(quadProgram, "uScale")
+  if (!uniformCamera || !uniformView || !uniformScale || !quadUniformCamera || !quadUniformView || !quadUniformScale) {
     return null
   }
 
@@ -270,6 +355,44 @@ void main() {
 
   gl.bindVertexArray(null)
 
+  gl.bindVertexArray(quadVao)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadStaticBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,
+    1, -1,
+    -1, 1,
+    1, 1
+  ]), gl.STATIC_DRAW)
+  gl.enableVertexAttribArray(0)
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadInstanceBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, 256 * QUAD_INSTANCE_STRIDE * 4, gl.DYNAMIC_DRAW)
+  const quadStride = QUAD_INSTANCE_STRIDE * 4
+
+  gl.enableVertexAttribArray(1)
+  gl.vertexAttribPointer(1, 2, gl.FLOAT, false, quadStride, 0)
+  gl.vertexAttribDivisor(1, 1)
+
+  gl.enableVertexAttribArray(2)
+  gl.vertexAttribPointer(2, 1, gl.FLOAT, false, quadStride, 2 * 4)
+  gl.vertexAttribDivisor(2, 1)
+
+  gl.enableVertexAttribArray(3)
+  gl.vertexAttribPointer(3, 1, gl.FLOAT, false, quadStride, 3 * 4)
+  gl.vertexAttribDivisor(3, 1)
+
+  gl.enableVertexAttribArray(4)
+  gl.vertexAttribPointer(4, 3, gl.FLOAT, false, quadStride, 4 * 4)
+  gl.vertexAttribDivisor(4, 1)
+
+  gl.enableVertexAttribArray(5)
+  gl.vertexAttribPointer(5, 1, gl.FLOAT, false, quadStride, 7 * 4)
+  gl.vertexAttribDivisor(5, 1)
+
+  gl.bindVertexArray(null)
+
   gl.useProgram(program)
   gl.uniform2f(uniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(uniformScale, WORLD_SCALE)
@@ -278,6 +401,10 @@ void main() {
 
   gl.enable(gl.BLEND)
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+
+  gl.useProgram(quadProgram)
+  gl.uniform2f(quadUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(quadUniformScale, WORLD_SCALE)
 
   loadTextureFromUrl(gl, petalTexture, FLOWER_PETAL_URL)
   loadTextureFromUrl(gl, centerTexture, FLOWER_CENTER_URL)
@@ -289,13 +416,22 @@ void main() {
     vao,
     quadBuffer,
     instanceBuffer,
+    quadProgram,
+    quadVao,
+    quadStaticBuffer,
+    quadInstanceBuffer,
     petalTexture,
     centerTexture,
     instanceData: new Float32Array(512 * FLOWER_INSTANCE_STRIDE),
+    quadInstanceData: new Float32Array(256 * QUAD_INSTANCE_STRIDE),
     capacity: 512,
+    quadCapacity: 256,
     uniformCamera,
     uniformView,
-    uniformScale
+    uniformScale,
+    quadUniformCamera,
+    quadUniformView,
+    quadUniformScale
   }
 
   return flowerGpuState
@@ -381,6 +517,110 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   gl.bindVertexArray(state.vao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)
   gl.bufferData(gl.ARRAY_BUFFER, state.instanceData.subarray(0, instanceCount * FLOWER_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
+  gl.bindVertexArray(null)
+
+  context.save()
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  context.restore()
+
+  return true
+}
+
+interface RenderObstacleFxInstancesArgs {
+  context: CanvasRenderingContext2D
+  world: WorldState
+  cameraX: number
+  cameraY: number
+}
+
+export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: RenderObstacleFxInstancesArgs) => {
+  const state = initFlowerGpuState()
+  if (!state) {
+    return false
+  }
+
+  const { gl } = state
+  if (state.canvas.width !== VIEW_WIDTH || state.canvas.height !== VIEW_HEIGHT) {
+    state.canvas.width = VIEW_WIDTH
+    state.canvas.height = VIEW_HEIGHT
+  }
+
+  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
+  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
+  const minX = cameraX - halfViewX - 2
+  const maxX = cameraX + halfViewX + 2
+  const minY = cameraY - halfViewY - 2
+  const maxY = cameraY + halfViewY + 2
+
+  let instanceCount = 0
+  for (const debris of world.obstacleDebris) {
+    if (!debris.active || debris.maxLife <= 0) {
+      continue
+    }
+    if (debris.position.x < minX || debris.position.x > maxX || debris.position.y < minY || debris.position.y > maxY) {
+      continue
+    }
+
+    ensureQuadCapacity(state, instanceCount + 1)
+    const writeIndex = instanceCount * QUAD_INSTANCE_STRIDE
+    const lifeRatio = Math.max(0, Math.min(1, debris.life / debris.maxLife))
+    const alpha = lifeRatio * lifeRatio
+    const size = debris.size * (0.7 + (1 - lifeRatio) * 0.5)
+    const [red, green, blue] = parseHexColorFloat(debris.color)
+
+    state.quadInstanceData[writeIndex] = debris.position.x
+    state.quadInstanceData[writeIndex + 1] = debris.position.y
+    state.quadInstanceData[writeIndex + 2] = size
+    state.quadInstanceData[writeIndex + 3] = debris.rotation
+    state.quadInstanceData[writeIndex + 4] = red
+    state.quadInstanceData[writeIndex + 5] = green
+    state.quadInstanceData[writeIndex + 6] = blue
+    state.quadInstanceData[writeIndex + 7] = alpha
+    instanceCount += 1
+  }
+
+  for (const casing of world.shellCasings) {
+    if (!casing.active || casing.maxLife <= 0) {
+      continue
+    }
+    if (casing.position.x < minX || casing.position.x > maxX || casing.position.y < minY || casing.position.y > maxY) {
+      continue
+    }
+
+    ensureQuadCapacity(state, instanceCount + 1)
+    const writeIndex = instanceCount * QUAD_INSTANCE_STRIDE
+    const lifeRatio = Math.max(0, Math.min(1, casing.life / casing.maxLife))
+    const alpha = lifeRatio * 0.85
+    const [red, green, blue] = parseHexColorFloat("#e7c66a")
+
+    state.quadInstanceData[writeIndex] = casing.position.x
+    state.quadInstanceData[writeIndex + 1] = casing.position.y
+    state.quadInstanceData[writeIndex + 2] = casing.size
+    state.quadInstanceData[writeIndex + 3] = casing.rotation
+    state.quadInstanceData[writeIndex + 4] = red
+    state.quadInstanceData[writeIndex + 5] = green
+    state.quadInstanceData[writeIndex + 6] = blue
+    state.quadInstanceData[writeIndex + 7] = alpha
+    instanceCount += 1
+  }
+
+  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.clearColor(0, 0, 0, 0)
+  gl.clear(gl.COLOR_BUFFER_BIT)
+  if (instanceCount <= 0) {
+    return true
+  }
+
+  gl.useProgram(state.quadProgram)
+  gl.uniform2f(state.quadUniformCamera, cameraX, cameraY)
+  gl.uniform2f(state.quadUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(state.quadUniformScale, WORLD_SCALE)
+
+  gl.bindVertexArray(state.quadVao)
+  gl.bindBuffer(gl.ARRAY_BUFFER, state.quadInstanceBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, state.quadInstanceData.subarray(0, instanceCount * QUAD_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 

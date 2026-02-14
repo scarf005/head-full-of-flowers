@@ -1,4 +1,4 @@
-import { DamagePopup, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, Throwable, Unit, Vec2 } from "../entities.ts"
+import { DamagePopup, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, ShellCasing, Throwable, Unit, Vec2 } from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
@@ -50,6 +50,7 @@ export interface WorldState {
   molotovZones: MolotovZone[]
   obstacles: Obstacle[]
   obstacleDebris: ObstacleDebris[]
+  shellCasings: ShellCasing[]
   explosions: ExplosionFx[]
   projectileCursor: number
   throwableCursor: number
@@ -121,6 +122,7 @@ export const createWorldState = (): WorldState => {
       return obstacle
     }),
     obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
+    shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
     explosions: Array.from({ length: 24 }, () => ({
       active: false,
       position: new Vec2(),
