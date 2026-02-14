@@ -173,9 +173,10 @@ export class FlowerArenaGame {
     cancelAnimationFrame(this.raf)
     window.removeEventListener("keydown", this.onKeyDown)
     window.removeEventListener("keyup", this.onKeyUp)
-    this.canvas.removeEventListener("pointermove", this.onPointerMove)
-    this.canvas.removeEventListener("pointerdown", this.onPointerDown)
-    this.canvas.removeEventListener("pointerup", this.onPointerUp)
+    window.removeEventListener("pointermove", this.onPointerMove)
+    window.removeEventListener("pointerdown", this.onPointerDown)
+    window.removeEventListener("pointerup", this.onPointerUp)
+    window.removeEventListener("contextmenu", this.onContextMenu)
     this.canvas.removeEventListener("pointerleave", this.onPointerLeave)
     this.canvas.removeEventListener("contextmenu", this.onContextMenu)
     this.audioDirector.stopAll()
@@ -228,21 +229,17 @@ export class FlowerArenaGame {
   private setupEvents() {
     window.addEventListener("keydown", this.onKeyDown)
     window.addEventListener("keyup", this.onKeyUp)
-    this.canvas.addEventListener("pointermove", this.onPointerMove)
-    this.canvas.addEventListener("pointerdown", this.onPointerDown)
-    this.canvas.addEventListener("pointerup", this.onPointerUp)
+    window.addEventListener("pointermove", this.onPointerMove)
+    window.addEventListener("pointerdown", this.onPointerDown)
+    window.addEventListener("pointerup", this.onPointerUp)
+    window.addEventListener("contextmenu", this.onContextMenu)
     this.canvas.addEventListener("pointerleave", this.onPointerLeave)
     this.canvas.addEventListener("contextmenu", this.onContextMenu)
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
-    const wasPrimed = this.audioPrimed
     if (!this.audioPrimed) {
       this.primeAudio()
-    }
-
-    if (!wasPrimed && !this.started && event.key !== "Enter") {
-      return
     }
 
     this.input.keys.add(event.key.toLowerCase())
@@ -284,14 +281,8 @@ export class FlowerArenaGame {
   }
 
   private onPointerDown = (event: PointerEvent) => {
-    const wasPrimed = this.audioPrimed
     if (!this.audioPrimed) {
       this.primeAudio()
-    }
-
-    if (!wasPrimed && !this.started) {
-      statusMessageSignal.value = "Menu theme awake. Click again or press Enter to deploy"
-      return
     }
 
     if (!this.started || this.finished) {
@@ -300,10 +291,17 @@ export class FlowerArenaGame {
 
     if (event.button === 0) {
       this.input.leftDown = true
+      if (this.running) {
+        this.firePrimary(this.player)
+      }
     }
 
     if (event.button === 2) {
+      event.preventDefault()
       this.input.rightDown = true
+      if (this.running) {
+        this.throwSecondary(this.player)
+      }
     }
   }
 
@@ -318,8 +316,6 @@ export class FlowerArenaGame {
   }
 
   private onPointerLeave = () => {
-    this.input.leftDown = false
-    this.input.rightDown = false
     crosshairSignal.value = {
       x: this.input.screenX,
       y: this.input.screenY,
@@ -756,8 +752,8 @@ export class FlowerArenaGame {
     this.arenaRadius = lerp(ARENA_START_RADIUS, ARENA_END_RADIUS, clamp(shrinkProgress, 0, 1))
 
     this.updateCrosshairWorld()
-    this.updatePlayer(simDt)
-    this.updateBots(simDt)
+    this.updatePlayer(dt)
+    this.updateBots(dt)
     this.resolveUnitCollisions()
     this.constrainUnitsToArena()
     this.updateProjectiles(simDt)
@@ -1026,6 +1022,7 @@ export class FlowerArenaGame {
       projectile.damage = weapon.damage * shooter.damageMultiplier
       projectile.maxRange = weapon.range
       projectile.traveled = 0
+      projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
       projectile.glow = randomRange(0.4, 0.9)
     }
 
@@ -1093,6 +1090,22 @@ export class FlowerArenaGame {
       projectile.position.x += stepX
       projectile.position.y += stepY
       projectile.traveled += Math.hypot(stepX, stepY)
+      projectile.ttl -= dt
+
+      if (
+        !Number.isFinite(projectile.position.x) ||
+        !Number.isFinite(projectile.position.y) ||
+        !Number.isFinite(projectile.velocity.x) ||
+        !Number.isFinite(projectile.velocity.y)
+      ) {
+        projectile.active = false
+        continue
+      }
+
+      if (projectile.ttl <= 0) {
+        projectile.active = false
+        continue
+      }
 
       const progress = projectile.traveled / projectile.maxRange
       if (progress > 0.62) {
@@ -1101,7 +1114,8 @@ export class FlowerArenaGame {
         projectile.velocity.y *= drag
       }
 
-      if (progress >= 1 || (progress > 0.72 && Math.hypot(projectile.velocity.x, projectile.velocity.y) < 4)) {
+      const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+      if (progress >= 1 || (progress > 0.72 && speed < 4) || speed < 0.6) {
         projectile.active = false
         continue
       }

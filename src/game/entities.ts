@@ -117,6 +117,7 @@ export class Projectile {
   damage = 10
   maxRange = 500
   traveled = 0
+  ttl = 0
   glow = 0.5
 }
 
