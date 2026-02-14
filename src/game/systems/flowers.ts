@@ -31,12 +31,38 @@ export interface FlowerSpawnDeps {
   onCoverageUpdated: () => void
 }
 
+const toHex = (value: number) => {
+  return Math.round(clamp(value, 0, 255)).toString(16).padStart(2, "0")
+}
+
+const pastelize = (hex: string, saturation = 0.62, lift = 0.22) => {
+  const cleaned = hex.replace("#", "")
+  if (cleaned.length !== 6) {
+    return hex
+  }
+
+  const red = Number.parseInt(cleaned.slice(0, 2), 16)
+  const green = Number.parseInt(cleaned.slice(2, 4), 16)
+  const blue = Number.parseInt(cleaned.slice(4, 6), 16)
+  const gray = (red + green + blue) / 3
+
+  const softRed = red * saturation + gray * (1 - saturation)
+  const softGreen = green * saturation + gray * (1 - saturation)
+  const softBlue = blue * saturation + gray * (1 - saturation)
+
+  const liftedRed = softRed + (255 - softRed) * lift
+  const liftedGreen = softGreen + (255 - softGreen) * lift
+  const liftedBlue = softBlue + (255 - softBlue) * lift
+
+  return `#${toHex(liftedRed)}${toHex(liftedGreen)}${toHex(liftedBlue)}`
+}
+
 const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps) => {
   if (ownerId === deps.playerId) {
     return {
       team: "white" as const,
-      color: "#f7ffef",
-      accent: "#e5efcf",
+      color: "#f1f7eb",
+      accent: "#dce7d0",
       fromPlayer: true
     }
   }
@@ -44,8 +70,8 @@ const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps
   const palette = deps.botPalette(ownerId)
   return {
     team: "blue" as const,
-    color: palette.tone,
-    accent: palette.edge,
+    color: pastelize(palette.tone, 0.56, 0.16),
+    accent: pastelize(palette.edge, 0.54, 0.1),
     fromPlayer: false
   }
 }
@@ -86,6 +112,7 @@ export const spawnFlowers = (
     flower.ownerId = ownerId
     flower.color = palette.color
     flower.accent = palette.accent
+    flower.scorched = false
     flower.position.set(
       originX + Math.cos(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER),
       originY + Math.sin(angle) * distance + randomRange(-FLOWER_POSITION_JITTER, FLOWER_POSITION_JITTER)

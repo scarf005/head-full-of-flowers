@@ -71,6 +71,17 @@ const grenadeSprite: SpriteRow[] = [
   "........"
 ]
 
+const flameProjectileSprite: SpriteRow[] = [
+  "....C...",
+  "...cCc..",
+  "..cCCc..",
+  ".cCyyCc.",
+  "..cCCc..",
+  "...cCc..",
+  "....c...",
+  "........"
+]
+
 const draw = (
   context: CanvasRenderingContext2D,
   sprite: SpriteRow[],
@@ -121,4 +132,13 @@ export const drawGrenadeSprite = (
   size = 0.08
 ) => {
   draw(context, grenadeSprite, x, y, size)
+}
+
+export const drawFlameProjectileSprite = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size = 0.07
+) => {
+  draw(context, flameProjectileSprite, x, y, size)
 }

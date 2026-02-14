@@ -110,6 +110,7 @@ export class Unit {
 
 export class Projectile {
   active = false
+  kind: "ballistic" | "flame" = "ballistic"
   ownerId = ""
   ownerTeam: Team = "white"
   position = new Vec2()
@@ -131,6 +132,7 @@ export class Throwable {
   velocity = new Vec2()
   life = 0.9
   radius = 7
+  rolled = false
 }
 
 export class Flower {
@@ -139,6 +141,7 @@ export class Flower {
   ownerId = ""
   color = "#f7ffef"
   accent = "#e5efcf"
+  scorched = false
   position = new Vec2()
   size = 0
   targetSize = 4
@@ -166,16 +169,19 @@ export class MolotovZone {
   active = false
   ownerId = ""
   ownerTeam: Team = "white"
+  source: "molotov" | "flame" = "molotov"
   position = new Vec2()
-  radius = 54
+  radius = 16
   life = 2
   tick = 0
+  tickInterval = 0.22
+  damagePerTick = 1
 }
 
 export class Obstacle {
   active = false
   id = ""
-  kind: "box" | "house" = "box"
+  kind: "box" | "warehouse" | "wall" = "box"
   position = new Vec2()
   width = 2
   height = 2

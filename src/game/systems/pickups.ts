@@ -1,4 +1,4 @@
-import type { Unit, Vec2 } from "../entities.ts"
+import type { Unit } from "../entities.ts"
 import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { WorldState } from "../world/state.ts"
@@ -7,14 +7,14 @@ export interface PickupDeps {
   randomLootablePrimary: () => "assault" | "shotgun" | "flamethrower"
 }
 
-export const spawnPickupAt = (world: WorldState, position: Vec2, deps: PickupDeps) => {
+export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
   const slot = world.pickups.find((pickup) => !pickup.active)
   if (!slot) {
     return
   }
 
   slot.active = true
-  slot.position.copy(position)
+  slot.position.set(position.x, position.y)
   slot.weapon = deps.randomLootablePrimary()
   slot.radius = 0.8
   slot.bob = randomRange(0, Math.PI * 2)

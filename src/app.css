@@ -155,11 +155,38 @@
   color: #bdd7ac;
 }
 
+.weapon-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.32rem;
+}
+
+.weapon-icon {
+  min-width: 1.2rem;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #f8ffd8;
+  border: 1px solid rgba(218, 238, 194, 0.72);
+  background: rgba(166, 202, 131, 0.22);
+  border-radius: 3px;
+  padding: 0.06rem 0.2rem;
+  letter-spacing: 0.06em;
+}
+
 .weapon-value {
   margin-top: 0.1rem;
   font-size: 0.9rem;
   color: #f7ffe7;
   font-weight: 700;
+}
+
+.weapon-value.compact {
+  margin-top: 0.12rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .weapon-sub {

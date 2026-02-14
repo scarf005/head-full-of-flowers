@@ -3,6 +3,7 @@ import type { WorldState } from "../world/state.ts"
 
 export interface ProjectileDeps {
   hitObstacle: (projectileIndex: number) => boolean
+  spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: "white" | "blue") => void
   applyDamage: (
     targetId: string,
     amount: number,
@@ -15,6 +16,20 @@ export interface ProjectileDeps {
 }
 
 export const updateProjectiles = (world: WorldState, dt: number, deps: ProjectileDeps) => {
+  const deactivateProjectile = (projectileIndex: number, createFlamePatch: boolean) => {
+    const projectile = world.projectiles[projectileIndex]
+    if (!projectile.active) {
+      return
+    }
+
+    const shouldSpawnPatch = projectile.kind === "flame" && createFlamePatch
+    if (shouldSpawnPatch) {
+      deps.spawnFlamePatch(projectile.position.x, projectile.position.y, projectile.ownerId, projectile.ownerTeam)
+    }
+
+    projectile.active = false
+  }
+
   for (let projectileIndex = 0; projectileIndex < world.projectiles.length; projectileIndex += 1) {
     const projectile = world.projectiles[projectileIndex]
     if (!projectile.active) {
@@ -34,12 +49,12 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       !Number.isFinite(projectile.velocity.x) ||
       !Number.isFinite(projectile.velocity.y)
     ) {
-      projectile.active = false
+      deactivateProjectile(projectileIndex, false)
       continue
     }
 
     if (projectile.ttl <= 0) {
-      projectile.active = false
+      deactivateProjectile(projectileIndex, true)
       continue
     }
 
@@ -52,17 +67,17 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     if (progress >= 1 || (progress > 0.72 && speed < 4) || speed < 0.6) {
-      projectile.active = false
+      deactivateProjectile(projectileIndex, true)
       continue
     }
 
     if (projectile.position.length() > world.arenaRadius + 4) {
-      projectile.active = false
+      deactivateProjectile(projectileIndex, false)
       continue
     }
 
     if (deps.hitObstacle(projectileIndex)) {
-      projectile.active = false
+      deactivateProjectile(projectileIndex, true)
       continue
     }
 
@@ -73,16 +88,21 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
       const hitDistance = unit.radius + projectile.radius
       if (distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <= hitDistance * hitDistance) {
+        const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
+        const impactDirX = projectile.velocity.x / impactLength
+        const impactDirY = projectile.velocity.y / impactLength
+        const hitX = unit.position.x + impactDirX * unit.radius
+        const hitY = unit.position.y + impactDirY * unit.radius
         deps.applyDamage(
           unit.id,
           projectile.damage,
           projectile.ownerId,
-          projectile.position.x,
-          projectile.position.y,
+          hitX,
+          hitY,
           projectile.velocity.x,
           projectile.velocity.y
         )
-        projectile.active = false
+        deactivateProjectile(projectileIndex, true)
         break
       }
     }

@@ -1,4 +1,4 @@
-import { drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
+import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
@@ -38,6 +38,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderArenaBoundary(context, world)
   context.restore()
 
+  renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
   renderAtmosphere(context)
   renderMenuCard(context, world)
 }
@@ -75,23 +76,23 @@ const renderArenaGround = (context: CanvasRenderingContext2D, world: WorldState)
       }
 
       const terrain = terrainAt(world.terrainMap, worldX, worldY)
-      if (terrain === "dust") context.fillStyle = "#b8b290"
-      if (terrain === "cracked") context.fillStyle = "#a99f7f"
-      if (terrain === "dead-grass") context.fillStyle = "#98a173"
-      if (terrain === "stone") context.fillStyle = "#8f9086"
-      if (terrain === "rubble") context.fillStyle = "#7f7b6f"
-      if (terrain === "thorns") context.fillStyle = "#646d4f"
-      if (terrain === "shrub") context.fillStyle = "#7e8664"
-      if (terrain === "fence") context.fillStyle = "#6c695d"
+      if (terrain === "grass") context.fillStyle = "#89bf6f"
+      if (terrain === "clover") context.fillStyle = "#78b462"
+      if (terrain === "wild-grass") context.fillStyle = "#6ca656"
+      if (terrain === "dirt") context.fillStyle = "#9a8259"
+      if (terrain === "dirt-road") context.fillStyle = "#8b6f47"
+      if (terrain === "road-edge") context.fillStyle = "#839764"
+      if (terrain === "gravel") context.fillStyle = "#8f8a7a"
+      if (terrain === "concrete") context.fillStyle = "#9ca091"
       context.fillRect(worldX, worldY, tile, tile)
-      if (terrain === "dust") context.fillStyle = "#c3bb99"
-      if (terrain === "cracked") context.fillStyle = "#b2a88a"
-      if (terrain === "dead-grass") context.fillStyle = "#a6ad7c"
-      if (terrain === "stone") context.fillStyle = "#a1a299"
-      if (terrain === "rubble") context.fillStyle = "#948f84"
-      if (terrain === "thorns") context.fillStyle = "#778059"
-      if (terrain === "shrub") context.fillStyle = "#8e966c"
-      if (terrain === "fence") context.fillStyle = "#7f7c70"
+      if (terrain === "grass") context.fillStyle = "#9ace82"
+      if (terrain === "clover") context.fillStyle = "#8cc373"
+      if (terrain === "wild-grass") context.fillStyle = "#80b96a"
+      if (terrain === "dirt") context.fillStyle = "#ab9166"
+      if (terrain === "dirt-road") context.fillStyle = "#9c7f53"
+      if (terrain === "road-edge") context.fillStyle = "#95a975"
+      if (terrain === "gravel") context.fillStyle = "#a4a090"
+      if (terrain === "concrete") context.fillStyle = "#b2b6a6"
       context.fillRect(worldX + 0.05, worldY + 0.05, tile - 0.18, tile - 0.18)
     }
   }
@@ -154,10 +155,18 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState) 
     }
 
     if (throwable.mode === "grenade") {
+      context.fillStyle = "rgba(0, 0, 0, 0.28)"
+      context.beginPath()
+      context.ellipse(throwable.position.x, throwable.position.y + 0.22, 0.2, 0.11, 0, 0, Math.PI * 2)
+      context.fill()
       drawGrenadeSprite(context, throwable.position.x, throwable.position.y, 0.08)
       continue
     }
 
+    context.fillStyle = "rgba(0, 0, 0, 0.24)"
+    context.beginPath()
+    context.ellipse(throwable.position.x, throwable.position.y + 0.2, 0.18, 0.1, 0, 0, Math.PI * 2)
+    context.fill()
     context.fillStyle = "#8f3a2e"
     context.fillRect(throwable.position.x - 0.12, throwable.position.y - 0.12, 0.24, 0.24)
     context.fillStyle = "#f88a3a"
@@ -171,12 +180,24 @@ const renderMolotovZones = (context: CanvasRenderingContext2D, world: WorldState
       continue
     }
 
-    const alpha = clamp(zone.life / 2.2, 0, 1)
-    context.fillStyle = `rgba(244, 120, 46, ${0.24 * alpha})`
+    const fullLife = zone.source === "flame" ? 3 : 2.2
+    const alpha = clamp(zone.life / fullLife, 0, 1)
+    if (zone.source === "flame") {
+      context.fillStyle = `rgba(40, 34, 27, ${0.46 * alpha})`
+      context.beginPath()
+      context.arc(zone.position.x, zone.position.y, zone.radius * 1.06, 0, Math.PI * 2)
+      context.fill()
+    }
+
+    context.fillStyle = zone.source === "flame"
+      ? `rgba(214, 108, 40, ${0.3 * alpha})`
+      : `rgba(244, 120, 46, ${0.24 * alpha})`
     context.beginPath()
     context.arc(zone.position.x, zone.position.y, zone.radius, 0, Math.PI * 2)
     context.fill()
-    context.strokeStyle = `rgba(255, 176, 84, ${0.5 * alpha})`
+    context.strokeStyle = zone.source === "flame"
+      ? `rgba(255, 193, 132, ${0.55 * alpha})`
+      : `rgba(255, 176, 84, ${0.5 * alpha})`
     context.lineWidth = 0.15
     context.beginPath()
     context.arc(zone.position.x, zone.position.y, Math.max(0.06, zone.radius - 0.2), 0, Math.PI * 2)
@@ -192,7 +213,7 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
 
     const halfWidth = obstacle.width * 0.5
     const halfHeight = obstacle.height * 0.5
-    if (obstacle.kind === "house") {
+    if (obstacle.kind === "warehouse") {
       const originX = obstacle.position.x - halfWidth
       const originY = obstacle.position.y - halfHeight
       for (let row = 0; row < obstacle.tiles.length; row += 1) {
@@ -203,10 +224,31 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
 
           const tileX = originX + col
           const tileY = originY + row
-          context.fillStyle = "#6f7f56"
+          context.fillStyle = "#5f655d"
           context.fillRect(tileX, tileY, 1, 1)
-          context.fillStyle = "#d7e5b6"
+          context.fillStyle = "#9ca293"
           context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
+          context.fillStyle = "#757b70"
+          context.fillRect(tileX + 0.08, tileY + 0.46, 0.84, 0.12)
+        }
+      }
+    } else if (obstacle.kind === "wall") {
+      context.fillStyle = "#874b39"
+      context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
+      context.fillStyle = "#ab6850"
+      context.fillRect(obstacle.position.x - halfWidth + 0.06, obstacle.position.y - halfHeight + 0.06, obstacle.width - 0.12, obstacle.height - 0.12)
+
+      const horizontal = obstacle.width >= obstacle.height
+      const steps = Math.max(2, Math.floor((horizontal ? obstacle.width : obstacle.height) * 2))
+      for (let step = 0; step < steps; step += 1) {
+        if (horizontal) {
+          const px = obstacle.position.x - halfWidth + (step / steps) * obstacle.width
+          context.fillStyle = "#6e3528"
+          context.fillRect(px, obstacle.position.y - halfHeight + 0.06, 0.03, obstacle.height - 0.12)
+        } else {
+          const py = obstacle.position.y - halfHeight + (step / steps) * obstacle.height
+          context.fillStyle = "#6e3528"
+          context.fillRect(obstacle.position.x - halfWidth + 0.06, py, obstacle.width - 0.12, 0.03)
         }
       }
     } else {
@@ -261,15 +303,64 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState)
 
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     const angle = Math.atan2(projectile.velocity.y, projectile.velocity.x)
-    const stretch = clamp(speed / 25, 1.1, 2.6)
+    const stretch = clamp(speed / 25, 1.1, projectile.kind === "flame" ? 2.2 : 2.9)
     const length = projectile.radius * 2.6 * stretch
     const width = projectile.radius * 1.4
     const glow = projectile.radius * (2.2 + projectile.glow)
 
-    context.fillStyle = "rgba(255, 233, 120, 0.2)"
+    context.fillStyle = "rgba(0, 0, 0, 0.26)"
+    context.beginPath()
+    context.ellipse(projectile.position.x, projectile.position.y + 0.26, projectile.radius * 0.8, projectile.radius * 0.45, 0, 0, Math.PI * 2)
+    context.fill()
+
+    const glowColor = projectile.kind === "flame"
+      ? "rgba(255, 148, 72, 0.36)"
+      : "rgba(255, 244, 176, 0.34)"
+    context.fillStyle = glowColor
     context.beginPath()
     context.arc(projectile.position.x, projectile.position.y, glow, 0, Math.PI * 2)
     context.fill()
+
+    context.save()
+    context.translate(projectile.position.x, projectile.position.y)
+    context.rotate(angle)
+
+    const trailLength = projectile.kind === "flame" ? length * 1 : length * 1.45
+    for (let index = 0; index < 5; index += 1) {
+      const t = index / 4
+      const alpha = projectile.kind === "flame"
+        ? (1 - t) * 0.24
+        : (1 - t) * 0.34
+      context.fillStyle = `rgba(255, 255, 255, ${alpha})`
+      context.beginPath()
+      context.ellipse(
+        -trailLength * (0.36 + t * 0.44),
+        0,
+        width * (0.84 - t * 0.2),
+        width * (0.52 - t * 0.14),
+        0,
+        0,
+        Math.PI * 2
+      )
+      context.fill()
+    }
+
+    context.strokeStyle = projectile.kind === "flame"
+      ? "rgba(255, 186, 118, 0.42)"
+      : "rgba(255, 246, 196, 0.48)"
+    context.lineWidth = width * 0.44
+    context.lineCap = "round"
+    context.beginPath()
+    context.moveTo(-trailLength * 1.24, 0)
+    context.lineTo(-length * 0.12, 0)
+    context.stroke()
+
+    context.restore()
+
+    if (projectile.kind === "flame") {
+      drawFlameProjectileSprite(context, projectile.position.x, projectile.position.y, 0.07)
+      continue
+    }
 
     context.save()
     context.translate(projectile.position.x, projectile.position.y)
@@ -303,9 +394,19 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     const body = unit.radius * 1.2
     const ear = unit.radius * 0.42
 
-    context.fillStyle = "rgba(0, 0, 0, 0.2)"
+    const moveSpeed = Math.hypot(unit.velocity.x, unit.velocity.y)
+    const skew = clamp(moveSpeed / 12, 0, 1)
+    context.fillStyle = "rgba(0, 0, 0, 0.24)"
     context.beginPath()
-    context.ellipse(drawX, drawY + body * 1.2, body * 0.72, body * 0.42, 0, 0, Math.PI * 2)
+    context.ellipse(
+      drawX - unit.velocity.x * 0.012,
+      drawY + body * 1.26,
+      body * (0.68 + skew * 0.12),
+      body * (0.37 - skew * 0.05),
+      0,
+      0,
+      Math.PI * 2
+    )
     context.fill()
 
     const palette = unit.isPlayer ? { tone: "#f6f2df", edge: "#b8b49a" } : botPalette(unit.id)
@@ -352,6 +453,86 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
     context.fillStyle = unit.isPlayer ? "#e8ffdb" : "#8fc0ff"
     context.fillRect(drawX - body, drawY - body * 1.28, body * 2 * hpRatio, body * 0.24)
   }
+}
+
+const renderOffscreenEnemyIndicators = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  renderCameraX: number,
+  renderCameraY: number
+) => {
+  if (!world.running || world.finished) {
+    return
+  }
+
+  const margin = 24
+  const innerLeft = margin
+  const innerTop = margin
+  const innerRight = VIEW_WIDTH - margin
+  const innerBottom = VIEW_HEIGHT - margin
+  const centerX = VIEW_WIDTH * 0.5
+  const centerY = VIEW_HEIGHT * 0.5
+
+  context.save()
+  context.textAlign = "center"
+  context.textBaseline = "middle"
+  context.font = "bold 11px monospace"
+
+  for (const enemy of world.bots) {
+    const screenX = (enemy.position.x - renderCameraX) * WORLD_SCALE + centerX
+    const screenY = (enemy.position.y - renderCameraY) * WORLD_SCALE + centerY
+    const isOnScreen = screenX >= innerLeft && screenX <= innerRight && screenY >= innerTop && screenY <= innerBottom
+    if (isOnScreen) {
+      continue
+    }
+
+    const dx = screenX - centerX
+    const dy = screenY - centerY
+    const angle = Math.atan2(dy, dx)
+    const cosine = Math.cos(angle)
+    const sine = Math.sin(angle)
+    const edgeScaleX = (VIEW_WIDTH * 0.5 - margin) / Math.max(0.001, Math.abs(cosine))
+    const edgeScaleY = (VIEW_HEIGHT * 0.5 - margin) / Math.max(0.001, Math.abs(sine))
+    const edgeDistance = Math.min(edgeScaleX, edgeScaleY)
+    const markerX = centerX + cosine * edgeDistance
+    const markerY = centerY + sine * edgeDistance
+    const distanceMeters = Math.hypot(enemy.position.x - world.player.position.x, enemy.position.y - world.player.position.y)
+    const palette = botPalette(enemy.id)
+
+    context.save()
+    context.translate(markerX, markerY)
+    context.rotate(angle)
+
+    context.fillStyle = "rgba(0, 0, 0, 0.4)"
+    context.beginPath()
+    context.moveTo(13, 0)
+    context.lineTo(-2, -8)
+    context.lineTo(-2, 8)
+    context.closePath()
+    context.fill()
+
+    context.fillStyle = palette.tone
+    context.beginPath()
+    context.moveTo(11, 0)
+    context.lineTo(-3, -7)
+    context.lineTo(-3, 7)
+    context.closePath()
+    context.fill()
+
+    context.fillStyle = palette.edge
+    context.fillRect(-17, -5, 8, 8)
+    context.fillStyle = "#eff3ff"
+    context.fillRect(-15, -3, 4, 4)
+
+    context.rotate(-angle)
+    context.fillStyle = "rgba(8, 16, 10, 0.72)"
+    context.fillRect(-7, 9, 30, 14)
+    context.fillStyle = "#eaf5e1"
+    context.fillText(`${distanceMeters.toFixed(1)}m`, 8, 16)
+    context.restore()
+  }
+
+  context.restore()
 }
 
 const renderDamagePopups = (context: CanvasRenderingContext2D, world: WorldState) => {

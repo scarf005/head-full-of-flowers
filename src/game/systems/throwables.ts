@@ -3,6 +3,8 @@ import { clamp, distSquared, limitToArena } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
 import type { WorldState } from "../world/state.ts"
 
+const isTiledObstacle = (obstacle: Obstacle) => obstacle.kind === "warehouse"
+
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
   onPlayerThrow: (mode: "grenade" | "molotov") => void
@@ -21,17 +23,37 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   }
 
   const throwable = deps.allocThrowable()
-  const speed = mode === "grenade" ? 30 : 20
+  let throwDirX = shooter.aim.x
+  let throwDirY = shooter.aim.y
+  let speed = mode === "grenade" ? 20 : 20
+
+  if (mode === "grenade" && shooter.isPlayer) {
+    const toCursorX = world.input.worldX - shooter.position.x
+    const toCursorY = world.input.worldY - shooter.position.y
+    const toCursorLength = Math.hypot(toCursorX, toCursorY) || 1
+    const clampedDistance = clamp(toCursorLength, 2.2, 14)
+    const normalizedX = toCursorX / toCursorLength
+    const normalizedY = toCursorY / toCursorLength
+    throwDirX = normalizedX
+    throwDirY = normalizedY
+    speed = 10 + clampedDistance * 1.35
+    throwable.velocity.x = normalizedX * speed
+    throwable.velocity.y = normalizedY * speed
+  }
+
   throwable.active = true
   throwable.ownerId = shooter.id
   throwable.ownerTeam = shooter.team
   throwable.mode = mode
-  throwable.position.x = shooter.position.x + shooter.aim.x * (shooter.radius + 0.12)
-  throwable.position.y = shooter.position.y + shooter.aim.y * (shooter.radius + 0.12)
-  throwable.velocity.x = shooter.aim.x * speed
-  throwable.velocity.y = shooter.aim.y * speed
+  throwable.position.x = shooter.position.x + throwDirX * (shooter.radius + 0.12)
+  throwable.position.y = shooter.position.y + throwDirY * (shooter.radius + 0.12)
+  if (!(mode === "grenade" && shooter.isPlayer)) {
+    throwable.velocity.x = throwDirX * speed
+    throwable.velocity.y = throwDirY * speed
+  }
   throwable.life = mode === "grenade" ? 1.05 : 0.78
   throwable.radius = mode === "grenade" ? 0.36 : 0.3
+  throwable.rolled = false
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
@@ -71,7 +93,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
         continue
       }
 
-      if (obstacle.kind === "house") {
+      if (isTiledObstacle(obstacle)) {
         const originX = obstacle.position.x - obstacle.width * 0.5
         const originY = obstacle.position.y - obstacle.height * 0.5
         const tileX = Math.floor(throwable.position.x - originX)
@@ -112,6 +134,16 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     }
 
     if (throwable.life > 0) {
+      continue
+    }
+
+    if (throwable.mode === "grenade" && !throwable.rolled) {
+      throwable.rolled = true
+      throwable.life = 0.2
+      const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
+      const directionLength = speed || 1
+      throwable.velocity.x = throwable.velocity.x / directionLength * (speed + 4.5)
+      throwable.velocity.y = throwable.velocity.y / directionLength * (speed + 4.5)
       continue
     }
 
@@ -181,7 +213,7 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
       continue
     }
 
-    if (obstacle.kind === "house") {
+    if (isTiledObstacle(obstacle)) {
       deps.damageHouseByExplosion(obstacle, throwable.position.x, throwable.position.y, explosionRadius)
       continue
     }

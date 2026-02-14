@@ -41,11 +41,11 @@ import {
 } from "./systems/combat.ts"
 import { constrainUnitsToArena, damageHouseByExplosion, hitObstacle, resolveUnitCollisions } from "./systems/collisions.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
-import { updateMolotovZones, igniteMolotov } from "./systems/molotov.ts"
+import { spawnFlamePatch, updateMolotovZones, igniteMolotov } from "./systems/molotov.ts"
 import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
 import { updatePlayer, updateCombatFeel, updateCrosshairWorld } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
-import { breakObstacle, respawnUnit, setupWorldUnits, spawnAllUnits, spawnObstacles } from "./systems/respawn.ts"
+import { breakObstacle, respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import type { Obstacle, Unit } from "./entities.ts"
@@ -160,10 +160,6 @@ export class FlowerArenaGame {
       bot.secondaryMode = Math.random() > 0.58 ? "molotov" : "grenade"
     }
 
-    spawnAllUnits(this.world)
-    this.world.perkChoices = []
-    clearPerkOptions()
-
     for (const projectile of this.world.projectiles) projectile.active = false
     for (const throwable of this.world.throwables) throwable.active = false
     for (const flower of this.world.flowers) flower.active = false
@@ -177,6 +173,19 @@ export class FlowerArenaGame {
     for (const explosion of this.world.explosions) explosion.active = false
 
     spawnObstacles(this.world)
+    spawnAllUnits(this.world)
+    spawnMapLoot(this.world, {
+      spawnPickupAt: (x, y) => {
+        spawnPickupAt(this.world, { x, y }, {
+          randomLootablePrimary: () => {
+            const id = randomLootablePrimary()
+            return id === "pistol" ? "assault" : id
+          }
+        })
+      }
+    })
+    this.world.perkChoices = []
+    clearPerkOptions()
 
     this.world.cameraShake = 0
     this.world.cameraOffset.set(0, 0)
@@ -472,6 +481,9 @@ export class FlowerArenaGame {
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
           breakObstacle: (obstacle) => this.breakObstacle(obstacle)
         })
+      },
+      spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
+        spawnFlamePatch(this.world, x, y, ownerId, ownerTeam, () => this.allocMolotovZone())
       },
       applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
         this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)

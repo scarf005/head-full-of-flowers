@@ -6,7 +6,9 @@ import {
   pausedSignal,
   perkOptionsSignal,
   primaryAmmoSignal,
+  primaryWeaponIconSignal,
   primaryWeaponSignal,
+  secondaryWeaponIconSignal,
   secondaryWeaponSignal,
   statusMessageSignal,
   timeRemainingSignal
@@ -62,11 +64,13 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   coverageSlicesSignal.value = buildCoverageSlices(world)
   matchResultSignal.value = defaultMatchResult
   primaryWeaponSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].name
+  primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
   secondaryWeaponSignal.value = "Grenade"
+  secondaryWeaponIconSignal.value = "G"
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
   perkOptionsSignal.value = []
-  statusMessageSignal.value = "Click once to wake audio, then fight from 50m down to 25m"
+  statusMessageSignal.value = "Click once to wake audio, then begin fighting"
   crosshairSignal.value = {
     x: canvas.clientWidth * 0.5,
     y: canvas.clientHeight * 0.5,
@@ -81,6 +85,7 @@ export const updateCoverageSignals = (world: WorldState) => {
 export const updatePlayerWeaponSignals = (world: WorldState) => {
   const config = PRIMARY_WEAPONS[world.player.primaryWeapon]
   primaryWeaponSignal.value = config.name
+  primaryWeaponIconSignal.value = config.icon
   if (world.player.reloadCooldown > 0) {
     primaryAmmoSignal.value = "Reloading..."
     return
@@ -117,6 +122,7 @@ export const setCrosshairSignal = (x: number, y: number, visible: boolean) => {
 
 export const setSecondaryWeaponSignal = (mode: "grenade" | "molotov") => {
   secondaryWeaponSignal.value = mode === "grenade" ? "Grenade" : "Molotov"
+  secondaryWeaponIconSignal.value = mode === "grenade" ? "G" : "M"
 }
 
 export const setStatusMessage = (message: string) => {

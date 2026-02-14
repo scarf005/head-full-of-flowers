@@ -6,7 +6,9 @@ import {
   pausedSignal,
   perkOptionsSignal,
   primaryAmmoSignal,
+  primaryWeaponIconSignal,
   primaryWeaponSignal,
+  secondaryWeaponIconSignal,
   secondaryWeaponSignal,
   statusMessageSignal,
   timeRemainingSignal
@@ -57,13 +59,19 @@ export const GameHud = () => {
 
       <div class="hud hud-left">
         <div class="weapon-card">
-          <div class="weapon-title">Primary</div>
-          <div class="weapon-value">{primaryWeaponSignal.value}</div>
+          <div class="weapon-title-row">
+            <div class="weapon-title">Primary</div>
+            <div class="weapon-icon">{primaryWeaponIconSignal.value}</div>
+          </div>
+          <div class="weapon-value compact">{primaryWeaponSignal.value}</div>
           <div class="weapon-sub">Ammo {primaryAmmoSignal.value}</div>
         </div>
         <div class="weapon-card">
-          <div class="weapon-title">Secondary</div>
-          <div class="weapon-value">{secondaryWeaponSignal.value}</div>
+          <div class="weapon-title-row">
+            <div class="weapon-title">Secondary</div>
+            <div class="weapon-icon">{secondaryWeaponIconSignal.value}</div>
+          </div>
+          <div class="weapon-value compact">{secondaryWeaponSignal.value}</div>
           <div class="weapon-sub">RMB to throw</div>
         </div>
         <div class="weapon-card hp-card">

@@ -129,6 +129,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     const dirY = Math.sin(angle)
 
     projectile.active = true
+    projectile.kind = shooter.primaryWeapon === "flamethrower" ? "flame" : "ballistic"
     projectile.ownerId = shooter.id
     projectile.ownerTeam = shooter.team
     projectile.position.x = shooter.position.x + dirX * (shooter.radius + 0.08)
@@ -140,7 +141,9 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     projectile.maxRange = weapon.range
     projectile.traveled = 0
     projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
-    projectile.glow = randomRange(0.4, 0.9)
+    projectile.glow = shooter.primaryWeapon === "flamethrower"
+      ? randomRange(0.5, 0.95)
+      : randomRange(0.4, 0.9)
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
@@ -200,10 +203,10 @@ export const applyDamage = (
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
     sourceId,
-    target.position.x,
-    target.position.y,
-    -impactX,
-    -impactY,
+    hitX,
+    hitY,
+    impactX,
+    impactY,
     flowerBurst.amount,
     flowerBurst.sizeScale
   )

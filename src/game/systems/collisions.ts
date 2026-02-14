@@ -2,6 +2,8 @@ import type { Obstacle, Projectile, Unit } from "../entities.ts"
 import { clamp, distSquared, limitToArena } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 
+const isTiledObstacle = (obstacle: Obstacle) => obstacle.kind === "warehouse"
+
 const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: number, height: number) => {
   const halfWidth = width * 0.5
   const halfHeight = height * 0.5
@@ -30,7 +32,7 @@ const resolveObstacleCollision = (world: WorldState, unit: Unit) => {
       continue
     }
 
-    if (obstacle.kind === "house") {
+    if (isTiledObstacle(obstacle)) {
       const originX = obstacle.position.x - obstacle.width * 0.5
       const originY = obstacle.position.y - obstacle.height * 0.5
       for (let row = 0; row < obstacle.tiles.length; row += 1) {
@@ -113,7 +115,7 @@ export const damageHouseByExplosion = (
   radius: number,
   deps: ObstacleDamageDeps
 ) => {
-  if (obstacle.kind !== "house" || !obstacle.active) {
+  if (!isTiledObstacle(obstacle) || !obstacle.active) {
     return
   }
 
@@ -147,7 +149,7 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
       continue
     }
 
-    if (obstacle.kind === "house") {
+    if (isTiledObstacle(obstacle)) {
       const originX = obstacle.position.x - obstacle.width * 0.5
       const originY = obstacle.position.y - obstacle.height * 0.5
       const tileX = Math.floor(projectile.position.x - originX)

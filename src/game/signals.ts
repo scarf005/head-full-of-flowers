@@ -32,8 +32,10 @@ export const matchResultSignal = signal<MatchResultHud>({
 })
 
 export const primaryWeaponSignal = signal("Pistol")
+export const primaryWeaponIconSignal = signal("P")
 export const primaryAmmoSignal = signal("∞")
 export const secondaryWeaponSignal = signal("Grenade")
+export const secondaryWeaponIconSignal = signal("G")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 
 export const perkOptionsSignal = signal<PerkOption[]>([])
