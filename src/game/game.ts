@@ -69,6 +69,9 @@ import {
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
 
+const BULLET_TRAIL_WIDTH_SCALE = 4
+const SECONDARY_TRAIL_WIDTH_SCALE = 6
+
 export class FlowerArenaGame {
   private canvas: HTMLCanvasElement
   private context: CanvasRenderingContext2D
@@ -570,7 +573,7 @@ export class FlowerArenaGame {
           smoothDirX,
           smoothDirY,
           0.2 + speedFactor * 0.18,
-          0.085 + speedFactor * 0.024,
+          (0.085 + speedFactor * 0.024) * BULLET_TRAIL_WIDTH_SCALE,
           "#ffd8af",
           0.4,
           0.11 + speedFactor * 0.05
@@ -582,7 +585,7 @@ export class FlowerArenaGame {
           smoothDirX,
           smoothDirY,
           0.34 + speedFactor * 0.22,
-          0.028 + speedFactor * 0.01,
+          (0.028 + speedFactor * 0.01) * BULLET_TRAIL_WIDTH_SCALE,
           "#fffdf4",
           0.9,
           0.14 + speedFactor * 0.08
@@ -662,7 +665,7 @@ export class FlowerArenaGame {
           smoothDirX,
           smoothDirY,
           0.22 + speedFactor * 0.2,
-          0.058 + speedFactor * 0.024,
+          (0.058 + speedFactor * 0.024) * SECONDARY_TRAIL_WIDTH_SCALE,
           "#f7faee",
           0.54,
           0.16 + speedFactor * 0.07
@@ -674,7 +677,7 @@ export class FlowerArenaGame {
           smoothDirX,
           smoothDirY,
           0.18 + speedFactor * 0.15,
-          0.066 + speedFactor * 0.018,
+          (0.066 + speedFactor * 0.018) * SECONDARY_TRAIL_WIDTH_SCALE,
           "#ffd2a2",
           0.42,
           0.13 + speedFactor * 0.05
@@ -715,7 +718,7 @@ export class FlowerArenaGame {
           directionX,
           directionY,
           0.2,
-          0.1,
+          0.1 * BULLET_TRAIL_WIDTH_SCALE,
           "#ffd4a8",
           0.32,
           0.09
@@ -729,7 +732,7 @@ export class FlowerArenaGame {
         directionX,
         directionY,
         0.42 - index * 0.12,
-        0.038,
+        0.038 * BULLET_TRAIL_WIDTH_SCALE,
         "#fffdf2",
         0.76 - index * 0.22,
         0.1 + index * 0.03
@@ -752,11 +755,31 @@ export class FlowerArenaGame {
     const directionX = velocityX / speed
     const directionY = velocityY / speed
     if (mode === "grenade") {
-      this.emitFlightTrailSegment(x, y, directionX, directionY, 0.7, 0.09, "#f5f8ea", 0.5, 0.16)
+      this.emitFlightTrailSegment(
+        x,
+        y,
+        directionX,
+        directionY,
+        0.7,
+        0.09 * SECONDARY_TRAIL_WIDTH_SCALE,
+        "#f5f8ea",
+        0.5,
+        0.16
+      )
       return
     }
 
-    this.emitFlightTrailSegment(x, y, directionX, directionY, 0.46, 0.1, "#ffd2a2", 0.4, 0.12)
+    this.emitFlightTrailSegment(
+      x,
+      y,
+      directionX,
+      directionY,
+      0.46,
+      0.1 * SECONDARY_TRAIL_WIDTH_SCALE,
+      "#ffd2a2",
+      0.4,
+      0.12
+    )
   }
 
   private updateFlightTrailEmitters() {
