@@ -130,6 +130,8 @@ export class Projectile {
   trailCooldown = 0
   trailX = 0
   trailY = 0
+  trailDirX = 1
+  trailDirY = 0
   trailReady = false
 }
 
@@ -148,6 +150,8 @@ export class Throwable {
   trailCooldown = 0
   trailX = 0
   trailY = 0
+  trailDirX = 1
+  trailDirY = 0
   trailReady = false
 }
 

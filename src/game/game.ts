@@ -209,11 +209,15 @@ export class FlowerArenaGame {
     for (const projectile of this.world.projectiles) {
       projectile.active = false
       projectile.trailCooldown = 0
+      projectile.trailDirX = 1
+      projectile.trailDirY = 0
       projectile.trailReady = false
     }
     for (const throwable of this.world.throwables) {
       throwable.active = false
       throwable.trailCooldown = 0
+      throwable.trailDirX = 1
+      throwable.trailDirY = 0
       throwable.trailReady = false
     }
     for (let flowerIndex = 0; flowerIndex < this.world.flowers.length; flowerIndex += 1) {
@@ -508,9 +512,13 @@ export class FlowerArenaGame {
       return
     }
 
+    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     if (!projectile.trailReady) {
       projectile.trailX = projectile.position.x
       projectile.trailY = projectile.position.y
+      const length = speed || 1
+      projectile.trailDirX = projectile.velocity.x / length
+      projectile.trailDirY = projectile.velocity.y / length
       projectile.trailReady = true
       return
     }
@@ -522,54 +530,73 @@ export class FlowerArenaGame {
       return
     }
 
-    const dirX = deltaX / distance
-    const dirY = deltaY / distance
-    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     if (speed <= 0.08) {
       projectile.trailX = projectile.position.x
       projectile.trailY = projectile.position.y
       return
     }
 
-    const spacing = projectile.kind === "flame" ? 0.12 : 0.18
-    const sampleCount = Math.max(1, Math.floor(distance / spacing))
+    const spacing = projectile.kind === "flame" ? 0.1 : 0.08
+    const sampleCount = Math.max(1, Math.ceil(distance / spacing))
     const speedFactor = clamp(speed / (projectile.kind === "flame" ? 24 : 44), 0, 2)
+    let previousX = projectile.trailX
+    let previousY = projectile.trailY
+    let smoothDirX = projectile.trailDirX
+    let smoothDirY = projectile.trailDirY
+    const smoothing = projectile.kind === "flame" ? 0.34 : 0.28
 
     for (let index = 1; index <= sampleCount; index += 1) {
       const t = index / sampleCount
       const sampleX = projectile.trailX + deltaX * t
       const sampleY = projectile.trailY + deltaY * t
 
+      const stepX = sampleX - previousX
+      const stepY = sampleY - previousY
+      const stepLength = Math.hypot(stepX, stepY)
+      if (stepLength > 0.0001) {
+        const targetDirX = stepX / stepLength
+        const targetDirY = stepY / stepLength
+        smoothDirX += (targetDirX - smoothDirX) * smoothing
+        smoothDirY += (targetDirY - smoothDirY) * smoothing
+        const smoothLength = Math.hypot(smoothDirX, smoothDirY) || 1
+        smoothDirX /= smoothLength
+        smoothDirY /= smoothLength
+      }
+
       if (projectile.kind === "flame") {
         this.emitFlightTrailSegment(
           sampleX,
           sampleY,
-          dirX,
-          dirY,
-          0.22 + speedFactor * 0.22,
-          0.09 + speedFactor * 0.03,
+          smoothDirX,
+          smoothDirY,
+          0.2 + speedFactor * 0.18,
+          0.085 + speedFactor * 0.024,
           "#ffd8af",
           0.4,
           0.11 + speedFactor * 0.05
         )
-        continue
+      } else {
+        this.emitFlightTrailSegment(
+          sampleX,
+          sampleY,
+          smoothDirX,
+          smoothDirY,
+          0.34 + speedFactor * 0.22,
+          0.028 + speedFactor * 0.01,
+          "#fffdf4",
+          0.9,
+          0.14 + speedFactor * 0.08
+        )
       }
 
-      this.emitFlightTrailSegment(
-        sampleX,
-        sampleY,
-        dirX,
-        dirY,
-        0.28 + speedFactor * 0.34,
-        0.032 + speedFactor * 0.012,
-        "#fffdf4",
-        0.9,
-        0.14 + speedFactor * 0.08
-      )
+      previousX = sampleX
+      previousY = sampleY
     }
 
     projectile.trailX = projectile.position.x
     projectile.trailY = projectile.position.y
+    projectile.trailDirX = smoothDirX
+    projectile.trailDirY = smoothDirY
   }
 
   private emitThrowableTrail(throwable: WorldState["throwables"][number]) {
@@ -577,9 +604,13 @@ export class FlowerArenaGame {
       return
     }
 
+    const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
     if (!throwable.trailReady) {
       throwable.trailX = throwable.position.x
       throwable.trailY = throwable.position.y
+      const length = speed || 1
+      throwable.trailDirX = throwable.velocity.x / length
+      throwable.trailDirY = throwable.velocity.y / length
       throwable.trailReady = true
       return
     }
@@ -591,54 +622,73 @@ export class FlowerArenaGame {
       return
     }
 
-    const dirX = deltaX / distance
-    const dirY = deltaY / distance
-    const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
     if (speed <= 0.18) {
       throwable.trailX = throwable.position.x
       throwable.trailY = throwable.position.y
       return
     }
 
-    const spacing = throwable.mode === "grenade" ? 0.14 : 0.18
-    const sampleCount = Math.max(1, Math.floor(distance / spacing))
+    const spacing = throwable.mode === "grenade" ? 0.09 : 0.12
+    const sampleCount = Math.max(1, Math.ceil(distance / spacing))
     const speedFactor = clamp(speed / 20, 0, 1.5)
+    let previousX = throwable.trailX
+    let previousY = throwable.trailY
+    let smoothDirX = throwable.trailDirX
+    let smoothDirY = throwable.trailDirY
+    const smoothing = throwable.mode === "grenade" ? 0.3 : 0.36
 
     for (let index = 1; index <= sampleCount; index += 1) {
       const t = index / sampleCount
       const sampleX = throwable.trailX + deltaX * t
       const sampleY = throwable.trailY + deltaY * t
 
+      const stepX = sampleX - previousX
+      const stepY = sampleY - previousY
+      const stepLength = Math.hypot(stepX, stepY)
+      if (stepLength > 0.0001) {
+        const targetDirX = stepX / stepLength
+        const targetDirY = stepY / stepLength
+        smoothDirX += (targetDirX - smoothDirX) * smoothing
+        smoothDirY += (targetDirY - smoothDirY) * smoothing
+        const smoothLength = Math.hypot(smoothDirX, smoothDirY) || 1
+        smoothDirX /= smoothLength
+        smoothDirY /= smoothLength
+      }
+
       if (throwable.mode === "grenade") {
         this.emitFlightTrailSegment(
           sampleX,
           sampleY,
-          dirX,
-          dirY,
-          0.2 + speedFactor * 0.3,
-          0.06 + speedFactor * 0.03,
+          smoothDirX,
+          smoothDirY,
+          0.22 + speedFactor * 0.2,
+          0.058 + speedFactor * 0.024,
           "#f7faee",
           0.54,
           0.16 + speedFactor * 0.07
         )
-        continue
+      } else {
+        this.emitFlightTrailSegment(
+          sampleX,
+          sampleY,
+          smoothDirX,
+          smoothDirY,
+          0.18 + speedFactor * 0.15,
+          0.066 + speedFactor * 0.018,
+          "#ffd2a2",
+          0.42,
+          0.13 + speedFactor * 0.05
+        )
       }
 
-      this.emitFlightTrailSegment(
-        sampleX,
-        sampleY,
-        dirX,
-        dirY,
-        0.16 + speedFactor * 0.2,
-        0.07 + speedFactor * 0.02,
-        "#ffd2a2",
-        0.42,
-        0.13 + speedFactor * 0.05
-      )
+      previousX = sampleX
+      previousY = sampleY
     }
 
     throwable.trailX = throwable.position.x
     throwable.trailY = throwable.position.y
+    throwable.trailDirX = smoothDirX
+    throwable.trailDirY = smoothDirY
   }
 
   private emitProjectileTrailEnd(
@@ -768,6 +818,8 @@ export class FlowerArenaGame {
     const slot = this.world.projectiles[this.world.projectileCursor]
     this.world.projectileCursor = (this.world.projectileCursor + 1) % this.world.projectiles.length
     slot.trailCooldown = 0
+    slot.trailDirX = 1
+    slot.trailDirY = 0
     slot.trailReady = false
     return slot
   }
@@ -776,6 +828,8 @@ export class FlowerArenaGame {
     const slot = this.world.throwables[this.world.throwableCursor]
     this.world.throwableCursor = (this.world.throwableCursor + 1) % this.world.throwables.length
     slot.trailCooldown = 0
+    slot.trailDirX = 1
+    slot.trailDirY = 0
     slot.trailReady = false
     return slot
   }
