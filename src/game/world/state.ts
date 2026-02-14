@@ -16,6 +16,7 @@ import {
   VIEW_HEIGHT,
   VIEW_WIDTH
 } from "./constants.ts"
+import { buildObstacleGridFromMap, type ObstacleGridState } from "./obstacle-grid.ts"
 import { createBarrenGardenMap, type TerrainMap } from "./wfc-map.ts"
 
 export interface ExplosionFx {
@@ -73,12 +74,14 @@ export interface WorldState {
   hitStop: number
   arenaRadius: number
   terrainMap: TerrainMap
+  obstacleGrid: ObstacleGridState
 }
 
 export const createWorldState = (): WorldState => {
   const factions = buildFactions(BOT_COUNT)
   const player = new Unit("player", true, "white")
   const bots = Array.from({ length: BOT_COUNT }, (_, index) => new Unit(`bot-${index + 1}`, false, "blue"))
+  const terrainMap = createBarrenGardenMap(112)
 
   return {
     input: {
@@ -134,6 +137,7 @@ export const createWorldState = (): WorldState => {
     cameraShake: 0,
     hitStop: 0,
     arenaRadius: ARENA_START_RADIUS,
-    terrainMap: createBarrenGardenMap(112)
+    terrainMap,
+    obstacleGrid: buildObstacleGridFromMap(terrainMap)
   }
 }

@@ -2,6 +2,12 @@ import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } 
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
+import {
+  OBSTACLE_MATERIAL_ROCK,
+  OBSTACLE_MATERIAL_WALL,
+  OBSTACLE_MATERIAL_WAREHOUSE,
+  obstacleGridToWorldCenter
+} from "../world/obstacle-grid.ts"
 import { terrainAt } from "../world/wfc-map.ts"
 import type { WorldState } from "../world/state.ts"
 
@@ -155,6 +161,30 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState) 
     }
 
     if (throwable.mode === "grenade") {
+      const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
+      if (speed > 0.45) {
+        const directionX = throwable.velocity.x / speed
+        const directionY = throwable.velocity.y / speed
+        const trailLength = clamp(speed * 0.045, 0.12, 0.58)
+        for (let index = 0; index < 4; index += 1) {
+          const t = index / 3
+          const alpha = (1 - t) * 0.16
+          const spread = 0.02 + t * 0.05
+          context.fillStyle = `rgba(238, 244, 222, ${alpha})`
+          context.beginPath()
+          context.ellipse(
+            throwable.position.x - directionX * trailLength * (0.4 + t * 0.9),
+            throwable.position.y - directionY * trailLength * (0.4 + t * 0.9),
+            0.09 + spread,
+            0.05 + spread * 0.7,
+            0,
+            0,
+            Math.PI * 2
+          )
+          context.fill()
+        }
+      }
+
       context.fillStyle = "rgba(0, 0, 0, 0.28)"
       context.beginPath()
       context.ellipse(throwable.position.x, throwable.position.y + 0.22, 0.2, 0.11, 0, 0, Math.PI * 2)
@@ -206,63 +236,55 @@ const renderMolotovZones = (context: CanvasRenderingContext2D, world: WorldState
 }
 
 const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) => {
-  for (const obstacle of world.obstacles) {
-    if (!obstacle.active) {
-      continue
-    }
+  const grid = world.obstacleGrid
+  const half = Math.floor(grid.size * 0.5)
+  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
+  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
+  const minX = Math.max(0, Math.floor(world.camera.x - halfViewX) + half - 2)
+  const maxX = Math.min(grid.size - 1, Math.floor(world.camera.x + halfViewX) + half + 2)
+  const minY = Math.max(0, Math.floor(world.camera.y - halfViewY) + half - 2)
+  const maxY = Math.min(grid.size - 1, Math.floor(world.camera.y + halfViewY) + half + 2)
 
-    const halfWidth = obstacle.width * 0.5
-    const halfHeight = obstacle.height * 0.5
-    if (obstacle.kind === "warehouse") {
-      const originX = obstacle.position.x - halfWidth
-      const originY = obstacle.position.y - halfHeight
-      for (let row = 0; row < obstacle.tiles.length; row += 1) {
-        for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
-          if (!obstacle.tiles[row][col]) {
-            continue
-          }
-
-          const tileX = originX + col
-          const tileY = originY + row
-          context.fillStyle = "#5f655d"
-          context.fillRect(tileX, tileY, 1, 1)
-          context.fillStyle = "#9ca293"
-          context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
-          context.fillStyle = "#757b70"
-          context.fillRect(tileX + 0.08, tileY + 0.46, 0.84, 0.12)
-        }
+  for (let gy = minY; gy <= maxY; gy += 1) {
+    for (let gx = minX; gx <= maxX; gx += 1) {
+      const index = gy * grid.size + gx
+      if (grid.solid[index] <= 0) {
+        continue
       }
-    } else if (obstacle.kind === "wall") {
-      context.fillStyle = "#874b39"
-      context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
-      context.fillStyle = "#ab6850"
-      context.fillRect(obstacle.position.x - halfWidth + 0.06, obstacle.position.y - halfHeight + 0.06, obstacle.width - 0.12, obstacle.height - 0.12)
 
-      const horizontal = obstacle.width >= obstacle.height
-      const steps = Math.max(2, Math.floor((horizontal ? obstacle.width : obstacle.height) * 2))
-      for (let step = 0; step < steps; step += 1) {
-        if (horizontal) {
-          const px = obstacle.position.x - halfWidth + (step / steps) * obstacle.width
-          context.fillStyle = "#6e3528"
-          context.fillRect(px, obstacle.position.y - halfHeight + 0.06, 0.03, obstacle.height - 0.12)
-        } else {
-          const py = obstacle.position.y - halfHeight + (step / steps) * obstacle.height
-          context.fillStyle = "#6e3528"
-          context.fillRect(obstacle.position.x - halfWidth + 0.06, py, obstacle.width - 0.12, 0.03)
-        }
+      const material = grid.material[index]
+      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+      const tileX = center.x - 0.5
+      const tileY = center.y - 0.5
+
+      if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
+        context.fillStyle = "#5f655d"
+        context.fillRect(tileX, tileY, 1, 1)
+        context.fillStyle = "#9ca293"
+        context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
+        context.fillStyle = "#757b70"
+        context.fillRect(tileX + 0.08, tileY + 0.46, 0.84, 0.12)
+      } else if (material === OBSTACLE_MATERIAL_WALL) {
+        context.fillStyle = "#874b39"
+        context.fillRect(tileX, tileY, 1, 1)
+        context.fillStyle = "#ab6850"
+        context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
+        context.fillStyle = "#6e3528"
+        context.fillRect(tileX + 0.06, tileY + 0.46, 0.88, 0.08)
+      } else if (material === OBSTACLE_MATERIAL_ROCK) {
+        context.fillStyle = "#676a64"
+        context.fillRect(tileX, tileY, 1, 1)
+        context.fillStyle = "#8f948b"
+        context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
+        context.fillStyle = "#5d605a"
+        context.fillRect(tileX + 0.14, tileY + 0.14, 0.72, 0.08)
       }
-    } else {
-      context.fillStyle = "#676a64"
-      context.fillRect(obstacle.position.x - halfWidth, obstacle.position.y - halfHeight, obstacle.width, obstacle.height)
-      context.fillStyle = "#8f948b"
-      context.fillRect(obstacle.position.x - halfWidth + 0.08, obstacle.position.y - halfHeight + 0.08, obstacle.width - 0.16, obstacle.height - 0.16)
 
-      context.fillStyle = "#5d605a"
-      const cuts = Math.max(2, Math.floor(obstacle.width * 2.2))
-      for (let i = 0; i < cuts; i += 1) {
-        const t = i / Math.max(1, cuts - 1)
-        const px = obstacle.position.x - halfWidth + 0.14 + t * (obstacle.width - 0.28)
-        context.fillRect(px, obstacle.position.y - halfHeight + 0.16, 0.04, obstacle.height - 0.32)
+      const flash = grid.flash[index]
+      if (flash > 0.01) {
+        const flicker = 0.42 + Math.sin((1 - flash) * 42) * 0.38
+        context.fillStyle = `rgba(255, 96, 96, ${clamp(flash * flicker, 0, 1) * 0.55})`
+        context.fillRect(tileX + 0.04, tileY + 0.04, 0.92, 0.92)
       }
     }
   }

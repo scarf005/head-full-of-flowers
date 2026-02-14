@@ -2,6 +2,7 @@ import type { Obstacle, Vec2 } from "../entities.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
+import { buildObstacleGridFromMap, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 import {
   BOT_BASE_SPEED,
   BOT_RADIUS,
@@ -10,8 +11,6 @@ import {
   UNIT_BASE_HP
 } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
-
-const isTiledObstacle = (obstacle: Obstacle) => obstacle.kind === "warehouse"
 
 const pointOverlapsRect = (
   pointX: number,
@@ -31,36 +30,31 @@ const pointOverlapsRect = (
   return dx * dx + dy * dy < radius * radius
 }
 
-const collidesWithObstacle = (x: number, y: number, obstacle: Obstacle, radius: number) => {
-  if (!obstacle.active) {
-    return false
-  }
+const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radius: number) => {
+  const grid = world.obstacleGrid
+  const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
+  const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
 
-  if (isTiledObstacle(obstacle)) {
-    const originX = obstacle.position.x - obstacle.width * 0.5
-    const originY = obstacle.position.y - obstacle.height * 0.5
-    const rows = obstacle.tiles.length
-    const cols = obstacle.tiles[0]?.length ?? 0
-    const minCol = Math.max(0, Math.floor(x - radius - originX))
-    const maxCol = Math.min(cols - 1, Math.floor(x + radius - originX))
-    const minRow = Math.max(0, Math.floor(y - radius - originY))
-    const maxRow = Math.min(rows - 1, Math.floor(y + radius - originY))
+  const minX = Math.max(0, min.x)
+  const maxX = Math.min(grid.size - 1, max.x)
+  const minY = Math.max(0, min.y)
+  const maxY = Math.min(grid.size - 1, max.y)
 
-    for (let row = minRow; row <= maxRow; row += 1) {
-      for (let col = minCol; col <= maxCol; col += 1) {
-        if (!obstacle.tiles[row][col]) {
-          continue
-        }
+  for (let gy = minY; gy <= maxY; gy += 1) {
+    for (let gx = minX; gx <= maxX; gx += 1) {
+      const index = gy * grid.size + gx
+      if (grid.solid[index] <= 0) {
+        continue
+      }
 
-        if (pointOverlapsRect(x, y, originX + col + 0.5, originY + row + 0.5, 1, 1, radius)) {
-          return true
-        }
+      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+      if (pointOverlapsRect(x, y, center.x, center.y, 1, 1, radius)) {
+        return true
       }
     }
-    return false
   }
 
-  return pointOverlapsRect(x, y, obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height, radius)
+  return false
 }
 
 export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
@@ -76,11 +70,8 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
     }
 
     if (safe) {
-      for (const obstacle of world.obstacles) {
-        if (collidesWithObstacle(candidate.x, candidate.y, obstacle, 0.9)) {
-          safe = false
-          break
-        }
+      if (collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
+        safe = false
       }
     }
 
@@ -117,38 +108,10 @@ export const breakObstacle = (obstacle: Obstacle, deps: BreakObstacleDeps) => {
 }
 
 export const spawnObstacles = (world: WorldState) => {
-  let cursor = 0
-
+  world.obstacleGrid = buildObstacleGridFromMap(world.terrainMap)
   for (const obstacle of world.obstacles) {
     obstacle.active = false
     obstacle.lootDropped = false
-  }
-
-  for (const blueprint of world.terrainMap.obstacles) {
-    if (cursor >= world.obstacles.length) {
-      break
-    }
-
-    const obstacle = world.obstacles[cursor]
-    obstacle.kind = blueprint.kind
-    obstacle.position.set(blueprint.x, blueprint.y)
-    obstacle.width = blueprint.width
-    obstacle.height = blueprint.height
-    if (isTiledObstacle(obstacle)) {
-      obstacle.tiles = blueprint.tiles.map((row) => [...row])
-      obstacle.maxHp = obstacle.tiles.reduce((sum, row) => {
-        return sum + row.reduce((count, tile) => count + (tile ? 1 : 0), 0)
-      }, 0) * 3
-    } else if (obstacle.kind === "wall") {
-      obstacle.tiles = []
-      obstacle.maxHp = 7
-    } else {
-      obstacle.tiles = []
-      obstacle.maxHp = 9
-    }
-    obstacle.hp = obstacle.maxHp
-    obstacle.active = true
-    cursor += 1
   }
 }
 

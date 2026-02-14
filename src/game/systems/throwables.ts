@@ -1,9 +1,11 @@
-import type { Obstacle } from "../entities.ts"
 import { clamp, distSquared, limitToArena } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
+import {
+  damageObstacleCell,
+  isObstacleCellSolid,
+  worldToObstacleGrid
+} from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
-
-const isTiledObstacle = (obstacle: Obstacle) => obstacle.kind === "warehouse"
 
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
@@ -71,7 +73,6 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
 }
 
 export interface ThrowableUpdateDeps {
-  breakObstacle: (obstacle: Obstacle) => void
   explodeGrenade: (throwableIndex: number) => void
   igniteMolotov: (throwableIndex: number) => void
   onExplosion: () => void
@@ -91,49 +92,11 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     throwable.velocity.y *= clamp(1 - dt * 0.55, 0, 1)
     limitToArena(throwable.position, throwable.radius, world.arenaRadius)
 
-    for (const obstacle of world.obstacles) {
-      if (!obstacle.active) {
-        continue
-      }
-
-      if (isTiledObstacle(obstacle)) {
-        const originX = obstacle.position.x - obstacle.width * 0.5
-        const originY = obstacle.position.y - obstacle.height * 0.5
-        const tileX = Math.floor(throwable.position.x - originX)
-        const tileY = Math.floor(throwable.position.y - originY)
-        if (
-          tileX >= 0 &&
-          tileY >= 0 &&
-          tileY < obstacle.tiles.length &&
-          tileX < obstacle.tiles[tileY].length &&
-          obstacle.tiles[tileY][tileX]
-        ) {
-          throwable.life = 0
-          obstacle.tiles[tileY][tileX] = false
-          obstacle.hp -= 1
-          if (obstacle.hp <= 0) {
-            deps.breakObstacle(obstacle)
-          }
-          break
-        }
-        continue
-      }
-
-      const halfWidth = obstacle.width * 0.5
-      const halfHeight = obstacle.height * 0.5
-      if (
-        throwable.position.x >= obstacle.position.x - halfWidth &&
-        throwable.position.x <= obstacle.position.x + halfWidth &&
-        throwable.position.y >= obstacle.position.y - halfHeight &&
-        throwable.position.y <= obstacle.position.y + halfHeight
-      ) {
-        throwable.life = 0
-        obstacle.hp -= throwable.mode === "grenade" ? 6 : 2
-        if (obstacle.hp <= 0) {
-          deps.breakObstacle(obstacle)
-        }
-        break
-      }
+    const hitCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, throwable.position.y)
+    if (isObstacleCellSolid(world.obstacleGrid, hitCell.x, hitCell.y)) {
+      const damage = throwable.mode === "grenade" ? 3 : 1.5
+      damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, damage)
+      throwable.life = 0
     }
 
     if (throwable.life > 0) {
@@ -172,8 +135,7 @@ export interface GrenadeExplosionDeps {
     impactX: number,
     impactY: number
   ) => void
-  damageHouseByExplosion: (obstacle: Obstacle, x: number, y: number, radius: number) => void
-  breakObstacle: (obstacle: Obstacle) => void
+  damageObstaclesByExplosion: (x: number, y: number, radius: number) => void
   spawnExplosion: (x: number, y: number, radius: number) => void
 }
 
@@ -211,25 +173,5 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
     )
   }
 
-  for (const obstacle of world.obstacles) {
-    if (!obstacle.active) {
-      continue
-    }
-
-    if (isTiledObstacle(obstacle)) {
-      deps.damageHouseByExplosion(obstacle, throwable.position.x, throwable.position.y, explosionRadius)
-      continue
-    }
-
-    const dx = obstacle.position.x - throwable.position.x
-    const dy = obstacle.position.y - throwable.position.y
-    if (dx * dx + dy * dy > explosionRadiusSquared) {
-      continue
-    }
-
-    obstacle.hp -= 6
-    if (obstacle.hp <= 0) {
-      deps.breakObstacle(obstacle)
-    }
-  }
+  deps.damageObstaclesByExplosion(throwable.position.x, throwable.position.y, explosionRadius)
 }

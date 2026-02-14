@@ -39,16 +39,22 @@ import {
   randomLootablePrimary,
   startReload
 } from "./systems/combat.ts"
-import { constrainUnitsToArena, damageHouseByExplosion, hitObstacle, resolveUnitCollisions } from "./systems/collisions.ts"
+import {
+  constrainUnitsToArena,
+  damageObstaclesByExplosion,
+  hitObstacle,
+  resolveUnitCollisions,
+  updateObstacleFlash
+} from "./systems/collisions.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { spawnFlamePatch, updateMolotovZones, igniteMolotov } from "./systems/molotov.ts"
 import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
 import { updatePlayer, updateCombatFeel, updateCrosshairWorld } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
-import { breakObstacle, respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
+import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
-import type { Obstacle, Unit } from "./entities.ts"
+import type { Unit } from "./entities.ts"
 import { botPalette } from "./factions.ts"
 
 import menuTrackUrl from "../../hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
@@ -356,19 +362,6 @@ export class FlowerArenaGame {
     })
   }
 
-  private breakObstacle(obstacle: Obstacle) {
-    breakObstacle(obstacle, {
-      spawnPickupAt: (position) => {
-        spawnPickupAt(this.world, position, {
-          randomLootablePrimary: () => {
-            const id = this.randomLootablePrimaryForMatch()
-            return id === "pistol" ? "assault" : id
-          }
-        })
-      }
-    })
-  }
-
   private respawnUnit(unitId: string) {
     respawnUnit(this.world, unitId, {
       equipPrimary: (id, weaponId, ammo) => this.equipPrimary(id, weaponId, ammo),
@@ -428,6 +421,7 @@ export class FlowerArenaGame {
     this.world.camera.x = lerp(this.world.camera.x, this.world.player.position.x, clamp(dt * 10, 0, 1))
     this.world.camera.y = lerp(this.world.camera.y, this.world.player.position.y, clamp(dt * 10, 0, 1))
     updateCombatFeel(this.world, dt)
+    updateObstacleFlash(this.world, dt)
 
     const simDt = this.world.hitStop > 0 ? dt * 0.12 : dt
     this.world.hitStop = Math.max(0, this.world.hitStop - dt)
@@ -491,7 +485,6 @@ export class FlowerArenaGame {
         const projectile = this.world.projectiles[projectileIndex]
         return hitObstacle(this.world, projectile, {
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
-          breakObstacle: (obstacle) => this.breakObstacle(obstacle),
           onSfxHit: () => this.sfx.hit(),
           onSfxDeath: () => this.sfx.die()
         })
@@ -505,21 +498,18 @@ export class FlowerArenaGame {
     })
 
     updateThrowables(this.world, simDt, {
-      breakObstacle: (obstacle) => this.breakObstacle(obstacle),
       explodeGrenade: (throwableIndex) => {
         explodeGrenade(this.world, throwableIndex, {
           applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
             this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
           },
-          damageHouseByExplosion: (obstacle, x, y, radius) => {
-            damageHouseByExplosion(obstacle, x, y, radius, {
+          damageObstaclesByExplosion: (x, y, radius) => {
+            damageObstaclesByExplosion(this.world, x, y, radius, {
               spawnExplosion: (sx, sy, rr) => this.spawnExplosion(sx, sy, rr),
-              breakObstacle: (ob) => this.breakObstacle(ob),
               onSfxHit: () => this.sfx.hit(),
               onSfxDeath: () => this.sfx.die()
             })
           },
-          breakObstacle: (obstacle) => this.breakObstacle(obstacle),
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius)
         })
       },

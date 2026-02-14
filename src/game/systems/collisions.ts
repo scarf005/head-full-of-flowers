@@ -1,8 +1,13 @@
-import type { Obstacle, Projectile, Unit } from "../entities.ts"
-import { clamp, distSquared, limitToArena } from "../utils.ts"
+import type { Projectile, Unit } from "../entities.ts"
+import { clamp, distSquared, lerp, limitToArena } from "../utils.ts"
+import {
+  damageObstacleCell,
+  decayObstacleFlash,
+  isObstacleCellSolid,
+  obstacleGridToWorldCenter,
+  worldToObstacleGrid
+} from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
-
-const isTiledObstacle = (obstacle: Obstacle) => obstacle.kind === "warehouse"
 
 const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: number, height: number) => {
   const halfWidth = width * 0.5
@@ -27,29 +32,23 @@ const resolveUnitVsRect = (unit: Unit, centerX: number, centerY: number, width: 
 }
 
 const resolveObstacleCollision = (world: WorldState, unit: Unit) => {
-  for (const obstacle of world.obstacles) {
-    if (!obstacle.active) {
-      continue
-    }
+  const grid = world.obstacleGrid
+  const min = worldToObstacleGrid(grid.size, unit.position.x - unit.radius, unit.position.y - unit.radius)
+  const max = worldToObstacleGrid(grid.size, unit.position.x + unit.radius, unit.position.y + unit.radius)
+  const minX = Math.max(0, min.x)
+  const maxX = Math.min(grid.size - 1, max.x)
+  const minY = Math.max(0, min.y)
+  const maxY = Math.min(grid.size - 1, max.y)
 
-    if (isTiledObstacle(obstacle)) {
-      const originX = obstacle.position.x - obstacle.width * 0.5
-      const originY = obstacle.position.y - obstacle.height * 0.5
-      for (let row = 0; row < obstacle.tiles.length; row += 1) {
-        for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
-          if (!obstacle.tiles[row][col]) {
-            continue
-          }
-
-          const tileCenterX = originX + col + 0.5
-          const tileCenterY = originY + row + 0.5
-          resolveUnitVsRect(unit, tileCenterX, tileCenterY, 1, 1)
-        }
+  for (let gy = minY; gy <= maxY; gy += 1) {
+    for (let gx = minX; gx <= maxX; gx += 1) {
+      if (!isObstacleCellSolid(grid, gx, gy)) {
+        continue
       }
-      continue
-    }
 
-    resolveUnitVsRect(unit, obstacle.position.x, obstacle.position.y, obstacle.width, obstacle.height)
+      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+      resolveUnitVsRect(unit, center.x, center.y, 1, 1)
+    }
   }
 }
 
@@ -90,131 +89,113 @@ export const constrainUnitsToArena = (world: WorldState) => {
   for (const unit of world.units) {
     limitToArena(unit.position, unit.radius, world.arenaRadius)
   }
-
-  for (const obstacle of world.obstacles) {
-    if (!obstacle.active) {
-      continue
-    }
-
-    const margin = Math.max(obstacle.width, obstacle.height) * 0.35
-    if (obstacle.position.length() > world.arenaRadius - margin) {
-      obstacle.active = false
-    }
-  }
 }
 
 export interface ObstacleDamageDeps {
   spawnExplosion: (x: number, y: number, radius: number) => void
-  breakObstacle: (obstacle: Obstacle) => void
   onSfxHit?: () => void
   onSfxDeath?: () => void
 }
 
-export const damageHouseByExplosion = (
-  obstacle: Obstacle,
+const sampleObstacleRay = (
+  world: WorldState,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number
+) => {
+  const dx = toX - fromX
+  const dy = toY - fromY
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 4))
+  const grid = world.obstacleGrid
+
+  for (let step = 0; step <= steps; step += 1) {
+    const t = step / steps
+    const sampleX = lerp(fromX, toX, t)
+    const sampleY = lerp(fromY, toY, t)
+    const cell = worldToObstacleGrid(grid.size, sampleX, sampleY)
+    if (!isObstacleCellSolid(grid, cell.x, cell.y)) {
+      continue
+    }
+    return cell
+  }
+
+  return null
+}
+
+export const hitObstacle = (world: WorldState, projectile: Projectile, deps: ObstacleDamageDeps) => {
+  const velocityLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
+  const backtrack = Math.min(0.9, velocityLength * 0.018)
+  const fromX = projectile.position.x - (projectile.velocity.x / velocityLength) * backtrack
+  const fromY = projectile.position.y - (projectile.velocity.y / velocityLength) * backtrack
+  const hitCell = sampleObstacleRay(world, fromX, fromY, projectile.position.x, projectile.position.y)
+  if (!hitCell) {
+    return false
+  }
+
+  const result = damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, Math.max(1, projectile.damage))
+  if (!result.damaged) {
+    return false
+  }
+
+  const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
+  deps.spawnExplosion(center.x, center.y, 0.14)
+  deps.onSfxHit?.()
+  if (result.destroyed) {
+    deps.onSfxDeath?.()
+  }
+  return true
+}
+
+export const damageObstaclesByExplosion = (
+  world: WorldState,
   x: number,
   y: number,
   radius: number,
   deps: ObstacleDamageDeps
 ) => {
-  if (!isTiledObstacle(obstacle) || !obstacle.active) {
-    return
-  }
-
+  const grid = world.obstacleGrid
   let tookDamage = false
-  const originX = obstacle.position.x - obstacle.width * 0.5
-  const originY = obstacle.position.y - obstacle.height * 0.5
-  for (let row = 0; row < obstacle.tiles.length; row += 1) {
-    for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
-      if (!obstacle.tiles[row][col]) {
+  let destroyedAny = false
+  const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
+  const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
+  const minX = Math.max(0, min.x)
+  const maxX = Math.min(grid.size - 1, max.x)
+  const minY = Math.max(0, min.y)
+  const maxY = Math.min(grid.size - 1, max.y)
+
+  for (let gy = minY; gy <= maxY; gy += 1) {
+    for (let gx = minX; gx <= maxX; gx += 1) {
+      if (!isObstacleCellSolid(grid, gx, gy)) {
         continue
       }
 
-      const tileCenterX = originX + col + 0.5
-      const tileCenterY = originY + row + 0.5
-      if (distSquared(tileCenterX, tileCenterY, x, y) > radius * radius) {
+      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+      if (distSquared(center.x, center.y, x, y) > radius * radius) {
         continue
       }
 
-      obstacle.tiles[row][col] = false
-      obstacle.hp -= 1
-      deps.spawnExplosion(tileCenterX, tileCenterY, 0.16)
-      tookDamage = true
+      const result = damageObstacleCell(grid, gx, gy, 2.5)
+      if (result.damaged) {
+        deps.spawnExplosion(center.x, center.y, 0.16)
+        tookDamage = true
+        if (result.destroyed) {
+          destroyedAny = true
+        }
+      }
     }
   }
 
   if (tookDamage) {
     deps.onSfxHit?.()
+    if (destroyedAny) {
+      deps.onSfxDeath?.()
+    }
   }
 
-  if (obstacle.hp <= 0) {
-    for (let row = 0; row < obstacle.tiles.length; row += 1) {
-      for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
-        obstacle.tiles[row][col] = false
-      }
-    }
-    deps.onSfxDeath?.()
-    deps.breakObstacle(obstacle)
-  }
+  return tookDamage
 }
 
-export const hitObstacle = (world: WorldState, projectile: Projectile, deps: ObstacleDamageDeps) => {
-  for (const obstacle of world.obstacles) {
-    if (!obstacle.active) {
-      continue
-    }
-
-    if (isTiledObstacle(obstacle)) {
-      const originX = obstacle.position.x - obstacle.width * 0.5
-      const originY = obstacle.position.y - obstacle.height * 0.5
-      const tileX = Math.floor(projectile.position.x - originX)
-      const tileY = Math.floor(projectile.position.y - originY)
-      if (
-        tileX < 0 ||
-        tileY < 0 ||
-        tileY >= obstacle.tiles.length ||
-        tileX >= obstacle.tiles[tileY].length ||
-        !obstacle.tiles[tileY][tileX]
-      ) {
-        continue
-      }
-
-      obstacle.tiles[tileY][tileX] = false
-      obstacle.hp -= 1
-      deps.spawnExplosion(originX + tileX + 0.5, originY + tileY + 0.5, 0.14)
-      deps.onSfxHit?.()
-      if (obstacle.hp <= 0) {
-        for (let row = 0; row < obstacle.tiles.length; row += 1) {
-          for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
-            obstacle.tiles[row][col] = false
-          }
-        }
-        deps.onSfxDeath?.()
-        deps.breakObstacle(obstacle)
-      }
-      return true
-    }
-
-    const halfWidth = obstacle.width * 0.5
-    const halfHeight = obstacle.height * 0.5
-    if (
-      projectile.position.x < obstacle.position.x - halfWidth ||
-      projectile.position.x > obstacle.position.x + halfWidth ||
-      projectile.position.y < obstacle.position.y - halfHeight ||
-      projectile.position.y > obstacle.position.y + halfHeight
-    ) {
-      continue
-    }
-
-    obstacle.hp -= Math.max(0.9, projectile.damage * 0.85)
-    deps.spawnExplosion(Math.floor(projectile.position.x) + 0.5, Math.floor(projectile.position.y) + 0.5, 0.14)
-    deps.onSfxHit?.()
-    if (obstacle.hp <= 0 || obstacle.width > 1 || obstacle.height > 1) {
-      deps.onSfxDeath?.()
-      deps.breakObstacle(obstacle)
-    }
-    return true
-  }
-
-  return false
+export const updateObstacleFlash = (world: WorldState, dt: number) => {
+  decayObstacleFlash(world.obstacleGrid, dt)
 }
