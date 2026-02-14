@@ -20,8 +20,19 @@ export const setupInputAdapter = (
   world: WorldState,
   handlers: InputAdapterHandlers
 ): InputAdapter => {
-  const isRematchButtonTarget = (target: EventTarget | null) => {
-    return target instanceof Element && Boolean(target.closest(".match-result-rematch"))
+  const isRematchButtonTarget = (event: PointerEvent) => {
+    if (event.target instanceof Element && Boolean(event.target.closest(".match-result-rematch"))) {
+      return true
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : []
+    for (const node of path) {
+      if (node instanceof Element && Boolean(node.closest(".match-result-rematch"))) {
+        return true
+      }
+    }
+
+    return false
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -86,7 +97,7 @@ export const setupInputAdapter = (
         return
       }
 
-      if (world.finished && !isRematchButtonTarget(event.target)) {
+      if (world.finished && !isRematchButtonTarget(event)) {
         return
       }
 
