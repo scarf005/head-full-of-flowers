@@ -65,6 +65,7 @@ const ALLOWED: Record<TerrainTile, TerrainTile[]> = {
 const randomInt = (min: number, max: number) => Math.floor(min + Math.random() * (max - min + 1))
 
 const gridToWorld = (index: number, size: number) => index - Math.floor(size * 0.5) + 0.5
+const gridToWorldOrigin = (index: number, size: number) => index - Math.floor(size * 0.5)
 
 const hasNeighbor = (mask: boolean[][], x: number, y: number) => {
   for (let oy = -1; oy <= 1; oy += 1) {
@@ -202,9 +203,6 @@ const createWarehouseBlueprints = (size: number, roads: boolean[][]) => {
     const height = randomInt(3, 6)
     const left = randomInt(3, size - width - 4)
     const top = randomInt(3, size - height - 4)
-    const centerX = left + width * 0.5
-    const centerY = top + height * 0.5
-
     let inArena = true
     for (let y = top; y < top + height; y += 1) {
       for (let x = left; x < left + width; x += 1) {
@@ -243,8 +241,8 @@ const createWarehouseBlueprints = (size: number, roads: boolean[][]) => {
     }
 
     const worldRect = {
-      x: gridToWorld(Math.floor(centerX), size),
-      y: gridToWorld(Math.floor(centerY), size),
+      x: gridToWorldOrigin(left, size) + width * 0.5,
+      y: gridToWorldOrigin(top, size) + height * 0.5,
       width,
       height
     }
@@ -288,53 +286,49 @@ const createWarehouseBlueprints = (size: number, roads: boolean[][]) => {
 
 const createWallBlueprints = (size: number, roads: boolean[][], warehouses: MapObstacleBlueprint[]) => {
   const walls: MapObstacleBlueprint[] = []
-  const wallCount = randomInt(15, 24)
+  const wallCount = randomInt(28, 46)
 
   for (let attempt = 0; attempt < 1000 && walls.length < wallCount; attempt += 1) {
-    const gridX = randomInt(4, size - 5)
-    const gridY = randomInt(4, size - 5)
-    if (!roads[gridY][gridX] && Math.random() > 0.28) {
-      continue
-    }
-    if (!circleFitsArena(gridX, gridY, size, 2.5)) {
+    const startX = randomInt(4, size - 5)
+    const startY = randomInt(4, size - 5)
+    if (!roads[startY][startX] && Math.random() > 0.28) {
       continue
     }
 
     const horizontal = Math.random() > 0.5
     const length = randomInt(2, 5)
-    const width = horizontal ? length : 1
-    const height = horizontal ? 1 : length
-    const wall = {
-      kind: "wall" as const,
-      x: gridToWorld(gridX, size),
-      y: gridToWorld(gridY, size),
-      width,
-      height,
-      tiles: [] as boolean[][]
-    }
 
-    let valid = true
-    for (const warehouse of warehouses) {
-      if (rectsOverlap(wall, warehouse, 1.1)) {
-        valid = false
+    for (let index = 0; index < length && walls.length < wallCount; index += 1) {
+      const gridX = startX + (horizontal ? index : 0)
+      const gridY = startY + (horizontal ? 0 : index)
+      if (gridX < 3 || gridY < 3 || gridX >= size - 3 || gridY >= size - 3) {
         break
       }
-    }
-    if (!valid) {
-      continue
-    }
-
-    for (const existing of walls) {
-      if (rectsOverlap(wall, existing, 0.65)) {
-        valid = false
-        break
+      if (!circleFitsArena(gridX, gridY, size, 2.5)) {
+        continue
       }
-    }
-    if (!valid) {
-      continue
-    }
 
-    walls.push(wall)
+      const wall = {
+        kind: "wall" as const,
+        x: gridToWorld(gridX, size),
+        y: gridToWorld(gridY, size),
+        width: 1,
+        height: 1,
+        tiles: [] as boolean[][]
+      }
+
+      const blockedByWarehouse = warehouses.some((warehouse) => rectsOverlap(wall, warehouse, 0.7))
+      if (blockedByWarehouse) {
+        continue
+      }
+
+      const blockedByWall = walls.some((existing) => rectsOverlap(wall, existing, 0.2))
+      if (blockedByWall) {
+        continue
+      }
+
+      walls.push(wall)
+    }
   }
 
   return walls
@@ -355,14 +349,12 @@ const createRockBlueprints = (size: number, roads: boolean[][], blocked: MapObst
       continue
     }
 
-    const width = randomInt(1, 2)
-    const height = randomInt(1, 2)
     const rock = {
       kind: "box" as const,
       x: gridToWorld(gridX, size),
       y: gridToWorld(gridY, size),
-      width,
-      height,
+      width: 1,
+      height: 1,
       tiles: [] as boolean[][]
     }
 

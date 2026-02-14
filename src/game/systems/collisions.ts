@@ -104,6 +104,7 @@ export const constrainUnitsToArena = (world: WorldState) => {
 }
 
 export interface ObstacleDamageDeps {
+  spawnExplosion: (x: number, y: number, radius: number) => void
   breakObstacle: (obstacle: Obstacle) => void
 }
 
@@ -168,6 +169,7 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
       }
 
       obstacle.hp -= Math.max(0.08, projectile.damage * 0.1)
+      deps.spawnExplosion(projectile.position.x, projectile.position.y, 0.12)
       if (obstacle.hp <= 0) {
         for (let row = 0; row < obstacle.tiles.length; row += 1) {
           for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
@@ -191,6 +193,7 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
     }
 
     obstacle.hp -= Math.max(0.12, projectile.damage * 0.12)
+    deps.spawnExplosion(projectile.position.x, projectile.position.y, 0.14)
     if (obstacle.hp <= 0) {
       deps.breakObstacle(obstacle)
     }
