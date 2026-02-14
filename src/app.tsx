@@ -16,8 +16,6 @@ export const App = () => {
         <canvas
           ref={canvasNode}
           class="arena-canvas"
-          width={960}
-          height={540}
           aria-label="BadaBada arena"
         />
         <GameHud />

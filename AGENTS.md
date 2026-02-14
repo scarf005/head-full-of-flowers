@@ -109,3 +109,7 @@
 - **Center Screen:**
   - Crosshair that follows the mouse.
   - Damage indicators as world-space text popping off enemies.
+
+## **5. Workflow Rule**
+
+- Make an atomic git commit after completing each user prompt that requests code changes.

@@ -34,10 +34,10 @@ export const PERK_DEFINITIONS: PerkDefinition[] = [
   {
     id: "deep-roots",
     name: "Deep Roots",
-    description: "Max HP +50",
+    description: "Max HP +3",
     apply: (player) => {
-      player.maxHp += 50
-      player.hp += 50
+      player.maxHp += 3
+      player.hp += 3
       clampHp(player)
       return "Deep Roots harden your frame"
     }

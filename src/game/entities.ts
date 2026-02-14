@@ -68,12 +68,15 @@ export class Unit {
   aim = new Vec2(1, 0)
   radius = 14
   speed = 175
-  maxHp = 100
-  hp = 100
+  maxHp = 10
+  hp = 10
   shootCooldown = 0
   secondaryCooldown = 0
+  reloadCooldown = 0
   primaryWeapon: PrimaryWeaponId = "pistol"
   primaryAmmo = Number.POSITIVE_INFINITY
+  reserveAmmo = Number.POSITIVE_INFINITY
+  magazineSize = Number.POSITIVE_INFINITY
   secondaryMode: SecondaryMode = "grenade"
   damageMultiplier = 1
   fireRateMultiplier = 1
@@ -97,6 +100,7 @@ export class Unit {
     this.hp = this.maxHp
     this.shootCooldown = 0
     this.secondaryCooldown = 0
+    this.reloadCooldown = 0
     this.aiDecisionTimer = 0
     this.hitFlash = 0
     this.recoil = 0
@@ -130,6 +134,9 @@ export class Throwable {
 export class Flower {
   active = false
   team: Team = "white"
+  ownerId = ""
+  color = "#f7ffef"
+  accent = "#e5efcf"
   position = new Vec2()
   size = 0
   targetSize = 4
@@ -161,4 +168,17 @@ export class MolotovZone {
   radius = 54
   life = 2
   tick = 0
+}
+
+export class Obstacle {
+  active = false
+  id = ""
+  kind: "box" | "house" = "box"
+  position = new Vec2()
+  width = 2
+  height = 2
+  hp = 0
+  maxHp = 0
+  lootDropped = false
+  tiles: boolean[][] = []
 }

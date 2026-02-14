@@ -1,6 +1,7 @@
 import { Vec2 } from "./entities.ts"
 
-export const ARENA_RADIUS = 380
+export const ARENA_START_RADIUS = 50
+export const ARENA_END_RADIUS = 25
 
 export const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
@@ -10,14 +11,14 @@ export const randomRange = (min: number, max: number) => min + Math.random() * (
 
 export const randomInt = (min: number, max: number) => Math.floor(randomRange(min, max + 1))
 
-export const randomPointInArena = () => {
+export const randomPointInArena = (radius: number) => {
   const angle = Math.random() * Math.PI * 2
-  const distance = Math.sqrt(Math.random()) * (ARENA_RADIUS - 48)
+  const distance = Math.sqrt(Math.random()) * Math.max(1, radius - 2)
   return new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance)
 }
 
-export const limitToArena = (position: Vec2, radius: number) => {
-  const maxDistance = ARENA_RADIUS - radius
+export const limitToArena = (position: Vec2, radius: number, arenaRadius: number) => {
+  const maxDistance = arenaRadius - radius
   const current = position.length()
   if (current <= maxDistance) {
     return
