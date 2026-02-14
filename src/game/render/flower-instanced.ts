@@ -3,6 +3,7 @@ import type { WorldState } from "../world/state.ts"
 
 const FLOWER_INSTANCE_STRIDE = 9
 const QUAD_INSTANCE_STRIDE = 8
+const TRAIL_INSTANCE_STRIDE = 10
 const FLOWER_PETAL_URL = "/flowers/flower-petal-mask.png"
 const FLOWER_CENTER_URL = "/flowers/flower-accent-mask.png"
 
@@ -19,16 +20,25 @@ interface FlowerGpuState {
   quadVao: WebGLVertexArrayObject
   quadStaticBuffer: WebGLBuffer
   quadInstanceBuffer: WebGLBuffer
+  trailProgram: WebGLProgram
+  trailVao: WebGLVertexArrayObject
+  trailStaticBuffer: WebGLBuffer
+  trailInstanceBuffer: WebGLBuffer
   instanceData: Float32Array
   quadInstanceData: Float32Array
+  trailInstanceData: Float32Array
   capacity: number
   quadCapacity: number
+  trailCapacity: number
   uniformCamera: WebGLUniformLocation
   uniformView: WebGLUniformLocation
   uniformScale: WebGLUniformLocation
   quadUniformCamera: WebGLUniformLocation
   quadUniformView: WebGLUniformLocation
   quadUniformScale: WebGLUniformLocation
+  trailUniformCamera: WebGLUniformLocation
+  trailUniformView: WebGLUniformLocation
+  trailUniformScale: WebGLUniformLocation
 }
 
 let flowerGpuState: FlowerGpuState | null = null
@@ -165,6 +175,20 @@ const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
   state.quadInstanceData = new Float32Array(state.quadCapacity * QUAD_INSTANCE_STRIDE)
 }
 
+const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
+  if (needed <= state.trailCapacity) {
+    return
+  }
+
+  let nextCapacity = state.trailCapacity
+  while (nextCapacity < needed) {
+    nextCapacity = Math.max(512, nextCapacity * 2)
+  }
+
+  state.trailCapacity = nextCapacity
+  state.trailInstanceData = new Float32Array(state.trailCapacity * TRAIL_INSTANCE_STRIDE)
+}
+
 const initFlowerGpuState = () => {
   if (flowerGpuState || flowerGpuInitTried || typeof document === "undefined") {
     return flowerGpuState
@@ -299,15 +323,90 @@ void main() {
     return null
   }
 
+  const trailVertexSource = `#version 300 es
+layout(location = 0) in vec2 aCorner;
+layout(location = 1) in vec2 iPosition;
+layout(location = 2) in vec2 iDirection;
+layout(location = 3) in float iLength;
+layout(location = 4) in float iWidth;
+layout(location = 5) in vec3 iColor;
+layout(location = 6) in float iAlpha;
+
+uniform vec2 uCamera;
+uniform vec2 uView;
+uniform float uScale;
+
+out vec2 vUv;
+out vec3 vColor;
+out float vAlpha;
+
+void main() {
+  vec2 dir = normalize(iDirection);
+  vec2 normal = vec2(-dir.y, dir.x);
+  float t = aCorner.x * 0.5 + 0.5;
+  vec2 along = dir * ((t - 1.0) * iLength);
+  vec2 across = normal * (aCorner.y * iWidth * 0.5);
+  vec2 world = iPosition + along + across;
+  vec2 screen = (world - uCamera) * uScale + uView * 0.5;
+  vec2 clip = screen / uView * 2.0 - 1.0;
+  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+  vUv = vec2(t, aCorner.y * 0.5 + 0.5);
+  vColor = iColor;
+  vAlpha = iAlpha;
+}
+`
+
+  const trailFragmentSource = `#version 300 es
+precision mediump float;
+
+in vec2 vUv;
+in vec3 vColor;
+in float vAlpha;
+
+out vec4 outColor;
+
+void main() {
+  float profile = 1.0 - abs(vUv.y * 2.0 - 1.0);
+  profile = smoothstep(0.0, 1.0, profile);
+  float tipFade = smoothstep(0.0, 0.24, vUv.x);
+  float tailFade = smoothstep(1.0, 0.42, vUv.x);
+  float alpha = vAlpha * profile * tipFade * tailFade;
+  if (alpha <= 0.01) {
+    discard;
+  }
+  outColor = vec4(vColor, alpha);
+}
+`
+
+  const trailProgram = createProgram(gl, trailVertexSource, trailFragmentSource)
+  if (!trailProgram) {
+    return null
+  }
+
   const vao = gl.createVertexArray()
   const quadBuffer = gl.createBuffer()
   const instanceBuffer = gl.createBuffer()
   const quadVao = gl.createVertexArray()
   const quadStaticBuffer = gl.createBuffer()
   const quadInstanceBuffer = gl.createBuffer()
+  const trailVao = gl.createVertexArray()
+  const trailStaticBuffer = gl.createBuffer()
+  const trailInstanceBuffer = gl.createBuffer()
   const petalTexture = createTexture(gl)
   const centerTexture = createTexture(gl)
-  if (!vao || !quadBuffer || !instanceBuffer || !quadVao || !quadStaticBuffer || !quadInstanceBuffer || !petalTexture || !centerTexture) {
+  if (
+    !vao
+    || !quadBuffer
+    || !instanceBuffer
+    || !quadVao
+    || !quadStaticBuffer
+    || !quadInstanceBuffer
+    || !trailVao
+    || !trailStaticBuffer
+    || !trailInstanceBuffer
+    || !petalTexture
+    || !centerTexture
+  ) {
     return null
   }
 
@@ -317,7 +416,20 @@ void main() {
   const quadUniformCamera = gl.getUniformLocation(quadProgram, "uCamera")
   const quadUniformView = gl.getUniformLocation(quadProgram, "uView")
   const quadUniformScale = gl.getUniformLocation(quadProgram, "uScale")
-  if (!uniformCamera || !uniformView || !uniformScale || !quadUniformCamera || !quadUniformView || !quadUniformScale) {
+  const trailUniformCamera = gl.getUniformLocation(trailProgram, "uCamera")
+  const trailUniformView = gl.getUniformLocation(trailProgram, "uView")
+  const trailUniformScale = gl.getUniformLocation(trailProgram, "uScale")
+  if (
+    !uniformCamera
+    || !uniformView
+    || !uniformScale
+    || !quadUniformCamera
+    || !quadUniformView
+    || !quadUniformScale
+    || !trailUniformCamera
+    || !trailUniformView
+    || !trailUniformScale
+  ) {
     return null
   }
 
@@ -393,6 +505,48 @@ void main() {
 
   gl.bindVertexArray(null)
 
+  gl.bindVertexArray(trailVao)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, trailStaticBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,
+    1, -1,
+    -1, 1,
+    1, 1
+  ]), gl.STATIC_DRAW)
+  gl.enableVertexAttribArray(0)
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, trailInstanceBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, 512 * TRAIL_INSTANCE_STRIDE * 4, gl.DYNAMIC_DRAW)
+  const trailStride = TRAIL_INSTANCE_STRIDE * 4
+
+  gl.enableVertexAttribArray(1)
+  gl.vertexAttribPointer(1, 2, gl.FLOAT, false, trailStride, 0)
+  gl.vertexAttribDivisor(1, 1)
+
+  gl.enableVertexAttribArray(2)
+  gl.vertexAttribPointer(2, 2, gl.FLOAT, false, trailStride, 2 * 4)
+  gl.vertexAttribDivisor(2, 1)
+
+  gl.enableVertexAttribArray(3)
+  gl.vertexAttribPointer(3, 1, gl.FLOAT, false, trailStride, 4 * 4)
+  gl.vertexAttribDivisor(3, 1)
+
+  gl.enableVertexAttribArray(4)
+  gl.vertexAttribPointer(4, 1, gl.FLOAT, false, trailStride, 5 * 4)
+  gl.vertexAttribDivisor(4, 1)
+
+  gl.enableVertexAttribArray(5)
+  gl.vertexAttribPointer(5, 3, gl.FLOAT, false, trailStride, 6 * 4)
+  gl.vertexAttribDivisor(5, 1)
+
+  gl.enableVertexAttribArray(6)
+  gl.vertexAttribPointer(6, 1, gl.FLOAT, false, trailStride, 9 * 4)
+  gl.vertexAttribDivisor(6, 1)
+
+  gl.bindVertexArray(null)
+
   gl.useProgram(program)
   gl.uniform2f(uniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(uniformScale, WORLD_SCALE)
@@ -405,6 +559,10 @@ void main() {
   gl.useProgram(quadProgram)
   gl.uniform2f(quadUniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(quadUniformScale, WORLD_SCALE)
+
+  gl.useProgram(trailProgram)
+  gl.uniform2f(trailUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(trailUniformScale, WORLD_SCALE)
 
   loadTextureFromUrl(gl, petalTexture, FLOWER_PETAL_URL)
   loadTextureFromUrl(gl, centerTexture, FLOWER_CENTER_URL)
@@ -420,18 +578,27 @@ void main() {
     quadVao,
     quadStaticBuffer,
     quadInstanceBuffer,
+    trailProgram,
+    trailVao,
+    trailStaticBuffer,
+    trailInstanceBuffer,
     petalTexture,
     centerTexture,
     instanceData: new Float32Array(512 * FLOWER_INSTANCE_STRIDE),
     quadInstanceData: new Float32Array(256 * QUAD_INSTANCE_STRIDE),
+    trailInstanceData: new Float32Array(512 * TRAIL_INSTANCE_STRIDE),
     capacity: 512,
     quadCapacity: 256,
+    trailCapacity: 512,
     uniformCamera,
     uniformView,
     uniformScale,
     quadUniformCamera,
     quadUniformView,
-    quadUniformScale
+    quadUniformScale,
+    trailUniformCamera,
+    trailUniformView,
+    trailUniformScale
   }
 
   return flowerGpuState
@@ -621,6 +788,144 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
   gl.bindVertexArray(state.quadVao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.quadInstanceBuffer)
   gl.bufferData(gl.ARRAY_BUFFER, state.quadInstanceData.subarray(0, instanceCount * QUAD_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
+  gl.bindVertexArray(null)
+
+  context.save()
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  context.restore()
+
+  return true
+}
+
+interface RenderFlightTrailInstancesArgs {
+  context: CanvasRenderingContext2D
+  world: WorldState
+  cameraX: number
+  cameraY: number
+}
+
+export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }: RenderFlightTrailInstancesArgs) => {
+  const state = initFlowerGpuState()
+  if (!state) {
+    return false
+  }
+
+  const { gl } = state
+  if (state.canvas.width !== VIEW_WIDTH || state.canvas.height !== VIEW_HEIGHT) {
+    state.canvas.width = VIEW_WIDTH
+    state.canvas.height = VIEW_HEIGHT
+  }
+
+  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
+  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
+  const minX = cameraX - halfViewX - 2
+  const maxX = cameraX + halfViewX + 2
+  const minY = cameraY - halfViewY - 2
+  const maxY = cameraY + halfViewY + 2
+
+  let instanceCount = 0
+
+  for (const projectile of world.projectiles) {
+    if (!projectile.active) {
+      continue
+    }
+    if (projectile.position.x < minX || projectile.position.x > maxX || projectile.position.y < minY || projectile.position.y > maxY) {
+      continue
+    }
+
+    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+    if (speed <= 0.1) {
+      continue
+    }
+
+    const progress = Math.max(0, Math.min(1, projectile.traveled / Math.max(0.001, projectile.maxRange)))
+    const alpha = (1 - progress) * (projectile.kind === "flame" ? 0.46 : 0.54)
+    if (alpha <= 0.01) {
+      continue
+    }
+
+    const speedFactor = Math.max(0, Math.min(1.3, speed / 45))
+    const baseLength = projectile.kind === "flame" ? 0.42 : 0.55
+    const length = baseLength + speedFactor * (projectile.kind === "flame" ? 1.2 : 1.45)
+    const width = projectile.radius * (projectile.kind === "flame" ? 2.8 : 2.2)
+    const directionX = projectile.velocity.x / speed
+    const directionY = projectile.velocity.y / speed
+    const [red, green, blue] = parseHexColorFloat(projectile.kind === "flame" ? "#ffb07a" : "#ffe7a6")
+
+    ensureTrailCapacity(state, instanceCount + 1)
+    const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE
+    state.trailInstanceData[writeIndex] = projectile.position.x
+    state.trailInstanceData[writeIndex + 1] = projectile.position.y
+    state.trailInstanceData[writeIndex + 2] = directionX
+    state.trailInstanceData[writeIndex + 3] = directionY
+    state.trailInstanceData[writeIndex + 4] = length
+    state.trailInstanceData[writeIndex + 5] = width
+    state.trailInstanceData[writeIndex + 6] = red
+    state.trailInstanceData[writeIndex + 7] = green
+    state.trailInstanceData[writeIndex + 8] = blue
+    state.trailInstanceData[writeIndex + 9] = alpha
+    instanceCount += 1
+  }
+
+  for (const throwable of world.throwables) {
+    if (!throwable.active) {
+      continue
+    }
+    if (throwable.position.x < minX || throwable.position.x > maxX || throwable.position.y < minY || throwable.position.y > maxY) {
+      continue
+    }
+
+    const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
+    if (speed <= 0.2) {
+      continue
+    }
+
+    const lifeRatio = Math.max(0, Math.min(1, throwable.life / Math.max(0.001, throwable.maxLife)))
+    const alpha = lifeRatio * (throwable.mode === "grenade" ? 0.34 : 0.28)
+    if (alpha <= 0.01) {
+      continue
+    }
+
+    const speedFactor = Math.max(0, Math.min(1.2, speed / 20))
+    const length = 0.2 + speedFactor * (throwable.mode === "grenade" ? 0.85 : 0.62)
+    const width = throwable.radius * (throwable.mode === "grenade" ? 1.05 : 0.92)
+    const directionX = throwable.velocity.x / speed
+    const directionY = throwable.velocity.y / speed
+    const [red, green, blue] = parseHexColorFloat(throwable.mode === "grenade" ? "#eef4de" : "#ffbb7a")
+
+    ensureTrailCapacity(state, instanceCount + 1)
+    const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE
+    state.trailInstanceData[writeIndex] = throwable.position.x
+    state.trailInstanceData[writeIndex + 1] = throwable.position.y
+    state.trailInstanceData[writeIndex + 2] = directionX
+    state.trailInstanceData[writeIndex + 3] = directionY
+    state.trailInstanceData[writeIndex + 4] = length
+    state.trailInstanceData[writeIndex + 5] = width
+    state.trailInstanceData[writeIndex + 6] = red
+    state.trailInstanceData[writeIndex + 7] = green
+    state.trailInstanceData[writeIndex + 8] = blue
+    state.trailInstanceData[writeIndex + 9] = alpha
+    instanceCount += 1
+  }
+
+  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.clearColor(0, 0, 0, 0)
+  gl.clear(gl.COLOR_BUFFER_BIT)
+
+  if (instanceCount <= 0) {
+    return true
+  }
+
+  gl.useProgram(state.trailProgram)
+  gl.uniform2f(state.trailUniformCamera, cameraX, cameraY)
+  gl.uniform2f(state.trailUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(state.trailUniformScale, WORLD_SCALE)
+
+  gl.bindVertexArray(state.trailVao)
+  gl.bindBuffer(gl.ARRAY_BUFFER, state.trailInstanceBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, state.trailInstanceData.subarray(0, instanceCount * TRAIL_INSTANCE_STRIDE), gl.DYNAMIC_DRAW)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 

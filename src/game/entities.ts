@@ -137,6 +137,7 @@ export class Throwable {
   position = new Vec2()
   velocity = new Vec2()
   life = 0.9
+  maxLife = 0.9
   radius = 7
   ricochets = 0
   rolled = false

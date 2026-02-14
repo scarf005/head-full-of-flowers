@@ -51,6 +51,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.velocity.x = throwDirX * speed
   throwable.velocity.y = throwDirY * speed
   throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
+  throwable.maxLife = throwable.life
   throwable.radius = throwableRadius
   throwable.ricochets = 0
   throwable.rolled = false

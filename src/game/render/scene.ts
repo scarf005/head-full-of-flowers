@@ -1,5 +1,5 @@
 import { drawFlameProjectileSprite, drawGrenadeSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
-import { renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
+import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
@@ -437,8 +437,14 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
     renderShellCasings(context, world)
   }
   renderPickups(context, world, dt)
-  renderThrowables(context, world)
-  renderProjectiles(context, world)
+  const renderedFlightTrailsWithWebGl = renderFlightTrailInstances({
+    context,
+    world,
+    cameraX: renderCameraX,
+    cameraY: renderCameraY
+  })
+  renderThrowables(context, world, !renderedFlightTrailsWithWebGl)
+  renderProjectiles(context, world, !renderedFlightTrailsWithWebGl)
   renderUnits(context, world)
   renderExplosions(context, world)
   renderDamagePopups(context, world)
@@ -684,7 +690,7 @@ const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt:
   }
 }
 
-const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, renderTrails: boolean) => {
   for (const throwable of world.throwables) {
     if (!throwable.active) {
       continue
@@ -692,7 +698,7 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState) 
 
     if (throwable.mode === "grenade") {
       const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
-      if (speed > 0.45) {
+      if (renderTrails && speed > 0.45) {
         const directionX = throwable.velocity.x / speed
         const directionY = throwable.velocity.y / speed
         const trailLength = clamp(speed * 0.045, 0.12, 0.58)
@@ -911,7 +917,7 @@ const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState) 
   }
 }
 
-const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState, renderTrails: boolean) => {
   for (const projectile of world.projectiles) {
     if (!projectile.active) {
       continue
@@ -937,33 +943,35 @@ const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState)
     context.arc(projectile.position.x, projectile.position.y, glow, 0, Math.PI * 2)
     context.fill()
 
-    context.save()
-    context.translate(projectile.position.x, projectile.position.y)
-    context.rotate(angle)
+    if (renderTrails) {
+      context.save()
+      context.translate(projectile.position.x, projectile.position.y)
+      context.rotate(angle)
 
-    const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
-    for (let index = 0; index < 6; index += 1) {
-      const t = index / 5
-      const alpha = projectile.kind === "flame"
-        ? (1 - t) * 0.2
-        : (1 - t) * 0.22
-      context.fillStyle = projectile.kind === "flame"
-        ? `rgba(255, 177, 122, ${alpha})`
-        : `rgba(255, 230, 170, ${alpha})`
-      context.beginPath()
-      context.ellipse(
-        -trailLength * (0.3 + t * 0.58),
-        0,
-        width * (0.9 - t * 0.36),
-        width * (0.56 - t * 0.24),
-        0,
-        0,
-        Math.PI * 2
-      )
-      context.fill()
+      const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
+      for (let index = 0; index < 6; index += 1) {
+        const t = index / 5
+        const alpha = projectile.kind === "flame"
+          ? (1 - t) * 0.2
+          : (1 - t) * 0.22
+        context.fillStyle = projectile.kind === "flame"
+          ? `rgba(255, 177, 122, ${alpha})`
+          : `rgba(255, 230, 170, ${alpha})`
+        context.beginPath()
+        context.ellipse(
+          -trailLength * (0.3 + t * 0.58),
+          0,
+          width * (0.9 - t * 0.36),
+          width * (0.56 - t * 0.24),
+          0,
+          0,
+          Math.PI * 2
+        )
+        context.fill()
+      }
+
+      context.restore()
     }
-
-    context.restore()
 
     if (projectile.kind === "flame") {
       drawFlameProjectileSprite(context, projectile.position.x, projectile.position.y, 0.07)
