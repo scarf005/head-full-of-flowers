@@ -206,8 +206,14 @@ export class FlowerArenaGame {
       bot.secondaryMode = Math.random() > 0.58 ? "molotov" : "grenade"
     }
 
-    for (const projectile of this.world.projectiles) projectile.active = false
-    for (const throwable of this.world.throwables) throwable.active = false
+    for (const projectile of this.world.projectiles) {
+      projectile.active = false
+      projectile.trailCooldown = 0
+    }
+    for (const throwable of this.world.throwables) {
+      throwable.active = false
+      throwable.trailCooldown = 0
+    }
     for (let flowerIndex = 0; flowerIndex < this.world.flowers.length; flowerIndex += 1) {
       const flower = this.world.flowers[flowerIndex]
       flower.slotIndex = flowerIndex
@@ -229,6 +235,8 @@ export class FlowerArenaGame {
     }
     for (const debris of this.world.obstacleDebris) debris.active = false
     for (const casing of this.world.shellCasings) casing.active = false
+    for (const trail of this.world.flightTrails) trail.active = false
+    this.world.flightTrailCursor = 0
     for (const explosion of this.world.explosions) explosion.active = false
 
     spawnObstacles(this.world)
@@ -464,6 +472,219 @@ export class FlowerArenaGame {
     }
   }
 
+  private emitFlightTrailSegment(
+    x: number,
+    y: number,
+    directionX: number,
+    directionY: number,
+    length: number,
+    width: number,
+    color: string,
+    alpha: number,
+    life: number
+  ) {
+    const magnitude = Math.hypot(directionX, directionY)
+    if (magnitude <= 0.00001 || life <= 0.001 || alpha <= 0.001) {
+      return
+    }
+
+    const slot = this.world.flightTrails[this.world.flightTrailCursor]
+    this.world.flightTrailCursor = (this.world.flightTrailCursor + 1) % this.world.flightTrails.length
+    slot.active = true
+    slot.position.set(x, y)
+    slot.direction.set(directionX / magnitude, directionY / magnitude)
+    slot.length = Math.max(0.02, length)
+    slot.width = Math.max(0.01, width)
+    slot.color = color
+    slot.alpha = clamp(alpha, 0, 1)
+    slot.maxLife = life
+    slot.life = life
+  }
+
+  private emitProjectileTrail(projectile: WorldState["projectiles"][number], dt: number) {
+    if (!projectile.active) {
+      return
+    }
+
+    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+    if (speed <= 0.08) {
+      return
+    }
+
+    projectile.trailCooldown -= dt
+    const interval = projectile.kind === "flame" ? 0.016 : 0.01
+    while (projectile.trailCooldown <= 0) {
+      projectile.trailCooldown += interval
+      const speedFactor = clamp(speed / (projectile.kind === "flame" ? 24 : 44), 0, 2)
+      if (projectile.kind === "flame") {
+        this.emitFlightTrailSegment(
+          projectile.position.x,
+          projectile.position.y,
+          projectile.velocity.x,
+          projectile.velocity.y,
+          0.46 + speedFactor * 0.82,
+          0.11 + speedFactor * 0.06,
+          "#ffd4a8",
+          0.42,
+          0.12 + speedFactor * 0.05
+        )
+        continue
+      }
+
+      this.emitFlightTrailSegment(
+        projectile.position.x,
+        projectile.position.y,
+        projectile.velocity.x,
+        projectile.velocity.y,
+        1.45 + speedFactor * 2.9,
+        0.042 + speedFactor * 0.02,
+        "#fffdf2",
+        0.92,
+        0.16 + speedFactor * 0.09
+      )
+    }
+  }
+
+  private emitThrowableTrail(throwable: WorldState["throwables"][number], dt: number) {
+    if (!throwable.active) {
+      return
+    }
+
+    const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
+    if (speed <= 0.18) {
+      return
+    }
+
+    throwable.trailCooldown -= dt
+    const interval = throwable.mode === "grenade" ? 0.014 : 0.02
+    while (throwable.trailCooldown <= 0) {
+      throwable.trailCooldown += interval
+      const speedFactor = clamp(speed / 20, 0, 1.5)
+      if (throwable.mode === "grenade") {
+        this.emitFlightTrailSegment(
+          throwable.position.x,
+          throwable.position.y,
+          throwable.velocity.x,
+          throwable.velocity.y,
+          0.48 + speedFactor * 1.1,
+          0.07 + speedFactor * 0.03,
+          "#f5f8ea",
+          0.56,
+          0.18 + speedFactor * 0.08
+        )
+        continue
+      }
+
+      this.emitFlightTrailSegment(
+        throwable.position.x,
+        throwable.position.y,
+        throwable.velocity.x,
+        throwable.velocity.y,
+        0.34 + speedFactor * 0.58,
+        0.08 + speedFactor * 0.03,
+        "#ffd2a2",
+        0.44,
+        0.14 + speedFactor * 0.06
+      )
+    }
+  }
+
+  private emitProjectileTrailEnd(
+    x: number,
+    y: number,
+    velocityX: number,
+    velocityY: number,
+    kind: "ballistic" | "flame"
+  ) {
+    const speed = Math.hypot(velocityX, velocityY)
+    if (speed <= 0.04) {
+      return
+    }
+
+    const directionX = velocityX / speed
+    const directionY = velocityY / speed
+    const count = kind === "flame" ? 2 : 3
+    for (let index = 0; index < count; index += 1) {
+      const jitterAngle = randomRange(-0.16, 0.16)
+      const c = Math.cos(jitterAngle)
+      const s = Math.sin(jitterAngle)
+      const dirX = directionX * c - directionY * s
+      const dirY = directionX * s + directionY * c
+      const back = index * (kind === "flame" ? 0.14 : 0.22)
+      if (kind === "flame") {
+        this.emitFlightTrailSegment(
+          x - dirX * back,
+          y - dirY * back,
+          dirX,
+          dirY,
+          0.4,
+          0.12,
+          "#ffd4a8",
+          0.36,
+          0.08
+        )
+        continue
+      }
+
+      this.emitFlightTrailSegment(
+        x - dirX * back,
+        y - dirY * back,
+        dirX,
+        dirY,
+        1.15 - index * 0.22,
+        0.05,
+        "#fffdf2",
+        0.86 - index * 0.17,
+        0.1 + index * 0.02
+      )
+    }
+  }
+
+  private emitThrowableTrailEnd(
+    x: number,
+    y: number,
+    velocityX: number,
+    velocityY: number,
+    mode: "grenade" | "molotov"
+  ) {
+    const speed = Math.hypot(velocityX, velocityY)
+    if (speed <= 0.05) {
+      return
+    }
+
+    const directionX = velocityX / speed
+    const directionY = velocityY / speed
+    if (mode === "grenade") {
+      this.emitFlightTrailSegment(x, y, directionX, directionY, 0.7, 0.09, "#f5f8ea", 0.5, 0.16)
+      return
+    }
+
+    this.emitFlightTrailSegment(x, y, directionX, directionY, 0.46, 0.1, "#ffd2a2", 0.4, 0.12)
+  }
+
+  private updateFlightTrailEmitters(dt: number) {
+    for (const projectile of this.world.projectiles) {
+      this.emitProjectileTrail(projectile, dt)
+    }
+
+    for (const throwable of this.world.throwables) {
+      this.emitThrowableTrail(throwable, dt)
+    }
+  }
+
+  private updateFlightTrails(dt: number) {
+    for (const trail of this.world.flightTrails) {
+      if (!trail.active) {
+        continue
+      }
+
+      trail.life -= dt
+      if (trail.life <= 0) {
+        trail.active = false
+      }
+    }
+  }
+
   private spawnExplosion(x: number, y: number, radius: number) {
     const slot = this.world.explosions.find((explosion) => !explosion.active) ?? this.world.explosions[0]
     slot.active = true
@@ -499,12 +720,14 @@ export class FlowerArenaGame {
   private allocProjectile() {
     const slot = this.world.projectiles[this.world.projectileCursor]
     this.world.projectileCursor = (this.world.projectileCursor + 1) % this.world.projectiles.length
+    slot.trailCooldown = 0
     return slot
   }
 
   private allocThrowable() {
     const slot = this.world.throwables[this.world.throwableCursor]
     this.world.throwableCursor = (this.world.throwableCursor + 1) % this.world.throwables.length
+    slot.trailCooldown = 0
     return slot
   }
 
@@ -605,13 +828,13 @@ export class FlowerArenaGame {
   ) {
     applyDamage(this.world, targetId, amount, sourceId, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
-      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale) => {
+      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt) => {
         spawnFlowers(this.world, ownerId, x, y, dirX, dirY, amountValue, sizeScale, {
           allocFlower: () => this.allocFlower(),
           playerId: this.world.player.id,
           botPalette: (id) => botPalette(id),
           onCoverageUpdated: () => updateCoverageSignals(this.world)
-        })
+        }, isBurnt)
       },
       respawnUnit: (id) => this.respawnUnit(id),
       onSfxHit: () => this.sfx.hit(),
@@ -668,6 +891,7 @@ export class FlowerArenaGame {
       updateDamagePopups(this.world, simDt)
       this.updateObstacleDebris(simDt)
       this.updateShellCasings(simDt)
+      this.updateFlightTrails(simDt)
       this.updateExplosions(simDt)
       updateCrosshairWorld(this.world)
       return
@@ -736,6 +960,9 @@ export class FlowerArenaGame {
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
         spawnFlamePatch(this.world, x, y, ownerId, ownerTeam, () => this.allocMolotovZone())
       },
+      onTrailEnd: (x, y, velocityX, velocityY, kind) => {
+        this.emitProjectileTrailEnd(x, y, velocityX, velocityY, kind)
+      },
       applyDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
         this.applyDamage(targetId, amount, sourceId, hitX, hitY, impactX, impactY)
       }
@@ -768,6 +995,9 @@ export class FlowerArenaGame {
         }
         igniteMolotov(this.world, throwable, () => this.allocMolotovZone())
       },
+      onTrailEnd: (x, y, velocityX, velocityY, mode) => {
+        this.emitThrowableTrailEnd(x, y, velocityX, velocityY, mode)
+      },
       onExplosion: () => this.sfx.explosion()
     })
 
@@ -781,6 +1011,8 @@ export class FlowerArenaGame {
     updateDamagePopups(this.world, simDt)
     this.updateObstacleDebris(simDt)
     this.updateShellCasings(simDt)
+    this.updateFlightTrailEmitters(simDt)
+    this.updateFlightTrails(simDt)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {

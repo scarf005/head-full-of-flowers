@@ -830,89 +830,29 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
 
   let instanceCount = 0
 
-  for (const projectile of world.projectiles) {
-    if (!projectile.active) {
+  for (const trail of world.flightTrails) {
+    if (!trail.active || trail.maxLife <= 0) {
       continue
     }
-    if (projectile.position.x < minX || projectile.position.x > maxX || projectile.position.y < minY || projectile.position.y > maxY) {
-      continue
-    }
-
-    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
-    if (speed <= 0.1) {
+    if (trail.position.x < minX || trail.position.x > maxX || trail.position.y < minY || trail.position.y > maxY) {
       continue
     }
 
-    const progress = Math.max(0, Math.min(1, projectile.traveled / Math.max(0.001, projectile.maxRange)))
-    const alpha = Math.max(0.16, 0.95 - progress * (projectile.kind === "flame" ? 0.72 : 0.58))
+    const lifeRatio = Math.max(0, Math.min(1, trail.life / trail.maxLife))
+    const alpha = trail.alpha * lifeRatio * lifeRatio
     if (alpha <= 0.01) {
       continue
     }
 
-    const speedFactor = Math.max(0, Math.min(1.8, speed / (projectile.kind === "flame" ? 24 : 42)))
-    const length = projectile.kind === "flame"
-      ? Math.max(0.45, Math.min(2.4, speed * 0.055 + speedFactor * 0.5))
-      : Math.max(1.1, Math.min(5.8, speed * 0.11 + speedFactor * 0.85))
-    const width = projectile.kind === "flame"
-      ? Math.max(0.11, Math.min(0.3, projectile.radius * 1.5))
-      : Math.max(0.045, Math.min(0.085, projectile.radius * 0.22))
-    const directionX = projectile.velocity.x / speed
-    const directionY = projectile.velocity.y / speed
-    const [red, green, blue] = parseHexColorFloat(projectile.kind === "flame" ? "#ffb07a" : "#fff8df")
-
     ensureTrailCapacity(state, instanceCount + 1)
     const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE
-    state.trailInstanceData[writeIndex] = projectile.position.x
-    state.trailInstanceData[writeIndex + 1] = projectile.position.y
-    state.trailInstanceData[writeIndex + 2] = directionX
-    state.trailInstanceData[writeIndex + 3] = directionY
-    state.trailInstanceData[writeIndex + 4] = length
-    state.trailInstanceData[writeIndex + 5] = width
-    state.trailInstanceData[writeIndex + 6] = red
-    state.trailInstanceData[writeIndex + 7] = green
-    state.trailInstanceData[writeIndex + 8] = blue
-    state.trailInstanceData[writeIndex + 9] = alpha
-    instanceCount += 1
-  }
-
-  for (const throwable of world.throwables) {
-    if (!throwable.active) {
-      continue
-    }
-    if (throwable.position.x < minX || throwable.position.x > maxX || throwable.position.y < minY || throwable.position.y > maxY) {
-      continue
-    }
-
-    const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
-    if (speed <= 0.2) {
-      continue
-    }
-
-    const lifeRatio = Math.max(0, Math.min(1, throwable.life / Math.max(0.001, throwable.maxLife)))
-    const alpha = lifeRatio * (throwable.mode === "grenade" ? 0.55 : 0.42)
-    if (alpha <= 0.01) {
-      continue
-    }
-
-    const speedFactor = Math.max(0, Math.min(1.35, speed / 20))
-    const length = throwable.mode === "grenade"
-      ? Math.max(0.42, Math.min(2.1, speed * 0.09 + speedFactor * 0.24))
-      : Math.max(0.3, Math.min(1.25, speed * 0.055 + speedFactor * 0.14))
-    const width = throwable.mode === "grenade"
-      ? Math.max(0.07, Math.min(0.16, throwable.radius * 0.28))
-      : Math.max(0.07, Math.min(0.14, throwable.radius * 0.25))
-    const directionX = throwable.velocity.x / speed
-    const directionY = throwable.velocity.y / speed
-    const [red, green, blue] = parseHexColorFloat(throwable.mode === "grenade" ? "#f4f8e7" : "#ffd2a3")
-
-    ensureTrailCapacity(state, instanceCount + 1)
-    const writeIndex = instanceCount * TRAIL_INSTANCE_STRIDE
-    state.trailInstanceData[writeIndex] = throwable.position.x
-    state.trailInstanceData[writeIndex + 1] = throwable.position.y
-    state.trailInstanceData[writeIndex + 2] = directionX
-    state.trailInstanceData[writeIndex + 3] = directionY
-    state.trailInstanceData[writeIndex + 4] = length
-    state.trailInstanceData[writeIndex + 5] = width
+    const [red, green, blue] = parseHexColorFloat(trail.color)
+    state.trailInstanceData[writeIndex] = trail.position.x
+    state.trailInstanceData[writeIndex + 1] = trail.position.y
+    state.trailInstanceData[writeIndex + 2] = trail.direction.x
+    state.trailInstanceData[writeIndex + 3] = trail.direction.y
+    state.trailInstanceData[writeIndex + 4] = trail.length * (0.74 + lifeRatio * 0.26)
+    state.trailInstanceData[writeIndex + 5] = trail.width * (0.68 + lifeRatio * 0.32)
     state.trailInstanceData[writeIndex + 6] = red
     state.trailInstanceData[writeIndex + 7] = green
     state.trailInstanceData[writeIndex + 8] = blue

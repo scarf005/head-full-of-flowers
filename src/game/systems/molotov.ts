@@ -2,7 +2,7 @@ import type { Team } from "../types.ts"
 import type { Throwable } from "../entities.ts"
 import { distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
-import { BURNED_FACTION_ID } from "../factions.ts"
+import { BURNED_FACTION_ID, BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR } from "../factions.ts"
 
 export const igniteMolotov = (world: WorldState, throwable: Throwable, allocMolotovZone: () => WorldState["molotovZones"][number]) => {
   const zone = allocMolotovZone()
@@ -108,13 +108,13 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
                     flower.scorched = true
                   }
 
-                  if (flower.color !== "#4a453d" || flower.accent !== "#29261f") {
-                    flower.color = "#4a453d"
-                    flower.accent = "#29261f"
-                    if (!flower.renderDirty) {
-                      flower.renderDirty = true
-                      world.flowerDirtyCount += 1
-                    }
+                  if (flower.color !== BURNED_FLOWER_COLOR || flower.accent !== BURNED_FLOWER_ACCENT) {
+                    flower.color = BURNED_FLOWER_COLOR
+                    flower.accent = BURNED_FLOWER_ACCENT
+                  }
+                  if (!flower.renderDirty) {
+                    flower.renderDirty = true
+                    world.flowerDirtyCount += 1
                   }
                 }
               }

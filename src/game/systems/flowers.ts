@@ -1,6 +1,6 @@
 import { clamp, limitToArena, randomInt } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
-import { BURNED_FACTION_ID } from "../factions.ts"
+import { BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR, BURNED_FACTION_ID } from "../factions.ts"
 
 const FLOWER_SPAWN_CONE_HALF_ANGLE = 0.95
 const FLOWER_BACK_OFFSET = 0.26
@@ -75,13 +75,27 @@ const shiftHex = (hex: string, offset: number) => {
   return `#${toHex(red + offset)}${toHex(green + offset)}${toHex(blue + offset)}`
 }
 
-const flowerPalette = (world: WorldState, ownerId: string, deps: FlowerSpawnDeps) => {
+const flowerPalette = (
+  world: WorldState,
+  ownerId: string,
+  deps: FlowerSpawnDeps,
+  isBurnt: boolean
+) => {
   if (ownerId === deps.playerId) {
     return {
       team: "white" as const,
       color: "#f2f6ff",
       accent: "#d9e5ff",
       fromPlayer: true
+    }
+  }
+
+  if (isBurnt || ownerId === BURNED_FACTION_ID) {
+    return {
+      team: "white" as const,
+      color: BURNED_FLOWER_COLOR,
+      accent: BURNED_FLOWER_ACCENT,
+      fromPlayer: false
     }
   }
 
@@ -245,9 +259,10 @@ export const spawnFlowers = (
   dirY: number,
   amount: number,
   sizeScale: number,
-  deps: FlowerSpawnDeps
+  deps: FlowerSpawnDeps,
+  isBurnt = false
 ) => {
-  const palette = flowerPalette(world, ownerId, deps)
+  const palette = flowerPalette(world, ownerId, deps, isBurnt)
   const dirLength = Math.hypot(dirX, dirY) || 1
   const nx = dirX / dirLength
   const ny = dirY / dirLength
@@ -319,7 +334,7 @@ export const spawnFlowers = (
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]
     flower.color = shiftHex(palette.color, colorOffset)
     flower.accent = shiftHex(palette.accent, Math.round(colorOffset * 0.6))
-    flower.scorched = false
+    flower.scorched = isBurnt
     flower.position.set(
       spawnX,
       spawnY

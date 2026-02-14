@@ -55,6 +55,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.radius = throwableRadius
   throwable.ricochets = 0
   throwable.rolled = false
+  throwable.trailCooldown = 0
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
@@ -73,6 +74,13 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
 export interface ThrowableUpdateDeps {
   explodeGrenade: (throwableIndex: number) => void
   igniteMolotov: (throwableIndex: number) => void
+  onTrailEnd?: (
+    x: number,
+    y: number,
+    velocityX: number,
+    velocityY: number,
+    mode: "grenade" | "molotov"
+  ) => void
   onExplosion: () => void
   applyDamage: (
     targetId: string,
@@ -159,6 +167,13 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     }
 
     throwable.active = false
+    deps.onTrailEnd?.(
+      throwable.position.x,
+      throwable.position.y,
+      throwable.velocity.x,
+      throwable.velocity.y,
+      throwable.mode
+    )
     if (isGrenade) {
       if (shouldExplode) {
         deps.explodeGrenade(throwableIndex)

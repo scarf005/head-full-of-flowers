@@ -5,6 +5,7 @@ import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 import { debugInfiniteHpSignal } from "../signals.ts"
 
@@ -202,6 +203,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     projectile.glow = shooter.primaryWeapon === "flamethrower"
       ? randomRange(0.5, 0.95)
       : randomRange(0.4, 0.9)
+    projectile.trailCooldown = 0
   }
 
   if (Number.isFinite(shooter.primaryAmmo) && shooter.primaryAmmo <= 0) {
@@ -223,7 +225,7 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
 export interface DamageDeps {
   allocPopup: () => WorldState["damagePopups"][number]
-  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number) => void
+  spawnFlowers: (ownerId: string, x: number, y: number, dirX: number, dirY: number, amount: number, sizeScale: number, isBurnt?: boolean) => void
   respawnUnit: (unitId: string) => void
   onSfxHit: () => void
   onSfxDeath: () => void
@@ -232,28 +234,6 @@ export interface DamageDeps {
   onPlayerHit?: (targetId: string, damage: number) => void
   onPlayerKill?: (targetId: string) => void
   onPlayerHpChanged: () => void
-}
-
-const nearestEnemyId = (world: WorldState, sourceUnit: string, sourceTeam: "white" | "blue", targetX: number, targetY: number) => {
-  const hostileTeam = sourceTeam === "white" ? "blue" : "white"
-  let nearestEnemy = ""
-  let nearestDistance = Number.POSITIVE_INFINITY
-
-  for (const unit of world.units) {
-    if (unit.team !== hostileTeam || unit.id === sourceUnit) {
-      continue
-    }
-
-    const distance = (unit.position.x - targetX) ** 2 + (unit.position.y - targetY) ** 2
-    if (distance >= nearestDistance) {
-      continue
-    }
-
-    nearestDistance = distance
-    nearestEnemy = unit.id
-  }
-
-  return nearestEnemy
 }
 
 export const applyDamage = (
@@ -288,9 +268,8 @@ export const applyDamage = (
   const hitSpeed = Math.hypot(impactX, impactY)
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
-  const flowerSourceId = isSelfHarm
-    ? nearestEnemyId(world, target.id, sourceUnit.team, target.position.x, target.position.y) || sourceId
-    : sourceId
+  const flowerSourceId = isSelfHarm ? BURNED_FACTION_ID : sourceId
+  const isBurntFlowers = isSelfHarm
 
   const flowerBurst = randomFlowerBurst(damage, hitSpeed)
   deps.spawnFlowers(
@@ -300,7 +279,8 @@ export const applyDamage = (
     impactX,
     impactY,
     flowerBurst.amount,
-    flowerBurst.sizeScale
+    flowerBurst.sizeScale,
+    isBurntFlowers
   )
 
   if (target.isPlayer && debugInfiniteHpSignal.value) {
@@ -321,7 +301,8 @@ export const applyDamage = (
       Math.cos(extraDir),
       Math.sin(extraDir),
       Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
-      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST)
+      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST),
+      isBurntFlowers
     )
   }
 

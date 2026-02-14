@@ -127,6 +127,7 @@ export class Projectile {
   traveled = 0
   ttl = 0
   glow = 0.5
+  trailCooldown = 0
 }
 
 export class Throwable {
@@ -141,6 +142,19 @@ export class Throwable {
   radius = 7
   ricochets = 0
   rolled = false
+  trailCooldown = 0
+}
+
+export class FlightTrailSegment {
+  active = false
+  position = new Vec2()
+  direction = new Vec2(1, 0)
+  length = 1
+  width = 0.06
+  alpha = 1
+  life = 0
+  maxLife = 0
+  color = "#ffffff"
 }
 
 export class Flower {

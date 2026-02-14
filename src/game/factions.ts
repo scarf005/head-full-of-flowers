@@ -4,9 +4,11 @@ export interface FactionDescriptor {
   color: string
 }
 
+export const BURNED_FLOWER_COLOR = "#4a453d"
+export const BURNED_FLOWER_ACCENT = "#29261f"
 export const BURNED_FACTION_ID = "burnt"
 export const BURNED_FACTION_LABEL = "Burnt"
-export const BURNED_FACTION_COLOR = "#4a453d"
+export const BURNED_FACTION_COLOR = BURNED_FLOWER_COLOR
 
 const BOT_PALETTES = [
   { tone: "#7aa6ff", edge: "#3d67bf" },

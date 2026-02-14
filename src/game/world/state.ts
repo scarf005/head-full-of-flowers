@@ -1,4 +1,4 @@
-import { DamagePopup, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, ShellCasing, Throwable, Unit, Vec2 } from "../entities.ts"
+import { DamagePopup, FlightTrailSegment, Flower, MolotovZone, Obstacle, ObstacleDebris, Pickup, Projectile, ShellCasing, Throwable, Unit, Vec2 } from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
 import { ARENA_START_RADIUS } from "../utils.ts"
 import {
@@ -51,12 +51,14 @@ export interface WorldState {
   obstacles: Obstacle[]
   obstacleDebris: ObstacleDebris[]
   shellCasings: ShellCasing[]
+  flightTrails: FlightTrailSegment[]
   explosions: ExplosionFx[]
   projectileCursor: number
   throwableCursor: number
   flowerCursor: number
   popupCursor: number
   molotovCursor: number
+  flightTrailCursor: number
   camera: Vec2
   cameraOffset: Vec2
   started: boolean
@@ -123,6 +125,7 @@ export const createWorldState = (): WorldState => {
     }),
     obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
     shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
+    flightTrails: Array.from({ length: 2400 }, () => new FlightTrailSegment()),
     explosions: Array.from({ length: 24 }, () => ({
       active: false,
       position: new Vec2(),
@@ -134,6 +137,7 @@ export const createWorldState = (): WorldState => {
     flowerCursor: 0,
     popupCursor: 0,
     molotovCursor: 0,
+    flightTrailCursor: 0,
     camera: new Vec2(),
     cameraOffset: new Vec2(),
     started: false,
