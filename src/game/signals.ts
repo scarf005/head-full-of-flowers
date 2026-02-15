@@ -19,6 +19,13 @@ export interface MatchResultHud {
   standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
 }
 
+export interface PrimaryWeaponHudItem {
+  label: string
+  icon: WeaponHudIcon
+  ammo: string
+  selected: boolean
+}
+
 const DEBUG_OPTIONS_STORAGE_KEY = "head-full-of-flowers.debug-options"
 const AUDIO_OPTIONS_STORAGE_KEY = "head-full-of-flowers.audio-options"
 const DEBUG_GAME_SPEED_MIN = 0.4
@@ -182,6 +189,14 @@ export const matchResultSignal = signal<MatchResultHud>({
 export const primaryWeaponSignal = signal("Pistol")
 export const primaryWeaponIconSignal = signal<WeaponHudIcon>("pistol")
 export const primaryAmmoSignal = signal("∞")
+export const primaryWeaponSlotsSignal = signal<PrimaryWeaponHudItem[]>([
+  {
+    label: "Pistol",
+    icon: "pistol",
+    ammo: "∞",
+    selected: true,
+  },
+])
 export const secondaryModeSignal = signal<SecondaryMode>("grenade")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })

@@ -8,6 +8,7 @@ import {
   pausedSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
+  primaryWeaponSlotsSignal,
   primaryWeaponSignal,
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
@@ -42,6 +43,16 @@ const localizeWeapon = (weaponId: PrimaryWeaponId) => {
   }
 
   return t`Flamethrower`
+}
+
+const formatAmmo = (primaryAmmo: number, reserveAmmo: number, reloading = false) => {
+  if (reloading) {
+    return t`Reloading...`
+  }
+
+  return Number.isFinite(primaryAmmo)
+    ? `${Math.floor(primaryAmmo)} / ${Number.isFinite(reserveAmmo) ? Math.floor(reserveAmmo) : "∞"}`
+    : "∞"
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -105,6 +116,12 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   primaryWeaponSignal.value = localizeWeapon(world.player.primaryWeapon)
   primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
+  primaryWeaponSlotsSignal.value = [{
+    label: t`Pistol`,
+    icon: "pistol",
+    ammo: "∞",
+    selected: true,
+  }]
   secondaryModeSignal.value = "grenade"
   secondaryWeaponCooldownSignal.value = t`RMB to throw`
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
@@ -129,16 +146,25 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   const config = PRIMARY_WEAPONS[world.player.primaryWeapon]
   primaryWeaponSignal.value = localizeWeapon(config.id)
   primaryWeaponIconSignal.value = config.icon
-  if (world.player.reloadCooldown > 0) {
-    primaryAmmoSignal.value = t`Reloading...`
-    return
-  }
+  primaryAmmoSignal.value = formatAmmo(world.player.primaryAmmo, world.player.reserveAmmo, world.player.reloadCooldown > 0)
 
-  primaryAmmoSignal.value = Number.isFinite(world.player.primaryAmmo)
-    ? `${Math.floor(world.player.primaryAmmo)} / ${
-      Number.isFinite(world.player.reserveAmmo) ? Math.floor(world.player.reserveAmmo) : "∞"
-    }`
-    : "∞"
+  const activeSlotIndex = Math.max(0, Math.min(world.player.primarySlotIndex, world.player.primarySlots.length - 1))
+  const slots = world.player.primarySlots.length > 0
+    ? world.player.primarySlots
+    : [{
+      weaponId: world.player.primaryWeapon,
+      primaryAmmo: world.player.primaryAmmo,
+      reserveAmmo: world.player.reserveAmmo,
+      magazineSize: world.player.magazineSize,
+      acquiredAt: 0,
+    }]
+
+  primaryWeaponSlotsSignal.value = slots.slice(0, 2).map((slot, index) => ({
+    label: localizeWeapon(slot.weaponId),
+    icon: PRIMARY_WEAPONS[slot.weaponId].icon,
+    ammo: formatAmmo(slot.primaryAmmo, slot.reserveAmmo, world.player.reloadCooldown > 0 && index === activeSlotIndex),
+    selected: index === activeSlotIndex,
+  }))
 }
 
 const updateSecondaryCooldownSignal = (world: WorldState) => {

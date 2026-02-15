@@ -17,9 +17,7 @@ import {
   musicVolumeSignal,
   pausedSignal,
   persistAudioOptions,
-  primaryAmmoSignal,
-  primaryWeaponIconSignal,
-  primaryWeaponSignal,
+  primaryWeaponSlotsSignal,
   persistDebugOptions,
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
@@ -355,15 +353,18 @@ export const GameHud = () => {
         ? (
           <div class="hud hud-left">
             <div class="weapon-card">
-              <div class="weapon-title-row">
-                <div class="weapon-title">{t`Primary`}</div>
-                <WeaponIcon
-                  icon={primaryWeaponIconSignal.value}
-                  fallback={primaryWeaponSignal.value.slice(0, 2).toUpperCase()}
-                />
+              <div class="weapon-title">{t`Primary`}</div>
+              <div class="primary-slot-list">
+                {primaryWeaponSlotsSignal.value.map((slot, index) => (
+                  <div class={`primary-slot ${slot.selected ? "selected" : "dimmed"}`} key={`${slot.label}-${slot.ammo}-${index}`}>
+                    <WeaponIcon icon={slot.icon} fallback={slot.label.slice(0, 2).toUpperCase()} />
+                    <div>
+                      <div class="weapon-value compact">{slot.label}</div>
+                      <div class="weapon-sub">{t`Ammo ${slot.ammo}`}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div class="weapon-value compact">{primaryWeaponSignal.value}</div>
-              <div class="weapon-sub">{t`Ammo ${primaryAmmoSignal.value}`}</div>
             </div>
             <div class="weapon-card">
               <div class="weapon-title-row">

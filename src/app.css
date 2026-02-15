@@ -406,6 +406,37 @@
   padding: 0.45rem 0.56rem;
 }
 
+.primary-slot-list {
+  margin-top: 0.3rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.primary-slot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.22rem;
+  border: 1px solid rgba(193, 219, 165, 0.5);
+  background: rgba(101, 131, 79, 0.14);
+}
+
+.primary-slot .weapon-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  min-width: 2.2rem;
+}
+
+.primary-slot.selected {
+  border-color: rgba(233, 252, 205, 0.9);
+  background: rgba(175, 214, 140, 0.2);
+}
+
+.primary-slot.dimmed {
+  opacity: 0.7;
+}
+
 .weapon-title {
   font-size: 0.62rem;
   text-transform: uppercase;
