@@ -30,7 +30,7 @@ import {
 } from "./signals.ts"
 import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
-import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "./utils.ts"
+import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, distSquared, lerp, randomPointInArena, randomRange } from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   BOT_RADIUS,
@@ -69,6 +69,8 @@ import {
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
+  obstacleGridIndex,
+  worldToObstacleGrid,
 } from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
@@ -100,6 +102,11 @@ const SECONDARY_TRAIL_WIDTH_SCALE = 6
 const BULLET_TRAIL_COLOR = "#ff9e3a"
 const HIGH_TIER_BOX_DROP_CHANCE_START = 0.07
 const HIGH_TIER_BOX_DROP_CHANCE_END = 0.5
+const WHITE_LOOT_BOX_SPAWN_INTERVAL_START_SECONDS = 14
+const WHITE_LOOT_BOX_SPAWN_INTERVAL_END_SECONDS = 3
+const WHITE_LOOT_BOX_MAX_FREQUENCY_TIME_REMAINING_SECONDS = 10
+const WHITE_LOOT_BOX_HP = 8
+const WHITE_LOOT_BOX_RADIUS = 0.95
 const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
 const FX_CULL_PADDING_WORLD = 2.25
 const TEAM_COLOR_RAMP = [
@@ -372,6 +379,59 @@ export class FlowerArenaGame {
     return lerp(HIGH_TIER_BOX_DROP_CHANCE_START, HIGH_TIER_BOX_DROP_CHANCE_END, elapsedRatio)
   }
 
+  private whiteLootBoxSpawnIntervalSeconds() {
+    const progressToMaxFrequency = clamp(
+      (MATCH_DURATION_SECONDS - this.world.timeRemaining)
+        / Math.max(1, MATCH_DURATION_SECONDS - WHITE_LOOT_BOX_MAX_FREQUENCY_TIME_REMAINING_SECONDS),
+      0,
+      1,
+    )
+    return lerp(
+      WHITE_LOOT_BOX_SPAWN_INTERVAL_START_SECONDS,
+      WHITE_LOOT_BOX_SPAWN_INTERVAL_END_SECONDS,
+      progressToMaxFrequency,
+    )
+  }
+
+  private spawnRandomWhiteLootBox() {
+    const grid = this.world.obstacleGrid
+
+    for (let attempt = 0; attempt < 48; attempt += 1) {
+      const spawn = randomPointInArena(this.world.arenaRadius, 1)
+      const cell = worldToObstacleGrid(grid.size, spawn.x, spawn.y)
+      if (cell.x < 0 || cell.y < 0 || cell.x >= grid.size || cell.y >= grid.size) {
+        continue
+      }
+
+      const index = obstacleGridIndex(grid.size, cell.x, cell.y)
+      if (grid.solid[index] > 0) {
+        continue
+      }
+
+      const cellCenterX = cell.x - Math.floor(grid.size * 0.5) + 0.5
+      const cellCenterY = cell.y - Math.floor(grid.size * 0.5) + 0.5
+
+      let overlapsUnit = false
+      for (const unit of this.world.units) {
+        const limit = unit.radius + WHITE_LOOT_BOX_RADIUS
+        if (distSquared(unit.position.x, unit.position.y, cellCenterX, cellCenterY) <= limit * limit) {
+          overlapsUnit = true
+          break
+        }
+      }
+      if (overlapsUnit) {
+        continue
+      }
+
+      grid.solid[index] = 1
+      grid.material[index] = OBSTACLE_MATERIAL_BOX
+      grid.hp[index] = WHITE_LOOT_BOX_HP
+      grid.highTierLoot[index] = 1
+      grid.flash[index] = 0
+      return
+    }
+  }
+
   private spawnGuaranteedCenterHighTierLoot() {
     spawnPickupAt(this.world, { x: 0, y: 0 }, {
       force: true,
@@ -506,6 +566,7 @@ export class FlowerArenaGame {
     this.world.timeRemaining = MATCH_DURATION_SECONDS
     this.world.arenaRadius = ARENA_START_RADIUS
     this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
+    this.world.lootBoxTimer = this.whiteLootBoxSpawnIntervalSeconds()
     this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
     this.world.playerBulletsFired = 0
     this.world.playerBulletsHit = 0
@@ -1890,6 +1951,12 @@ export class FlowerArenaGame {
         this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
       },
     })
+
+    this.world.lootBoxTimer -= simDt
+    if (this.world.lootBoxTimer <= 0) {
+      this.spawnRandomWhiteLootBox()
+      this.world.lootBoxTimer = this.whiteLootBoxSpawnIntervalSeconds()
+    }
 
     this.updateExplosions(effectDt, fxCullBounds)
     syncHudSignals(this.world)

@@ -86,6 +86,7 @@ export interface WorldState {
   audioPrimed: boolean
   timeRemaining: number
   pickupTimer: number
+  lootBoxTimer: number
   factions: FactionDescriptor[]
   factionFlowerCounts: Record<string, number>
   playerBulletsFired: number
@@ -171,6 +172,7 @@ export const createWorldState = (): WorldState => {
     audioPrimed: false,
     timeRemaining: MATCH_DURATION_SECONDS,
     pickupTimer: LOOT_PICKUP_INTERVAL_SECONDS,
+    lootBoxTimer: 0,
     factions,
     factionFlowerCounts: createFactionFlowerCounts(factions),
     playerBulletsFired: 0,
