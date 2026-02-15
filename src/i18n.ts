@@ -1,4 +1,4 @@
-import { i18n } from "@lingui/core"
+import { i18n, type Messages } from "@lingui/core"
 import { messages as enMessages } from "./locales/en/messages.po"
 
 export type LocaleId = "en" | "ko"
@@ -15,16 +15,29 @@ const isLocaleId = (value: string): value is LocaleId => {
   return value === "en" || value === "ko"
 }
 
-const readStoredLocale = (): LocaleId => {
+const detectNavigatorLocale = (): LocaleId => {
   if (typeof window === "undefined") {
     return defaultLocale
   }
 
+  const language = window.navigator.language.toLowerCase()
+  if (language.startsWith("ko")) {
+    return "ko"
+  }
+
+  return defaultLocale
+}
+
+const readStoredLocale = (): LocaleId | null => {
+  if (typeof window === "undefined") {
+    return null
+  }
+
   try {
     const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY)
-    return stored && isLocaleId(stored) ? stored : defaultLocale
+    return stored && isLocaleId(stored) ? stored : null
   } catch {
-    return defaultLocale
+    return null
   }
 }
 
@@ -40,9 +53,14 @@ const writeStoredLocale = (locale: LocaleId) => {
   }
 }
 
-export const preferredLocale = readStoredLocale()
+const storedLocale = readStoredLocale()
+export const preferredLocale = storedLocale ?? detectNavigatorLocale()
 
-const localeLoaders: Record<Exclude<LocaleId, "en">, () => Promise<{ messages: Record<string, unknown> }>> = {
+if (!storedLocale) {
+  writeStoredLocale(preferredLocale)
+}
+
+const localeLoaders: Record<Exclude<LocaleId, "en">, () => Promise<{ messages: Messages }>> = {
   ko: () => import("./locales/ko/messages.po"),
 }
 
