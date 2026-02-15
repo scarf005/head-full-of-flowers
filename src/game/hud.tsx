@@ -341,7 +341,10 @@ export const GameHud = () => {
                   </button>
                 </div>
               </div>
-              <button type="button" class="pause-resume-button">{t`Resume`}</button>
+              <div class="pause-actions">
+                <button type="button" class="pause-resume-button">{t`Resume`}</button>
+                <button type="button" class="pause-main-menu-button">{t`Main Menu`}</button>
+              </div>
             </div>
           </div>
         )

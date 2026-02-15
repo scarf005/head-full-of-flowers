@@ -149,6 +149,24 @@
   padding: 0.58rem 0.64rem;
 }
 
+.pause-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.pause-main-menu-button {
+  border: 1px solid rgba(213, 235, 192, 0.82);
+  color: #f2ffe8;
+  background: rgba(53, 42, 24, 0.94);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.58rem 0.64rem;
+}
+
 .menu-panel {
   display: grid;
   gap: 0.8rem;
@@ -746,8 +764,13 @@
   }
 
   .option-language-button,
-  .pause-resume-button {
+  .pause-resume-button,
+  .pause-main-menu-button {
     font-size: 0.62rem;
+  }
+
+  .pause-actions {
+    grid-template-columns: 1fr;
   }
 
   .menu-panel {

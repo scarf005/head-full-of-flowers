@@ -102,6 +102,21 @@ export const setupInputAdapter = (
     return false
   }
 
+  const isPauseMainMenuTarget = (event: PointerEvent) => {
+    if (event.target instanceof Element && Boolean(event.target.closest(".pause-main-menu-button"))) {
+      return true
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : []
+    for (const node of path) {
+      if (node instanceof Element && Boolean(node.closest(".pause-main-menu-button"))) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase()
     const hadAudioPrimed = world.audioPrimed
@@ -185,6 +200,9 @@ export const setupInputAdapter = (
     if (world.paused && isPausePanelTarget(event)) {
       if (event.button === 0 && isPauseResumeTarget(event)) {
         handlers.onTogglePause()
+      } else if (event.button === 0 && isPauseMainMenuTarget(event)) {
+        handlers.onReturnToMenu()
+        menuStartBlockUntilMs = performance.now() + 220
       }
       return
     }
