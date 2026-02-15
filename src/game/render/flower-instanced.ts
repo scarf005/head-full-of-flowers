@@ -719,10 +719,6 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   gl.clearColor(0, 0, 0, 0)
   gl.clear(gl.COLOR_BUFFER_BIT)
   if (instanceCount <= 0) {
-    context.save()
-    context.setTransform(1, 0, 0, 1, 0, 0)
-    context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-    context.restore()
     return true
   }
 

@@ -109,6 +109,8 @@ const WHITE_LOOT_BOX_HP = 8
 const WHITE_LOOT_BOX_RADIUS = 0.95
 const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
 const FX_CULL_PADDING_WORLD = 2.25
+const FPS_SIGNAL_UPDATE_INTERVAL_SECONDS = 0.2
+const HUD_SYNC_INTERVAL_SECONDS = 0.1
 const TEAM_COLOR_RAMP = [
   "#ff6f7b",
   "#68a8ff",
@@ -133,6 +135,8 @@ export class FlowerArenaGame {
   private raf = 0
   private previousTime = 0
   private smoothedFps = 0
+  private fpsSignalElapsed = 0
+  private hudSyncElapsed = 0
   private audioDirector = new AudioDirector(menuTrackUrl, gameplayTrackUrl)
   private sfx = new SfxSynth()
   private currentMode: GameModeId = "ffa"
@@ -227,6 +231,8 @@ export class FlowerArenaGame {
       }
     })
     this.previousTime = performance.now()
+    this.fpsSignalElapsed = FPS_SIGNAL_UPDATE_INTERVAL_SECONDS
+    this.hudSyncElapsed = HUD_SYNC_INTERVAL_SECONDS
     this.raf = requestAnimationFrame(this.loop)
   }
 
@@ -1757,7 +1763,11 @@ export class FlowerArenaGame {
 
     const instantFps = realDt > 0 ? 1 / realDt : 0
     this.smoothedFps = this.smoothedFps <= 0 ? instantFps : lerp(this.smoothedFps, instantFps, 0.18)
-    setFpsSignal(this.smoothedFps)
+    this.fpsSignalElapsed += realDt
+    if (this.fpsSignalElapsed >= FPS_SIGNAL_UPDATE_INTERVAL_SECONDS) {
+      setFpsSignal(this.smoothedFps)
+      this.fpsSignalElapsed = this.fpsSignalElapsed % FPS_SIGNAL_UPDATE_INTERVAL_SECONDS
+    }
 
     this.update(frameDt, gameplayDt)
     renderScene({ context: this.context, world: this.world, dt: this.world.paused ? 0 : frameDt })
@@ -1772,7 +1782,7 @@ export class FlowerArenaGame {
 
     if (this.world.paused) {
       updateCrosshairWorld(this.world)
-      syncHudSignals(this.world)
+      this.syncHudSignalsThrottled(frameDt)
       return
     }
 
@@ -1959,6 +1969,16 @@ export class FlowerArenaGame {
     }
 
     this.updateExplosions(effectDt, fxCullBounds)
+    this.syncHudSignalsThrottled(frameDt)
+  }
+
+  private syncHudSignalsThrottled(dt: number) {
+    this.hudSyncElapsed += dt
+    if (this.hudSyncElapsed < HUD_SYNC_INTERVAL_SECONDS) {
+      return
+    }
+
+    this.hudSyncElapsed = this.hudSyncElapsed % HUD_SYNC_INTERVAL_SECONDS
     syncHudSignals(this.world)
   }
 }

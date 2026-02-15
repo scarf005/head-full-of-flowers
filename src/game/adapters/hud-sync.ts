@@ -16,6 +16,7 @@ import {
   statusMessageSignal,
   timeRemainingSignal,
 } from "../signals.ts"
+import type { PlayerPerkHudItem, PrimaryWeaponHudItem } from "../signals.ts"
 import { BURNED_FACTION_COLOR, BURNED_FACTION_ID } from "../factions.ts"
 import { PERK_POOL } from "../perks.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
@@ -179,6 +180,49 @@ const buildPieGradient = (slices: { color: string; percent: number }[]) => {
   return `conic-gradient(${stops.join(", ")})`
 }
 
+const samePrimaryWeaponSlots = (left: PrimaryWeaponHudItem[], right: PrimaryWeaponHudItem[]) => {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const current = left[index]
+    const next = right[index]
+    if (
+      current.label !== next.label ||
+      current.icon !== next.icon ||
+      current.ammo !== next.ammo ||
+      current.selected !== next.selected
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const samePlayerPerks = (left: PlayerPerkHudItem[], right: PlayerPerkHudItem[]) => {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  for (let index = 0; index < left.length; index += 1) {
+    const current = left[index]
+    const next = right[index]
+    if (
+      current.id !== next.id ||
+      current.label !== next.label ||
+      current.detail !== next.detail ||
+      current.icon !== next.icon ||
+      current.stacks !== next.stacks
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
 export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) => {
   timeRemainingSignal.value = MATCH_DURATION_SECONDS
   fpsSignal.value = 0
@@ -208,7 +252,12 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
 }
 
 export const setFpsSignal = (fps: number) => {
-  fpsSignal.value = Math.max(0, fps)
+  const next = Math.max(0, fps)
+  if (Math.abs(fpsSignal.value - next) < 0.25) {
+    return
+  }
+
+  fpsSignal.value = next
 }
 
 export const updateCoverageSignals = (world: WorldState) => {
@@ -217,9 +266,18 @@ export const updateCoverageSignals = (world: WorldState) => {
 
 export const updatePlayerWeaponSignals = (world: WorldState) => {
   const config = PRIMARY_WEAPONS[world.player.primaryWeapon]
-  primaryWeaponSignal.value = localizeWeapon(config.id)
-  primaryWeaponIconSignal.value = config.icon
-  primaryAmmoSignal.value = formatAmmo(world.player.primaryAmmo, world.player.reserveAmmo, world.player.reloadCooldown > 0)
+  const nextWeaponLabel = localizeWeapon(config.id)
+  if (primaryWeaponSignal.value !== nextWeaponLabel) {
+    primaryWeaponSignal.value = nextWeaponLabel
+  }
+  if (primaryWeaponIconSignal.value !== config.icon) {
+    primaryWeaponIconSignal.value = config.icon
+  }
+
+  const nextAmmo = formatAmmo(world.player.primaryAmmo, world.player.reserveAmmo, world.player.reloadCooldown > 0)
+  if (primaryAmmoSignal.value !== nextAmmo) {
+    primaryAmmoSignal.value = nextAmmo
+  }
 
   const activeSlotIndex = Math.max(0, Math.min(world.player.primarySlotIndex, world.player.primarySlots.length - 1))
   const slots = world.player.primarySlots.length > 0
@@ -232,59 +290,81 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
       acquiredAt: 0,
     }]
 
-  primaryWeaponSlotsSignal.value = slots.slice(0, 2).map((slot, index) => ({
+  const nextSlots = slots.slice(0, 2).map((slot, index) => ({
     label: localizeWeapon(slot.weaponId),
     icon: PRIMARY_WEAPONS[slot.weaponId].icon,
     ammo: formatAmmo(slot.primaryAmmo, slot.reserveAmmo, world.player.reloadCooldown > 0 && index === activeSlotIndex),
     selected: index === activeSlotIndex,
   }))
+
+  if (!samePrimaryWeaponSlots(primaryWeaponSlotsSignal.value, nextSlots)) {
+    primaryWeaponSlotsSignal.value = nextSlots
+  }
 }
 
 const updatePlayerPerkSignals = (world: WorldState) => {
-  const perks = PERK_POOL
-    .map((perkId) => {
-      const stacks = world.player.perkStacks[perkId] ?? 0
-      if (stacks <= 0) {
-        return null
-      }
+  const perks: PlayerPerkHudItem[] = []
+  for (const perkId of PERK_POOL) {
+    const stacks = world.player.perkStacks[perkId] ?? 0
+    if (stacks <= 0) {
+      continue
+    }
 
-      return {
-        id: perkId,
-        label: localizePerk(perkId),
-        detail: localizePerkDetail(perkId, stacks),
-        icon: perkId,
-        stacks,
-      }
+    perks.push({
+      id: perkId,
+      label: localizePerk(perkId),
+      detail: localizePerkDetail(perkId, stacks),
+      icon: perkId,
+      stacks,
     })
-    .filter((entry) => entry !== null)
+  }
 
-  playerPerksSignal.value = perks
+  if (!samePlayerPerks(playerPerksSignal.value, perks)) {
+    playerPerksSignal.value = perks
+  }
 }
 
 const updateSecondaryCooldownSignal = (world: WorldState) => {
-  if (!world.player.secondaryCooldown) {
-    secondaryWeaponCooldownSignal.value = t`RMB to throw`
+  const nextValue = !world.player.secondaryCooldown
+    ? t`RMB to throw`
+    : `${Math.max(0, world.player.secondaryCooldown).toFixed(1)}s`
+
+  if (secondaryWeaponCooldownSignal.value === nextValue) {
     return
   }
 
-  secondaryWeaponCooldownSignal.value = `${Math.max(0, world.player.secondaryCooldown).toFixed(1)}s`
+  secondaryWeaponCooldownSignal.value = nextValue
 }
 
 export const syncHudSignals = (world: WorldState) => {
-  timeRemainingSignal.value = world.timeRemaining
-  hpSignal.value = {
-    hp: Math.round(world.player.hp),
-    maxHp: Math.round(world.player.maxHp),
+  if (Math.abs(timeRemainingSignal.value - world.timeRemaining) >= 0.05) {
+    timeRemainingSignal.value = world.timeRemaining
   }
+
+  const hpValue = Math.round(world.player.hp)
+  const maxHpValue = Math.round(world.player.maxHp)
+  if (hpSignal.value.hp !== hpValue || hpSignal.value.maxHp !== maxHpValue) {
+    hpSignal.value = {
+      hp: hpValue,
+      maxHp: maxHpValue,
+    }
+  }
+
   updatePlayerWeaponSignals(world)
   updateSecondaryCooldownSignal(world)
   updatePlayerPerkSignals(world)
 }
 
 export const updatePlayerHpSignal = (world: WorldState) => {
+  const hpValue = Math.round(world.player.hp)
+  const maxHpValue = Math.round(world.player.maxHp)
+  if (hpSignal.value.hp === hpValue && hpSignal.value.maxHp === maxHpValue) {
+    return
+  }
+
   hpSignal.value = {
-    hp: Math.round(world.player.hp),
-    maxHp: Math.round(world.player.maxHp),
+    hp: hpValue,
+    maxHp: maxHpValue,
   }
 }
 
