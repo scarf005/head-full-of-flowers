@@ -2,6 +2,7 @@ import {
   coverageSlicesSignal,
   crosshairSignal,
   debugGameSpeedSignal,
+  debugImpactFeelLevelSignal,
   debugInfiniteHpSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
@@ -88,6 +89,8 @@ export const GameHud = () => {
     ? duoTeams
     : squadTeams
   const showMenu = menuVisibleSignal.value
+  const impactFeelLevel = debugImpactFeelLevelSignal.value
+  const impactFeelLabel = impactFeelLevel >= 1.75 ? t`Heavy` : impactFeelLevel <= 1.25 ? t`Medium` : t`Hybrid`
   const secondaryMode = secondaryModeSignal.value
   const secondaryLabel = secondaryMode === "grenade" ? t`Grenade` : t`Molotov`
   const locale = languageSignal.value
@@ -171,6 +174,20 @@ export const GameHud = () => {
                 value={Math.round(debugGameSpeedSignal.value * 100)}
                 onInput={(event) => {
                   debugGameSpeedSignal.value = Number(event.currentTarget.value) / 100
+                  persistDebugOptions()
+                }}
+              />
+            </label>
+            <label class="debug-speed">
+              <span>{t`Impact Feel`} {impactFeelLabel} ({impactFeelLevel.toFixed(2)}x)</span>
+              <input
+                type="range"
+                min={1}
+                max={2}
+                step={0.05}
+                value={impactFeelLevel}
+                onInput={(event) => {
+                  debugImpactFeelLevelSignal.value = Number(event.currentTarget.value)
                   persistDebugOptions()
                 }}
               />

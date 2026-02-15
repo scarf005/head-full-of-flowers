@@ -16,6 +16,10 @@ export const randomLootablePrimary = (): PrimaryWeaponId => {
 
 const DEATH_FLOWER_AMOUNT_MULTIPLIER = 2
 const DEATH_FLOWER_SIZE_SCALE_BOOST = 0.25
+const KILL_CIRCLE_EXTRA_BURSTS = 3
+const KILL_CIRCLE_EXTRA_AMOUNT_MULTIPLIER = 0.85
+const KILL_CIRCLE_RADIUS_MIN = 0.2
+const KILL_CIRCLE_RADIUS_MAX = 0.95
 
 export const startReload = (unitId: string, world: WorldState, onPlayerReloading: () => void) => {
   const unit = world.units.find((candidate) => candidate.id === unitId)
@@ -218,7 +222,9 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   }
 
   if (shooter.isPlayer) {
-    world.cameraShake = Math.min(1.1, world.cameraShake + 0.09)
+    const impactFeel = Math.max(1, Math.min(2, world.impactFeelLevel || 1))
+    const shakeScale = 1 + (impactFeel - 1) * 1.2
+    world.cameraShake = Math.min(1.3 + (impactFeel - 1) * 0.9, world.cameraShake + 0.1 * shakeScale)
     deps.onPlayerShoot()
   } else if (Math.random() > 0.82) {
     deps.onOtherShoot()
@@ -236,10 +242,14 @@ export interface DamageDeps {
     amount: number,
     sizeScale: number,
     isBurnt?: boolean,
+    options?: {
+      staggeredBloom?: boolean
+    },
   ) => void
   respawnUnit: (unitId: string) => void
+  onKillPetalBurst?: (x: number, y: number) => void
   onUnitKilled?: (target: Unit, isSuicide: boolean) => void
-  onSfxHit: () => void
+  onSfxHit: (isPlayerInvolved: boolean) => void
   onSfxDeath: () => void
   onSfxPlayerDeath: () => void
   onSfxPlayerKill: () => void
@@ -286,11 +296,17 @@ export const applyDamage = (
   impactX: number,
   impactY: number,
   deps: DamageDeps,
+  damageSource: "projectile" | "throwable" | "molotov" | "arena" | "other" = "other",
 ) => {
   const target = world.units.find((unit) => unit.id === targetId)
   if (!target) {
     return
   }
+
+  const impactFeel = Math.max(1, Math.min(2, world.impactFeelLevel || 1))
+  const shakeScale = 1 + (impactFeel - 1) * 2
+  const hitStopScale = 1 + (impactFeel - 1) * 2
+  const shakeCapBoost = (impactFeel - 1) * 1.5
 
   const sourceUnit = world.units.find((unit) => unit.id === sourceId)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
@@ -339,74 +355,123 @@ export const applyDamage = (
 
   const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfHarm || isBoundarySource
+  const isKilled = target.hp <= 0
+  const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
 
-  const flowerBurst = randomFlowerBurst(damage, hitSpeed)
-  deps.spawnFlowers(
-    flowerSourceId,
-    hitX,
-    hitY,
-    impactX,
-    impactY,
-    flowerBurst.amount,
-    flowerBurst.sizeScale,
-    isBurntFlowers,
-  )
+  if (isKilled) {
+    const deathBurst = randomFlowerBurst(damage, hitSpeed)
+    let deathDirX = impactX
+    let deathDirY = impactY
+    if (Math.hypot(deathDirX, deathDirY) <= 0.0001) {
+      const extraDir = randomRange(0, Math.PI * 2)
+      deathDirX = Math.cos(extraDir)
+      deathDirY = Math.sin(extraDir)
+    }
+    deps.spawnFlowers(
+      flowerSourceId,
+      hitX,
+      hitY,
+      deathDirX,
+      deathDirY,
+      Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
+      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST),
+      isBurntFlowers,
+      { staggeredBloom },
+    )
+
+    for (let burstIndex = 0; burstIndex < KILL_CIRCLE_EXTRA_BURSTS; burstIndex += 1) {
+      const angle = randomRange(0, Math.PI * 2)
+      const radius = randomRange(KILL_CIRCLE_RADIUS_MIN, KILL_CIRCLE_RADIUS_MAX)
+      deps.spawnFlowers(
+        flowerSourceId,
+        target.position.x + Math.cos(angle) * radius,
+        target.position.y + Math.sin(angle) * radius,
+        Math.cos(angle),
+        Math.sin(angle),
+        Math.max(2, Math.round(deathBurst.amount * KILL_CIRCLE_EXTRA_AMOUNT_MULTIPLIER)),
+        Math.min(2, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST * 0.5),
+        isBurntFlowers,
+        { staggeredBloom: false },
+      )
+    }
+
+    deps.onKillPetalBurst?.(target.position.x, target.position.y)
+  } else {
+    const flowerBurst = randomFlowerBurst(damage, hitSpeed)
+    deps.spawnFlowers(
+      flowerSourceId,
+      hitX,
+      hitY,
+      impactX,
+      impactY,
+      flowerBurst.amount,
+      flowerBurst.sizeScale,
+      isBurntFlowers,
+      { staggeredBloom },
+    )
+  }
 
   if (target.isPlayer && debugInfiniteHpSignal.value) {
     target.hp = target.maxHp
   }
 
-  const isKilled = target.hp <= 0
   if (isPlayerSource && target.id !== world.player.id) {
     deps.onPlayerHit?.(target.id, damage)
   }
-  if (isKilled) {
-    const deathBurst = randomFlowerBurst(damage, hitSpeed)
-    const extraDir = randomRange(0, Math.PI * 2)
-    deps.spawnFlowers(
-      flowerSourceId,
-      target.position.x,
-      target.position.y,
-      Math.cos(extraDir),
-      Math.sin(extraDir),
-      Math.round(deathBurst.amount * DEATH_FLOWER_AMOUNT_MULTIPLIER),
-      Math.min(1.9, deathBurst.sizeScale + DEATH_FLOWER_SIZE_SCALE_BOOST),
-      isBurntFlowers,
-    )
-  }
 
-  if (isPlayerSource) {
-    world.cameraShake = Math.min(1.2, world.cameraShake + 0.12)
-    world.hitStop = Math.max(world.hitStop, 0.012)
+  if (isPlayerSource && target.id !== world.player.id) {
+    world.cameraShake = Math.min(2.8 + shakeCapBoost, world.cameraShake + 0.48 * shakeScale)
+    world.hitStop = Math.max(world.hitStop, 0.012 * hitStopScale)
   }
 
   if (target.isPlayer) {
-    world.cameraShake = Math.min(1.25, world.cameraShake + 0.18)
-    world.hitStop = Math.max(world.hitStop, 0.016)
+    world.cameraShake = Math.min(3 + shakeCapBoost, world.cameraShake + 0.66 * shakeScale)
+    world.hitStop = Math.max(world.hitStop, 0.016 * hitStopScale)
   }
 
   const impactLength = Math.hypot(impactX, impactY) || 1
-  target.velocity.x += (impactX / impactLength) * 2.7
-  target.velocity.y += (impactY / impactLength) * 2.7
+  const impactDirX = impactX / impactLength
+  const impactDirY = impactY / impactLength
+  target.velocity.x += impactDirX * 2.7
+  target.velocity.y += impactDirY * 2.7
 
-  world.cameraShake = Math.min(1.15, world.cameraShake + 0.08)
+  if (isPlayerSource && target.id !== world.player.id) {
+    const offenseKick = 0.1 + (impactFeel - 1) * 0.22
+    world.cameraKick.x += impactDirX * offenseKick
+    world.cameraKick.y += impactDirY * offenseKick
+  }
+
+  if (target.isPlayer) {
+    const defenseKick = 0.14 + (impactFeel - 1) * 0.32
+    world.cameraKick.x -= impactDirX * defenseKick
+    world.cameraKick.y -= impactDirY * defenseKick
+  }
+
+  const kickLength = Math.hypot(world.cameraKick.x, world.cameraKick.y)
+  const kickCap = 0.3 + (impactFeel - 1) * 0.7
+  if (kickLength > kickCap) {
+    const scale = kickCap / kickLength
+    world.cameraKick.x *= scale
+    world.cameraKick.y *= scale
+  }
+
+  world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.09 * shakeScale)
 
   if (isKilled) {
     deps.onUnitKilled?.(target, isSelfHarm)
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()
+    } else if (isPlayerSource && target.id !== world.player.id) {
+      deps.onSfxPlayerKill()
     } else {
       deps.onSfxDeath()
-    }
-    if (isPlayerSource && target.id !== world.player.id) {
-      deps.onSfxPlayerKill()
     }
     if (isPlayerSource && target.id !== world.player.id) {
       deps.onPlayerKill?.(target.id)
     }
     deps.respawnUnit(target.id)
   } else {
-    deps.onSfxHit()
+    deps.onSfxHit(target.isPlayer || isPlayerSource)
   }
 
   if (target.isPlayer) {

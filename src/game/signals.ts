@@ -28,6 +28,7 @@ interface DebugOptions {
   infiniteHp: boolean
   infiniteReload: boolean
   gameSpeed: number
+  impactFeelLevel: number
 }
 
 interface AudioOptions {
@@ -39,11 +40,16 @@ const clampGameSpeed = (value: number) => {
   return Math.max(DEBUG_GAME_SPEED_MIN, Math.min(DEBUG_GAME_SPEED_MAX, value))
 }
 
+const clampImpactFeelLevel = (value: number) => {
+  return Math.max(1, Math.min(2, value))
+}
+
 const readStoredDebugOptions = (): DebugOptions => {
   const fallback: DebugOptions = {
     infiniteHp: false,
     infiniteReload: false,
     gameSpeed: GAME_SPEED,
+    impactFeelLevel: 1,
   }
 
   if (typeof window === "undefined") {
@@ -61,6 +67,9 @@ const readStoredDebugOptions = (): DebugOptions => {
       infiniteHp: typeof parsed.infiniteHp === "boolean" ? parsed.infiniteHp : fallback.infiniteHp,
       infiniteReload: typeof parsed.infiniteReload === "boolean" ? parsed.infiniteReload : fallback.infiniteReload,
       gameSpeed: typeof parsed.gameSpeed === "number" ? clampGameSpeed(parsed.gameSpeed) : fallback.gameSpeed,
+      impactFeelLevel: typeof parsed.impactFeelLevel === "number"
+        ? clampImpactFeelLevel(parsed.impactFeelLevel)
+        : fallback.impactFeelLevel,
     }
   } catch {
     return fallback
@@ -112,6 +121,7 @@ const writeStoredDebugOptions = () => {
     infiniteHp: debugInfiniteHpSignal.value,
     infiniteReload: debugInfiniteReloadSignal.value,
     gameSpeed: clampGameSpeed(debugGameSpeedSignal.value),
+    impactFeelLevel: clampImpactFeelLevel(debugImpactFeelLevelSignal.value),
   }
 
   try {
@@ -141,6 +151,7 @@ const writeStoredAudioOptions = () => {
 export const debugInfiniteHpSignal = signal(storedDebugOptions.infiniteHp)
 export const debugInfiniteReloadSignal = signal(storedDebugOptions.infiniteReload)
 export const debugGameSpeedSignal = signal(storedDebugOptions.gameSpeed)
+export const debugImpactFeelLevelSignal = signal(storedDebugOptions.impactFeelLevel)
 export const debugSkipToMatchEndSignal = signal(false)
 export const persistDebugOptions = () => writeStoredDebugOptions()
 export const persistAudioOptions = () => writeStoredAudioOptions()

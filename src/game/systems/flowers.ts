@@ -23,6 +23,8 @@ const FLOWER_COUNT_SCALE_MIN = 0.55
 const FLOWER_COUNT_SCALE_MAX = 1.75
 const FLOWER_SIZE_SCALE_MIN = 0.6
 const FLOWER_SIZE_SCALE_MAX = 1.9
+const FLOWER_BLOOM_DURATION_SECONDS = 0.066
+const PLAYER_IMPACT_BLOOM_DELAYS = [0.05, 0.1, 0.15, 0.2, 0.25]
 
 export interface FlowerBurstProfile {
   amount: number
@@ -35,6 +37,10 @@ export interface FlowerSpawnDeps {
   botPalette: (id: string) => { tone: string; edge: string }
   factionColor: (id: string) => string | null
   onCoverageUpdated: () => void
+}
+
+export interface FlowerSpawnOptions {
+  staggeredBloom?: boolean
 }
 
 const toHex = (value: number) => {
@@ -286,6 +292,7 @@ export const spawnFlowers = (
   sizeScale: number,
   deps: FlowerSpawnDeps,
   isBurnt = false,
+  options: FlowerSpawnOptions = {},
 ) => {
   const palette = flowerPalette(world, ownerId, scoreOwnerId, deps, isBurnt)
   const dirLength = Math.hypot(dirX, dirY) || 1
@@ -370,9 +377,12 @@ export const spawnFlowers = (
     } else {
       flower.bloomCell = -1
     }
-    flower.size = targetSize
     flower.targetSize = targetSize
-    flower.pop = 1
+    flower.bloomDelay = options.staggeredBloom
+      ? PLAYER_IMPACT_BLOOM_DELAYS[index % PLAYER_IMPACT_BLOOM_DELAYS.length]
+      : 0
+    flower.pop = 0
+    flower.size = 0
 
     if (scoreOwnerId in world.factionFlowerCounts) {
       world.factionFlowerCounts[scoreOwnerId] += 1
@@ -387,8 +397,29 @@ export const spawnFlowers = (
 }
 
 export const updateFlowers = (world: WorldState, dt: number) => {
-  void world
-  void dt
+  const bloomStep = dt / FLOWER_BLOOM_DURATION_SECONDS
+  for (const flower of world.flowers) {
+    if (!flower.active) {
+      continue
+    }
+
+    if (flower.bloomDelay > 0) {
+      flower.bloomDelay = Math.max(0, flower.bloomDelay - dt)
+      if (flower.bloomDelay > 0) {
+        flower.size = 0
+        continue
+      }
+    }
+
+    if (flower.pop >= 1) {
+      flower.size = flower.targetSize
+      continue
+    }
+
+    flower.pop = clamp(flower.pop + bloomStep, 0, 1)
+    const easedBloom = Math.pow(flower.pop, 0.16)
+    flower.size = flower.targetSize * easedBloom
+  }
 }
 
 export const randomFlowerBurst = (damage: number, impactSpeed: number): FlowerBurstProfile => {

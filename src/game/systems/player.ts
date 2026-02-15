@@ -16,15 +16,26 @@ export const updateCrosshairWorld = (world: WorldState) => {
 }
 
 export const updateCombatFeel = (world: WorldState, dt: number) => {
+  const impactFeel = clamp(world.impactFeelLevel || 1, 1, 2)
+  const feelBoost = 1 + (impactFeel - 1) * 2
+  const feelDecayScale = 1 + (impactFeel - 1) * 2
+
   for (const unit of world.units) {
     unit.hitFlash = Math.max(0, unit.hitFlash - dt * 6.5)
     unit.recoil = Math.max(0, unit.recoil - dt * 8.5)
   }
 
-  world.cameraShake = Math.max(0, world.cameraShake - dt * 3.8)
-  const shakePower = Math.pow(clamp(world.cameraShake, 0, 1.5), 1.15)
-  world.cameraOffset.x = randomRange(-1, 1) * shakePower * 0.46
-  world.cameraOffset.y = randomRange(-1, 1) * shakePower * 0.36
+  world.cameraShake = Math.max(0, world.cameraShake - dt * 4.4 * feelDecayScale)
+
+  const kickDrag = clamp(1 - dt * 8.5 * feelDecayScale, 0, 1)
+  world.cameraKick.x *= kickDrag
+  world.cameraKick.y *= kickDrag
+
+  const shakePower = Math.pow(clamp(world.cameraShake * feelBoost, 0, 4.2), 1.08)
+  const jitterX = randomRange(-1, 1) * shakePower * 0.34
+  const jitterY = randomRange(-1, 1) * shakePower * 0.28
+  world.cameraOffset.x = world.cameraKick.x + jitterX
+  world.cameraOffset.y = world.cameraKick.y + jitterY
 }
 
 export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDeps) => {

@@ -185,7 +185,20 @@ export class Flower {
   position = new Vec2()
   size = 0
   targetSize = 4
+  bloomDelay = 0
   pop = 0
+}
+
+export class KillPetal {
+  active = false
+  position = new Vec2()
+  velocity = new Vec2()
+  rotation = 0
+  angularVelocity = 0
+  size = 0.12
+  life = 0
+  maxLife = 0
+  color = "#8ef29a"
 }
 
 export class DamagePopup {

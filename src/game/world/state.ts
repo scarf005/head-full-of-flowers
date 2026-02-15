@@ -2,6 +2,7 @@ import {
   DamagePopup,
   FlightTrailSegment,
   Flower,
+  KillPetal,
   MolotovZone,
   Obstacle,
   ObstacleDebris,
@@ -63,6 +64,7 @@ export interface WorldState {
   molotovZones: MolotovZone[]
   obstacles: Obstacle[]
   obstacleDebris: ObstacleDebris[]
+  killPetals: KillPetal[]
   shellCasings: ShellCasing[]
   flightTrails: FlightTrailSegment[]
   explosions: ExplosionFx[]
@@ -74,6 +76,7 @@ export interface WorldState {
   flightTrailCursor: number
   camera: Vec2
   cameraOffset: Vec2
+  cameraKick: Vec2
   started: boolean
   running: boolean
   paused: boolean
@@ -91,6 +94,7 @@ export interface WorldState {
   flowerCellHead: Int32Array
   flowerDirtyCount: number
   playerFlowerTotal: number
+  impactFeelLevel: number
   cameraShake: number
   hitStop: number
   arenaRadius: number
@@ -138,6 +142,7 @@ export const createWorldState = (): WorldState => {
       return obstacle
     }),
     obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
+    killPetals: Array.from({ length: 240 }, () => new KillPetal()),
     shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
     flightTrails: Array.from({ length: 2400 }, () => new FlightTrailSegment()),
     explosions: Array.from({ length: 24 }, () => ({
@@ -154,6 +159,7 @@ export const createWorldState = (): WorldState => {
     flightTrailCursor: 0,
     camera: new Vec2(),
     cameraOffset: new Vec2(),
+    cameraKick: new Vec2(),
     started: false,
     running: false,
     paused: false,
@@ -171,6 +177,7 @@ export const createWorldState = (): WorldState => {
     flowerCellHead,
     flowerDirtyCount: 0,
     playerFlowerTotal: 0,
+    impactFeelLevel: 1,
     cameraShake: 0,
     hitStop: 0,
     arenaRadius: ARENA_START_RADIUS,

@@ -75,7 +75,9 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   shooter.recoil = Math.min(1, shooter.recoil + 0.5)
 
   if (shooter.isPlayer) {
-    world.cameraShake = Math.min(1.1, world.cameraShake + 0.14)
+    const impactFeel = Math.max(1, Math.min(2, world.impactFeelLevel || 1))
+    const shakeScale = 1 + (impactFeel - 1) * 1.4
+    world.cameraShake = Math.min(1.2 + (impactFeel - 1) * 1, world.cameraShake + 0.15 * shakeScale)
     deps.onPlayerThrow(mode)
   } else if (Math.random() > 0.88) {
     deps.onOtherThrow()
@@ -106,6 +108,11 @@ export interface ThrowableUpdateDeps {
 }
 
 export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableUpdateDeps) => {
+  const impactFeel = Math.max(1, Math.min(2, world.impactFeelLevel || 1))
+  const shakeScale = 1 + (impactFeel - 1) * 2
+  const hitStopScale = 1 + (impactFeel - 1) * 2
+  const shakeCapBoost = (impactFeel - 1) * 1.5
+
   for (let throwableIndex = 0; throwableIndex < world.throwables.length; throwableIndex += 1) {
     const throwable = world.throwables[throwableIndex]
     if (!throwable.active) {
@@ -240,8 +247,8 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     if (isGrenade) {
       if (shouldExplode) {
         deps.explodeGrenade(throwableIndex)
-        world.cameraShake = Math.min(1.4, world.cameraShake + GRENADE_HIT_CAMERA_SHAKE)
-        world.hitStop = Math.max(world.hitStop, GRENADE_HIT_STOP)
+        world.cameraShake = Math.min(1.4 + shakeCapBoost, world.cameraShake + GRENADE_HIT_CAMERA_SHAKE * shakeScale)
+        world.hitStop = Math.max(world.hitStop, GRENADE_HIT_STOP * hitStopScale)
         deps.onExplosion()
       }
 
@@ -249,8 +256,8 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     }
 
     deps.igniteMolotov(throwableIndex)
-    world.cameraShake = Math.min(1.15, world.cameraShake + 0.16)
-    world.hitStop = Math.max(world.hitStop, 0.006)
+    world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.16 * shakeScale)
+    world.hitStop = Math.max(world.hitStop, 0.006 * hitStopScale)
     deps.onExplosion()
   }
 }

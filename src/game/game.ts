@@ -12,6 +12,7 @@ import {
 import {
   crosshairSignal,
   debugGameSpeedSignal,
+  debugImpactFeelLevelSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
   duoTeamCountSignal,
@@ -33,6 +34,7 @@ import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, lerp, randomRange } from "
 import {
   BOT_BASE_SPEED,
   BOT_RADIUS,
+  EFFECT_SPEED,
   LOOT_PICKUP_INTERVAL_SECONDS,
   MATCH_DURATION_SECONDS,
   PLAYER_BASE_SPEED,
@@ -90,6 +92,7 @@ import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSI
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
 const BULLET_TRAIL_COLOR = "#ff9e3a"
+const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
 const TEAM_COLOR_RAMP = [
   "#ff6f7b",
   "#68a8ff",
@@ -377,6 +380,7 @@ export class FlowerArenaGame {
     this.world.playerKills = 0
     this.world.playerDamageDealt = 0
     this.world.playerFlowerTotal = 0
+    this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
     this.world.flowerCellHead = new Int32Array(this.world.terrainMap.size * this.world.terrainMap.size)
@@ -432,6 +436,10 @@ export class FlowerArenaGame {
       flower.bloomWeight = 1
       flower.prevInCell = -1
       flower.nextInCell = -1
+      flower.bloomDelay = 0
+      flower.pop = 0
+      flower.size = 0
+      flower.targetSize = 0
     }
     for (const popup of this.world.damagePopups) popup.active = false
     for (const pickup of this.world.pickups) pickup.active = false
@@ -441,6 +449,7 @@ export class FlowerArenaGame {
       obstacle.lootDropped = false
     }
     for (const debris of this.world.obstacleDebris) debris.active = false
+    for (const petal of this.world.killPetals) petal.active = false
     for (const casing of this.world.shellCasings) casing.active = false
     for (const trail of this.world.flightTrails) trail.active = false
     this.world.flightTrailCursor = 0
@@ -454,6 +463,7 @@ export class FlowerArenaGame {
 
     this.world.cameraShake = 0
     this.world.cameraOffset.set(0, 0)
+    this.world.cameraKick.set(0, 0)
     this.world.hitStop = 0
 
     updateCoverageSignals(this.world)
@@ -637,6 +647,55 @@ export class FlowerArenaGame {
       debris.position.x += debris.velocity.x * dt
       debris.position.y += debris.velocity.y * dt
       debris.rotation += debris.angularVelocity * dt
+    }
+  }
+
+  private allocKillPetal() {
+    return this.world.killPetals.find((petal) => !petal.active) ?? this.world.killPetals[0]
+  }
+
+  private spawnKillPetalBurst(x: number, y: number) {
+    const count = 22
+    for (let index = 0; index < count; index += 1) {
+      const petal = this.allocKillPetal()
+      const angle = Math.random() * Math.PI * 2
+      const speed = randomRange(6.4, 21.6)
+      petal.active = true
+      petal.position.set(
+        x + randomRange(-0.18, 0.18),
+        y + randomRange(-0.18, 0.18),
+      )
+      petal.velocity.set(
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed,
+      )
+      petal.rotation = randomRange(0, Math.PI * 2)
+      petal.angularVelocity = randomRange(-12.5, 12.5)
+      petal.size = randomRange(0.06, 0.14)
+      petal.maxLife = 0.25
+      petal.life = petal.maxLife
+      petal.color = KILL_PETAL_COLORS[Math.floor(Math.random() * KILL_PETAL_COLORS.length)]
+    }
+  }
+
+  private updateKillPetals(dt: number) {
+    const drag = clamp(1 - dt * 2.8, 0, 1)
+    for (const petal of this.world.killPetals) {
+      if (!petal.active) {
+        continue
+      }
+
+      petal.life -= dt
+      if (petal.life <= 0) {
+        petal.active = false
+        continue
+      }
+
+      petal.velocity.x *= drag
+      petal.velocity.y *= drag
+      petal.position.x += petal.velocity.x * dt
+      petal.position.y += petal.velocity.y * dt
+      petal.rotation += petal.angularVelocity * dt
     }
   }
 
@@ -1034,6 +1093,8 @@ export class FlowerArenaGame {
   }
 
   private applyDebugOverrides() {
+    this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
+
     if (debugInfiniteReloadSignal.value) {
       const player = this.world.player
 
@@ -1172,10 +1233,11 @@ export class FlowerArenaGame {
     hitY: number,
     impactX: number,
     impactY: number,
+    damageSource: "projectile" | "throwable" | "molotov" | "arena" | "other" = "other",
   ) {
     applyDamage(this.world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
       allocPopup: () => this.allocPopup(),
-      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt) => {
+      spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt, options) => {
         const scoreOwnerId = this.resolveScoreOwnerId(ownerId)
         spawnFlowers(this.world, ownerId, scoreOwnerId, x, y, dirX, dirY, amountValue, sizeScale, {
           allocFlower: () => this.allocFlower(),
@@ -1183,9 +1245,10 @@ export class FlowerArenaGame {
           botPalette: (id) => botPalette(id),
           factionColor: (id) => this.world.factions.find((faction) => faction.id === id)?.color ?? null,
           onCoverageUpdated: () => updateCoverageSignals(this.world),
-        }, isBurnt)
+        }, isBurnt, options)
       },
       respawnUnit: (id) => this.respawnUnit(id),
+      onKillPetalBurst: (x, y) => this.spawnKillPetalBurst(x, y),
       onUnitKilled: (target, isSuicide) => {
         if (isSuicide) {
           return
@@ -1193,7 +1256,7 @@ export class FlowerArenaGame {
 
         this.spawnLootPickupAt(target.position.x, target.position.y, true)
       },
-      onSfxHit: () => this.sfx.hit(),
+      onSfxHit: (targetIsPlayer) => this.sfx.characterDamage(targetIsPlayer),
       onSfxDeath: () => this.sfx.die(),
       onSfxPlayerDeath: () => this.sfx.playerDeath(),
       onSfxPlayerKill: () => this.sfx.playerKill(),
@@ -1205,7 +1268,7 @@ export class FlowerArenaGame {
         this.world.playerKills += 1
       },
       onPlayerHpChanged: () => updatePlayerHpSignal(this.world),
-    })
+    }, damageSource)
   }
 
   private loop = (time: number) => {
@@ -1228,6 +1291,8 @@ export class FlowerArenaGame {
   private update(frameDt: number, gameplayDt: number) {
     this.syncPlayerOptions()
 
+    const effectDt = frameDt * EFFECT_SPEED
+
     if (this.world.paused) {
       updateCrosshairWorld(this.world)
       syncHudSignals(this.world)
@@ -1245,12 +1310,13 @@ export class FlowerArenaGame {
     this.world.hitStop = Math.max(0, this.world.hitStop - gameplayDt)
 
     if (!this.world.running) {
-      updateFlowers(this.world, frameDt)
-      updateDamagePopups(this.world, frameDt)
-      this.updateObstacleDebris(frameDt)
-      this.updateShellCasings(frameDt)
-      this.updateFlightTrails(frameDt)
-      this.updateExplosions(frameDt)
+      updateFlowers(this.world, effectDt)
+      updateDamagePopups(this.world, effectDt)
+      this.updateObstacleDebris(effectDt)
+      this.updateKillPetals(effectDt)
+      this.updateShellCasings(effectDt)
+      this.updateFlightTrails(effectDt)
+      this.updateExplosions(effectDt)
       updateCrosshairWorld(this.world)
       return
     }
@@ -1272,6 +1338,7 @@ export class FlowerArenaGame {
         collectNearbyPickup(this.world, this.world.player, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
           onPlayerPickup: (label) => {
+            this.sfx.itemAcquire()
             const localizedWeapon = label === "pistol"
               ? t`Pistol`
               : label === "assault"
@@ -1310,7 +1377,7 @@ export class FlowerArenaGame {
     resolveUnitCollisions(this.world)
     constrainUnitsToArena(this.world, simDt, {
       onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, this.world.player.team, hitX, hitY, impactX, impactY)
+        this.applyDamage(targetId, amount, sourceId, this.world.player.team, hitX, hitY, impactX, impactY, "arena")
       },
     })
 
@@ -1331,18 +1398,18 @@ export class FlowerArenaGame {
         this.emitProjectileTrailEnd(x, y, velocityX, velocityY, kind)
       },
       applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "projectile")
       },
     })
 
     updateThrowables(this.world, simDt, {
       applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
       },
       explodeGrenade: (throwableIndex) => {
         explodeGrenade(this.world, throwableIndex, {
           applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-            this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
+            this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
           },
           damageObstaclesByExplosion: (x, y, radius) => {
             damageObstaclesByExplosion(this.world, x, y, radius, {
@@ -1370,16 +1437,17 @@ export class FlowerArenaGame {
 
     updateMolotovZones(this.world, simDt, {
       applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY)
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "molotov")
       },
     })
 
-    updateFlowers(this.world, frameDt)
-    updateDamagePopups(this.world, frameDt)
-    this.updateObstacleDebris(frameDt)
-    this.updateShellCasings(frameDt)
+    updateFlowers(this.world, effectDt)
+    updateDamagePopups(this.world, effectDt)
+    this.updateObstacleDebris(effectDt)
+    this.updateKillPetals(effectDt)
+    this.updateShellCasings(effectDt)
     this.updateFlightTrailEmitters()
-    this.updateFlightTrails(frameDt)
+    this.updateFlightTrails(effectDt)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {
@@ -1388,7 +1456,7 @@ export class FlowerArenaGame {
       },
     })
 
-    this.updateExplosions(frameDt)
+    this.updateExplosions(effectDt)
     syncHudSignals(this.world)
   }
 }

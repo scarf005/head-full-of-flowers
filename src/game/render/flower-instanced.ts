@@ -4,7 +4,7 @@ import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 
 const FLOWER_INSTANCE_STRIDE = 9
-const QUAD_INSTANCE_STRIDE = 8
+const QUAD_INSTANCE_STRIDE = 9
 const TRAIL_INSTANCE_STRIDE = 10
 const FLOWER_PETAL_URL = flowerPetalMaskUrl
 const FLOWER_CENTER_URL = flowerAccentMaskUrl
@@ -277,6 +277,7 @@ layout(location = 2) in float iSize;
 layout(location = 3) in float iRotation;
 layout(location = 4) in vec3 iColor;
 layout(location = 5) in float iAlpha;
+layout(location = 6) in float iStyle;
 
 uniform vec2 uCamera;
 uniform vec2 uView;
@@ -285,6 +286,7 @@ uniform float uScale;
 out vec2 vUv;
 out vec3 vColor;
 out float vAlpha;
+out float vStyle;
 
 void main() {
   float c = cos(iRotation);
@@ -300,6 +302,7 @@ void main() {
   vUv = aCorner * 0.5 + 0.5;
   vColor = iColor;
   vAlpha = iAlpha;
+  vStyle = iStyle;
 }
 `
 
@@ -309,10 +312,27 @@ precision mediump float;
 in vec2 vUv;
 in vec3 vColor;
 in float vAlpha;
+in float vStyle;
 
 out vec4 outColor;
 
 void main() {
+  if (vStyle > 0.5) {
+    vec2 centered = vUv * 2.0 - 1.0;
+    float profile = abs(centered.x) * 1.18 + centered.y * centered.y * 0.92;
+    float petalMask = 1.0 - smoothstep(0.78, 1.0, profile);
+    float tipFade = 1.0 - smoothstep(0.72, 1.0, abs(centered.y));
+    float alpha = vAlpha * petalMask * tipFade;
+    if (alpha <= 0.01) {
+      discard;
+    }
+
+    float vein = smoothstep(0.24, 0.0, abs(centered.x));
+    vec3 color = mix(vColor * 0.76, min(vec3(1.0), vColor * 1.2), vein * 0.45 + 0.15);
+    outColor = vec4(color, alpha);
+    return;
+  }
+
   vec3 color = vColor;
   float stripe = smoothstep(0.54, 0.62, vUv.y) * (1.0 - smoothstep(0.76, 0.84, vUv.y));
   color = mix(color, color * 0.52, stripe);
@@ -523,6 +543,10 @@ void main() {
   gl.vertexAttribPointer(5, 1, gl.FLOAT, false, quadStride, 7 * 4)
   gl.vertexAttribDivisor(5, 1)
 
+  gl.enableVertexAttribArray(6)
+  gl.vertexAttribPointer(6, 1, gl.FLOAT, false, quadStride, 8 * 4)
+  gl.vertexAttribDivisor(6, 1)
+
   gl.bindVertexArray(null)
 
   gl.bindVertexArray(trailVao)
@@ -673,7 +697,10 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
     const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
     const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
     const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
-    const size = Math.max(0.12, flower.size * 0.9)
+    const size = flower.size * 0.9
+    if (size <= 0.001) {
+      continue
+    }
 
     state.instanceData[writeIndex] = flower.position.x
     state.instanceData[writeIndex + 1] = flower.position.y
@@ -777,6 +804,7 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
     state.quadInstanceData[writeIndex + 5] = green
     state.quadInstanceData[writeIndex + 6] = blue
     state.quadInstanceData[writeIndex + 7] = alpha
+    state.quadInstanceData[writeIndex + 8] = 0
     instanceCount += 1
   }
 
@@ -802,6 +830,37 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
     state.quadInstanceData[writeIndex + 5] = green
     state.quadInstanceData[writeIndex + 6] = blue
     state.quadInstanceData[writeIndex + 7] = alpha
+    state.quadInstanceData[writeIndex + 8] = 0
+    instanceCount += 1
+  }
+
+  for (const petal of world.killPetals) {
+    if (!petal.active || petal.maxLife <= 0) {
+      continue
+    }
+    if (petal.position.x < minX || petal.position.x > maxX || petal.position.y < minY || petal.position.y > maxY) {
+      continue
+    }
+
+    ensureQuadCapacity(state, instanceCount + 1)
+    const writeIndex = instanceCount * QUAD_INSTANCE_STRIDE
+    const lifeRatio = Math.max(0, Math.min(1, petal.life / petal.maxLife))
+    const ageRatio = 1 - lifeRatio
+    const fadeIn = Math.max(0, Math.min(1, ageRatio / 0.14))
+    const fadeOut = Math.pow(lifeRatio, 0.9)
+    const alpha = fadeIn * fadeOut
+    const size = petal.size * (0.84 + ageRatio * 0.42)
+    const [red, green, blue] = parseHexColorFloat(petal.color)
+
+    state.quadInstanceData[writeIndex] = petal.position.x
+    state.quadInstanceData[writeIndex + 1] = petal.position.y
+    state.quadInstanceData[writeIndex + 2] = size
+    state.quadInstanceData[writeIndex + 3] = petal.rotation
+    state.quadInstanceData[writeIndex + 4] = red
+    state.quadInstanceData[writeIndex + 5] = green
+    state.quadInstanceData[writeIndex + 6] = blue
+    state.quadInstanceData[writeIndex + 7] = alpha
+    state.quadInstanceData[writeIndex + 8] = 1
     instanceCount += 1
   }
 
