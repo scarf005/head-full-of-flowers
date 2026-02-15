@@ -43,6 +43,8 @@ export interface InputState {
   keys: Set<string>
   leftDown: boolean
   rightDown: boolean
+  moveAxisX: number
+  moveAxisY: number
   canvasX: number
   canvasY: number
   screenX: number
@@ -116,6 +118,8 @@ export const createWorldState = (): WorldState => {
       keys: new Set(),
       leftDown: false,
       rightDown: false,
+      moveAxisX: 0,
+      moveAxisY: 0,
       canvasX: VIEW_WIDTH * 0.5,
       canvasY: VIEW_HEIGHT * 0.5,
       screenX: VIEW_WIDTH * 0.5,

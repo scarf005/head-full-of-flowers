@@ -63,6 +63,9 @@ export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDe
     moveX += 1
   }
 
+  moveX += clamp(world.input.moveAxisX, -1, 1)
+  moveY += clamp(world.input.moveAxisY, -1, 1)
+
   const moveLength = Math.hypot(moveX, moveY)
   const targetSpeed = player.speed
   const targetVelocityX = moveLength > 0 ? (moveX / moveLength) * targetSpeed : 0
