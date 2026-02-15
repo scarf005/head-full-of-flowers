@@ -2,7 +2,7 @@ export const VIEW_WIDTH = 960
 export const VIEW_HEIGHT = 540
 export const VISIBLE_WORLD_WIDTH_METERS = 25
 export const WORLD_SCALE = VIEW_WIDTH / VISIBLE_WORLD_WIDTH_METERS
-export const GAME_SPEED = 0.8
+export const GAME_SPEED = 0.75
 export const EFFECT_SPEED = 1
 
 export const FLOWER_POOL_SIZE = 5000

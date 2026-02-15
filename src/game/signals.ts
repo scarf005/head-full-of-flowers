@@ -164,7 +164,7 @@ export const persistDebugOptions = () => writeStoredDebugOptions()
 export const persistAudioOptions = () => writeStoredAudioOptions()
 
 export const selectedGameModeSignal = signal<GameModeId>("ffa")
-export const ffaPlayerCountSignal = signal(8)
+export const ffaPlayerCountSignal = signal(4)
 export const tdmTeamSizeSignal = signal(4)
 export const duoTeamCountSignal = signal(4)
 export const squadTeamCountSignal = signal(2)
