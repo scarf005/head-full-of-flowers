@@ -1257,7 +1257,7 @@ export class FlowerArenaGame {
       onSfxHit: () => this.sfx.hit(),
       onSfxBreak: () => this.sfx.obstacleBreak(),
       onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-      onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
+      onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, true, highTier),
     })
   }
 
@@ -1628,7 +1628,7 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, highTier, highTier),
+          onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, true, highTier),
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -1659,7 +1659,7 @@ export class FlowerArenaGame {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
+              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, true, highTier),
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),

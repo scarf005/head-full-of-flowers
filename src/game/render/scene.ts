@@ -885,16 +885,30 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         context.fillStyle = "#6e3528"
         context.fillRect(tileX + 0.06, tileY + 0.46, 0.88, 0.08)
       } else if (material === OBSTACLE_MATERIAL_BOX) {
-        context.fillStyle = "#6f2d2b"
-        context.fillRect(tileX, tileY, 1, 1)
-        context.fillStyle = "#df6f3f"
-        context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
-        context.fillStyle = "#ffd36e"
-        context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.24)
-        context.fillStyle = "#f6e5a8"
-        context.fillRect(tileX + 0.44, tileY + 0.08, 0.12, 0.84)
-        context.fillStyle = "#a1402e"
-        context.fillRect(tileX + 0.08, tileY + 0.54, 0.84, 0.1)
+        const isHighTierBox = grid.highTierLoot[index] > 0
+        if (isHighTierBox) {
+          context.fillStyle = "#4d535b"
+          context.fillRect(tileX, tileY, 1, 1)
+          context.fillStyle = "#d7dde6"
+          context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
+          context.fillStyle = "#f4f8ff"
+          context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.24)
+          context.fillStyle = "#ffffff"
+          context.fillRect(tileX + 0.44, tileY + 0.08, 0.12, 0.84)
+          context.fillStyle = "#96a0ad"
+          context.fillRect(tileX + 0.08, tileY + 0.54, 0.84, 0.1)
+        } else {
+          context.fillStyle = "#6f2d2b"
+          context.fillRect(tileX, tileY, 1, 1)
+          context.fillStyle = "#df6f3f"
+          context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
+          context.fillStyle = "#ffd36e"
+          context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.24)
+          context.fillStyle = "#f6e5a8"
+          context.fillRect(tileX + 0.44, tileY + 0.08, 0.12, 0.84)
+          context.fillStyle = "#a1402e"
+          context.fillRect(tileX + 0.08, tileY + 0.54, 0.84, 0.1)
+        }
       } else if (material === OBSTACLE_MATERIAL_ROCK) {
         context.fillStyle = "#676a64"
         context.fillRect(tileX, tileY, 1, 1)
