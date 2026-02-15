@@ -102,6 +102,12 @@ export class Unit {
   hitFlash = 0
   recoil = 0
   arenaBoundaryDamageCooldown = 0
+  burstShotsRemaining = 0
+  burstTotalShots = 0
+  burstShotIndex = 0
+  burstSpread = 0
+  burstInterval = 0
+  burstWeaponId: PrimaryWeaponId | null = null
 
   constructor(id: string, isPlayer: boolean, team: Team) {
     this.id = id
@@ -122,6 +128,12 @@ export class Unit {
     this.hitFlash = 0
     this.recoil = 0
     this.arenaBoundaryDamageCooldown = 0
+    this.burstShotsRemaining = 0
+    this.burstTotalShots = 0
+    this.burstShotIndex = 0
+    this.burstSpread = 0
+    this.burstInterval = 0
+    this.burstWeaponId = null
   }
 }
 

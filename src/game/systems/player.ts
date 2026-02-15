@@ -4,6 +4,7 @@ import type { WorldState } from "../world/state.ts"
 
 export interface UpdatePlayerDeps {
   firePrimary: () => void
+  continueBurst: () => void
   startReload: () => void
   throwSecondary: () => void
   collectNearbyPickup: () => void
@@ -46,6 +47,7 @@ export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDe
     player.secondaryCooldownMax = 0
   }
   player.reloadCooldown = Math.max(0, player.reloadCooldown - dt)
+  deps.continueBurst()
 
   let moveX = 0
   let moveY = 0

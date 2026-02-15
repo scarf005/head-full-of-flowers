@@ -42,13 +42,16 @@ import {
   UNIT_BASE_HP,
   VIEW_HEIGHT,
   VIEW_WIDTH,
+  WORLD_SCALE,
 } from "./world/constants.ts"
 import { createWorldState, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
   applyDamage,
+  continueBurstFire,
   cyclePrimaryWeapon,
   equipPrimary,
+  type FirePrimaryDeps,
   finishReload,
   firePrimary,
   randomLootablePrimary,
@@ -97,6 +100,7 @@ const BULLET_TRAIL_COLOR = "#ff9e3a"
 const HIGH_TIER_BOX_DROP_CHANCE_START = 0.07
 const HIGH_TIER_BOX_DROP_CHANCE_END = 0.5
 const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
+const FX_CULL_PADDING_WORLD = 2.25
 const TEAM_COLOR_RAMP = [
   "#ff6f7b",
   "#68a8ff",
@@ -105,6 +109,13 @@ const TEAM_COLOR_RAMP = [
   "#c9a5ff",
   "#ff9dd2",
 ]
+
+interface FogCullBounds {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
 
 export class FlowerArenaGame {
   private canvas: HTMLCanvasElement
@@ -227,6 +238,26 @@ export class FlowerArenaGame {
 
   private playerCoverageId() {
     return this.currentMode === "ffa" ? this.world.player.id : this.world.player.team
+  }
+
+  private buildFogCullBounds(padding = FX_CULL_PADDING_WORLD): FogCullBounds {
+    const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE + padding
+    const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE + padding
+    return {
+      minX: this.world.camera.x - halfViewX,
+      maxX: this.world.camera.x + halfViewX,
+      minY: this.world.camera.y - halfViewY,
+      maxY: this.world.camera.y + halfViewY,
+    }
+  }
+
+  private isInsideFogCullBounds(x: number, y: number, bounds: FogCullBounds, padding = 0) {
+    return (
+      x >= bounds.minX - padding &&
+      x <= bounds.maxX + padding &&
+      y >= bounds.minY - padding &&
+      y <= bounds.maxY + padding
+    )
   }
 
   private resolveScoreOwnerId(ownerId: string) {
@@ -654,9 +685,17 @@ export class FlowerArenaGame {
     pausedSignal.value = this.world.paused
   }
 
-  private updateExplosions(dt: number) {
+  private updateExplosions(dt: number, fogCullBounds?: FogCullBounds) {
     for (const explosion of this.world.explosions) {
       if (!explosion.active) {
+        continue
+      }
+
+      if (
+        fogCullBounds &&
+        !this.isInsideFogCullBounds(explosion.position.x, explosion.position.y, fogCullBounds, explosion.radius + 0.9)
+      ) {
+        explosion.active = false
         continue
       }
 
@@ -703,10 +742,15 @@ export class FlowerArenaGame {
     }
   }
 
-  private updateObstacleDebris(dt: number) {
+  private updateObstacleDebris(dt: number, fogCullBounds?: FogCullBounds) {
     const drag = clamp(1 - dt * 5.6, 0, 1)
     for (const debris of this.world.obstacleDebris) {
       if (!debris.active) {
+        continue
+      }
+
+      if (fogCullBounds && !this.isInsideFogCullBounds(debris.position.x, debris.position.y, fogCullBounds, debris.size + 0.35)) {
+        debris.active = false
         continue
       }
 
@@ -752,10 +796,15 @@ export class FlowerArenaGame {
     }
   }
 
-  private updateKillPetals(dt: number) {
+  private updateKillPetals(dt: number, fogCullBounds?: FogCullBounds) {
     const drag = clamp(1 - dt * 2.8, 0, 1)
     for (const petal of this.world.killPetals) {
       if (!petal.active) {
+        continue
+      }
+
+      if (fogCullBounds && !this.isInsideFogCullBounds(petal.position.x, petal.position.y, fogCullBounds, petal.size + 0.65)) {
+        petal.active = false
         continue
       }
 
@@ -801,10 +850,15 @@ export class FlowerArenaGame {
     slot.bounceCount = 0
   }
 
-  private updateShellCasings(dt: number) {
+  private updateShellCasings(dt: number, fogCullBounds?: FogCullBounds) {
     const drag = clamp(1 - dt * 4.8, 0, 1)
     for (const casing of this.world.shellCasings) {
       if (!casing.active) {
+        continue
+      }
+
+      if (fogCullBounds && !this.isInsideFogCullBounds(casing.position.x, casing.position.y, fogCullBounds, casing.size + 0.3)) {
+        casing.active = false
         continue
       }
 
@@ -867,8 +921,15 @@ export class FlowerArenaGame {
     slot.life = life
   }
 
-  private emitProjectileTrail(projectile: WorldState["projectiles"][number]) {
+  private emitProjectileTrail(projectile: WorldState["projectiles"][number], fogCullBounds: FogCullBounds) {
     if (!projectile.active) {
+      return
+    }
+
+    if (!this.isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.9)) {
+      projectile.trailX = projectile.position.x
+      projectile.trailY = projectile.position.y
+      projectile.trailReady = false
       return
     }
 
@@ -986,8 +1047,15 @@ export class FlowerArenaGame {
     projectile.trailDirY = smoothDirY
   }
 
-  private emitThrowableTrail(throwable: WorldState["throwables"][number]) {
+  private emitThrowableTrail(throwable: WorldState["throwables"][number], fogCullBounds: FogCullBounds) {
     if (!throwable.active) {
+      return
+    }
+
+    if (!this.isInsideFogCullBounds(throwable.position.x, throwable.position.y, fogCullBounds, throwable.radius + 1.1)) {
+      throwable.trailX = throwable.position.x
+      throwable.trailY = throwable.position.y
+      throwable.trailReady = false
       return
     }
 
@@ -1181,25 +1249,42 @@ export class FlowerArenaGame {
     )
   }
 
-  private updateFlightTrailEmitters() {
+  private updateFlightTrailEmitters(fogCullBounds: FogCullBounds) {
     for (const projectile of this.world.projectiles) {
-      this.emitProjectileTrail(projectile)
+      this.emitProjectileTrail(projectile, fogCullBounds)
     }
 
     for (const throwable of this.world.throwables) {
-      this.emitThrowableTrail(throwable)
+      this.emitThrowableTrail(throwable, fogCullBounds)
     }
   }
 
-  private updateFlightTrails(dt: number) {
+  private updateFlightTrails(dt: number, fogCullBounds?: FogCullBounds) {
     for (const trail of this.world.flightTrails) {
       if (!trail.active) {
+        continue
+      }
+
+      if (fogCullBounds && !this.isInsideFogCullBounds(trail.position.x, trail.position.y, fogCullBounds, trail.length + trail.width + 0.35)) {
+        trail.active = false
         continue
       }
 
       trail.life -= dt
       if (trail.life <= 0) {
         trail.active = false
+      }
+    }
+  }
+
+  private cullHiddenDamagePopups(fogCullBounds: FogCullBounds) {
+    for (const popup of this.world.damagePopups) {
+      if (!popup.active) {
+        continue
+      }
+
+      if (!this.isInsideFogCullBounds(popup.position.x, popup.position.y, fogCullBounds, 0.9)) {
+        popup.active = false
       }
     }
   }
@@ -1257,7 +1342,7 @@ export class FlowerArenaGame {
       onSfxHit: () => this.sfx.hit(),
       onSfxBreak: () => this.sfx.obstacleBreak(),
       onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-      onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, true, highTier),
+      onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
     })
   }
 
@@ -1433,7 +1518,11 @@ export class FlowerArenaGame {
   }
 
   private firePrimary(unitId: string) {
-    firePrimary(this.world, unitId, {
+    firePrimary(this.world, unitId, this.primaryFireDeps())
+  }
+
+  private primaryFireDeps(): FirePrimaryDeps {
+    return {
       allocProjectile: () => this.allocProjectile(),
       startReload: (id) => this.startReload(id),
       onShellEjected: (shooter) => this.spawnShellCasing(shooter),
@@ -1445,7 +1534,7 @@ export class FlowerArenaGame {
         this.world.playerBulletsFired += count
       },
       onOtherShoot: () => this.sfx.shoot(),
-    })
+    }
   }
 
   private swapPrimary(unitId: string, direction: number) {
@@ -1554,15 +1643,17 @@ export class FlowerArenaGame {
 
     const simDt = this.world.hitStop > 0 ? gameplayDt * 0.12 : gameplayDt
     this.world.hitStop = Math.max(0, this.world.hitStop - gameplayDt)
+    const fxCullBounds = this.buildFogCullBounds()
 
     if (!this.world.running) {
       updateFlowers(this.world, effectDt)
       updateDamagePopups(this.world, effectDt)
-      this.updateObstacleDebris(effectDt)
-      this.updateKillPetals(effectDt)
-      this.updateShellCasings(effectDt)
-      this.updateFlightTrails(effectDt)
-      this.updateExplosions(effectDt)
+      this.updateObstacleDebris(effectDt, fxCullBounds)
+      this.updateKillPetals(effectDt, fxCullBounds)
+      this.updateShellCasings(effectDt, fxCullBounds)
+      this.updateFlightTrails(effectDt, fxCullBounds)
+      this.cullHiddenDamagePopups(fxCullBounds)
+      this.updateExplosions(effectDt, fxCullBounds)
       updateCrosshairWorld(this.world)
       return
     }
@@ -1578,6 +1669,7 @@ export class FlowerArenaGame {
 
     updatePlayer(this.world, gameplayDt, {
       firePrimary: () => this.firePrimary(this.world.player.id),
+      continueBurst: () => continueBurstFire(this.world, this.world.player.id, this.primaryFireDeps()),
       startReload: () => this.startReload(this.world.player.id),
       throwSecondary: () => this.throwSecondary(this.world.player.id),
       collectNearbyPickup: () => {
@@ -1599,6 +1691,7 @@ export class FlowerArenaGame {
 
     updateAI(this.world, gameplayDt, {
       firePrimary: (botId) => this.firePrimary(botId),
+      continueBurst: (botId) => continueBurstFire(this.world, botId, this.primaryFireDeps()),
       throwSecondary: (botId) => this.throwSecondary(botId),
       finishReload: (botId) => this.finishReload(botId),
       collectNearbyPickup: (botId) => {
@@ -1628,7 +1721,7 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, true, highTier),
+          onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, highTier, highTier),
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -1659,7 +1752,7 @@ export class FlowerArenaGame {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, true, highTier),
+              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
@@ -1686,11 +1779,12 @@ export class FlowerArenaGame {
 
     updateFlowers(this.world, effectDt)
     updateDamagePopups(this.world, effectDt)
-    this.updateObstacleDebris(effectDt)
-    this.updateKillPetals(effectDt)
-    this.updateShellCasings(effectDt)
-    this.updateFlightTrailEmitters()
-    this.updateFlightTrails(effectDt)
+    this.updateObstacleDebris(effectDt, fxCullBounds)
+    this.updateKillPetals(effectDt, fxCullBounds)
+    this.updateShellCasings(effectDt, fxCullBounds)
+    this.updateFlightTrailEmitters(fxCullBounds)
+    this.updateFlightTrails(effectDt, fxCullBounds)
+    this.cullHiddenDamagePopups(fxCullBounds)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {
@@ -1701,7 +1795,7 @@ export class FlowerArenaGame {
       highTierChance: this.highTierLootBoxChance(),
     })
 
-    this.updateExplosions(effectDt)
+    this.updateExplosions(effectDt, fxCullBounds)
     syncHudSignals(this.world)
   }
 }

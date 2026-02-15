@@ -15,6 +15,7 @@ export interface PrimaryWeaponConfig {
   projectileKind?: "ballistic" | "flame" | "grenade" | "rocket"
   burstShots?: number
   burstSpread?: number
+  burstInterval?: number
   pickupMagazineBundle: number
   magazineSize: number
   reload: number
@@ -94,7 +95,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     damage: 2,
     speed: 38,
     range: 14,
-    spread: 0.5,
+    spread: 0.35,
     pellets: 8,
     bulletRadius: 0.25,
     pickupMagazineBundle: 2,
@@ -106,7 +107,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     name: "Battle Rifle",
     icon: "battle-rifle",
     color: "#ffd37f",
-    cooldown: 0.34,
+    cooldown: 0.2,
     damage: 4,
     speed: 52,
     range: 33,
@@ -115,6 +116,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     bulletRadius: 0.24,
     burstShots: 3,
     burstSpread: 0.028,
+    burstInterval: 0.06,
     pickupMagazineBundle: 2,
     magazineSize: 20,
     reload: 1,

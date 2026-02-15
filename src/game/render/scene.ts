@@ -24,6 +24,13 @@ export interface RenderSceneArgs {
   dt: number
 }
 
+interface FogCullBounds {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
 let grassWaveTime = Math.random() * Math.PI * 2
 
 const GRASS_BASE_COLOR = "#8fa684"
@@ -50,6 +57,26 @@ const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.22
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
 const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#c1c8cf"
+
+const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
+  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE + padding
+  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE + padding
+  return {
+    minX: cameraX - halfViewX,
+    maxX: cameraX + halfViewX,
+    minY: cameraY - halfViewY,
+    maxY: cameraY + halfViewY,
+  }
+}
+
+const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padding = 0) => {
+  return (
+    x >= bounds.minX - padding &&
+    x <= bounds.maxX + padding &&
+    y >= bounds.minY - padding &&
+    y <= bounds.maxY + padding
+  )
+}
 
 let grassBaseTexture: HTMLImageElement | null = null
 let grassDarkTexture: HTMLImageElement | null = null
@@ -452,6 +479,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   const renderCameraX = world.camera.x + world.cameraOffset.x
   const renderCameraY = world.camera.y + world.cameraOffset.y
+  const fogCullBounds = buildFogCullBounds(renderCameraX, renderCameraY, 2.25)
 
   renderArenaGround(context, world, grassWaveTime, renderCameraX, renderCameraY)
 
@@ -464,7 +492,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.arc(0, 0, Math.max(0.1, world.arenaRadius - 0.05), 0, Math.PI * 2)
   context.clip()
 
-  renderMolotovZones(context, world)
+  renderMolotovZones(context, world, fogCullBounds)
   renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
   const renderedObstacleFxWithWebGl = renderObstacleFxInstances({
@@ -474,21 +502,21 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
     cameraY: renderCameraY,
   })
   if (!renderedObstacleFxWithWebGl) {
-    renderObstacleDebris(context, world)
-    renderShellCasings(context, world)
+    renderObstacleDebris(context, world, fogCullBounds)
+    renderShellCasings(context, world, fogCullBounds)
   }
-  renderPickups(context, world, dt)
+  renderPickups(context, world, dt, fogCullBounds)
   const renderedFlightTrailsWithWebGl = renderFlightTrailInstances({
     context,
     world,
     cameraX: renderCameraX,
     cameraY: renderCameraY,
   })
-  renderThrowables(context, world, !renderedFlightTrailsWithWebGl)
-  renderProjectiles(context, world, !renderedFlightTrailsWithWebGl)
-  renderUnits(context, world)
-  renderExplosions(context, world)
-  renderDamagePopups(context, world)
+  renderThrowables(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
+  renderProjectiles(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
+  renderUnits(context, world, fogCullBounds)
+  renderExplosions(context, world, fogCullBounds)
+  renderDamagePopups(context, world, fogCullBounds)
 
   context.restore()
   renderArenaBoundary(context, world)
@@ -730,9 +758,18 @@ const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
   return "255, 214, 104"
 }
 
-const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt: number) => {
+const renderPickups = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  dt: number,
+  fogCullBounds: FogCullBounds,
+) => {
   for (const pickup of world.pickups) {
     if (!pickup.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(pickup.position.x, pickup.position.y, fogCullBounds, pickup.radius + 0.5)) {
       continue
     }
 
@@ -760,9 +797,18 @@ const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt:
   }
 }
 
-const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, renderTrails: boolean) => {
+const renderThrowables = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  renderTrails: boolean,
+  fogCullBounds: FogCullBounds,
+) => {
   for (const throwable of world.throwables) {
     if (!throwable.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(throwable.position.x, throwable.position.y, fogCullBounds, throwable.radius + 0.8)) {
       continue
     }
 
@@ -817,9 +863,13 @@ const renderThrowables = (context: CanvasRenderingContext2D, world: WorldState, 
   }
 }
 
-const renderMolotovZones = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderMolotovZones = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   for (const zone of world.molotovZones) {
     if (!zone.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(zone.position.x, zone.position.y, fogCullBounds, zone.radius + 0.5)) {
       continue
     }
 
@@ -928,9 +978,13 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
   }
 }
 
-const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   for (const debris of world.obstacleDebris) {
     if (!debris.active || debris.maxLife <= 0) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(debris.position.x, debris.position.y, fogCullBounds, debris.size + 0.35)) {
       continue
     }
 
@@ -950,9 +1004,13 @@ const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldSta
   }
 }
 
-const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   for (const casing of world.shellCasings) {
     if (!casing.active || casing.maxLife <= 0) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(casing.position.x, casing.position.y, fogCullBounds, casing.size + 0.3)) {
       continue
     }
 
@@ -969,9 +1027,13 @@ const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState
   }
 }
 
-const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   for (const explosion of world.explosions) {
     if (!explosion.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(explosion.position.x, explosion.position.y, fogCullBounds, explosion.radius + 0.85)) {
       continue
     }
 
@@ -1008,9 +1070,18 @@ const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState) 
   }
 }
 
-const renderProjectiles = (context: CanvasRenderingContext2D, world: WorldState, renderTrails: boolean) => {
+const renderProjectiles = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  renderTrails: boolean,
+  fogCullBounds: FogCullBounds,
+) => {
   for (const projectile of world.projectiles) {
     if (!projectile.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.7)) {
       continue
     }
 
@@ -1130,12 +1201,16 @@ const renderUnitStatusRings = (
   context.restore()
 }
 
-const renderUnits = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   for (const unit of world.units) {
     const drawX = unit.position.x - unit.aim.x * unit.recoil * 0.32
     const drawY = unit.position.y - unit.aim.y * unit.recoil * 0.32
     const body = unit.radius * 1.2
     const ear = unit.radius * 0.42
+
+    if (!isInsideFogCullBounds(drawX, drawY, fogCullBounds, body * 2.8)) {
+      continue
+    }
 
     renderUnitStatusRings(context, unit, drawX, drawY, body)
 
@@ -1282,11 +1357,15 @@ const renderOffscreenEnemyIndicators = (
   context.restore()
 }
 
-const renderDamagePopups = (context: CanvasRenderingContext2D, world: WorldState) => {
+const renderDamagePopups = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
   context.textAlign = "center"
   context.font = "0.9px monospace"
   for (const popup of world.damagePopups) {
     if (!popup.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(popup.position.x, popup.position.y, fogCullBounds, 0.9)) {
       continue
     }
 

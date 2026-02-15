@@ -68,6 +68,7 @@ const findNearestTarget = (
 
 export interface UpdateAIDeps {
   firePrimary: (botId: string) => void
+  continueBurst: (botId: string) => void
   throwSecondary: (botId: string) => void
   finishReload: (botId: string) => void
   collectNearbyPickup: (botId: string) => void
@@ -82,6 +83,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       bot.secondaryCooldownMax = 0
     }
     bot.reloadCooldown = Math.max(0, bot.reloadCooldown - dt)
+    deps.continueBurst(bot.id)
     if (bot.reloadCooldown <= 0) {
       deps.finishReload(bot.id)
     }
