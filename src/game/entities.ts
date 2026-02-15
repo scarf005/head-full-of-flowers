@@ -1,6 +1,14 @@
 import type { AIState, PrimaryWeaponId, SecondaryMode, Team } from "./types.ts"
 import { UNIT_BASE_HP } from "./world/constants.ts"
 
+export interface PrimaryWeaponSlot {
+  weaponId: PrimaryWeaponId
+  primaryAmmo: number
+  reserveAmmo: number
+  magazineSize: number
+  acquiredAt: number
+}
+
 export class Vec2 {
   x: number
   y: number
@@ -80,6 +88,9 @@ export class Unit {
   primaryAmmo = Number.POSITIVE_INFINITY
   reserveAmmo = Number.POSITIVE_INFINITY
   magazineSize = Number.POSITIVE_INFINITY
+  primarySlots: PrimaryWeaponSlot[] = []
+  primarySlotIndex = 0
+  primarySlotSequence = 0
   secondaryMode: SecondaryMode = "grenade"
   damageMultiplier = 1
   fireRateMultiplier = 1

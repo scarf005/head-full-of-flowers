@@ -8,6 +8,7 @@ export interface InputAdapterHandlers {
   onReturnToMenu: () => void
   onTogglePause: () => void
   onPrimaryDown: () => void
+  onPrimarySwap: (direction: number) => void
   onSecondaryDown: () => void
   onCrosshair: (x: number, y: number, visible: boolean) => void
 }
@@ -218,6 +219,16 @@ export const setupInputAdapter = (
     handlers.onCrosshair(world.input.screenX, world.input.screenY, false)
   }
 
+  const onWheel = (event: WheelEvent) => {
+    if (!world.running || world.paused || !world.started || world.finished) {
+      return
+    }
+
+    const direction = event.deltaY > 0 ? 1 : -1
+    event.preventDefault()
+    handlers.onPrimarySwap(direction)
+  }
+
   const onContextMenu = (event: Event) => {
     event.preventDefault()
   }
@@ -227,6 +238,7 @@ export const setupInputAdapter = (
   window.addEventListener("pointermove", onPointerMove)
   window.addEventListener("pointerdown", onPointerDown)
   window.addEventListener("pointerup", onPointerUp)
+  window.addEventListener("wheel", onWheel, { passive: false })
   window.addEventListener("contextmenu", onContextMenu)
   canvas.addEventListener("pointerleave", onPointerLeave)
   canvas.addEventListener("contextmenu", onContextMenu)
@@ -238,6 +250,7 @@ export const setupInputAdapter = (
       window.removeEventListener("pointermove", onPointerMove)
       window.removeEventListener("pointerdown", onPointerDown)
       window.removeEventListener("pointerup", onPointerUp)
+      window.removeEventListener("wheel", onWheel)
       window.removeEventListener("contextmenu", onContextMenu)
       canvas.removeEventListener("pointerleave", onPointerLeave)
       canvas.removeEventListener("contextmenu", onContextMenu)

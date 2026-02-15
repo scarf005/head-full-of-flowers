@@ -2,6 +2,7 @@ import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.mp3"
 import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.mp3"
 import damageUrl from "../assets/sfx/damage-690623-guinamun.mp3"
 import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.mp3"
+import reloadUrl from "../assets/sfx/reload-276963-gfl7.mp3"
 
 export class AudioDirector {
   private menuTrack: HTMLAudioElement
@@ -113,6 +114,8 @@ export class SfxSynth {
   private itemAcquireSamplePool = this.createSamplePool(itemAcquireUrl, 4)
   private damageSamplePool = this.createSamplePool(damageUrl, 8)
   private playerDeathSamplePool = this.createSamplePool(playerDeathUrl, 4)
+  private reloadSamplePool = this.createSamplePool(reloadUrl, 4)
+  private sampleStopTimers = new Map<HTMLAudioElement, number>()
 
   private ensureContext() {
     if (!this.context) {
@@ -193,6 +196,14 @@ export class SfxSynth {
     this.playSample(this.playerDeathSamplePool, 0.78)
   }
 
+  reloadBegin() {
+    this.playSample(this.reloadSamplePool, 0.74, 1.1, 1.5)
+  }
+
+  reloadEnd() {
+    this.playSample(this.reloadSamplePool, 0.8, 2.168, 2.7)
+  }
+
   explosion() {
     const context = this.ensureContext()
     this.chirp(context, 310, 36, 0.24, "sawtooth", 0.22)
@@ -243,13 +254,20 @@ export class SfxSynth {
       ...this.itemAcquireSamplePool,
       ...this.damageSamplePool,
       ...this.playerDeathSamplePool,
+      ...this.reloadSamplePool,
     ]) {
       sample.load()
     }
   }
 
-  private playSample(pool: HTMLAudioElement[], baseVolume: number, startAt = 0) {
+  private playSample(pool: HTMLAudioElement[], baseVolume: number, startAt = 0, endAt = 0) {
     const sample = pool.find((voice) => voice.paused || voice.ended) ?? pool[0]
+    const pendingStop = this.sampleStopTimers.get(sample)
+    if (pendingStop !== undefined) {
+      clearTimeout(pendingStop)
+      this.sampleStopTimers.delete(sample)
+    }
+
     sample.pause()
     sample.currentTime = 0
     if (startAt > 0) {
@@ -260,6 +278,19 @@ export class SfxSynth {
       }
     }
     sample.volume = Math.max(0, Math.min(1, baseVolume * this.effectsVolume))
-    sample.play().catch(() => {})
+    sample.play()
+      .then(() => {
+        if (endAt <= startAt) {
+          return
+        }
+
+        const stopDelay = Math.max(0, (endAt - startAt) * 1000)
+        const stopTimer = window.setTimeout(() => {
+          sample.pause()
+          this.sampleStopTimers.delete(sample)
+        }, stopDelay)
+        this.sampleStopTimers.set(sample, stopTimer)
+      })
+      .catch(() => {})
   }
 }

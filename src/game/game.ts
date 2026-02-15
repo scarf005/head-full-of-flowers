@@ -47,6 +47,7 @@ import { createWorldState, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
   applyDamage,
+  cyclePrimaryWeapon,
   equipPrimary,
   finishReload,
   firePrimary,
@@ -347,6 +348,7 @@ export class FlowerArenaGame {
       onReturnToMenu: () => this.returnToMenu(),
       onTogglePause: () => this.togglePause(),
       onPrimaryDown: () => this.firePrimary(this.world.player.id),
+      onPrimarySwap: (direction) => this.swapPrimary(this.world.player.id, direction),
       onSecondaryDown: () => this.throwSecondary(this.world.player.id),
       onCrosshair: (x, y, visible) => {
         crosshairSignal.value = { x, y, visible }
@@ -396,6 +398,9 @@ export class FlowerArenaGame {
     player.bulletSizeMultiplier = 1
     player.speed = PLAYER_BASE_SPEED
     player.grenadeTimer = 1
+    player.primarySlots.length = 0
+    player.primarySlotIndex = 0
+    player.primarySlotSequence = 0
     this.equipPrimary(player.id, "pistol", Number.POSITIVE_INFINITY)
 
     for (const bot of this.world.bots) {
@@ -407,6 +412,9 @@ export class FlowerArenaGame {
       bot.bulletSizeMultiplier = 1
       bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
+      bot.primarySlots.length = 0
+      bot.primarySlotIndex = 0
+      bot.primarySlotSequence = 0
       this.equipPrimary(bot.id, "pistol", Number.POSITIVE_INFINITY)
       bot.secondaryMode = Math.random() > 0.58 ? "molotov" : "grenade"
     }
@@ -1101,9 +1109,23 @@ export class FlowerArenaGame {
       player.reloadCooldown = 0
       player.reloadCooldownMax = 0
 
-      if (Number.isFinite(player.magazineSize) && Number.isFinite(player.primaryAmmo)) {
-        player.primaryAmmo = player.magazineSize
-        player.reserveAmmo = Number.POSITIVE_INFINITY
+      for (const slot of player.primarySlots) {
+        if (!Number.isFinite(slot.magazineSize) || !Number.isFinite(slot.primaryAmmo)) {
+          slot.primaryAmmo = Number.POSITIVE_INFINITY
+          slot.reserveAmmo = Number.POSITIVE_INFINITY
+          continue
+        }
+
+        slot.primaryAmmo = slot.magazineSize
+        slot.reserveAmmo = Number.POSITIVE_INFINITY
+      }
+
+      const activeSlot = player.primarySlots[player.primarySlotIndex]
+      if (activeSlot) {
+        player.primaryWeapon = activeSlot.weaponId
+        player.primaryAmmo = activeSlot.primaryAmmo
+        player.reserveAmmo = activeSlot.reserveAmmo
+        player.magazineSize = activeSlot.magazineSize
       }
     }
 
@@ -1179,15 +1201,26 @@ export class FlowerArenaGame {
   }
 
   private equipPrimary(unitId: string, weaponId: "pistol" | "assault" | "shotgun" | "flamethrower", ammo: number) {
-    equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
+    return equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
   }
 
   private startReload(unitId: string) {
+    const unit = this.getUnit(unitId)
+    const wasReloading = (unit?.reloadCooldownMax ?? 0) > 0
     startReload(unitId, this.world, () => updatePlayerWeaponSignals(this.world))
+    if (unit?.isPlayer && !wasReloading && unit.reloadCooldownMax > 0) {
+      this.sfx.reloadBegin()
+    }
   }
 
   private finishReload(unitId: string) {
+    const unit = this.getUnit(unitId)
+    const wasReloading = (unit?.reloadCooldownMax ?? 0) > 0
+    const ammoBefore = unit?.primaryAmmo ?? 0
     finishReload(unitId, this.world, () => updatePlayerWeaponSignals(this.world))
+    if (unit?.isPlayer && wasReloading && unit.reloadCooldownMax <= 0 && unit.primaryAmmo > ammoBefore) {
+      this.sfx.reloadEnd()
+    }
   }
 
   private firePrimary(unitId: string) {
@@ -1204,6 +1237,10 @@ export class FlowerArenaGame {
       },
       onOtherShoot: () => this.sfx.shoot(),
     })
+  }
+
+  private swapPrimary(unitId: string, direction: number) {
+    cyclePrimaryWeapon(unitId, this.world, direction, () => updatePlayerWeaponSignals(this.world))
   }
 
   private throwSecondary(unitId: string) {

@@ -108,7 +108,11 @@ export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps) =
 }
 
 export interface CollectPickupDeps {
-  equipPrimary: (unit: Unit, weaponId: "pistol" | "assault" | "shotgun" | "flamethrower", ammo: number) => void
+  equipPrimary: (
+    unit: Unit,
+    weaponId: "pistol" | "assault" | "shotgun" | "flamethrower",
+    ammo: number,
+  ) => "pistol" | "assault" | "shotgun" | "flamethrower" | null
   onPlayerPickup: (weaponId: "pistol" | "assault" | "shotgun" | "flamethrower") => void
 }
 
@@ -124,12 +128,27 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       continue
     }
 
-    pickup.active = false
-    const config = PRIMARY_WEAPONS[pickup.weapon]
-    deps.equipPrimary(unit, pickup.weapon, config.pickupAmmo)
+    const collectedWeapon = pickup.weapon
+    const config = PRIMARY_WEAPONS[collectedWeapon]
+    const ejectedWeapon = deps.equipPrimary(unit, collectedWeapon, config.pickupAmmo)
+
+    if (ejectedWeapon && ejectedWeapon !== "pistol") {
+      pickup.weapon = ejectedWeapon
+      pickup.active = true
+      const dropDistance = unit.radius + pickup.radius + 0.5
+      pickup.position.set(
+        unit.position.x - unit.aim.x * dropDistance,
+        unit.position.y - unit.aim.y * dropDistance,
+      )
+      pickup.bob = randomRange(0, Math.PI * 2)
+    } else {
+      pickup.active = false
+    }
 
     if (unit.isPlayer) {
-      deps.onPlayerPickup(pickup.weapon)
+      deps.onPlayerPickup(collectedWeapon)
     }
+
+    break
   }
 }
