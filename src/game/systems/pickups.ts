@@ -1,10 +1,15 @@
 import { Pickup, type Unit } from "../entities.ts"
-import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
+import { clamp, distSquared, limitToArena, randomPointInArena, randomRange } from "../utils.ts"
 import { isHighTierPrimary, pickupAmmoForWeapon } from "../weapons.ts"
-import type { PrimaryWeaponId } from "../types.ts"
+import type { PerkId, PrimaryWeaponId, Team } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 import { LOOT_PICKUP_INTERVAL_MAX_SECONDS, LOOT_PICKUP_INTERVAL_MIN_SECONDS } from "../world/constants.ts"
 import { isObstacleCellSolid, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+
+const EJECTED_PICKUP_THROW_SPEED = 24
+const EJECTED_PICKUP_DRAG = 3.1
+const EJECTED_PICKUP_STOP_SPEED = 2.2
+const EJECTED_PICKUP_DAMAGE = 1
 
 const pointOverlapsRect = (
   pointX: number,
@@ -57,6 +62,11 @@ export interface PickupDeps {
   force?: boolean
 }
 
+export interface PerkPickupDeps {
+  randomPerk: () => PerkId
+  force?: boolean
+}
+
 export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
   let slot = world.pickups.find((pickup) => !pickup.active)
   if (!slot && deps.force) {
@@ -69,6 +79,7 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
   }
 
   slot.active = true
+  slot.kind = "weapon"
   slot.position.set(position.x, position.y)
   const highTierRoll = (deps.highTierChance ?? 0) > 0 && Math.random() < (deps.highTierChance ?? 0)
   if (highTierRoll && deps.randomHighTierPrimary) {
@@ -80,6 +91,36 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
   }
   slot.radius = 0.8
   slot.bob = randomRange(0, Math.PI * 2)
+  slot.perkId = null
+  slot.velocity.set(0, 0)
+  slot.throwOwnerId = ""
+  slot.throwOwnerTeam = "white"
+  slot.throwDamageArmed = false
+}
+
+export const spawnPerkPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PerkPickupDeps) => {
+  let slot = world.pickups.find((pickup) => !pickup.active)
+  if (!slot && deps.force) {
+    slot = new Pickup()
+    world.pickups.push(slot)
+  }
+
+  if (!slot) {
+    return
+  }
+
+  slot.active = true
+  slot.kind = "perk"
+  slot.position.set(position.x, position.y)
+  slot.perkId = deps.randomPerk()
+  slot.weapon = "assault"
+  slot.highTier = false
+  slot.radius = 0.8
+  slot.bob = randomRange(0, Math.PI * 2)
+  slot.velocity.set(0, 0)
+  slot.throwOwnerId = ""
+  slot.throwOwnerTeam = "white"
+  slot.throwDamageArmed = false
 }
 
 export const spawnPickup = (world: WorldState, deps: PickupDeps) => {
@@ -101,13 +142,76 @@ export const spawnPickup = (world: WorldState, deps: PickupDeps) => {
   spawnPickupAt(world, spawn, deps)
 }
 
-export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps) => {
+export interface PickupImpactDamageDeps {
+  applyDamage: (
+    targetId: string,
+    amount: number,
+    sourceId: string,
+    sourceTeam: Team,
+    hitX: number,
+    hitY: number,
+    impactX: number,
+    impactY: number,
+  ) => void
+}
+
+export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps & PickupImpactDamageDeps) => {
   world.pickupTimer -= dt
 
   for (const pickup of world.pickups) {
     if (!pickup.active) {
       continue
     }
+
+    const speed = Math.hypot(pickup.velocity.x, pickup.velocity.y)
+    if (speed > 0.001) {
+      const previousX = pickup.position.x
+      const previousY = pickup.position.y
+      pickup.position.x += pickup.velocity.x * dt
+      pickup.position.y += pickup.velocity.y * dt
+
+      const collidedArena = limitToArena(pickup.position, pickup.radius, world.arenaRadius)
+      const collidedObstacle = collidesWithObstacleGrid(world, pickup.position.x, pickup.position.y, pickup.radius)
+      if (collidedArena || collidedObstacle) {
+        pickup.position.x = previousX
+        pickup.position.y = previousY
+        pickup.velocity.set(0, 0)
+        pickup.throwDamageArmed = false
+      } else if (pickup.throwDamageArmed) {
+        for (const unit of world.units) {
+          if (unit.id === pickup.throwOwnerId) {
+            continue
+          }
+
+          const hitRadius = pickup.radius + unit.radius
+          const hitRadiusSq = hitRadius * hitRadius
+          if (distSquared(unit.position.x, unit.position.y, pickup.position.x, pickup.position.y) > hitRadiusSq) {
+            continue
+          }
+
+          deps.applyDamage(
+            unit.id,
+            EJECTED_PICKUP_DAMAGE,
+            pickup.throwOwnerId,
+            pickup.throwOwnerTeam,
+            unit.position.x,
+            unit.position.y,
+            pickup.velocity.x,
+            pickup.velocity.y,
+          )
+          pickup.throwDamageArmed = false
+          pickup.velocity.set(0, 0)
+          break
+        }
+      }
+
+      const dragFactor = clamp(1 - EJECTED_PICKUP_DRAG * dt, 0, 1)
+      pickup.velocity.scale(dragFactor)
+      if (pickup.velocity.length() <= EJECTED_PICKUP_STOP_SPEED) {
+        pickup.velocity.set(0, 0)
+      }
+    }
+
     pickup.bob += dt * 2.3
   }
 
@@ -123,7 +227,10 @@ export interface CollectPickupDeps {
     weaponId: PrimaryWeaponId,
     ammo: number,
   ) => PrimaryWeaponId | null
+  applyPerk: (unit: Unit, perkId: PerkId) => { applied: boolean; stacks: number }
+  perkStacks: (unit: Unit, perkId: PerkId) => number
   onPlayerPickup: (weaponId: PrimaryWeaponId) => void
+  onPlayerPerkPickup: (perkId: PerkId, stacks: number) => void
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
@@ -138,22 +245,66 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       continue
     }
 
+    if (pickup.kind === "perk") {
+      if (!pickup.perkId) {
+        pickup.active = false
+        continue
+      }
+
+      const result = deps.applyPerk(unit, pickup.perkId)
+      if (!result.applied) {
+        continue
+      }
+
+      const perkId = pickup.perkId
+      pickup.active = false
+      pickup.highTier = false
+      pickup.velocity.set(0, 0)
+      pickup.throwOwnerId = ""
+      pickup.throwOwnerTeam = "white"
+      pickup.throwDamageArmed = false
+      pickup.kind = "weapon"
+      pickup.perkId = null
+
+      if (unit.isPlayer) {
+        deps.onPlayerPerkPickup(perkId, deps.perkStacks(unit, perkId))
+      }
+
+      break
+    }
+
     const collectedWeapon = pickup.weapon
     const ejectedWeapon = deps.equipPrimary(unit, collectedWeapon, pickupAmmoForWeapon(collectedWeapon))
 
     if (ejectedWeapon && ejectedWeapon !== "pistol") {
       pickup.weapon = ejectedWeapon
+      pickup.kind = "weapon"
+      pickup.perkId = null
       pickup.highTier = isHighTierPrimary(ejectedWeapon)
       pickup.active = true
       const dropDistance = unit.radius + pickup.radius + 0.5
+      const aimLength = Math.hypot(unit.aim.x, unit.aim.y)
+      const fallbackAngle = randomRange(0, Math.PI * 2)
+      const throwDirX = aimLength > 0.0001 ? -unit.aim.x / aimLength : Math.cos(fallbackAngle)
+      const throwDirY = aimLength > 0.0001 ? -unit.aim.y / aimLength : Math.sin(fallbackAngle)
       pickup.position.set(
-        unit.position.x - unit.aim.x * dropDistance,
-        unit.position.y - unit.aim.y * dropDistance,
+        unit.position.x + throwDirX * dropDistance,
+        unit.position.y + throwDirY * dropDistance,
       )
+      pickup.velocity.set(throwDirX * EJECTED_PICKUP_THROW_SPEED, throwDirY * EJECTED_PICKUP_THROW_SPEED)
+      pickup.throwOwnerId = unit.id
+      pickup.throwOwnerTeam = unit.team
+      pickup.throwDamageArmed = true
       pickup.bob = randomRange(0, Math.PI * 2)
     } else {
       pickup.active = false
       pickup.highTier = false
+      pickup.velocity.set(0, 0)
+      pickup.throwOwnerId = ""
+      pickup.throwOwnerTeam = "white"
+      pickup.throwDamageArmed = false
+      pickup.kind = "weapon"
+      pickup.perkId = null
     }
 
     if (unit.isPlayer) {
