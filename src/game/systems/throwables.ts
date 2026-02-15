@@ -16,10 +16,33 @@ const GRENADE_RICOCHET_TANGENT_FRICTION = 0.78
 const GRENADE_RICOCHET_MIN_SPEED = 2.8
 const GRENADE_RICOCHET_RANDOM_RADIANS = 0.45
 const GRENADE_AIR_DRAG = 0.18
+const GRENADE_PROXIMITY_RADIUS = 1.25
 const GRENADE_HIT_CAMERA_SHAKE = 0.55
 const GRENADE_HIT_STOP = 0.022
 const THROWABLE_SPIN_MIN = 7.2
 const THROWABLE_SPIN_MAX = 18.6
+
+const distToSegmentSquared = (
+  pointX: number,
+  pointY: number,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+) => {
+  const segmentX = endX - startX
+  const segmentY = endY - startY
+  const lengthSquared = segmentX * segmentX + segmentY * segmentY
+  if (lengthSquared <= 0.000001) {
+    return distSquared(pointX, pointY, startX, startY)
+  }
+
+  const projection = ((pointX - startX) * segmentX + (pointY - startY) * segmentY) / lengthSquared
+  const t = clamp(projection, 0, 1)
+  const nearestX = startX + segmentX * t
+  const nearestY = startY + segmentY * t
+  return distSquared(pointX, pointY, nearestX, nearestY)
+}
 
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
@@ -67,6 +90,8 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.trailX = throwable.position.x
   throwable.trailY = throwable.position.y
   throwable.trailReady = false
+  throwable.contactFuse = mode === "grenade" && shooter.proximityGrenades
+  throwable.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
 
   const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
@@ -204,6 +229,35 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
       }
     }
 
+    if (isGrenade && throwable.contactFuse && throwable.life > 0) {
+      let proximityFuseTriggered = false
+      for (const unit of world.units) {
+        if (unit.id === throwable.ownerId || unit.team === throwable.ownerTeam) {
+          continue
+        }
+
+        const fuseRadius = unit.radius + throwable.radius + GRENADE_PROXIMITY_RADIUS
+        if (
+          distToSegmentSquared(
+            unit.position.x,
+            unit.position.y,
+            previousX,
+            previousY,
+            throwable.position.x,
+            throwable.position.y,
+          ) <= fuseRadius * fuseRadius
+        ) {
+          proximityFuseTriggered = true
+          break
+        }
+      }
+
+      if (proximityFuseTriggered) {
+        shouldExplode = true
+        throwable.life = 0
+      }
+    }
+
     if (isGrenade) {
       for (const unit of world.units) {
         if (unit.team === throwable.ownerTeam && unit.id !== throwable.ownerId) {
@@ -283,7 +337,7 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
     return
   }
 
-  const explosionRadius = 3.8
+  const explosionRadius = 3.8 * Math.max(0.6, throwable.explosiveRadiusMultiplier)
   const explosionRadiusSquared = explosionRadius * explosionRadius
   deps.spawnExplosion(throwable.position.x, throwable.position.y, explosionRadius)
 

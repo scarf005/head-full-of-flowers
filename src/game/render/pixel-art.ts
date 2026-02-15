@@ -1,13 +1,22 @@
-import type { PrimaryWeaponId } from "../types.ts"
+import type { PerkId, PrimaryWeaponId } from "../types.ts"
 import pistolSprite from "../../assets/items/pistol.png"
 import assaultSprite from "../../assets/items/assault.png"
 import shotgunSprite from "../../assets/items/shotgun.png"
 import flamethrowerSprite from "../../assets/items/flamethrower.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
+import laserSightSprite from "../../assets/perks/laser-sight.png"
+import ricochetShellsSprite from "../../assets/perks/ricochet-shells.png"
+import contactGrenadesSprite from "../../assets/perks/contact-grenades.png"
+import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
+import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
+import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
+import thornRoundsSprite from "../../assets/perks/thorn-rounds.png"
+import quickstepSprite from "../../assets/perks/quickstep.png"
+import ironBarkSprite from "../../assets/perks/iron-bark.png"
 
 type SpriteRow = string
-export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov"
+export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
 
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
@@ -22,10 +31,41 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   "rocket-launcher": flamethrowerSprite,
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
+  laser_sight: laserSightSprite,
+  ricochet_shells: ricochetShellsSprite,
+  proximity_grenades: contactGrenadesSprite,
+  rapid_reload: rapidReloadSprite,
+  heavy_pellets: heavyPelletsSprite,
+  extra_heart: vitalBloomSprite,
+  overpressure_rounds: thornRoundsSprite,
+  extra_stamina: quickstepSprite,
+  kevlar_vest: ironBarkSprite,
 }
 
-export const getItemSpritePath = (id: ItemSpriteId) => {
-  return itemSpritePath[id]
+const legacyPerkSpriteAlias: Record<string, PerkId> = {
+  "laser-sight": "laser_sight",
+  "ricochet-shells": "ricochet_shells",
+  "contact-grenades": "proximity_grenades",
+  "rapid-reload": "rapid_reload",
+  "heavy-pellets": "heavy_pellets",
+  "vital-bloom": "extra_heart",
+  "thorn-rounds": "overpressure_rounds",
+  quickstep: "extra_stamina",
+  "iron-bark": "kevlar_vest",
+}
+
+export const getItemSpritePath = (id: ItemSpriteId | string) => {
+  const direct = (itemSpritePath as Record<string, string | undefined>)[id]
+  if (direct) {
+    return direct
+  }
+
+  const alias = legacyPerkSpriteAlias[id]
+  if (alias) {
+    return itemSpritePath[alias]
+  }
+
+  return undefined
 }
 
 const itemSpriteCache = new Map<ItemSpriteId, HTMLImageElement | null>()
@@ -41,8 +81,14 @@ const ensureItemSprite = (id: ItemSpriteId) => {
     return null
   }
 
+  const spritePath = getItemSpritePath(id)
+  if (!spritePath) {
+    itemSpriteCache.set(id, null)
+    return null
+  }
+
   const image = new Image()
-  image.src = getItemSpritePath(id)
+  image.src = spritePath
   itemSpriteCache.set(id, image)
   return image
 }
@@ -248,6 +294,28 @@ export const drawWeaponPickupSprite = (
   }
 
   draw(context, weaponSprites[weaponId], x, y, size)
+}
+
+export const drawItemPickupSprite = (
+  context: CanvasRenderingContext2D,
+  spriteId: ItemSpriteId,
+  x: number,
+  y: number,
+  size = 0.1,
+) => {
+  if (drawItemSpritePng(context, spriteId, x, y, size)) {
+    return
+  }
+
+  if (spriteId in weaponSprites) {
+    draw(context, weaponSprites[spriteId as PrimaryWeaponId], x, y, size)
+    return
+  }
+
+  context.fillStyle = "#f3f5f0"
+  context.fillRect(x - size * 2, y - size * 2, size * 4, size * 4)
+  context.fillStyle = "#bb2f2f"
+  context.fillRect(x - size, y - size, size * 2, size * 2)
 }
 
 export const drawGrenadeSprite = (

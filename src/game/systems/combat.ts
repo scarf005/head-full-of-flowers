@@ -20,10 +20,10 @@ const KILL_CIRCLE_EXTRA_BURSTS = 3
 const KILL_CIRCLE_EXTRA_AMOUNT_MULTIPLIER = 0.85
 const KILL_CIRCLE_RADIUS_MIN = 0.2
 const KILL_CIRCLE_RADIUS_MAX = 0.95
-const KILL_MAX_HP_BONUS = 1
 const KILL_HP_BONUS = 3
 const PRIMARY_WEAPON_CAP = 2
 const PRIMARY_RESERVE_PICKUP_CAP = 3
+const AIM_ASSIST_MAX_DISTANCE = 24
 
 const resetBurstState = (unit: Unit) => {
   unit.burstShotsRemaining = 0
@@ -79,6 +79,11 @@ const syncUnitPrimaryFromSlot = (unit: Unit) => {
     const pistol = buildPrimarySlot("pistol", Number.POSITIVE_INFINITY, ++unit.primarySlotSequence)
     unit.primarySlots.push(pistol)
     unit.primarySlotIndex = 0
+  }
+
+  if (unit.primarySlots.length === 1 && unit.primarySlots[0].weaponId !== "pistol") {
+    const fallbackPistol = buildPrimarySlot("pistol", Number.POSITIVE_INFINITY, 0)
+    unit.primarySlots.push(fallbackPistol)
   }
 
   if (unit.primarySlotIndex < 0 || unit.primarySlotIndex >= unit.primarySlots.length) {
@@ -223,8 +228,9 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
   }
 
   resetBurstState(unit)
-  unit.reloadCooldown = weapon.reload
-  unit.reloadCooldownMax = weapon.reload
+  const reloadSpeed = Math.max(0.05, unit.reloadSpeedMultiplier)
+  unit.reloadCooldown = weapon.reload / reloadSpeed
+  unit.reloadCooldownMax = unit.reloadCooldown
   if (unit.isPlayer) {
     onPlayerReloading()
   }
@@ -382,6 +388,61 @@ export interface FirePrimaryDeps {
   onShellEjected?: (shooter: Unit) => void
 }
 
+const normalizeAngleDelta = (delta: number) => {
+  let value = delta
+  while (value > Math.PI) {
+    value -= Math.PI * 2
+  }
+  while (value < -Math.PI) {
+    value += Math.PI * 2
+  }
+  return value
+}
+
+const resolveAssistedAimAngle = (world: WorldState, shooter: Unit, fallbackAngle: number) => {
+  const cone = shooter.aimAssistRadians
+  if (cone <= 0) {
+    return fallbackAngle
+  }
+
+  let bestDelta = 0
+  let bestScore = Number.POSITIVE_INFINITY
+
+  for (const candidate of world.units) {
+    if (candidate.id === shooter.id || candidate.team === shooter.team || candidate.hp <= 0) {
+      continue
+    }
+
+    const dx = candidate.position.x - shooter.position.x
+    const dy = candidate.position.y - shooter.position.y
+    const distance = Math.hypot(dx, dy)
+    if (distance <= 0.001 || distance > AIM_ASSIST_MAX_DISTANCE) {
+      continue
+    }
+
+    const targetAngle = Math.atan2(dy, dx)
+    const delta = normalizeAngleDelta(targetAngle - fallbackAngle)
+    const absDelta = Math.abs(delta)
+    if (absDelta > cone) {
+      continue
+    }
+
+    const score = absDelta * 8 + distance
+    if (score >= bestScore) {
+      continue
+    }
+
+    bestScore = score
+    bestDelta = delta
+  }
+
+  if (!Number.isFinite(bestScore)) {
+    return fallbackAngle
+  }
+
+  return fallbackAngle + bestDelta * 0.62
+}
+
 const emitPrimaryShot = (
   world: WorldState,
   shooter: Unit,
@@ -393,7 +454,7 @@ const emitPrimaryShot = (
 ) => {
   const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
   const pelletsPerShot = Math.max(1, weapon.pellets)
-  const baseAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
+  const baseAngle = resolveAssistedAimAngle(world, shooter, Math.atan2(shooter.aim.y, shooter.aim.x))
   const centeredBurstOffset = (shotIndex - (shotsTotal - 1) * 0.5) * burstSpread
 
   shooter.recoil = Math.min(1, shooter.recoil + 0.38 + pelletsPerShot * 0.05)
@@ -432,6 +493,11 @@ const emitPrimaryShot = (
     projectile.trailY = projectile.position.y
     projectile.trailReady = false
     projectile.ricochets = 0
+    projectile.ballisticRicochetRemaining = shooter.shotgunRicochet && (weapon.id === "shotgun" || weapon.id === "auto-shotgun")
+      ? 5
+      : 0
+    projectile.contactFuse = shooter.proximityGrenades && projectileKind === "grenade"
+    projectile.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
   }
 
   if (shooter.isPlayer) {
@@ -599,7 +665,7 @@ export interface DamageDeps {
   ) => void
   respawnUnit: (unitId: string) => void
   onKillPetalBurst?: (x: number, y: number) => void
-  onUnitKilled?: (target: Unit, isSuicide: boolean) => void
+  onUnitKilled?: (target: Unit, isSuicide: boolean, killer: Unit | null) => void
   onSfxHit: (isPlayerInvolved: boolean) => void
   onSfxDeath: () => void
   onSfxPlayerDeath: () => void
@@ -668,7 +734,8 @@ export const applyDamage = (
     return
   }
 
-  const damage = Math.max(1, amount)
+  const reducedAmount = Math.max(0, amount - target.damageReductionFlat)
+  const damage = Math.max(1, reducedAmount * Math.max(0.1, target.damageTakenMultiplier))
   target.hp = Math.max(0, target.hp - damage)
   target.hitFlash = 1
   target.recoil = Math.min(1, target.recoil + 0.45)
@@ -709,13 +776,12 @@ export const applyDamage = (
   const isKilled = target.hp <= 0
   const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
 
-  const killer = !isSelfHarm && !isBoundarySource
-    ? sourceUnit ?? world.units.find((unit) => unit.id === normalizedSourceId)
+  const killer: Unit | null = !isSelfHarm && !isBoundarySource
+    ? sourceUnit ?? world.units.find((unit) => unit.id === normalizedSourceId) ?? null
     : null
 
   if (isKilled) {
     if (killer) {
-      killer.maxHp += KILL_MAX_HP_BONUS
       killer.hp = Math.min(killer.maxHp, killer.hp + KILL_HP_BONUS)
 
       const bonusPopup = deps.allocPopup()
@@ -725,7 +791,7 @@ export const applyDamage = (
         killer.position.y - randomRange(0.85, 1.2),
       )
       bonusPopup.velocity.set(randomRange(-0.55, 0.55), randomRange(2.2, 3.2))
-      bonusPopup.text = `+${KILL_HP_BONUS} HP +${KILL_MAX_HP_BONUS} MAX`
+      bonusPopup.text = `+${KILL_HP_BONUS} HP`
       bonusPopup.color = "#a9ffbb"
       bonusPopup.life = 0.72
     }
@@ -829,7 +895,7 @@ export const applyDamage = (
   world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.09 * shakeScale)
 
   if (isKilled) {
-    deps.onUnitKilled?.(target, isSelfHarm)
+    deps.onUnitKilled?.(target, isSelfHarm, killer)
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()
     } else if (isPlayerSource && target.id !== world.player.id) {

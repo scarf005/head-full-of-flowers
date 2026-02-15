@@ -6,6 +6,7 @@ import {
   matchResultSignal,
   menuVisibleSignal,
   pausedSignal,
+  playerPerksSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
   primaryWeaponSlotsSignal,
@@ -16,11 +17,12 @@ import {
   timeRemainingSignal,
 } from "../signals.ts"
 import { BURNED_FACTION_COLOR, BURNED_FACTION_ID } from "../factions.ts"
+import { PERK_POOL } from "../perks.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { MATCH_DURATION_SECONDS } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 import { t } from "@lingui/core/macro"
-import type { PrimaryWeaponId } from "../types.ts"
+import type { PerkId, PrimaryWeaponId } from "../types.ts"
 
 const defaultMatchResult = {
   visible: false,
@@ -65,6 +67,64 @@ const formatAmmo = (primaryAmmo: number, reserveAmmo: number, reloading = false)
   return Number.isFinite(primaryAmmo)
     ? `${Math.floor(primaryAmmo)} / ${Number.isFinite(reserveAmmo) ? Math.floor(reserveAmmo) : "∞"}`
     : "∞"
+}
+
+const localizePerk = (perkId: PerkId) => {
+  if (perkId === "laser_sight") {
+    return t`Laser Sight`
+  }
+  if (perkId === "ricochet_shells") {
+    return t`Ricochet Shells`
+  }
+  if (perkId === "proximity_grenades") {
+    return t`Proximity Grenades`
+  }
+  if (perkId === "rapid_reload") {
+    return t`Rapid Reload`
+  }
+  if (perkId === "heavy_pellets") {
+    return t`Heavy Pellets`
+  }
+  if (perkId === "extra_heart") {
+    return t`Extra Heart`
+  }
+  if (perkId === "overpressure_rounds") {
+    return t`Overpressure Rounds`
+  }
+  if (perkId === "extra_stamina") {
+    return t`Extra Stamina`
+  }
+
+  return t`Kevlar Vest`
+}
+
+const localizePerkDetail = (perkId: PerkId, stacks: number) => {
+  if (perkId === "laser_sight") {
+    return t`Soft aim assist cone`
+  }
+  if (perkId === "ricochet_shells") {
+    return t`Shotgun bounces x5`
+  }
+  if (perkId === "proximity_grenades") {
+    return t`Grenades explode near enemies`
+  }
+  if (perkId === "rapid_reload") {
+    return t`Reload speed +25%`
+  }
+  if (perkId === "heavy_pellets") {
+    return t`Pellet size +50%, fire rate -25%`
+  }
+  if (perkId === "extra_heart") {
+    return t`Max HP +${stacks * 3}`
+  }
+  if (perkId === "overpressure_rounds") {
+    return t`Damage +15%, fire rate -8%`
+  }
+  if (perkId === "extra_stamina") {
+    return t`Move speed +12%`
+  }
+
+  return t`Damage taken -1 (min 1)`
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -137,6 +197,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   secondaryModeSignal.value = "grenade"
   secondaryWeaponCooldownSignal.value = t`RMB to throw`
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
+  playerPerksSignal.value = []
   statusMessageSignal.value = t`Click once to wake audio, then begin fighting`
   menuVisibleSignal.value = true
   crosshairSignal.value = {
@@ -179,6 +240,27 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   }))
 }
 
+const updatePlayerPerkSignals = (world: WorldState) => {
+  const perks = PERK_POOL
+    .map((perkId) => {
+      const stacks = world.player.perkStacks[perkId] ?? 0
+      if (stacks <= 0) {
+        return null
+      }
+
+      return {
+        id: perkId,
+        label: localizePerk(perkId),
+        detail: localizePerkDetail(perkId, stacks),
+        icon: perkId,
+        stacks,
+      }
+    })
+    .filter((entry) => entry !== null)
+
+  playerPerksSignal.value = perks
+}
+
 const updateSecondaryCooldownSignal = (world: WorldState) => {
   if (!world.player.secondaryCooldown) {
     secondaryWeaponCooldownSignal.value = t`RMB to throw`
@@ -196,6 +278,7 @@ export const syncHudSignals = (world: WorldState) => {
   }
   updatePlayerWeaponSignals(world)
   updateSecondaryCooldownSignal(world)
+  updatePlayerPerkSignals(world)
 }
 
 export const updatePlayerHpSignal = (world: WorldState) => {

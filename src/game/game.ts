@@ -72,7 +72,7 @@ import {
 } from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
-import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
+import { collectNearbyPickup, spawnPerkPickupAt, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
 import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
@@ -80,6 +80,7 @@ import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/thro
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
 import { HIGH_TIER_PRIMARY_IDS, PRIMARY_WEAPONS } from "./weapons.ts"
+import { applyPerkToUnit, perkStacks, randomPerkId } from "./perks.ts"
 import {
   botPalette,
   BURNED_FACTION_COLOR,
@@ -88,7 +89,7 @@ import {
   createFactionFlowerCounts,
   type FactionDescriptor,
 } from "./factions.ts"
-import type { GameModeId, PrimaryWeaponId, Team } from "./types.ts"
+import type { GameModeId, PerkId, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
@@ -406,6 +407,35 @@ export class FlowerArenaGame {
     return t`Rocket Launcher`
   }
 
+  private localizePerk(perkId: PerkId) {
+    if (perkId === "laser_sight") {
+      return t`Laser Sight`
+    }
+    if (perkId === "ricochet_shells") {
+      return t`Ricochet Shells`
+    }
+    if (perkId === "proximity_grenades") {
+      return t`Proximity Grenades`
+    }
+    if (perkId === "rapid_reload") {
+      return t`Rapid Reload`
+    }
+    if (perkId === "heavy_pellets") {
+      return t`Heavy Pellets`
+    }
+    if (perkId === "extra_heart") {
+      return t`Extra Heart`
+    }
+    if (perkId === "overpressure_rounds") {
+      return t`Overpressure Rounds`
+    }
+    if (perkId === "extra_stamina") {
+      return t`Extra Stamina`
+    }
+
+    return t`Kevlar Vest`
+  }
+
   private randomLootablePrimaryForMatch() {
     if (this.canSpawnFlamethrower()) {
       return randomLootablePrimary()
@@ -431,6 +461,13 @@ export class FlowerArenaGame {
       },
       randomHighTierPrimary: () => this.randomHighTierPrimary(),
       highTierChance,
+    })
+  }
+
+  private spawnPerkPickupDropAt(x: number, y: number, force = true) {
+    spawnPerkPickupAt(this.world, { x, y }, {
+      force,
+      randomPerk: () => randomPerkId(),
     })
   }
 
@@ -491,6 +528,16 @@ export class FlowerArenaGame {
     player.bulletSizeMultiplier = 1
     player.speed = PLAYER_BASE_SPEED
     player.grenadeTimer = 1
+    player.reloadSpeedMultiplier = 1
+    player.damageTakenMultiplier = 1
+    player.damageReductionFlat = 0
+    player.explosiveRadiusMultiplier = 1
+    player.aimAssistRadians = 0
+    player.shotgunRicochet = false
+    player.proximityGrenades = false
+    player.laserSight = false
+    player.perkStacks = {}
+    player.matchKills = 0
     player.primarySlots.length = 0
     player.primarySlotIndex = 0
     player.primarySlotSequence = 0
@@ -505,6 +552,16 @@ export class FlowerArenaGame {
       bot.bulletSizeMultiplier = 1
       bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
+      bot.reloadSpeedMultiplier = 1
+      bot.damageTakenMultiplier = 1
+      bot.damageReductionFlat = 0
+      bot.explosiveRadiusMultiplier = 1
+      bot.aimAssistRadians = 0
+      bot.shotgunRicochet = false
+      bot.proximityGrenades = false
+      bot.laserSight = false
+      bot.perkStacks = {}
+      bot.matchKills = 0
       bot.primarySlots.length = 0
       bot.primarySlotIndex = 0
       bot.primarySlotSequence = 0
@@ -518,6 +575,9 @@ export class FlowerArenaGame {
       projectile.trailDirX = 1
       projectile.trailDirY = 0
       projectile.trailReady = false
+      projectile.ballisticRicochetRemaining = 0
+      projectile.contactFuse = false
+      projectile.explosiveRadiusMultiplier = 1
     }
     for (const throwable of this.world.throwables) {
       throwable.active = false
@@ -525,6 +585,8 @@ export class FlowerArenaGame {
       throwable.trailDirX = 1
       throwable.trailDirY = 0
       throwable.trailReady = false
+      throwable.contactFuse = false
+      throwable.explosiveRadiusMultiplier = 1
     }
     for (let flowerIndex = 0; flowerIndex < this.world.flowers.length; flowerIndex += 1) {
       const flower = this.world.flowers[flowerIndex]
@@ -546,6 +608,12 @@ export class FlowerArenaGame {
     for (const pickup of this.world.pickups) {
       pickup.active = false
       pickup.highTier = false
+      pickup.velocity.set(0, 0)
+      pickup.throwOwnerId = ""
+      pickup.throwOwnerTeam = "white"
+      pickup.throwDamageArmed = false
+      pickup.kind = "weapon"
+      pickup.perkId = null
     }
     for (const zone of this.world.molotovZones) zone.active = false
     for (const obstacle of this.world.obstacles) {
@@ -1347,8 +1415,9 @@ export class FlowerArenaGame {
   }
 
   private explodeProjectilePayload(projectile: WorldState["projectiles"][number]) {
+    const explosionScale = Math.max(0.6, projectile.explosiveRadiusMultiplier)
     if (projectile.kind === "grenade") {
-      const explosionRadius = 3.8
+      const explosionRadius = 3.8 * explosionScale
       this.spawnExplosion(projectile.position.x, projectile.position.y, explosionRadius)
       this.applyRadialExplosionDamage(
         projectile.position.x,
@@ -1375,7 +1444,7 @@ export class FlowerArenaGame {
       const offset = explosionIndex === 0 ? 0 : randomRange(0.5, 1.1)
       const explosionX = projectile.position.x + Math.cos(angle) * offset
       const explosionY = projectile.position.y + Math.sin(angle) * offset
-      const explosionRadius = explosionIndex === 0 ? 2.9 : 2.4
+      const explosionRadius = (explosionIndex === 0 ? 2.9 : 2.4) * explosionScale
       this.spawnExplosion(explosionX, explosionY, explosionRadius)
       this.applyRadialExplosionDamage(
         explosionX,
@@ -1441,6 +1510,9 @@ export class FlowerArenaGame {
     slot.trailDirY = 0
     slot.trailReady = false
     slot.ricochets = 0
+    slot.ballisticRicochetRemaining = 0
+    slot.contactFuse = false
+    slot.explosiveRadiusMultiplier = 1
     return slot
   }
 
@@ -1451,6 +1523,8 @@ export class FlowerArenaGame {
     slot.trailDirX = 1
     slot.trailDirY = 0
     slot.trailReady = false
+    slot.contactFuse = false
+    slot.explosiveRadiusMultiplier = 1
     return slot
   }
 
@@ -1584,8 +1658,15 @@ export class FlowerArenaGame {
       },
       respawnUnit: (id) => this.respawnUnit(id),
       onKillPetalBurst: (x, y) => this.spawnKillPetalBurst(x, y),
-      onUnitKilled: (target, isSuicide) => {
-        if (isSuicide) {
+      onUnitKilled: (target, isSuicide, killer) => {
+        if (isSuicide || !killer) {
+          return
+        }
+
+        killer.matchKills += 1
+        const spawnPerkDrop = killer.matchKills > 0 && killer.matchKills % 5 === 0
+        if (spawnPerkDrop) {
+          this.spawnPerkPickupDropAt(target.position.x, target.position.y, true)
           return
         }
 
@@ -1675,10 +1756,19 @@ export class FlowerArenaGame {
       collectNearbyPickup: () => {
         collectNearbyPickup(this.world, this.world.player, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
+          applyPerk: (unit, perkId) => applyPerkToUnit(unit, perkId),
+          perkStacks: (unit, perkId) => perkStacks(unit, perkId),
           onPlayerPickup: (weaponId) => {
             this.sfx.itemAcquire()
             const localizedWeapon = this.localizePrimaryWeapon(weaponId)
             statusMessageSignal.value = t`Picked up ${localizedWeapon}`
+          },
+          onPlayerPerkPickup: (perkId, stacks) => {
+            this.sfx.itemAcquire()
+            const localizedPerk = this.localizePerk(perkId)
+            statusMessageSignal.value = stacks > 1
+              ? t`Perk acquired ${localizedPerk} x${stacks}`
+              : t`Perk acquired ${localizedPerk}`
           },
         })
       },
@@ -1701,7 +1791,10 @@ export class FlowerArenaGame {
         }
         collectNearbyPickup(this.world, bot, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
+          applyPerk: (unit, perkId) => applyPerkToUnit(unit, perkId),
+          perkStacks: (unit, perkId) => perkStacks(unit, perkId),
           onPlayerPickup: () => {},
+          onPlayerPerkPickup: () => {},
         })
       },
       nowMs: () => performance.now(),
@@ -1793,6 +1886,9 @@ export class FlowerArenaGame {
       },
       randomHighTierPrimary: () => this.randomHighTierPrimary(),
       highTierChance: this.highTierLootBoxChance(),
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        this.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
+      },
     })
 
     this.updateExplosions(effectDt, fxCullBounds)

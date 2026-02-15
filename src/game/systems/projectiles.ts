@@ -4,11 +4,16 @@ import type { Team } from "../types.ts"
 import { isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 
 const ROCKET_PROXIMITY_RADIUS = 1.2
+const GRENADE_PROXIMITY_RADIUS = 1.25
 const GRENADE_PROJECTILE_MAX_RICOCHETS = 2
 const GRENADE_PROJECTILE_RICOCHET_RESTITUTION = 0.58
 const GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION = 0.78
 const GRENADE_PROJECTILE_RICOCHET_MIN_SPEED = 2.8
 const GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS = 0.45
+const BALLISTIC_RICOCHET_RESTITUTION = 0.72
+const BALLISTIC_RICOCHET_TANGENT_FRICTION = 0.9
+const BALLISTIC_RICOCHET_MIN_SPEED = 4
+const BALLISTIC_RICOCHET_DAMAGE_SCALE = 0.8
 
 const distToSegmentSquared = (
   pointX: number,
@@ -30,6 +35,59 @@ const distToSegmentSquared = (
   const nearestX = startX + segmentX * t
   const nearestY = startY + segmentY * t
   return distSquared(pointX, pointY, nearestX, nearestY)
+}
+
+const ricochetBallisticProjectile = (
+  world: WorldState,
+  projectile: WorldState["projectiles"][number],
+  previousX: number,
+  previousY: number,
+) => {
+  const xCell = worldToObstacleGrid(world.obstacleGrid.size, projectile.position.x, previousY)
+  const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, projectile.position.y)
+  const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
+  const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
+  const moveX = projectile.position.x - previousX
+  const moveY = projectile.position.y - previousY
+  const moveLength = Math.hypot(moveX, moveY) || 1
+  const moveDirX = moveX / moveLength
+  const moveDirY = moveY / moveLength
+
+  projectile.position.x = previousX
+  projectile.position.y = previousY
+
+  let normalX = 0
+  let normalY = 0
+  if (blockedX && !blockedY) {
+    normalX = moveDirX > 0 ? -1 : 1
+  } else if (blockedY && !blockedX) {
+    normalY = moveDirY > 0 ? -1 : 1
+  } else {
+    normalX = -moveDirX
+    normalY = -moveDirY
+  }
+
+  const normalLength = Math.hypot(normalX, normalY) || 1
+  normalX /= normalLength
+  normalY /= normalLength
+
+  const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
+  const normalVelocityX = velocityDotNormal * normalX
+  const normalVelocityY = velocityDotNormal * normalY
+  const tangentVelocityX = projectile.velocity.x - normalVelocityX
+  const tangentVelocityY = projectile.velocity.y - normalVelocityY
+
+  projectile.velocity.x = -normalVelocityX * BALLISTIC_RICOCHET_RESTITUTION +
+    tangentVelocityX * BALLISTIC_RICOCHET_TANGENT_FRICTION
+  projectile.velocity.y = -normalVelocityY * BALLISTIC_RICOCHET_RESTITUTION +
+    tangentVelocityY * BALLISTIC_RICOCHET_TANGENT_FRICTION
+
+  projectile.velocity.x *= 0.78
+  projectile.velocity.y *= 0.78
+  projectile.damage *= BALLISTIC_RICOCHET_DAMAGE_SCALE
+  projectile.ballisticRicochetRemaining = Math.max(0, projectile.ballisticRicochetRemaining - 1)
+  projectile.position.x += normalX * 0.02
+  projectile.position.y += normalY * 0.02
 }
 
 export interface ProjectileDeps {
@@ -156,6 +214,35 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     if (projectile.kind === "grenade") {
+      if (projectile.contactFuse) {
+        let proximityFuseTriggered = false
+        for (const unit of world.units) {
+          if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+            continue
+          }
+
+          const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS
+          if (
+            distToSegmentSquared(
+              unit.position.x,
+              unit.position.y,
+              previousX,
+              previousY,
+              projectile.position.x,
+              projectile.position.y,
+            ) <= fuseRadius * fuseRadius
+          ) {
+            proximityFuseTriggered = true
+            break
+          }
+        }
+
+        if (proximityFuseTriggered) {
+          deactivateProjectile(projectileIndex, true, true)
+          continue
+        }
+      }
+
       const grenadeHitObstacle = deps.hitObstacle(projectileIndex)
       if (grenadeHitObstacle) {
         if (projectile.ricochets < GRENADE_PROJECTILE_MAX_RICOCHETS) {
@@ -220,6 +307,14 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         continue
       }
     } else if (deps.hitObstacle(projectileIndex)) {
+      if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
+        ricochetBallisticProjectile(world, projectile, previousX, previousY)
+        if (Math.hypot(projectile.velocity.x, projectile.velocity.y) < BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8) {
+          deactivateProjectile(projectileIndex, true)
+        }
+        continue
+      }
+
       deactivateProjectile(projectileIndex, true, isExplosive)
       continue
     }

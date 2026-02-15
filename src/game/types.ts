@@ -14,4 +14,15 @@ export type PrimaryWeaponId =
 
 export type SecondaryMode = "grenade" | "molotov"
 
+export type PerkId =
+  | "laser_sight"
+  | "ricochet_shells"
+  | "proximity_grenades"
+  | "rapid_reload"
+  | "heavy_pellets"
+  | "extra_heart"
+  | "overpressure_rounds"
+  | "extra_stamina"
+  | "kevlar_vest"
+
 export type GameModeId = "ffa" | "tdm" | "duo" | "squad"

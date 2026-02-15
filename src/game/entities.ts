@@ -1,4 +1,4 @@
-import type { AIState, PrimaryWeaponId, SecondaryMode, Team } from "./types.ts"
+import type { AIState, PerkId, PrimaryWeaponId, SecondaryMode, Team } from "./types.ts"
 import { UNIT_BASE_HP } from "./world/constants.ts"
 
 export interface PrimaryWeaponSlot {
@@ -99,6 +99,16 @@ export class Unit {
   aiDecisionTimer = 0
   aiMove = new Vec2(1, 0)
   grenadeTimer = 2
+  reloadSpeedMultiplier = 1
+  damageTakenMultiplier = 1
+  damageReductionFlat = 0
+  explosiveRadiusMultiplier = 1
+  aimAssistRadians = 0
+  shotgunRicochet = false
+  proximityGrenades = false
+  laserSight = false
+  perkStacks: Partial<Record<PerkId, number>> = {}
+  matchKills = 0
   hitFlash = 0
   recoil = 0
   arenaBoundaryDamageCooldown = 0
@@ -157,6 +167,9 @@ export class Projectile {
   trailDirY = 0
   trailReady = false
   ricochets = 0
+  ballisticRicochetRemaining = 0
+  contactFuse = false
+  explosiveRadiusMultiplier = 1
 }
 
 export class Throwable {
@@ -179,6 +192,8 @@ export class Throwable {
   trailDirX = 1
   trailDirY = 0
   trailReady = false
+  contactFuse = false
+  explosiveRadiusMultiplier = 1
 }
 
 export class FlightTrailSegment {
@@ -236,9 +251,15 @@ export class DamagePopup {
 
 export class Pickup {
   active = false
+  kind: "weapon" | "perk" = "weapon"
   weapon: PrimaryWeaponId = "assault"
+  perkId: PerkId | null = null
   highTier = false
   position = new Vec2()
+  velocity = new Vec2()
+  throwOwnerId = ""
+  throwOwnerTeam: Team = "white"
+  throwDamageArmed = false
   radius = 16
   bob = 0
 }
