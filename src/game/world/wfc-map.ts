@@ -9,7 +9,7 @@ export type TerrainTile =
   | "concrete"
 
 export interface MapObstacleBlueprint {
-  kind: "warehouse" | "wall" | "box"
+  kind: "warehouse" | "wall" | "box" | "warehouse-box"
   x: number
   y: number
   width: number
@@ -327,7 +327,7 @@ const createWarehouseLootBlueprints = (size: number, warehouses: MapObstacleBlue
 
     const [gridX, gridY] = candidates[randomInt(0, candidates.length - 1)]
     boxes.push({
-      kind: "box",
+      kind: "warehouse-box",
       x: gridToWorld(gridX, size),
       y: gridToWorld(gridY, size),
       width: 1,

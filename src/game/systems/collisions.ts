@@ -167,7 +167,7 @@ export const constrainUnitsToArena = (world: WorldState, dt: number, deps: Arena
 export interface ObstacleDamageDeps {
   onSfxHit?: () => void
   onSfxBreak?: () => void
-  onBoxDestroyed?: (x: number, y: number) => void
+  onBoxDestroyed?: (x: number, y: number, highTier: boolean) => void
   onObstacleDestroyed?: (x: number, y: number, material: number) => void
 }
 
@@ -221,7 +221,7 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
     }
     if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
       const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
-      deps.onBoxDestroyed?.(center.x, center.y)
+      deps.onBoxDestroyed?.(center.x, center.y, result.destroyedHighTierLoot ?? false)
     }
   }
   return true
@@ -265,7 +265,7 @@ export const damageObstaclesByExplosion = (
           }
           if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
             const center = obstacleGridToWorldCenter(grid.size, gx, gy)
-            deps.onBoxDestroyed?.(center.x, center.y)
+            deps.onBoxDestroyed?.(center.x, center.y, result.destroyedHighTierLoot ?? false)
           }
         }
       }

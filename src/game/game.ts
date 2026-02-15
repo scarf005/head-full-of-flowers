@@ -383,7 +383,15 @@ export class FlowerArenaGame {
     return Math.random() > 0.5 ? "assault" : "shotgun"
   }
 
-  private spawnLootPickupAt(x: number, y: number, force = false, allowHighTier = false) {
+  private spawnLootPickupAt(
+    x: number,
+    y: number,
+    force = false,
+    allowHighTier = false,
+    forceHighTier = false,
+  ) {
+    const highTierChance = forceHighTier ? 1 : allowHighTier ? this.highTierLootBoxChance() : 0
+
     spawnPickupAt(this.world, { x, y }, {
       force,
       randomLootablePrimary: () => {
@@ -391,7 +399,7 @@ export class FlowerArenaGame {
         return id === "pistol" ? "assault" : id
       },
       randomHighTierPrimary: () => this.randomHighTierPrimary(),
-      highTierChance: allowHighTier ? this.highTierLootBoxChance() : 0,
+      highTierChance,
     })
   }
 
@@ -1249,7 +1257,7 @@ export class FlowerArenaGame {
       onSfxHit: () => this.sfx.hit(),
       onSfxBreak: () => this.sfx.obstacleBreak(),
       onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-      onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true, true),
+      onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
     })
   }
 
@@ -1620,7 +1628,7 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true, true),
+          onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, highTier, highTier),
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
@@ -1651,7 +1659,7 @@ export class FlowerArenaGame {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-              onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true, true),
+              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),

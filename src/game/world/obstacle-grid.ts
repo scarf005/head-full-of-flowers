@@ -11,6 +11,7 @@ export interface ObstacleGridState {
   solid: Uint8Array
   hp: Float32Array
   material: Uint8Array
+  highTierLoot: Uint8Array
   flash: Float32Array
 }
 
@@ -41,6 +42,9 @@ const materialForKind = (kind: MapObstacleBlueprint["kind"]) => {
   if (kind === "box") {
     return OBSTACLE_MATERIAL_BOX
   }
+  if (kind === "warehouse-box") {
+    return OBSTACLE_MATERIAL_BOX
+  }
   return OBSTACLE_MATERIAL_NONE
 }
 
@@ -51,6 +55,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     solid: new Uint8Array(cellCount),
     hp: new Float32Array(cellCount),
     material: new Uint8Array(cellCount),
+    highTierLoot: new Uint8Array(cellCount),
     flash: new Float32Array(cellCount),
   }
 }
@@ -85,7 +90,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
   const grid = createObstacleGrid(map.size)
   const half = Math.floor(map.size * 0.5)
 
-  const setCell = (gridX: number, gridY: number, material: number) => {
+  const setCell = (gridX: number, gridY: number, material: number, highTierLoot = false) => {
     if (gridX < 0 || gridY < 0 || gridX >= map.size || gridY >= map.size) {
       return
     }
@@ -94,11 +99,13 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
     grid.solid[index] = 1
     grid.material[index] = material
     grid.hp[index] = hpForMaterial(material)
+    grid.highTierLoot[index] = highTierLoot ? 1 : 0
     grid.flash[index] = 0
   }
 
   for (const obstacle of map.obstacles) {
     const material = materialForKind(obstacle.kind)
+    const highTierLoot = obstacle.kind === "warehouse-box"
     if (material === OBSTACLE_MATERIAL_NONE) {
       continue
     }
@@ -112,7 +119,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
             continue
           }
 
-          setCell(left + col, top + row, material)
+          setCell(left + col, top + row, material, highTierLoot)
         }
       }
       continue
@@ -122,7 +129,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
     const height = Math.max(1, Math.floor(obstacle.height))
     for (let row = 0; row < height; row += 1) {
       for (let col = 0; col < width; col += 1) {
-        setCell(left + col, top + row, material)
+        setCell(left + col, top + row, material, highTierLoot)
       }
     }
   }
@@ -137,6 +144,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
 
   const index = obstacleGridIndex(grid.size, x, y)
   const material = grid.material[index]
+  const highTierLoot = grid.highTierLoot[index] > 0
   const hpBefore = grid.hp[index]
   grid.hp[index] = Math.max(0, grid.hp[index] - amount)
   grid.flash[index] = 1
@@ -145,8 +153,14 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
     grid.hp[index] = 0
     grid.solid[index] = 0
     grid.material[index] = OBSTACLE_MATERIAL_NONE
+    grid.highTierLoot[index] = 0
   }
-  return { damaged: true, destroyed, destroyedMaterial: destroyed ? material : OBSTACLE_MATERIAL_NONE }
+  return {
+    damaged: true,
+    destroyed,
+    destroyedMaterial: destroyed ? material : OBSTACLE_MATERIAL_NONE,
+    destroyedHighTierLoot: destroyed && highTierLoot,
+  }
 }
 
 export const decayObstacleFlash = (grid: ObstacleGridState, dt: number) => {
