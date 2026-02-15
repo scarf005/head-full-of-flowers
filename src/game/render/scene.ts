@@ -51,6 +51,7 @@ const TERRAIN_TINTS: Record<TerrainTile, string> = {
   concrete: "#8b908c",
 }
 const FLOWER_SPRITE_PIXEL_SIZE = 16
+const GROUND_LAYER_PIXELS_PER_TILE = GRASS_TILE_PIXEL_SIZE
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
 const FLOWER_LAYER_FLUSH_LIMIT = 1200
 const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
@@ -100,6 +101,20 @@ let groundPatchCache: {
   terrainMapRef: null,
   size: 0,
   cells: new Uint8Array(0),
+}
+
+let groundLayerCache: {
+  terrainMapRef: WorldState["terrainMap"] | null
+  size: number
+  textureStateKey: string
+  canvas: HTMLCanvasElement | null
+  context: CanvasRenderingContext2D | null
+} = {
+  terrainMapRef: null,
+  size: 0,
+  textureStateKey: "",
+  canvas: null,
+  context: null,
 }
 
 let flowerLayerCache: {
@@ -309,6 +324,173 @@ const ensureGroundPatchCache = (world: WorldState) => {
   }
   buildGroundPatchCache(world)
   return groundPatchCache
+}
+
+const groundTextureStateKey = () => {
+  return `${grassBaseTextureLoaded ? 1 : 0}-${grassDarkTextureLoaded ? 1 : 0}-${grassTransitionsTextureLoaded ? 1 : 0}`
+}
+
+const buildGroundLayerCache = (world: WorldState) => {
+  const size = world.terrainMap.size
+  const textureStateKey = groundTextureStateKey()
+  const canvas = document.createElement("canvas")
+  canvas.width = size * GROUND_LAYER_PIXELS_PER_TILE
+  canvas.height = size * GROUND_LAYER_PIXELS_PER_TILE
+  const context = canvas.getContext("2d")
+  if (!context) {
+    groundLayerCache = {
+      terrainMapRef: world.terrainMap,
+      size,
+      textureStateKey,
+      canvas,
+      context: null,
+    }
+    return groundLayerCache
+  }
+
+  context.imageSmoothingEnabled = false
+  context.clearRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = GRASS_BASE_COLOR
+  context.fillRect(0, 0, canvas.width, canvas.height)
+
+  const patchCache = ensureGroundPatchCache(world)
+  const patchCells = patchCache.cells
+  const patchSize = patchCache.size
+  const halfPatch = Math.floor(patchSize * 0.5)
+
+  if (grassBaseTexture && grassBaseTextureLoaded) {
+    for (let gridY = 0; gridY < patchSize; gridY += 1) {
+      for (let gridX = 0; gridX < patchSize; gridX += 1) {
+        const drawX = gridX * GROUND_LAYER_PIXELS_PER_TILE
+        const drawY = gridY * GROUND_LAYER_PIXELS_PER_TILE
+        context.drawImage(
+          grassBaseTexture,
+          drawX,
+          drawY,
+          GROUND_LAYER_PIXELS_PER_TILE,
+          GROUND_LAYER_PIXELS_PER_TILE,
+        )
+      }
+    }
+  }
+
+  if (grassTransitionsTexture && grassTransitionsTextureLoaded) {
+    for (let gridY = 0; gridY < patchSize; gridY += 1) {
+      for (let gridX = 0; gridX < patchSize; gridX += 1) {
+        if (!patchAt(patchCells, patchSize, gridX, gridY)) {
+          continue
+        }
+
+        const north = patchAt(patchCells, patchSize, gridX, gridY - 1)
+        const east = patchAt(patchCells, patchSize, gridX + 1, gridY)
+        const south = patchAt(patchCells, patchSize, gridX, gridY + 1)
+        const west = patchAt(patchCells, patchSize, gridX - 1, gridY)
+        let mask = 0
+        if (north) mask |= 1
+        if (east) mask |= 2
+        if (south) mask |= 4
+        if (west) mask |= 8
+
+        if (mask === 0) {
+          mask = 15
+        }
+
+        const drawX = gridX * GROUND_LAYER_PIXELS_PER_TILE
+        const drawY = gridY * GROUND_LAYER_PIXELS_PER_TILE
+        const cellX = gridX - halfPatch
+        const cellY = gridY - halfPatch
+
+        if (mask === 15 && grassDarkTexture && grassDarkTextureLoaded) {
+          const variant = grassVariantIndex(cellX, cellY)
+          const srcX = variant * GRASS_TILE_PIXEL_SIZE
+          context.drawImage(
+            grassDarkTexture,
+            srcX,
+            0,
+            GRASS_TILE_PIXEL_SIZE,
+            GRASS_TILE_PIXEL_SIZE,
+            drawX,
+            drawY,
+            GROUND_LAYER_PIXELS_PER_TILE,
+            GROUND_LAYER_PIXELS_PER_TILE,
+          )
+          continue
+        }
+
+        const tileIndex = GRASS_MASK_TO_TILE_INDEX.get(mask)
+        if (tileIndex === undefined) {
+          continue
+        }
+
+        const srcX = (tileIndex % GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
+        const srcY = Math.floor(tileIndex / GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
+        context.drawImage(
+          grassTransitionsTexture,
+          srcX,
+          srcY,
+          GRASS_TILE_PIXEL_SIZE,
+          GRASS_TILE_PIXEL_SIZE,
+          drawX,
+          drawY,
+          GROUND_LAYER_PIXELS_PER_TILE,
+          GROUND_LAYER_PIXELS_PER_TILE,
+        )
+      }
+    }
+  }
+
+  context.globalAlpha = 0.84
+  for (let gridY = 0; gridY < patchSize; gridY += 1) {
+    for (let gridX = 0; gridX < patchSize; gridX += 1) {
+      const terrain = world.terrainMap.tiles[gridY][gridX]
+      if (isGrassTile(terrain)) {
+        continue
+      }
+
+      const drawX = gridX * GROUND_LAYER_PIXELS_PER_TILE
+      const drawY = gridY * GROUND_LAYER_PIXELS_PER_TILE
+      context.fillStyle = TERRAIN_TINTS[terrain]
+      context.fillRect(drawX, drawY, GROUND_LAYER_PIXELS_PER_TILE, GROUND_LAYER_PIXELS_PER_TILE)
+
+      if (terrain === "dirt-road") {
+        context.globalAlpha = 0.18
+        context.fillStyle = "#d4c19a"
+        context.fillRect(
+          drawX + GROUND_LAYER_PIXELS_PER_TILE * 0.12,
+          drawY + GROUND_LAYER_PIXELS_PER_TILE * 0.18,
+          GROUND_LAYER_PIXELS_PER_TILE * 0.76,
+          GROUND_LAYER_PIXELS_PER_TILE * 0.14,
+        )
+        context.globalAlpha = 0.84
+      }
+    }
+  }
+  context.globalAlpha = 1
+
+  groundLayerCache = {
+    terrainMapRef: world.terrainMap,
+    size,
+    textureStateKey,
+    canvas,
+    context,
+  }
+
+  return groundLayerCache
+}
+
+const ensureGroundLayerCache = (world: WorldState) => {
+  const textureStateKey = groundTextureStateKey()
+  if (
+    groundLayerCache.terrainMapRef === world.terrainMap &&
+    groundLayerCache.size === world.terrainMap.size &&
+    groundLayerCache.textureStateKey === textureStateKey &&
+    groundLayerCache.canvas &&
+    groundLayerCache.context
+  ) {
+    return groundLayerCache
+  }
+
+  return buildGroundLayerCache(world)
 }
 
 const flowerSpriteForPalette = (color: string, accent: string) => {
@@ -556,113 +738,17 @@ const renderArenaGround = (
   const minWorldY = renderCameraY - halfViewY - 3
   const maxWorldY = renderCameraY + halfViewY + 3
 
-  const startCellX = Math.floor(minWorldX / GRASS_TILE_WORLD_SIZE) - 1
-  const endCellX = Math.floor(maxWorldX / GRASS_TILE_WORLD_SIZE) + 1
-  const startCellY = Math.floor(minWorldY / GRASS_TILE_WORLD_SIZE) - 1
-  const endCellY = Math.floor(maxWorldY / GRASS_TILE_WORLD_SIZE) + 1
-  const patchCache = ensureGroundPatchCache(world)
-  const patchCells = patchCache.cells
-  const patchSize = patchCache.size
-  const halfPatch = Math.floor(patchSize * 0.5)
-
-  context.fillStyle = GRASS_BASE_COLOR
-  context.fillRect(minWorldX, minWorldY, maxWorldX - minWorldX, maxWorldY - minWorldY)
-
-  if (grassBaseTexture && grassBaseTextureLoaded) {
-    for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
-      const mapY = cellY + halfPatch
-      if (mapY < 0 || mapY >= patchSize) {
-        continue
-      }
-      for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
-        const mapX = cellX + halfPatch
-        if (mapX < 0 || mapX >= patchSize) {
-          continue
-        }
-        const drawX = cellX * GRASS_TILE_WORLD_SIZE
-        const drawY = cellY * GRASS_TILE_WORLD_SIZE
-        context.drawImage(
-          grassBaseTexture,
-          drawX,
-          drawY,
-          GRASS_TILE_WORLD_SIZE,
-          GRASS_TILE_WORLD_SIZE,
-        )
-      }
-    }
+  const groundLayer = ensureGroundLayerCache(world)
+  if (groundLayer.canvas) {
+    const mapSize = groundLayer.size
+    const halfMap = Math.floor(mapSize * 0.5)
+    context.drawImage(groundLayer.canvas, -halfMap, -halfMap, mapSize, mapSize)
+  } else {
+    context.fillStyle = GRASS_BASE_COLOR
+    context.fillRect(minWorldX, minWorldY, maxWorldX - minWorldX, maxWorldY - minWorldY)
   }
 
-  if (grassTransitionsTexture && grassTransitionsTextureLoaded) {
-    for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
-      const mapY = cellY + halfPatch
-      if (mapY < 0 || mapY >= patchSize) {
-        continue
-      }
-      for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
-        const mapX = cellX + halfPatch
-        if (mapX < 0 || mapX >= patchSize) {
-          continue
-        }
-
-        if (!patchAt(patchCells, patchSize, mapX, mapY)) {
-          continue
-        }
-
-        const north = patchAt(patchCells, patchSize, mapX, mapY - 1)
-        const east = patchAt(patchCells, patchSize, mapX + 1, mapY)
-        const south = patchAt(patchCells, patchSize, mapX, mapY + 1)
-        const west = patchAt(patchCells, patchSize, mapX - 1, mapY)
-        let mask = 0
-        if (north) mask |= 1
-        if (east) mask |= 2
-        if (south) mask |= 4
-        if (west) mask |= 8
-
-        if (mask === 0) {
-          mask = 15
-        }
-
-        const drawX = cellX * GRASS_TILE_WORLD_SIZE
-        const drawY = cellY * GRASS_TILE_WORLD_SIZE
-
-        if (mask === 15 && grassDarkTexture && grassDarkTextureLoaded) {
-          const variant = grassVariantIndex(cellX, cellY)
-          const srcX = variant * GRASS_TILE_PIXEL_SIZE
-          context.drawImage(
-            grassDarkTexture,
-            srcX,
-            0,
-            GRASS_TILE_PIXEL_SIZE,
-            GRASS_TILE_PIXEL_SIZE,
-            drawX,
-            drawY,
-            GRASS_TILE_WORLD_SIZE,
-            GRASS_TILE_WORLD_SIZE,
-          )
-          continue
-        }
-
-        const tileIndex = GRASS_MASK_TO_TILE_INDEX.get(mask)
-        if (tileIndex === undefined) {
-          continue
-        }
-
-        const srcX = (tileIndex % GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
-        const srcY = Math.floor(tileIndex / GRASS_TRANSITION_COLS) * GRASS_TILE_PIXEL_SIZE
-        context.drawImage(
-          grassTransitionsTexture,
-          srcX,
-          srcY,
-          GRASS_TILE_PIXEL_SIZE,
-          GRASS_TILE_PIXEL_SIZE,
-          drawX,
-          drawY,
-          GRASS_TILE_WORLD_SIZE,
-          GRASS_TILE_WORLD_SIZE,
-        )
-      }
-    }
-
+  if (grassTransitionsTextureLoaded) {
     context.globalAlpha = 0.08
     const stripeHeight = 2.4
     for (let stripeY = minWorldY - stripeHeight; stripeY < maxWorldY + stripeHeight; stripeY += stripeHeight) {
@@ -672,38 +758,6 @@ const renderArenaGround = (
     }
     context.globalAlpha = 1
   }
-
-  context.globalAlpha = 0.84
-  for (let cellY = startCellY; cellY <= endCellY; cellY += 1) {
-    const mapY = cellY + halfPatch
-    if (mapY < 0 || mapY >= patchSize) {
-      continue
-    }
-    for (let cellX = startCellX; cellX <= endCellX; cellX += 1) {
-      const mapX = cellX + halfPatch
-      if (mapX < 0 || mapX >= patchSize) {
-        continue
-      }
-
-      const terrain = world.terrainMap.tiles[mapY][mapX]
-      if (isGrassTile(terrain)) {
-        continue
-      }
-
-      const drawX = cellX * GRASS_TILE_WORLD_SIZE
-      const drawY = cellY * GRASS_TILE_WORLD_SIZE
-      context.fillStyle = TERRAIN_TINTS[terrain]
-      context.fillRect(drawX, drawY, GRASS_TILE_WORLD_SIZE, GRASS_TILE_WORLD_SIZE)
-
-      if (terrain === "dirt-road") {
-        context.globalAlpha = 0.18
-        context.fillStyle = "#d4c19a"
-        context.fillRect(drawX + 0.12, drawY + 0.18, 0.76, 0.14)
-        context.globalAlpha = 0.84
-      }
-    }
-  }
-  context.globalAlpha = 1
 
   context.restore()
   context.restore()
