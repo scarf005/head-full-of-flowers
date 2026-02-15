@@ -16,6 +16,7 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
+  playerPerksSignal,
   persistAudioOptions,
   primaryWeaponSlotsSignal,
   persistDebugOptions,
@@ -91,6 +92,7 @@ export const GameHud = () => {
   const impactFeelLabel = impactFeelLevel >= 1.75 ? t`Heavy` : impactFeelLevel <= 1.25 ? t`Medium` : t`Hybrid`
   const secondaryMode = secondaryModeSignal.value
   const secondaryLabel = secondaryMode === "grenade" ? t`Grenade` : t`Molotov`
+  const perks = playerPerksSignal.value
   const locale = languageSignal.value
   const modeCards: { id: GameModeId; label: string; detail: string }[] = [
     { id: "ffa", label: t`Free For All`, detail: t`Every player for themselves` },
@@ -387,6 +389,26 @@ export const GameHud = () => {
               </div>
               <div class="weapon-sub">{hp.hp} / {hp.maxHp}</div>
             </div>
+            {perks.length > 0
+              ? (
+                <div class="weapon-card perks-card">
+                  <div class="weapon-title">{t`Perks`}</div>
+                  <div class="perk-list">
+                    {perks.map((perk) => (
+                      <div class="perk-row" key={perk.id}>
+                        <WeaponIcon icon={perk.icon} fallback={perk.label.slice(0, 2).toUpperCase()} />
+                        <div>
+                          <div class="weapon-value compact">{perk.label}</div>
+                          <div class="weapon-sub">
+                            {perk.stacks > 1 ? `${perk.detail} x${perk.stacks}` : perk.detail}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+              : null}
           </div>
         )
         : null}

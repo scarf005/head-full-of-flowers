@@ -458,6 +458,28 @@
   opacity: 0.7;
 }
 
+.perk-list {
+  margin-top: 0.3rem;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.perk-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem;
+  border: 1px solid rgba(255, 149, 149, 0.45);
+  background: rgba(144, 42, 42, 0.12);
+}
+
+.perk-row .weapon-icon {
+  width: 1.55rem;
+  height: 1.55rem;
+  min-width: 1.55rem;
+}
+
 .weapon-title {
   font-size: 0.62rem;
   text-transform: uppercase;

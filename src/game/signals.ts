@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals"
 import { GAME_SPEED, MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
-import type { GameModeId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
+import type { GameModeId, PerkId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
 import { preferredLocale, type LocaleId } from "../i18n.ts"
 
 export interface CoverageSlice {
@@ -24,6 +24,14 @@ export interface PrimaryWeaponHudItem {
   icon: WeaponHudIcon
   ammo: string
   selected: boolean
+}
+
+export interface PlayerPerkHudItem {
+  id: PerkId
+  label: string
+  detail: string
+  icon: WeaponHudIcon
+  stacks: number
 }
 
 const DEBUG_OPTIONS_STORAGE_KEY = "head-full-of-flowers.debug-options"
@@ -200,8 +208,9 @@ export const primaryWeaponSlotsSignal = signal<PrimaryWeaponHudItem[]>([
 export const secondaryModeSignal = signal<SecondaryMode>("grenade")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
+export const playerPerksSignal = signal<PlayerPerkHudItem[]>([])
 
 export const statusMessageSignal = signal("Click to begin")
 
 export const crosshairSignal = signal({ x: 0, y: 0, visible: false })
-export type WeaponHudIcon = PrimaryWeaponId | SecondaryMode
+export type WeaponHudIcon = PrimaryWeaponId | SecondaryMode | PerkId
