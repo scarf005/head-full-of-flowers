@@ -429,6 +429,22 @@ export const GameHud = () => {
         )
         : null}
 
+      {!showMenu && !result.visible
+        ? (
+          <div class="hud mobile-controls" aria-label={t`Mobile controls`}>
+            <div class="mobile-stick-zone mobile-move-zone" aria-label={t`Move joystick`}>
+              <div class="mobile-stick-thumb mobile-move-thumb" />
+            </div>
+            <button type="button" class="mobile-secondary-button" aria-label={t`Throw ${secondaryLabel}`}>
+              {secondaryLabel}
+            </button>
+            <div class="mobile-stick-zone mobile-aim-zone" aria-label={t`Aim and fire joystick`}>
+              <div class="mobile-stick-thumb mobile-aim-thumb" />
+            </div>
+          </div>
+        )
+        : null}
+
       {!showMenu
         ? (
           <div
