@@ -9,7 +9,7 @@ export type TerrainTile =
   | "concrete"
 
 export interface MapObstacleBlueprint {
-  kind: "warehouse" | "wall" | "box" | "warehouse-box"
+  kind: "warehouse" | "wall" | "box" | "high-tier-box"
   x: number
   y: number
   width: number
@@ -297,7 +297,7 @@ const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
   return obstacles
 }
 
-const createWarehouseLootBlueprints = (size: number, warehouses: MapObstacleBlueprint[]) => {
+const createHighTierLootBoxBlueprints = (size: number, warehouses: MapObstacleBlueprint[]) => {
   const boxes: MapObstacleBlueprint[] = []
 
   for (const warehouse of warehouses) {
@@ -327,7 +327,7 @@ const createWarehouseLootBlueprints = (size: number, warehouses: MapObstacleBlue
 
     const [gridX, gridY] = candidates[randomInt(0, candidates.length - 1)]
     boxes.push({
-      kind: "warehouse-box",
+      kind: "high-tier-box",
       x: gridToWorld(gridX, size),
       y: gridToWorld(gridY, size),
       width: 1,
@@ -714,19 +714,19 @@ export const createBarrenGardenMap = (size: number) => {
   const roads = applyRoadNetwork(tiles)
   const paths = roads
   const warehouseBlueprints = createWarehouseBlueprints(size, paths)
-  const warehouseLootBlueprints = createWarehouseLootBlueprints(size, warehouseBlueprints)
+  const highTierLootBoxBlueprints = createHighTierLootBoxBlueprints(size, warehouseBlueprints)
   const roadsideStructureBlueprints = createRoadsideStructureBlueprints(size, paths, warehouseBlueprints)
   const wallBlueprints = createWallBlueprints(size, paths, [...warehouseBlueprints, ...roadsideStructureBlueprints])
   const rockBlueprints = createRockBlueprints(size, paths, [
     ...warehouseBlueprints,
     ...roadsideStructureBlueprints,
-    ...warehouseLootBlueprints,
+    ...highTierLootBoxBlueprints,
     ...wallBlueprints,
   ])
   const structuralObstacles = [
     ...warehouseBlueprints,
     ...roadsideStructureBlueprints,
-    ...warehouseLootBlueprints,
+    ...highTierLootBoxBlueprints,
     ...wallBlueprints,
     ...rockBlueprints,
   ]

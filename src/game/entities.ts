@@ -247,7 +247,7 @@ export class MolotovZone {
 export class Obstacle {
   active = false
   id = ""
-  kind: "box" | "warehouse" | "wall" | "warehouse-box" = "box"
+  kind: "box" | "warehouse" | "wall" | "high-tier-box" = "box"
   position = new Vec2()
   width = 2
   height = 2

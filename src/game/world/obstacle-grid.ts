@@ -42,7 +42,7 @@ const materialForKind = (kind: MapObstacleBlueprint["kind"]) => {
   if (kind === "box") {
     return OBSTACLE_MATERIAL_BOX
   }
-  if (kind === "warehouse-box") {
+  if (kind === "high-tier-box") {
     return OBSTACLE_MATERIAL_BOX
   }
   return OBSTACLE_MATERIAL_NONE
@@ -105,7 +105,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
 
   for (const obstacle of map.obstacles) {
     const material = materialForKind(obstacle.kind)
-    const highTierLoot = obstacle.kind === "warehouse-box"
+    const highTierLoot = obstacle.kind === "high-tier-box"
     if (material === OBSTACLE_MATERIAL_NONE) {
       continue
     }
