@@ -1,4 +1,4 @@
-import type { Unit } from "../entities.ts"
+import { Pickup, type Unit } from "../entities.ts"
 import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { WorldState } from "../world/state.ts"
@@ -55,8 +55,12 @@ export interface PickupDeps {
 }
 
 export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
-  const slot = world.pickups.find((pickup) => !pickup.active) ??
-    (deps.force ? world.pickups[0] : undefined)
+  let slot = world.pickups.find((pickup) => !pickup.active)
+  if (!slot && deps.force) {
+    slot = new Pickup()
+    world.pickups.push(slot)
+  }
+
   if (!slot) {
     return
   }
