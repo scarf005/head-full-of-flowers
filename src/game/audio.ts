@@ -2,6 +2,7 @@ export class AudioDirector {
   private menuTrack: HTMLAudioElement
   private gameplayTrack: HTMLAudioElement
   private unlocked = false
+  private musicVolume = 0.75
 
   private mode: "menu" | "gameplay" | "stopped" = "stopped"
 
@@ -13,8 +14,17 @@ export class AudioDirector {
     this.gameplayTrack.loop = true
     this.menuTrack.preload = "auto"
     this.gameplayTrack.preload = "auto"
-    this.menuTrack.volume = 0.22
-    this.gameplayTrack.volume = 0.3
+    this.applyVolume()
+  }
+
+  private applyVolume() {
+    this.menuTrack.volume = Math.max(0, Math.min(1, 0.22 * this.musicVolume))
+    this.gameplayTrack.volume = Math.max(0, Math.min(1, 0.3 * this.musicVolume))
+  }
+
+  setMusicVolume(volume: number) {
+    this.musicVolume = Math.max(0, Math.min(1, volume))
+    this.applyVolume()
   }
 
   prime() {
@@ -93,6 +103,7 @@ export class SfxSynth {
   private bus: DynamicsCompressorNode | null = null
   private masterGain: GainNode | null = null
   private impactGain: GainNode | null = null
+  private effectsVolume = 0.9
 
   private ensureContext() {
     if (!this.context) {
@@ -105,7 +116,7 @@ export class SfxSynth {
       this.bus.release.value = 0.14
 
       this.masterGain = this.context.createGain()
-      this.masterGain.gain.value = 0.9
+      this.masterGain.gain.value = this.effectsVolume
 
       this.impactGain = this.context.createGain()
       this.impactGain.gain.value = 0.9
@@ -120,6 +131,13 @@ export class SfxSynth {
     }
 
     return this.context
+  }
+
+  setEffectsVolume(volume: number) {
+    this.effectsVolume = Math.max(0, Math.min(1, volume))
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.effectsVolume
+    }
   }
 
   prime() {

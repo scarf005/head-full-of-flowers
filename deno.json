@@ -3,7 +3,8 @@
     "dev": "deno run -A --node-modules-dir npm:vite",
     "build": "deno run -A --node-modules-dir npm:vite build",
     "preview": "deno run -A --node-modules-dir npm:vite preview",
-    "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/"
+    "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/",
+    "i18n:extract": "deno run -A --node-modules-dir ./node_modules/@lingui/cli/dist/lingui-extract.js --config ./lingui.config.ts --clean --workers 1"
   },
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
@@ -15,6 +16,12 @@
   "imports": {
     "@std/random": "jsr:@std/random@^0.1.5",
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
+    "@lingui/cli": "npm:@lingui/cli@6.0.0-next.0",
+    "@lingui/babel-plugin-lingui-macro": "npm:@lingui/babel-plugin-lingui-macro@6.0.0-next.0",
+    "@lingui/core": "npm:@lingui/core@6.0.0-next.0",
+    "@lingui/core/macro": "npm:@lingui/core@6.0.0-next.0/macro",
+    "@lingui/react": "npm:@lingui/react@6.0.0-next.0",
+    "@lingui/vite-plugin": "npm:@lingui/vite-plugin@6.0.0-next.0",
     "@preact/signals": "npm:@preact/signals@^2.8.0",
     "@preact/preset-vite": "npm:@preact/preset-vite@^2.10.2",
     "preact": "npm:preact@^10.28.0",

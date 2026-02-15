@@ -71,6 +71,36 @@ export const setupInputAdapter = (
       event.clientY <= bounds.bottom
   }
 
+  const isPausePanelTarget = (event: PointerEvent) => {
+    if (event.target instanceof Element && Boolean(event.target.closest(".pause-panel"))) {
+      return true
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : []
+    for (const node of path) {
+      if (node instanceof Element && Boolean(node.closest(".pause-panel"))) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  const isPauseResumeTarget = (event: PointerEvent) => {
+    if (event.target instanceof Element && Boolean(event.target.closest(".pause-resume-button"))) {
+      return true
+    }
+
+    const path = typeof event.composedPath === "function" ? event.composedPath() : []
+    for (const node of path) {
+      if (node instanceof Element && Boolean(node.closest(".pause-resume-button"))) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   const onKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase()
     const hadAudioPrimed = world.audioPrimed
@@ -148,6 +178,13 @@ export const setupInputAdapter = (
       }
 
       handlers.onBeginMatch()
+      return
+    }
+
+    if (world.paused && isPausePanelTarget(event)) {
+      if (event.button === 0 && isPauseResumeTarget(event)) {
+        handlers.onTogglePause()
+      }
       return
     }
 

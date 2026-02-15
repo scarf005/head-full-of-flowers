@@ -1,0 +1,325 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-02-15 12:07+0900\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ko\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
+#: src/game/game.ts:526
+msgid "{0} flowers"
+msgstr "{0}송이"
+
+#: src/game/hud.tsx:94
+msgid "2 players per team"
+msgstr "팀당 2명"
+
+#: src/game/hud.tsx:93
+msgid "2 teams, even sides"
+msgstr "2개 팀, 균등 인원"
+
+#: src/game/hud.tsx:95
+msgid "4 players per team"
+msgstr "팀당 4명"
+
+#. placeholder {0}: primaryAmmoSignal.value
+#: src/game/hud.tsx:326
+msgid "Ammo {0}"
+msgstr "탄약 {0}"
+
+#: src/game/adapters/hud-sync.ts:38
+#: src/game/game.ts:1275
+msgid "Assault Rifle"
+msgstr "돌격소총"
+
+#: src/game/game.ts:155
+#: src/game/game.ts:289
+msgid "Blue"
+msgstr "블루"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:275
+msgid "Bot {0}"
+msgstr "봇 {0}"
+
+#: src/game/game.ts:145
+msgid "Bot {botIndex}"
+msgstr "봇 {botIndex}"
+
+#: src/game/game.ts:528
+msgid "Bullets Fired"
+msgstr "발사 탄 수"
+
+#: src/game/game.ts:529
+msgid "Bullets Hit"
+msgstr "명중 탄 수"
+
+#: src/game/adapters/hud-sync.ts:59
+msgid "Burnt"
+msgstr "그을림"
+
+#: src/game/adapters/hud-sync.ts:111
+#: src/game/game.ts:559
+msgid "Click once to wake audio, then begin fighting"
+msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작하세요"
+
+#: src/game/hud.tsx:105
+msgid "Coverage score"
+msgstr "점유율 점수"
+
+#: src/game/game.ts:532
+msgid "Damage"
+msgstr "가한 피해"
+
+#: src/game/hud.tsx:94
+msgid "Duo"
+msgstr "듀오"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:305
+msgid "Duo {0}"
+msgstr "듀오 {0}"
+
+#: src/game/game.ts:166
+msgid "Duo {teamIndex}"
+msgstr "듀오 {teamIndex}"
+
+#: src/game/game.ts:166
+#: src/game/game.ts:305
+msgid "Duo 1 (You)"
+msgstr "듀오 1 (당신)"
+
+#: src/game/hud.tsx:269
+msgid "Effects Volume"
+msgstr "효과음 볼륨"
+
+#: src/game/hud.tsx:229
+#: src/game/hud.tsx:292
+msgid "English"
+msgstr "영어"
+
+#: src/game/hud.tsx:92
+msgid "Every player for themselves"
+msgstr "모두가 서로의 적"
+
+#: src/game/hud.tsx:357
+msgid "Final standings"
+msgstr "최종 순위"
+
+#: src/game/adapters/hud-sync.ts:44
+#: src/game/game.ts:1278
+msgid "Flamethrower"
+msgstr "화염방사기"
+
+#. placeholder {0}: Math.round(fpsSignal.value)
+#: src/game/hud.tsx:125
+msgid "FPS {0}"
+msgstr "FPS {0}"
+
+#: src/game/hud.tsx:92
+msgid "Free For All"
+msgstr "개인전"
+
+#: src/game/hud.tsx:172
+msgid "Game mode"
+msgstr "게임 모드"
+
+#: src/game/hud.tsx:89
+msgid "Grenade"
+msgstr "수류탄"
+
+#: src/game/hud.tsx:170
+msgid "Head Full of Flowers"
+msgstr "머릿속이 꽃밭"
+
+#: src/game/game.ts:530
+msgid "Hit Rate"
+msgstr "명중률"
+
+#: src/game/hud.tsx:340
+msgid "HP"
+msgstr "체력"
+
+#: src/game/hud.tsx:141
+msgid "Infinite HP"
+msgstr "무한 체력"
+
+#: src/game/hud.tsx:151
+msgid "Infinite Reload"
+msgstr "무한 재장전"
+
+#: src/game/hud.tsx:239
+#: src/game/hud.tsx:302
+msgid "Korean"
+msgstr "한국어"
+
+#: src/game/hud.tsx:219
+#: src/game/hud.tsx:282
+msgid "Language"
+msgstr "언어"
+
+#: src/game/game.ts:525
+msgid "Lead Margin"
+msgstr "선두 격차"
+
+#: src/game/hud.tsx:382
+msgid "Main Menu"
+msgstr "메인 메뉴"
+
+#: src/game/hud.tsx:254
+msgid "Match is frozen. Adjust options or resume."
+msgstr "경기가 멈춰 있습니다. 옵션을 조정하거나 계속하세요."
+
+#: src/game/hud.tsx:353
+msgid "Match Results"
+msgstr "경기 결과"
+
+#: src/game/hud.tsx:373
+msgid "Match statistics"
+msgstr "경기 통계"
+
+#: src/game/hud.tsx:89
+msgid "Molotov"
+msgstr "화염병"
+
+#: src/game/hud.tsx:256
+msgid "Music Volume"
+msgstr "음악 볼륨"
+
+#: src/game/hud.tsx:104
+#: src/game/hud.tsx:253
+msgid "Paused"
+msgstr "일시정지"
+
+#: src/game/game.ts:1279
+msgid "Picked up {localizedWeapon}"
+msgstr "{localizedWeapon} 획득"
+
+#: src/game/adapters/hud-sync.ts:35
+#: src/game/game.ts:1273
+msgid "Pistol"
+msgstr "권총"
+
+#: src/game/game.ts:531
+msgid "Player Kills"
+msgstr "처치 수"
+
+#: src/game/hud.tsx:71
+msgid "Players {players}"
+msgstr "플레이어 {players}명"
+
+#: src/game/hud.tsx:73
+msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
+msgstr "플레이어 {players}명 ({tdmTeamSize}대{tdmTeamSize})"
+
+#: src/game/hud.tsx:319
+msgid "Primary"
+msgstr "주무기"
+
+#: src/game/game.ts:152
+#: src/game/game.ts:288
+msgid "Red (You)"
+msgstr "레드 (당신)"
+
+#: src/game/adapters/hud-sync.ts:133
+msgid "Reloading..."
+msgstr "재장전 중..."
+
+#: src/game/hud.tsx:306
+msgid "Resume"
+msgstr "계속하기"
+
+#: src/game/adapters/hud-sync.ts:109
+#: src/game/adapters/hud-sync.ts:146
+msgid "RMB to throw"
+msgstr "우클릭으로 투척"
+
+#: src/game/hud.tsx:330
+msgid "Secondary"
+msgstr "보조무기"
+
+#: src/game/adapters/hud-sync.ts:41
+#: src/game/game.ts:1277
+msgid "Shotgun"
+msgstr "산탄총"
+
+#: src/game/hud.tsx:160
+msgid "Skip to Match End"
+msgstr "즉시 경기 종료"
+
+#: src/game/hud.tsx:95
+msgid "Squad"
+msgstr "스쿼드"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:308
+msgid "Squad {0}"
+msgstr "스쿼드 {0}"
+
+#: src/game/game.ts:169
+msgid "Squad {teamIndex}"
+msgstr "스쿼드 {teamIndex}"
+
+#: src/game/game.ts:169
+#: src/game/game.ts:307
+msgid "Squad 1 (You)"
+msgstr "스쿼드 1 (당신)"
+
+#: src/game/hud.tsx:243
+msgid "Start Match"
+msgstr "경기 시작"
+
+#: src/game/hud.tsx:93
+msgid "Team Deathmatch"
+msgstr "팀 데스매치"
+
+#: src/game/hud.tsx:75
+msgid "Teams {duoTeams} ({players} total)"
+msgstr "팀 {duoTeams}개 (총 {players}명)"
+
+#: src/game/hud.tsx:76
+msgid "Teams {squadTeams} ({players} total)"
+msgstr "팀 {squadTeams}개 (총 {players}명)"
+
+#: src/game/hud.tsx:171
+msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
+msgstr "{MATCH_DURATION_SECONDS}초 동안 가장 넓은 꽃밭을 만든 플레이어가 승리합니다"
+
+#. placeholder {0}: formatTime(timeRemainingSignal.value)
+#: src/game/hud.tsx:103
+msgid "Time {0}"
+msgstr "시간 {0}"
+
+#. placeholder {0}: winner.label
+#: src/game/game.ts:507
+msgid "Time up. {0} overwhelms the field"
+msgstr "시간 종료. {0}이(가) 전장을 압도했습니다"
+
+#: src/game/game.ts:506
+msgid "Time up. Your trail dominates the arena"
+msgstr "시간 종료. 당신의 꽃길이 전장을 지배했습니다"
+
+#: src/game/game.ts:521
+msgid "Total Flowers"
+msgstr "총 꽃 수"
+
+#: src/game/game.ts:522
+msgid "Winner Share"
+msgstr "승자 점유율"
+
+#: src/game/game.ts:141
+#: src/game/game.ts:269
+msgid "You"
+msgstr "당신"
+
+#: src/game/game.ts:523
+msgid "Your Place"
+msgstr "내 순위"

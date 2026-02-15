@@ -1,0 +1,325 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-02-15 12:07+0900\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
+#: src/game/game.ts:526
+msgid "{0} flowers"
+msgstr "{0} flowers"
+
+#: src/game/hud.tsx:94
+msgid "2 players per team"
+msgstr "2 players per team"
+
+#: src/game/hud.tsx:93
+msgid "2 teams, even sides"
+msgstr "2 teams, even sides"
+
+#: src/game/hud.tsx:95
+msgid "4 players per team"
+msgstr "4 players per team"
+
+#. placeholder {0}: primaryAmmoSignal.value
+#: src/game/hud.tsx:326
+msgid "Ammo {0}"
+msgstr "Ammo {0}"
+
+#: src/game/adapters/hud-sync.ts:38
+#: src/game/game.ts:1275
+msgid "Assault Rifle"
+msgstr "Assault Rifle"
+
+#: src/game/game.ts:155
+#: src/game/game.ts:289
+msgid "Blue"
+msgstr "Blue"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:275
+msgid "Bot {0}"
+msgstr "Bot {0}"
+
+#: src/game/game.ts:145
+msgid "Bot {botIndex}"
+msgstr "Bot {botIndex}"
+
+#: src/game/game.ts:528
+msgid "Bullets Fired"
+msgstr "Bullets Fired"
+
+#: src/game/game.ts:529
+msgid "Bullets Hit"
+msgstr "Bullets Hit"
+
+#: src/game/adapters/hud-sync.ts:59
+msgid "Burnt"
+msgstr "Burnt"
+
+#: src/game/adapters/hud-sync.ts:111
+#: src/game/game.ts:559
+msgid "Click once to wake audio, then begin fighting"
+msgstr "Click once to wake audio, then begin fighting"
+
+#: src/game/hud.tsx:105
+msgid "Coverage score"
+msgstr "Coverage score"
+
+#: src/game/game.ts:532
+msgid "Damage"
+msgstr "Damage"
+
+#: src/game/hud.tsx:94
+msgid "Duo"
+msgstr "Duo"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:305
+msgid "Duo {0}"
+msgstr "Duo {0}"
+
+#: src/game/game.ts:166
+msgid "Duo {teamIndex}"
+msgstr "Duo {teamIndex}"
+
+#: src/game/game.ts:166
+#: src/game/game.ts:305
+msgid "Duo 1 (You)"
+msgstr "Duo 1 (You)"
+
+#: src/game/hud.tsx:269
+msgid "Effects Volume"
+msgstr "Effects Volume"
+
+#: src/game/hud.tsx:229
+#: src/game/hud.tsx:292
+msgid "English"
+msgstr "English"
+
+#: src/game/hud.tsx:92
+msgid "Every player for themselves"
+msgstr "Every player for themselves"
+
+#: src/game/hud.tsx:357
+msgid "Final standings"
+msgstr "Final standings"
+
+#: src/game/adapters/hud-sync.ts:44
+#: src/game/game.ts:1278
+msgid "Flamethrower"
+msgstr "Flamethrower"
+
+#. placeholder {0}: Math.round(fpsSignal.value)
+#: src/game/hud.tsx:125
+msgid "FPS {0}"
+msgstr "FPS {0}"
+
+#: src/game/hud.tsx:92
+msgid "Free For All"
+msgstr "Free For All"
+
+#: src/game/hud.tsx:172
+msgid "Game mode"
+msgstr "Game mode"
+
+#: src/game/hud.tsx:89
+msgid "Grenade"
+msgstr "Grenade"
+
+#: src/game/hud.tsx:170
+msgid "Head Full of Flowers"
+msgstr "Head Full of Flowers"
+
+#: src/game/game.ts:530
+msgid "Hit Rate"
+msgstr "Hit Rate"
+
+#: src/game/hud.tsx:340
+msgid "HP"
+msgstr "HP"
+
+#: src/game/hud.tsx:141
+msgid "Infinite HP"
+msgstr "Infinite HP"
+
+#: src/game/hud.tsx:151
+msgid "Infinite Reload"
+msgstr "Infinite Reload"
+
+#: src/game/hud.tsx:239
+#: src/game/hud.tsx:302
+msgid "Korean"
+msgstr "Korean"
+
+#: src/game/hud.tsx:219
+#: src/game/hud.tsx:282
+msgid "Language"
+msgstr "Language"
+
+#: src/game/game.ts:525
+msgid "Lead Margin"
+msgstr "Lead Margin"
+
+#: src/game/hud.tsx:382
+msgid "Main Menu"
+msgstr "Main Menu"
+
+#: src/game/hud.tsx:254
+msgid "Match is frozen. Adjust options or resume."
+msgstr "Match is frozen. Adjust options or resume."
+
+#: src/game/hud.tsx:353
+msgid "Match Results"
+msgstr "Match Results"
+
+#: src/game/hud.tsx:373
+msgid "Match statistics"
+msgstr "Match statistics"
+
+#: src/game/hud.tsx:89
+msgid "Molotov"
+msgstr "Molotov"
+
+#: src/game/hud.tsx:256
+msgid "Music Volume"
+msgstr "Music Volume"
+
+#: src/game/hud.tsx:104
+#: src/game/hud.tsx:253
+msgid "Paused"
+msgstr "Paused"
+
+#: src/game/game.ts:1279
+msgid "Picked up {localizedWeapon}"
+msgstr "Picked up {localizedWeapon}"
+
+#: src/game/adapters/hud-sync.ts:35
+#: src/game/game.ts:1273
+msgid "Pistol"
+msgstr "Pistol"
+
+#: src/game/game.ts:531
+msgid "Player Kills"
+msgstr "Player Kills"
+
+#: src/game/hud.tsx:71
+msgid "Players {players}"
+msgstr "Players {players}"
+
+#: src/game/hud.tsx:73
+msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
+msgstr "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
+
+#: src/game/hud.tsx:319
+msgid "Primary"
+msgstr "Primary"
+
+#: src/game/game.ts:152
+#: src/game/game.ts:288
+msgid "Red (You)"
+msgstr "Red (You)"
+
+#: src/game/adapters/hud-sync.ts:133
+msgid "Reloading..."
+msgstr "Reloading..."
+
+#: src/game/hud.tsx:306
+msgid "Resume"
+msgstr "Resume"
+
+#: src/game/adapters/hud-sync.ts:109
+#: src/game/adapters/hud-sync.ts:146
+msgid "RMB to throw"
+msgstr "RMB to throw"
+
+#: src/game/hud.tsx:330
+msgid "Secondary"
+msgstr "Secondary"
+
+#: src/game/adapters/hud-sync.ts:41
+#: src/game/game.ts:1277
+msgid "Shotgun"
+msgstr "Shotgun"
+
+#: src/game/hud.tsx:160
+msgid "Skip to Match End"
+msgstr "Skip to Match End"
+
+#: src/game/hud.tsx:95
+msgid "Squad"
+msgstr "Squad"
+
+#. placeholder {0}: index + 1
+#: src/game/game.ts:308
+msgid "Squad {0}"
+msgstr "Squad {0}"
+
+#: src/game/game.ts:169
+msgid "Squad {teamIndex}"
+msgstr "Squad {teamIndex}"
+
+#: src/game/game.ts:169
+#: src/game/game.ts:307
+msgid "Squad 1 (You)"
+msgstr "Squad 1 (You)"
+
+#: src/game/hud.tsx:243
+msgid "Start Match"
+msgstr "Start Match"
+
+#: src/game/hud.tsx:93
+msgid "Team Deathmatch"
+msgstr "Team Deathmatch"
+
+#: src/game/hud.tsx:75
+msgid "Teams {duoTeams} ({players} total)"
+msgstr "Teams {duoTeams} ({players} total)"
+
+#: src/game/hud.tsx:76
+msgid "Teams {squadTeams} ({players} total)"
+msgstr "Teams {squadTeams} ({players} total)"
+
+#: src/game/hud.tsx:171
+msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
+msgstr "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
+
+#. placeholder {0}: formatTime(timeRemainingSignal.value)
+#: src/game/hud.tsx:103
+msgid "Time {0}"
+msgstr "Time {0}"
+
+#. placeholder {0}: winner.label
+#: src/game/game.ts:507
+msgid "Time up. {0} overwhelms the field"
+msgstr "Time up. {0} overwhelms the field"
+
+#: src/game/game.ts:506
+msgid "Time up. Your trail dominates the arena"
+msgstr "Time up. Your trail dominates the arena"
+
+#: src/game/game.ts:521
+msgid "Total Flowers"
+msgstr "Total Flowers"
+
+#: src/game/game.ts:522
+msgid "Winner Share"
+msgstr "Winner Share"
+
+#: src/game/game.ts:141
+#: src/game/game.ts:269
+msgid "You"
+msgstr "You"
+
+#: src/game/game.ts:523
+msgid "Your Place"
+msgstr "Your Place"

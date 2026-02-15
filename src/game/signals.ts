@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals"
 import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 import type { GameModeId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
+import { preferredLocale, type LocaleId } from "../i18n.ts"
 
 export interface CoverageSlice {
   id: string
@@ -28,6 +29,9 @@ export const tdmTeamSizeSignal = signal(4)
 export const duoTeamCountSignal = signal(4)
 export const squadTeamCountSignal = signal(2)
 export const menuVisibleSignal = signal(true)
+export const languageSignal = signal<LocaleId>(preferredLocale)
+export const musicVolumeSignal = signal(0.75)
+export const effectsVolumeSignal = signal(0.9)
 
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
 export const fpsSignal = signal(0)

@@ -14,8 +14,11 @@ import {
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
   duoTeamCountSignal,
+  effectsVolumeSignal,
   ffaPlayerCountSignal,
+  languageSignal,
   menuVisibleSignal,
+  musicVolumeSignal,
   pausedSignal,
   secondaryModeSignal,
   selectedGameModeSignal,
@@ -78,6 +81,7 @@ import {
   type FactionDescriptor,
 } from "./factions.ts"
 import type { GameModeId, Team } from "./types.ts"
+import { t } from "@lingui/core/macro"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
 import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -106,6 +110,9 @@ export class FlowerArenaGame {
   private sfx = new SfxSynth()
   private currentMode: GameModeId = "ffa"
   private botPool: Unit[]
+  private lastMusicVolume = -1
+  private lastEffectsVolume = -1
+  private lastLocale = languageSignal.value
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -120,11 +127,70 @@ export class FlowerArenaGame {
     this.world = createWorldState()
     this.botPool = [...this.world.bots]
     this.applyMatchMode()
+    this.syncPlayerOptions()
 
     this.setupWorld()
     this.setupInput()
     resetHudSignals(this.world, this.canvas)
     renderScene({ context: this.context, world: this.world, dt: 0 })
+  }
+
+  private localizeFactionLabel(factionId: string) {
+    if (this.currentMode === "ffa") {
+      if (factionId === this.world.player.id) {
+        return t`You`
+      }
+      const botIndex = Number(factionId.replace("bot-", ""))
+      if (Number.isFinite(botIndex) && botIndex > 0) {
+        return t`Bot ${botIndex}`
+      }
+      return factionId
+    }
+
+    if (this.currentMode === "tdm") {
+      if (factionId === "red") {
+        return t`Red (You)`
+      }
+      if (factionId === "blue") {
+        return t`Blue`
+      }
+      return factionId
+    }
+
+    const teamIndex = Number(factionId.replace("team-", ""))
+    if (!Number.isFinite(teamIndex) || teamIndex <= 0) {
+      return factionId
+    }
+
+    if (this.currentMode === "duo") {
+      return teamIndex === 1 ? t`Duo 1 (You)` : t`Duo ${teamIndex}`
+    }
+
+    return teamIndex === 1 ? t`Squad 1 (You)` : t`Squad ${teamIndex}`
+  }
+
+  private syncPlayerOptions() {
+    const musicVolume = musicVolumeSignal.value
+    if (musicVolume !== this.lastMusicVolume) {
+      this.lastMusicVolume = musicVolume
+      this.audioDirector.setMusicVolume(musicVolume)
+    }
+
+    const effectsVolume = effectsVolumeSignal.value
+    if (effectsVolume !== this.lastEffectsVolume) {
+      this.lastEffectsVolume = effectsVolume
+      this.sfx.setEffectsVolume(effectsVolume)
+    }
+
+    const locale = languageSignal.value
+    if (locale !== this.lastLocale) {
+      this.lastLocale = locale
+      this.world.factions = this.world.factions.map((faction) => ({
+        ...faction,
+        label: this.localizeFactionLabel(faction.id),
+      }))
+      updateCoverageSignals(this.world)
+    }
   }
 
   start() {
@@ -200,13 +266,13 @@ export class FlowerArenaGame {
     let factions: FactionDescriptor[] = []
     if (mode === "ffa") {
       this.world.player.team = this.world.player.id
-      factions = [{ id: this.world.player.id, label: "You", color: "#f2ffe8" }]
+      factions = [{ id: this.world.player.id, label: t`You`, color: "#f2ffe8" }]
       for (let index = 0; index < activeBots.length; index += 1) {
         const bot = activeBots[index]
         bot.team = bot.id
         factions.push({
           id: bot.id,
-          label: `Bot ${index + 1}`,
+          label: t`Bot ${index + 1}`,
           color: botPalette(bot.id).tone,
         })
       }
@@ -219,8 +285,8 @@ export class FlowerArenaGame {
       }
 
       factions = [
-        { id: "red", label: "Red (You)", color: TEAM_COLOR_RAMP[0] },
-        { id: "blue", label: "Blue", color: TEAM_COLOR_RAMP[1] },
+        { id: "red", label: t`Red (You)`, color: TEAM_COLOR_RAMP[0] },
+        { id: "blue", label: t`Blue`, color: TEAM_COLOR_RAMP[1] },
       ]
     } else {
       const teamSize = mode === "duo" ? 2 : 4
@@ -236,10 +302,10 @@ export class FlowerArenaGame {
       factions = teamIds.map((teamId, index) => ({
         id: teamId,
         label: mode === "duo"
-          ? index === 0 ? "Duo 1 (You)" : `Duo ${index + 1}`
+          ? index === 0 ? t`Duo 1 (You)` : t`Duo ${index + 1}`
           : index === 0
-          ? "Squad 1 (You)"
-          : `Squad ${index + 1}`,
+          ? t`Squad 1 (You)`
+          : t`Squad ${index + 1}`,
         color: TEAM_COLOR_RAMP[index % TEAM_COLOR_RAMP.length],
       }))
     }
@@ -437,8 +503,8 @@ export class FlowerArenaGame {
 
     if (winner) {
       const message = winner.id === this.playerCoverageId()
-        ? "Time up. Your trail dominates the arena"
-        : `Time up. ${winner.label} overwhelms the field`
+        ? t`Time up. Your trail dominates the arena`
+        : t`Time up. ${winner.label} overwhelms the field`
       statusMessageSignal.value = message
 
       const winnerPercent = standingsWithPercent.find((entry) => entry.id === winner.id)?.percent ?? 0
@@ -452,15 +518,18 @@ export class FlowerArenaGame {
       const shotsHit = this.world.playerBulletsHit
       const hitRate = shotsFired > 0 ? Math.min(100, (shotsHit / shotsFired) * 100) : 0
       const stats = [
-        { label: "Total Flowers", value: total.toLocaleString() },
-        { label: "Winner Share", value: `${winnerPercent.toFixed(1)}%` },
-        { label: "Your Place", value: `${playerRank}/${factionCount}` },
-        { label: "Lead Margin", value: `${Math.max(0, winner.flowers - runnerUpFlowers)} flowers` },
-        { label: "Bullets Fired", value: shotsFired.toLocaleString() },
-        { label: "Bullets Hit", value: shotsHit.toLocaleString() },
-        { label: "Hit Rate", value: `${hitRate.toFixed(1)}%` },
-        { label: "Player Kills", value: this.world.playerKills.toString() },
-        { label: "Damage", value: Math.round(this.world.playerDamageDealt).toLocaleString() },
+        { label: t`Total Flowers`, value: total.toLocaleString() },
+        { label: t`Winner Share`, value: `${winnerPercent.toFixed(1)}%` },
+        { label: t`Your Place`, value: `${playerRank}/${factionCount}` },
+        {
+          label: t`Lead Margin`,
+          value: t`${Math.max(0, winner.flowers - runnerUpFlowers)} flowers`,
+        },
+        { label: t`Bullets Fired`, value: shotsFired.toLocaleString() },
+        { label: t`Bullets Hit`, value: shotsHit.toLocaleString() },
+        { label: t`Hit Rate`, value: `${hitRate.toFixed(1)}%` },
+        { label: t`Player Kills`, value: this.world.playerKills.toString() },
+        { label: t`Damage`, value: Math.round(this.world.playerDamageDealt).toLocaleString() },
       ]
 
       setMatchResultSignal(
@@ -487,7 +556,7 @@ export class FlowerArenaGame {
     menuVisibleSignal.value = true
     pausedSignal.value = false
     clearMatchResultSignal()
-    statusMessageSignal.value = "Click once to wake audio, then begin fighting"
+    statusMessageSignal.value = t`Click once to wake audio, then begin fighting`
     this.audioDirector.startMenu()
   }
 
@@ -1154,6 +1223,8 @@ export class FlowerArenaGame {
   }
 
   private update(dt: number) {
+    this.syncPlayerOptions()
+
     if (this.world.paused) {
       updateCrosshairWorld(this.world)
       syncHudSignals(this.world)
@@ -1198,7 +1269,14 @@ export class FlowerArenaGame {
         collectNearbyPickup(this.world, this.world.player, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
           onPlayerPickup: (label) => {
-            statusMessageSignal.value = `Picked up ${label}`
+            const localizedWeapon = label === "pistol"
+              ? t`Pistol`
+              : label === "assault"
+              ? t`Assault Rifle`
+              : label === "shotgun"
+              ? t`Shotgun`
+              : t`Flamethrower`
+            statusMessageSignal.value = t`Picked up ${localizedWeapon}`
           },
         })
       },

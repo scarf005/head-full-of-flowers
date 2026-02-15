@@ -105,7 +105,7 @@ export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps) =
 
 export interface CollectPickupDeps {
   equipPrimary: (unit: Unit, weaponId: "pistol" | "assault" | "shotgun" | "flamethrower", ammo: number) => void
-  onPlayerPickup: (label: string) => void
+  onPlayerPickup: (weaponId: "pistol" | "assault" | "shotgun" | "flamethrower") => void
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
@@ -125,7 +125,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
     deps.equipPrimary(unit, pickup.weapon, config.pickupAmmo)
 
     if (unit.isPlayer) {
-      deps.onPlayerPickup(config.name)
+      deps.onPlayerPickup(pickup.weapon)
     }
   }
 }

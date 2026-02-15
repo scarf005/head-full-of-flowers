@@ -14,10 +14,12 @@ import {
   statusMessageSignal,
   timeRemainingSignal,
 } from "../signals.ts"
-import { BURNED_FACTION_COLOR, BURNED_FACTION_ID, BURNED_FACTION_LABEL } from "../factions.ts"
+import { BURNED_FACTION_COLOR, BURNED_FACTION_ID } from "../factions.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { MATCH_DURATION_SECONDS } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
+import { t } from "@lingui/core/macro"
+import type { PrimaryWeaponId } from "../types.ts"
 
 const defaultMatchResult = {
   visible: false,
@@ -26,6 +28,20 @@ const defaultMatchResult = {
   pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
   stats: [],
   standings: [],
+}
+
+const localizeWeapon = (weaponId: PrimaryWeaponId) => {
+  if (weaponId === "pistol") {
+    return t`Pistol`
+  }
+  if (weaponId === "assault") {
+    return t`Assault Rifle`
+  }
+  if (weaponId === "shotgun") {
+    return t`Shotgun`
+  }
+
+  return t`Flamethrower`
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -40,7 +56,7 @@ const buildCoverageSlices = (world: WorldState) => {
   if (burntCount > 0) {
     entries.push({
       id: BURNED_FACTION_ID,
-      label: BURNED_FACTION_LABEL,
+      label: t`Burnt`,
       color: BURNED_FACTION_COLOR,
       count: burntCount,
     })
@@ -86,13 +102,13 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   pausedSignal.value = false
   coverageSlicesSignal.value = buildCoverageSlices(world)
   matchResultSignal.value = defaultMatchResult
-  primaryWeaponSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].name
+  primaryWeaponSignal.value = localizeWeapon(world.player.primaryWeapon)
   primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
   secondaryModeSignal.value = "grenade"
-  secondaryWeaponCooldownSignal.value = "RMB to throw"
+  secondaryWeaponCooldownSignal.value = t`RMB to throw`
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
-  statusMessageSignal.value = "Click once to wake audio, then begin fighting"
+  statusMessageSignal.value = t`Click once to wake audio, then begin fighting`
   menuVisibleSignal.value = true
   crosshairSignal.value = {
     x: canvas.clientWidth * 0.5,
@@ -111,10 +127,10 @@ export const updateCoverageSignals = (world: WorldState) => {
 
 export const updatePlayerWeaponSignals = (world: WorldState) => {
   const config = PRIMARY_WEAPONS[world.player.primaryWeapon]
-  primaryWeaponSignal.value = config.name
+  primaryWeaponSignal.value = localizeWeapon(config.id)
   primaryWeaponIconSignal.value = config.icon
   if (world.player.reloadCooldown > 0) {
-    primaryAmmoSignal.value = "Reloading..."
+    primaryAmmoSignal.value = t`Reloading...`
     return
   }
 
@@ -127,7 +143,7 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
 
 const updateSecondaryCooldownSignal = (world: WorldState) => {
   if (!world.player.secondaryCooldown) {
-    secondaryWeaponCooldownSignal.value = "RMB to throw"
+    secondaryWeaponCooldownSignal.value = t`RMB to throw`
     return
   }
 

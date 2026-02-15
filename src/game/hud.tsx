@@ -5,11 +5,14 @@ import {
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
   duoTeamCountSignal,
+  effectsVolumeSignal,
   ffaPlayerCountSignal,
   fpsSignal,
   hpSignal,
+  languageSignal,
   matchResultSignal,
   menuVisibleSignal,
+  musicVolumeSignal,
   pausedSignal,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
@@ -22,10 +25,12 @@ import {
   tdmTeamSizeSignal,
   timeRemainingSignal,
 } from "./signals.ts"
-import type { WeaponHudIcon } from "./signals.ts"
-import type { CoverageSlice } from "./signals.ts"
+import type { CoverageSlice, WeaponHudIcon } from "./signals.ts"
 import type { GameModeId } from "./types.ts"
 import { getItemSpritePath } from "./render/pixel-art.ts"
+import { MATCH_DURATION_SECONDS } from "./world/constants.ts"
+import { activateLocale } from "../i18n.ts"
+import { t } from "@lingui/core/macro"
 
 type WeaponIconSprite = WeaponHudIcon
 
@@ -63,12 +68,12 @@ export const GameHud = () => {
     ? duoTeams * 2
     : squadTeams * 4
   const sliderLabel = selectedMode === "ffa"
-    ? `Players ${players}`
+    ? t`Players ${players}`
     : selectedMode === "tdm"
-    ? `Players ${players} (${tdmTeamSize}v${tdmTeamSize})`
+    ? t`Players ${players} (${tdmTeamSize}v${tdmTeamSize})`
     : selectedMode === "duo"
-    ? `Teams ${duoTeams} (${players} total)`
-    : `Teams ${squadTeams} (${players} total)`
+    ? t`Teams ${duoTeams} (${players} total)`
+    : t`Teams ${squadTeams} (${players} total)`
   const sliderMin = selectedMode === "ffa" ? 2 : selectedMode === "tdm" ? 4 : 2
   const sliderMax = selectedMode === "ffa" ? 8 : selectedMode === "tdm" ? 12 : selectedMode === "duo" ? 6 : 3
   const sliderStep = selectedMode === "tdm" ? 2 : 1
@@ -81,22 +86,29 @@ export const GameHud = () => {
     : squadTeams
   const showMenu = menuVisibleSignal.value
   const secondaryMode = secondaryModeSignal.value
-  const secondaryLabel = secondaryMode === "grenade" ? "Grenade" : "Molotov"
+  const secondaryLabel = secondaryMode === "grenade" ? t`Grenade` : t`Molotov`
+  const locale = languageSignal.value
   const modeCards: { id: GameModeId; label: string; detail: string }[] = [
-    { id: "ffa", label: "Free For All", detail: "Every player for themselves" },
-    { id: "tdm", label: "Team Deathmatch", detail: "2 teams, even sides" },
-    { id: "duo", label: "Duo", detail: "2 players per team" },
-    { id: "squad", label: "Squad", detail: "4 players per team" },
+    { id: "ffa", label: t`Free For All`, detail: t`Every player for themselves` },
+    { id: "tdm", label: t`Team Deathmatch`, detail: t`2 teams, even sides` },
+    { id: "duo", label: t`Duo`, detail: t`2 players per team` },
+    { id: "squad", label: t`Squad`, detail: t`4 players per team` },
   ]
+
+  const onSelectLocale = (nextLocale: "en" | "ko") => {
+    void activateLocale(nextLocale).then(() => {
+      languageSignal.value = nextLocale
+    })
+  }
 
   return (
     <>
       {!showMenu
         ? (
           <div class="hud hud-top">
-            <div class="hud-pill">Time {formatTime(timeRemainingSignal.value)}</div>
-            {pausedSignal.value ? <div class="hud-pill hud-pill-warn">Paused</div> : null}
-            <div class="score-panel" aria-label="Coverage score">
+            <div class="hud-pill">{t`Time ${formatTime(timeRemainingSignal.value)}`}</div>
+            {pausedSignal.value ? <div class="hud-pill hud-pill-warn">{t`Paused`}</div> : null}
+            <div class="score-panel" aria-label={t`Coverage score`}>
               <div class="score-track score-track-ffa">
                 {slices.map((slice) => (
                   <div
@@ -116,7 +128,7 @@ export const GameHud = () => {
                 ))}
               </div>
             </div>
-            <div class="hud-pill hud-pill-fps">FPS {Math.round(fpsSignal.value)}</div>
+            <div class="hud-pill hud-pill-fps">{t`FPS ${Math.round(fpsSignal.value)}`}</div>
           </div>
         )
         : null}
@@ -132,7 +144,7 @@ export const GameHud = () => {
                   debugInfiniteHpSignal.value = event.currentTarget.checked
                 }}
               />
-              <span>Infinite HP</span>
+              <span>{t`Infinite HP`}</span>
             </label>
             <label class="debug-row">
               <input
@@ -142,7 +154,7 @@ export const GameHud = () => {
                   debugInfiniteReloadSignal.value = event.currentTarget.checked
                 }}
               />
-              <span>Infinite Reload</span>
+              <span>{t`Infinite Reload`}</span>
             </label>
             <button
               class="debug-skip"
@@ -151,7 +163,7 @@ export const GameHud = () => {
                 debugSkipToMatchEndSignal.value = true
               }}
             >
-              Skip to Match End
+              {t`Skip to Match End`}
             </button>
           </div>
         )
@@ -161,9 +173,9 @@ export const GameHud = () => {
         ? (
           <div class="hud menu-layer">
             <div class="menu-panel">
-              <div class="menu-title">Head Full of Flowers</div>
-              <div class="menu-subtitle">Pick a mode and step into the garden</div>
-              <div class="mode-cards" role="radiogroup" aria-label="Game mode">
+              <div class="menu-title">{t`Head Full of Flowers`}</div>
+              <div class="menu-subtitle">{t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}</div>
+              <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
                 {modeCards.map((mode) => (
                   <button
                     key={mode.id}
@@ -209,7 +221,91 @@ export const GameHud = () => {
                   }}
                 />
               </label>
-              <button type="button" class="menu-start-button">Start Match</button>
+              <div class="mode-row">
+                <span>{t`Language`}</span>
+                <div class="option-language-row">
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "en" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("en")
+                    }}
+                  >
+                    {t`English`}
+                  </button>
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "ko" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("ko")
+                    }}
+                  >
+                    {t`Korean`}
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="menu-start-button">{t`Start Match`}</button>
+            </div>
+          </div>
+        )
+        : null}
+
+      {!showMenu && pausedSignal.value && !result.visible
+        ? (
+          <div class="hud pause-layer">
+            <div class="pause-panel">
+              <div class="pause-title">{t`Paused`}</div>
+              <div class="pause-hint">{t`Match is frozen. Adjust options or resume.`}</div>
+              <label class="mode-row mode-row-slider">
+                <span>{t`Music Volume`} {Math.round(musicVolumeSignal.value * 100)}%</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(musicVolumeSignal.value * 100)}
+                  onInput={(event) => {
+                    musicVolumeSignal.value = Number(event.currentTarget.value) / 100
+                  }}
+                />
+              </label>
+              <label class="mode-row mode-row-slider">
+                <span>{t`Effects Volume`} {Math.round(effectsVolumeSignal.value * 100)}%</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(effectsVolumeSignal.value * 100)}
+                  onInput={(event) => {
+                    effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
+                  }}
+                />
+              </label>
+              <div class="mode-row">
+                <span>{t`Language`}</span>
+                <div class="option-language-row">
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "en" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("en")
+                    }}
+                  >
+                    {t`English`}
+                  </button>
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "ko" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("ko")
+                    }}
+                  >
+                    {t`Korean`}
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="pause-resume-button">{t`Resume`}</button>
             </div>
           </div>
         )
@@ -222,18 +318,18 @@ export const GameHud = () => {
           <div class="hud hud-left">
             <div class="weapon-card">
               <div class="weapon-title-row">
-                <div class="weapon-title">Primary</div>
+                <div class="weapon-title">{t`Primary`}</div>
                 <WeaponIcon
                   icon={primaryWeaponIconSignal.value}
                   fallback={primaryWeaponSignal.value.slice(0, 2).toUpperCase()}
                 />
               </div>
               <div class="weapon-value compact">{primaryWeaponSignal.value}</div>
-              <div class="weapon-sub">Ammo {primaryAmmoSignal.value}</div>
+              <div class="weapon-sub">{t`Ammo ${primaryAmmoSignal.value}`}</div>
             </div>
             <div class="weapon-card">
               <div class="weapon-title-row">
-                <div class="weapon-title">Secondary</div>
+                <div class="weapon-title">{t`Secondary`}</div>
                 <WeaponIcon
                   icon={secondaryMode}
                   fallback={secondaryLabel.slice(0, 2)}
@@ -243,7 +339,7 @@ export const GameHud = () => {
               <div class="weapon-sub">{secondaryWeaponCooldownSignal.value}</div>
             </div>
             <div class="weapon-card hp-card">
-              <div class="weapon-title">HP</div>
+              <div class="weapon-title">{t`HP`}</div>
               <div class="hp-track">
                 <div class="hp-fill" style={{ width: `${Math.max(0, Math.min(100, (hp.hp / hp.maxHp) * 100))}%` }} />
               </div>
@@ -256,11 +352,11 @@ export const GameHud = () => {
       {result.visible
         ? (
           <div class="hud match-result" role="status" aria-live="polite">
-            <div class="match-result-title">Match Results</div>
+            <div class="match-result-title">{t`Match Results`}</div>
             <div class="match-result-name" style={{ color: result.winnerColor }}>{result.winnerLabel}</div>
             <div class="match-result-content">
               <div class="match-result-pie" style={{ background: result.pieGradient }} />
-              <div class="match-result-standings" aria-label="Final standings">
+              <div class="match-result-standings" aria-label={t`Final standings`}>
                 {result.standings.map((standing, index) => (
                   <div class="match-result-standing" key={standing.id}>
                     <div class="match-result-standing-main">
@@ -276,7 +372,7 @@ export const GameHud = () => {
                 ))}
               </div>
             </div>
-            <div class="match-result-stats" aria-label="Match statistics">
+            <div class="match-result-stats" aria-label={t`Match statistics`}>
               {result.stats.map((stat) => (
                 <div class="match-result-stat" key={stat.label}>
                   <div class="match-result-stat-label">{stat.label}</div>
@@ -285,7 +381,7 @@ export const GameHud = () => {
               ))}
             </div>
             <button type="button" class="match-result-rematch">
-              Main Menu
+              {t`Main Menu`}
             </button>
           </div>
         )
