@@ -1,4 +1,4 @@
-import { drawFlameProjectileSprite, drawGrenadeSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
+import { drawFlameProjectileSprite, drawGrenadeSprite, drawItemPickupSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
 import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { botPalette } from "../factions.ts"
@@ -514,6 +514,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   })
   renderThrowables(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
   renderProjectiles(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
+  renderAimLasers(context, world, fogCullBounds)
   renderUnits(context, world, fogCullBounds)
   renderExplosions(context, world, fogCullBounds)
   renderDamagePopups(context, world, fogCullBounds)
@@ -751,6 +752,10 @@ const renderFlowers = (
 }
 
 const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
+  if (pickup.kind === "perk") {
+    return "255, 118, 118"
+  }
+
   if (pickup.highTier) {
     return "244, 248, 255"
   }
@@ -793,7 +798,8 @@ const renderPickups = (
     context.ellipse(pickup.position.x, pickup.position.y + 0.55, 0.45, 0.2, 0, 0, Math.PI * 2)
     context.fill()
 
-    drawWeaponPickupSprite(context, pickup.weapon, pickup.position.x, pickup.position.y + bobOffset, 0.1)
+    const spriteId = pickup.kind === "perk" && pickup.perkId ? pickup.perkId : pickup.weapon
+    drawItemPickupSprite(context, spriteId, pickup.position.x, pickup.position.y + bobOffset, 0.1)
   }
 }
 
@@ -1175,6 +1181,55 @@ const renderProjectiles = (
   }
 }
 
+const renderAimLasers = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
+  const LASER_LENGTH_WORLD = 9.5
+  const pulse = 0.7 + (Math.sin(grassWaveTime * 6.5) * 0.5 + 0.5) * 0.3
+  context.save()
+
+  for (const unit of world.units) {
+    const unitHasLaserSight = unit.laserSight || (unit.perkStacks.laser_sight ?? 0) > 0
+    if (!unitHasLaserSight) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(unit.position.x, unit.position.y, fogCullBounds, unit.radius + 10)) {
+      continue
+    }
+
+    const aimLength = Math.hypot(unit.aim.x, unit.aim.y)
+    if (aimLength <= 0.0001) {
+      continue
+    }
+
+    const dirX = unit.aim.x / aimLength
+    const dirY = unit.aim.y / aimLength
+    const startX = unit.position.x + dirX * (unit.radius + 0.12)
+    const startY = unit.position.y + dirY * (unit.radius + 0.12)
+    const endX = startX + dirX * LASER_LENGTH_WORLD
+    const endY = startY + dirY * LASER_LENGTH_WORLD
+    const normalX = -dirY
+    const normalY = dirX
+    const halfBaseWidth = (unit.isPlayer ? 0.03 : 0.022) * pulse
+    const baseLeftX = startX + normalX * halfBaseWidth
+    const baseLeftY = startY + normalY * halfBaseWidth
+    const baseRightX = startX - normalX * halfBaseWidth
+    const baseRightY = startY - normalY * halfBaseWidth
+    const alpha = unit.isPlayer ? 0.72 * pulse : 0.48 * pulse
+
+    context.fillStyle = unit.isPlayer
+      ? `rgba(255, 106, 106, ${alpha})`
+      : `rgba(255, 80, 80, ${alpha})`
+    context.beginPath()
+    context.moveTo(baseLeftX, baseLeftY)
+    context.lineTo(baseRightX, baseRightY)
+    context.lineTo(endX, endY)
+    context.closePath()
+    context.fill()
+  }
+
+  context.restore()
+}
+
 const renderUnitStatusRings = (
   context: CanvasRenderingContext2D,
   unit: WorldState["units"][number],
@@ -1291,16 +1346,100 @@ const renderOffscreenEnemyIndicators = (
   const innerBottom = VIEW_HEIGHT - margin
   const centerX = VIEW_WIDTH * 0.5
   const centerY = VIEW_HEIGHT * 0.5
+  const markerSpacing = 34
+  const cornerPadding = 24
+  const sideMinY = Math.min(innerBottom, innerTop + cornerPadding)
+  const sideMaxY = Math.max(sideMinY, innerBottom - cornerPadding)
+  const sideMinX = Math.min(innerRight, innerLeft + cornerPadding)
+  const sideMaxX = Math.max(sideMinX, innerRight - cornerPadding)
+
+  type OffscreenMarkerSide = "left" | "right" | "top" | "bottom"
+
+  interface OffscreenMarker {
+    enemy: WorldState["units"][number]
+    x: number
+    y: number
+    angle: number
+    side: OffscreenMarkerSide
+    sideAxis: number
+    distanceMeters: number
+  }
+
+  const distributeSideMarkers = (
+    markers: OffscreenMarker[],
+    minAxis: number,
+    maxAxis: number,
+    spacing: number,
+    side: OffscreenMarkerSide,
+  ) => {
+    if (markers.length <= 0) {
+      return [] as OffscreenMarker[]
+    }
+
+    const sorted = markers
+      .slice()
+      .sort((left, right) => left.sideAxis - right.sideAxis)
+      .map((marker) => ({ ...marker, sideAxis: clamp(marker.sideAxis, minAxis, maxAxis) }))
+
+    const availableRange = Math.max(0, maxAxis - minAxis)
+    const requiredRange = spacing * Math.max(0, sorted.length - 1)
+
+    if (requiredRange > availableRange && sorted.length > 1) {
+      const spreadStep = availableRange / (sorted.length - 1)
+      for (let index = 0; index < sorted.length; index += 1) {
+        sorted[index].sideAxis = minAxis + spreadStep * index
+      }
+    } else {
+      for (let index = 1; index < sorted.length; index += 1) {
+        sorted[index].sideAxis = Math.max(sorted[index].sideAxis, sorted[index - 1].sideAxis + spacing)
+      }
+
+      if (sorted[sorted.length - 1].sideAxis > maxAxis) {
+        sorted[sorted.length - 1].sideAxis = maxAxis
+        for (let index = sorted.length - 2; index >= 0; index -= 1) {
+          sorted[index].sideAxis = Math.min(sorted[index].sideAxis, sorted[index + 1].sideAxis - spacing)
+        }
+
+        if (sorted[0].sideAxis < minAxis) {
+          sorted[0].sideAxis = minAxis
+          for (let index = 1; index < sorted.length; index += 1) {
+            sorted[index].sideAxis = Math.max(sorted[index].sideAxis, sorted[index - 1].sideAxis + spacing)
+          }
+        }
+      }
+    }
+
+    for (const marker of sorted) {
+      if (side === "left" || side === "right") {
+        marker.y = clamp(marker.sideAxis, sideMinY, sideMaxY)
+      } else {
+        marker.x = clamp(marker.sideAxis, sideMinX, sideMaxX)
+      }
+    }
+
+    return sorted
+  }
+
+  const sideMarkers: Record<OffscreenMarkerSide, OffscreenMarker[]> = {
+    left: [],
+    right: [],
+    top: [],
+    bottom: [],
+  }
 
   context.save()
   context.textAlign = "center"
   context.textBaseline = "middle"
   context.font = "bold 11px monospace"
 
-  for (const enemy of world.bots) {
+  for (const enemy of world.units) {
+    if (enemy.id === world.player.id) {
+      continue
+    }
+
     const screenX = (enemy.position.x - renderCameraX) * WORLD_SCALE + centerX
     const screenY = (enemy.position.y - renderCameraY) * WORLD_SCALE + centerY
-    const isOnScreen = screenX >= innerLeft && screenX <= innerRight && screenY >= innerTop && screenY <= innerBottom
+    const isOnScreen = screenX >= 0 && screenX <= VIEW_WIDTH && screenY >= 0 && screenY <= VIEW_HEIGHT
     if (isOnScreen) {
       continue
     }
@@ -1308,17 +1447,62 @@ const renderOffscreenEnemyIndicators = (
     const dx = screenX - centerX
     const dy = screenY - centerY
     const angle = Math.atan2(dy, dx)
-    const cosine = Math.cos(angle)
-    const sine = Math.sin(angle)
-    const edgeScaleX = (VIEW_WIDTH * 0.5 - margin) / Math.max(0.001, Math.abs(cosine))
-    const edgeScaleY = (VIEW_HEIGHT * 0.5 - margin) / Math.max(0.001, Math.abs(sine))
-    const edgeDistance = Math.min(edgeScaleX, edgeScaleY)
-    const markerX = centerX + cosine * edgeDistance
-    const markerY = centerY + sine * edgeDistance
+    const horizontalRatio = Math.abs(dx) / Math.max(1, VIEW_WIDTH * 0.5 - margin)
+    const verticalRatio = Math.abs(dy) / Math.max(1, VIEW_HEIGHT * 0.5 - margin)
+    const dominantHorizontal = horizontalRatio >= verticalRatio
+    let side: OffscreenMarkerSide = "right"
+    let markerX = centerX
+    let markerY = centerY
+
+    if (dominantHorizontal) {
+      if (dx >= 0) {
+        side = "right"
+        markerX = innerRight
+        markerY = centerY + dy * ((innerRight - centerX) / Math.max(0.001, dx))
+      } else {
+        side = "left"
+        markerX = innerLeft
+        markerY = centerY + dy * ((innerLeft - centerX) / Math.min(-0.001, dx))
+      }
+      markerY = clamp(markerY, innerTop, innerBottom)
+    } else {
+      if (dy >= 0) {
+        side = "bottom"
+        markerY = innerBottom
+        markerX = centerX + dx * ((innerBottom - centerY) / Math.max(0.001, dy))
+      } else {
+        side = "top"
+        markerY = innerTop
+        markerX = centerX + dx * ((innerTop - centerY) / Math.min(-0.001, dy))
+      }
+      markerX = clamp(markerX, innerLeft, innerRight)
+    }
+
     const distanceMeters = Math.hypot(
       enemy.position.x - world.player.position.x,
       enemy.position.y - world.player.position.y,
     )
+
+    sideMarkers[side].push({
+      enemy,
+      x: markerX,
+      y: markerY,
+      angle,
+      side,
+      sideAxis: side === "left" || side === "right" ? markerY : markerX,
+      distanceMeters,
+    })
+  }
+
+  const placedMarkers: OffscreenMarker[] = [
+    ...distributeSideMarkers(sideMarkers.left, sideMinY, sideMaxY, markerSpacing, "left"),
+    ...distributeSideMarkers(sideMarkers.right, sideMinY, sideMaxY, markerSpacing, "right"),
+    ...distributeSideMarkers(sideMarkers.top, sideMinX, sideMaxX, markerSpacing, "top"),
+    ...distributeSideMarkers(sideMarkers.bottom, sideMinX, sideMaxX, markerSpacing, "bottom"),
+  ]
+
+  for (const marker of placedMarkers) {
+    const { enemy, x: markerX, y: markerY, angle, distanceMeters } = marker
     const palette = paletteForUnit(world, enemy)
 
     context.save()
