@@ -11,6 +11,7 @@ import {
 } from "./adapters/hud-sync.ts"
 import {
   crosshairSignal,
+  debugGameSpeedSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
   duoTeamCountSignal,
@@ -1209,20 +1210,22 @@ export class FlowerArenaGame {
 
   private loop = (time: number) => {
     const realDt = Math.max(0, (time - this.previousTime) / 1000)
-    const dt = Math.min(0.033, realDt)
+    const frameDt = Math.min(0.033, realDt)
+    const speedScale = clamp(debugGameSpeedSignal.value, 0.4, 1.5)
+    const gameplayDt = frameDt * speedScale
     this.previousTime = time
 
     const instantFps = realDt > 0 ? 1 / realDt : 0
     this.smoothedFps = this.smoothedFps <= 0 ? instantFps : lerp(this.smoothedFps, instantFps, 0.18)
     setFpsSignal(this.smoothedFps)
 
-    this.update(dt)
-    renderScene({ context: this.context, world: this.world, dt: this.world.paused ? 0 : dt })
+    this.update(frameDt, gameplayDt)
+    renderScene({ context: this.context, world: this.world, dt: this.world.paused ? 0 : frameDt })
 
     this.raf = requestAnimationFrame(this.loop)
   }
 
-  private update(dt: number) {
+  private update(frameDt: number, gameplayDt: number) {
     this.syncPlayerOptions()
 
     if (this.world.paused) {
@@ -1231,28 +1234,28 @@ export class FlowerArenaGame {
       return
     }
 
-    this.world.camera.x = lerp(this.world.camera.x, this.world.player.position.x, clamp(dt * 10, 0, 1))
-    this.world.camera.y = lerp(this.world.camera.y, this.world.player.position.y, clamp(dt * 10, 0, 1))
-    updateCombatFeel(this.world, dt)
-    updateObstacleFlash(this.world, dt)
+    this.world.camera.x = lerp(this.world.camera.x, this.world.player.position.x, clamp(gameplayDt * 10, 0, 1))
+    this.world.camera.y = lerp(this.world.camera.y, this.world.player.position.y, clamp(gameplayDt * 10, 0, 1))
+    updateCombatFeel(this.world, gameplayDt)
+    updateObstacleFlash(this.world, gameplayDt)
 
     this.applyDebugOverrides()
 
-    const simDt = this.world.hitStop > 0 ? dt * 0.12 : dt
-    this.world.hitStop = Math.max(0, this.world.hitStop - dt)
+    const simDt = this.world.hitStop > 0 ? gameplayDt * 0.12 : gameplayDt
+    this.world.hitStop = Math.max(0, this.world.hitStop - gameplayDt)
 
     if (!this.world.running) {
-      updateFlowers(this.world, simDt)
-      updateDamagePopups(this.world, simDt)
-      this.updateObstacleDebris(simDt)
-      this.updateShellCasings(simDt)
-      this.updateFlightTrails(simDt)
-      this.updateExplosions(simDt)
+      updateFlowers(this.world, frameDt)
+      updateDamagePopups(this.world, frameDt)
+      this.updateObstacleDebris(frameDt)
+      this.updateShellCasings(frameDt)
+      this.updateFlightTrails(frameDt)
+      this.updateExplosions(frameDt)
       updateCrosshairWorld(this.world)
       return
     }
 
-    this.world.timeRemaining -= dt
+    this.world.timeRemaining -= gameplayDt
     if (this.world.timeRemaining <= 0) {
       this.world.timeRemaining = 0
       this.finishMatch()
@@ -1261,7 +1264,7 @@ export class FlowerArenaGame {
     const shrinkProgress = 1 - this.world.timeRemaining / MATCH_DURATION_SECONDS
     this.world.arenaRadius = lerp(ARENA_START_RADIUS, ARENA_END_RADIUS, clamp(shrinkProgress, 0, 1))
 
-    updatePlayer(this.world, dt, {
+    updatePlayer(this.world, gameplayDt, {
       firePrimary: () => this.firePrimary(this.world.player.id),
       startReload: () => this.startReload(this.world.player.id),
       throwSecondary: () => this.throwSecondary(this.world.player.id),
@@ -1287,7 +1290,7 @@ export class FlowerArenaGame {
       this.finishReload(this.world.player.id)
     }
 
-    updateAI(this.world, dt, {
+    updateAI(this.world, gameplayDt, {
       firePrimary: (botId) => this.firePrimary(botId),
       throwSecondary: (botId) => this.throwSecondary(botId),
       finishReload: (botId) => this.finishReload(botId),
@@ -1371,12 +1374,12 @@ export class FlowerArenaGame {
       },
     })
 
-    updateFlowers(this.world, simDt)
-    updateDamagePopups(this.world, simDt)
-    this.updateObstacleDebris(simDt)
-    this.updateShellCasings(simDt)
+    updateFlowers(this.world, frameDt)
+    updateDamagePopups(this.world, frameDt)
+    this.updateObstacleDebris(frameDt)
+    this.updateShellCasings(frameDt)
     this.updateFlightTrailEmitters()
-    this.updateFlightTrails(simDt)
+    this.updateFlightTrails(frameDt)
 
     updatePickups(this.world, simDt, {
       randomLootablePrimary: () => {
@@ -1385,7 +1388,7 @@ export class FlowerArenaGame {
       },
     })
 
-    this.updateExplosions(simDt)
+    this.updateExplosions(frameDt)
     syncHudSignals(this.world)
   }
 }

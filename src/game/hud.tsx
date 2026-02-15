@@ -1,6 +1,7 @@
 import {
   coverageSlicesSignal,
   crosshairSignal,
+  debugGameSpeedSignal,
   debugInfiniteHpSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
@@ -14,9 +15,11 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
+  persistAudioOptions,
   primaryAmmoSignal,
   primaryWeaponIconSignal,
   primaryWeaponSignal,
+  persistDebugOptions,
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
   selectedGameModeSignal,
@@ -54,7 +57,7 @@ export const GameHud = () => {
   const hp = hpSignal.value
   const slices: CoverageSlice[] = coverageSlicesSignal.value
   const result = matchResultSignal.value
-  const showDebugPanel = ((import.meta as { env?: { DEV?: boolean } }).env?.DEV) ?? false
+  const showDebugPanel = true
   const selectedMode = selectedGameModeSignal.value
   const ffaPlayers = ffaPlayerCountSignal.value
   const tdmTeamSize = tdmTeamSizeSignal.value
@@ -142,6 +145,7 @@ export const GameHud = () => {
                 type="checkbox"
                 onChange={(event) => {
                   debugInfiniteHpSignal.value = event.currentTarget.checked
+                  persistDebugOptions()
                 }}
               />
               <span>{t`Infinite HP`}</span>
@@ -152,9 +156,24 @@ export const GameHud = () => {
                 type="checkbox"
                 onChange={(event) => {
                   debugInfiniteReloadSignal.value = event.currentTarget.checked
+                  persistDebugOptions()
                 }}
               />
               <span>{t`Infinite Reload`}</span>
+            </label>
+            <label class="debug-speed">
+              <span>{t`Game Speed`} {debugGameSpeedSignal.value.toFixed(2)}x</span>
+              <input
+                type="range"
+                min={40}
+                max={150}
+                step={5}
+                value={Math.round(debugGameSpeedSignal.value * 100)}
+                onInput={(event) => {
+                  debugGameSpeedSignal.value = Number(event.currentTarget.value) / 100
+                  persistDebugOptions()
+                }}
+              />
             </label>
             <button
               class="debug-skip"
@@ -266,6 +285,7 @@ export const GameHud = () => {
                   value={Math.round(musicVolumeSignal.value * 100)}
                   onInput={(event) => {
                     musicVolumeSignal.value = Number(event.currentTarget.value) / 100
+                    persistAudioOptions()
                   }}
                 />
               </label>
@@ -279,6 +299,7 @@ export const GameHud = () => {
                   value={Math.round(effectsVolumeSignal.value * 100)}
                   onInput={(event) => {
                     effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
+                    persistAudioOptions()
                   }}
                 />
               </label>

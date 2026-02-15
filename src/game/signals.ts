@@ -1,5 +1,5 @@
 import { signal } from "@preact/signals"
-import { MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
+import { GAME_SPEED, MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 import type { GameModeId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
 import { preferredLocale, type LocaleId } from "../i18n.ts"
 
@@ -19,9 +19,131 @@ export interface MatchResultHud {
   standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
 }
 
-export const debugInfiniteHpSignal = signal(false)
-export const debugInfiniteReloadSignal = signal(false)
+const DEBUG_OPTIONS_STORAGE_KEY = "head-full-of-flowers.debug-options"
+const AUDIO_OPTIONS_STORAGE_KEY = "head-full-of-flowers.audio-options"
+const DEBUG_GAME_SPEED_MIN = 0.4
+const DEBUG_GAME_SPEED_MAX = 1.5
+
+interface DebugOptions {
+  infiniteHp: boolean
+  infiniteReload: boolean
+  gameSpeed: number
+}
+
+interface AudioOptions {
+  musicVolume: number
+  effectsVolume: number
+}
+
+const clampGameSpeed = (value: number) => {
+  return Math.max(DEBUG_GAME_SPEED_MIN, Math.min(DEBUG_GAME_SPEED_MAX, value))
+}
+
+const readStoredDebugOptions = (): DebugOptions => {
+  const fallback: DebugOptions = {
+    infiniteHp: false,
+    infiniteReload: false,
+    gameSpeed: GAME_SPEED,
+  }
+
+  if (typeof window === "undefined") {
+    return fallback
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DEBUG_OPTIONS_STORAGE_KEY)
+    if (!raw) {
+      return fallback
+    }
+
+    const parsed = JSON.parse(raw) as Partial<DebugOptions>
+    return {
+      infiniteHp: typeof parsed.infiniteHp === "boolean" ? parsed.infiniteHp : fallback.infiniteHp,
+      infiniteReload: typeof parsed.infiniteReload === "boolean" ? parsed.infiniteReload : fallback.infiniteReload,
+      gameSpeed: typeof parsed.gameSpeed === "number" ? clampGameSpeed(parsed.gameSpeed) : fallback.gameSpeed,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+const storedDebugOptions = readStoredDebugOptions()
+
+const clampVolume = (value: number) => {
+  return Math.max(0, Math.min(1, value))
+}
+
+const readStoredAudioOptions = (): AudioOptions => {
+  const fallback: AudioOptions = {
+    musicVolume: 0.75,
+    effectsVolume: 0.9,
+  }
+
+  if (typeof window === "undefined") {
+    return fallback
+  }
+
+  try {
+    const raw = window.localStorage.getItem(AUDIO_OPTIONS_STORAGE_KEY)
+    if (!raw) {
+      return fallback
+    }
+
+    const parsed = JSON.parse(raw) as Partial<AudioOptions>
+    return {
+      musicVolume: typeof parsed.musicVolume === "number" ? clampVolume(parsed.musicVolume) : fallback.musicVolume,
+      effectsVolume: typeof parsed.effectsVolume === "number"
+        ? clampVolume(parsed.effectsVolume)
+        : fallback.effectsVolume,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+const storedAudioOptions = readStoredAudioOptions()
+
+const writeStoredDebugOptions = () => {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  const payload: DebugOptions = {
+    infiniteHp: debugInfiniteHpSignal.value,
+    infiniteReload: debugInfiniteReloadSignal.value,
+    gameSpeed: clampGameSpeed(debugGameSpeedSignal.value),
+  }
+
+  try {
+    window.localStorage.setItem(DEBUG_OPTIONS_STORAGE_KEY, JSON.stringify(payload))
+  } catch {
+    // noop
+  }
+}
+
+const writeStoredAudioOptions = () => {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  const payload: AudioOptions = {
+    musicVolume: clampVolume(musicVolumeSignal.value),
+    effectsVolume: clampVolume(effectsVolumeSignal.value),
+  }
+
+  try {
+    window.localStorage.setItem(AUDIO_OPTIONS_STORAGE_KEY, JSON.stringify(payload))
+  } catch {
+    // noop
+  }
+}
+
+export const debugInfiniteHpSignal = signal(storedDebugOptions.infiniteHp)
+export const debugInfiniteReloadSignal = signal(storedDebugOptions.infiniteReload)
+export const debugGameSpeedSignal = signal(storedDebugOptions.gameSpeed)
 export const debugSkipToMatchEndSignal = signal(false)
+export const persistDebugOptions = () => writeStoredDebugOptions()
+export const persistAudioOptions = () => writeStoredAudioOptions()
 
 export const selectedGameModeSignal = signal<GameModeId>("ffa")
 export const ffaPlayerCountSignal = signal(8)
@@ -30,8 +152,8 @@ export const duoTeamCountSignal = signal(4)
 export const squadTeamCountSignal = signal(2)
 export const menuVisibleSignal = signal(true)
 export const languageSignal = signal<LocaleId>(preferredLocale)
-export const musicVolumeSignal = signal(0.75)
-export const effectsVolumeSignal = signal(0.9)
+export const musicVolumeSignal = signal(storedAudioOptions.musicVolume)
+export const effectsVolumeSignal = signal(storedAudioOptions.effectsVolume)
 
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
 export const fpsSignal = signal(0)

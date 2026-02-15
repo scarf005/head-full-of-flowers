@@ -278,6 +278,23 @@
   accent-color: #f2ffe8;
 }
 
+.debug-speed {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.debug-speed span {
+  color: #e8ffcc;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.debug-speed input[type="range"] {
+  width: min(12rem, 38vw);
+  accent-color: #f2ffe8;
+}
+
 .debug-skip {
   border: 1px solid #d5ebc0;
   color: #f2ffe8;
@@ -742,6 +759,14 @@
 
   .debug-row {
     font-size: 0.57rem;
+  }
+
+  .debug-speed span {
+    font-size: 0.55rem;
+  }
+
+  .debug-speed input[type="range"] {
+    width: min(10rem, 42vw);
   }
 
   .debug-skip {
