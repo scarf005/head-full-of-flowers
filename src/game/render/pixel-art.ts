@@ -16,6 +16,10 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   assault: assaultSprite,
   shotgun: shotgunSprite,
   flamethrower: flamethrowerSprite,
+  "auto-shotgun": shotgunSprite,
+  "battle-rifle": assaultSprite,
+  "grenade-launcher": assaultSprite,
+  "rocket-launcher": flamethrowerSprite,
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
 }
@@ -120,6 +124,46 @@ const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
     "...k....",
     "........",
   ],
+  "auto-shotgun": [
+    "........",
+    ".kkkk...",
+    ".kMMMk..",
+    ".kMMMMkk",
+    "..kMMMk.",
+    "...kWy..",
+    "...k....",
+    "........",
+  ],
+  "battle-rifle": [
+    "........",
+    ".kkk....",
+    ".kMMkkkk",
+    ".kMMMMMk",
+    "..kMMkkk",
+    "...ky...",
+    "...k....",
+    "........",
+  ],
+  "grenade-launcher": [
+    "........",
+    "..kk....",
+    ".kMMkkkk",
+    ".kMMMNMk",
+    "..kMMkk.",
+    "...kWy..",
+    "...k....",
+    "........",
+  ],
+  "rocket-launcher": [
+    "........",
+    "..cc....",
+    ".ckCCkkk",
+    ".ckMMNMk",
+    "..kMMMk.",
+    "...kry..",
+    "...k....",
+    "........",
+  ],
 }
 
 const grenadeSprite: SpriteRow[] = [
@@ -157,11 +201,15 @@ const flameProjectileSprite: SpriteRow[] = [
 
 const draw = (
   context: CanvasRenderingContext2D,
-  sprite: SpriteRow[],
+  sprite: SpriteRow[] | undefined,
   x: number,
   y: number,
   pixelSize: number,
 ) => {
+  if (!sprite || sprite.length <= 0) {
+    return
+  }
+
   const size = sprite.length
   const half = (size * pixelSize) * 0.5
   for (let row = 0; row < size; row += 1) {

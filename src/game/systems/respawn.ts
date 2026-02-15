@@ -1,7 +1,7 @@
 import { type Obstacle, Vec2 } from "../entities.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena } from "../utils.ts"
-import { PRIMARY_WEAPONS } from "../weapons.ts"
+import { pickupAmmoForWeapon } from "../weapons.ts"
 import { buildObstacleGridFromMap, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 import { BOT_BASE_SPEED, BOT_RADIUS, PLAYER_BASE_SPEED, PLAYER_RADIUS, UNIT_BASE_HP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
@@ -168,7 +168,7 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
     const maybeLoot = Math.random() > 0.54
     if (maybeLoot) {
       const weapon = deps.randomLootablePrimary()
-      deps.equipPrimary(unit.id, weapon, PRIMARY_WEAPONS[weapon].pickupAmmo)
+      deps.equipPrimary(unit.id, weapon, pickupAmmoForWeapon(weapon))
     } else {
       deps.equipPrimary(unit.id, "pistol", Number.POSITIVE_INFINITY)
     }

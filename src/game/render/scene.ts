@@ -722,14 +722,12 @@ const renderFlowers = (
   context.drawImage(layer.canvas, -halfMap, -halfMap, mapSize, mapSize)
 }
 
-const pickupGlowColor = (weaponId: WorldState["pickups"][number]["weapon"]) => {
-  if (weaponId === "assault") {
-    return "255, 208, 112"
+const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
+  if (pickup.highTier) {
+    return "244, 248, 255"
   }
-  if (weaponId === "shotgun") {
-    return "255, 140, 92"
-  }
-  return "122, 255, 208"
+
+  return "255, 214, 104"
 }
 
 const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt: number) => {
@@ -740,7 +738,7 @@ const renderPickups = (context: CanvasRenderingContext2D, world: WorldState, dt:
 
     const bobOffset = Math.sin(pickup.bob + dt * 4) * 0.14
     const pulse = 0.35 + (Math.sin(pickup.bob * 1.6) * 0.5 + 0.5) * 0.35
-    const glow = pickupGlowColor(pickup.weapon)
+    const glow = pickupGlowColor(pickup)
 
     context.fillStyle = `rgba(${glow}, ${0.18 + pulse * 0.2})`
     context.beginPath()

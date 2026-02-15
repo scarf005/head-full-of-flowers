@@ -41,6 +41,18 @@ const localizeWeapon = (weaponId: PrimaryWeaponId) => {
   if (weaponId === "shotgun") {
     return t`Shotgun`
   }
+  if (weaponId === "auto-shotgun") {
+    return t`Auto Shotgun`
+  }
+  if (weaponId === "battle-rifle") {
+    return t`Battle Rifle`
+  }
+  if (weaponId === "grenade-launcher") {
+    return t`Grenade Launcher`
+  }
+  if (weaponId === "rocket-launcher") {
+    return t`Rocket Launcher`
+  }
 
   return t`Flamethrower`
 }

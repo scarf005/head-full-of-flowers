@@ -1,6 +1,14 @@
 import { clamp, distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 import type { Team } from "../types.ts"
+import { isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+
+const ROCKET_PROXIMITY_RADIUS = 1.2
+const GRENADE_PROJECTILE_MAX_RICOCHETS = 2
+const GRENADE_PROJECTILE_RICOCHET_RESTITUTION = 0.58
+const GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION = 0.78
+const GRENADE_PROJECTILE_RICOCHET_MIN_SPEED = 2.8
+const GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS = 0.45
 
 const distToSegmentSquared = (
   pointX: number,
@@ -27,12 +35,13 @@ const distToSegmentSquared = (
 export interface ProjectileDeps {
   hitObstacle: (projectileIndex: number) => boolean
   spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: Team) => void
+  explodeProjectile?: (projectile: WorldState["projectiles"][number]) => void
   onTrailEnd?: (
     x: number,
     y: number,
     velocityX: number,
     velocityY: number,
-    kind: "ballistic" | "flame",
+    kind: "ballistic" | "flame" | "grenade" | "rocket",
   ) => void
   applyDamage: (
     targetId: string,
@@ -47,7 +56,11 @@ export interface ProjectileDeps {
 }
 
 export const updateProjectiles = (world: WorldState, dt: number, deps: ProjectileDeps) => {
-  const deactivateProjectile = (projectileIndex: number, createFlamePatch: boolean) => {
+  const deactivateProjectile = (
+    projectileIndex: number,
+    createFlamePatch: boolean,
+    explode = false,
+  ) => {
     const projectile = world.projectiles[projectileIndex]
     if (!projectile.active) {
       return
@@ -66,6 +79,10 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       deps.spawnFlamePatch(projectile.position.x, projectile.position.y, projectile.ownerId, projectile.ownerTeam)
     }
 
+    if (explode) {
+      deps.explodeProjectile?.(projectile)
+    }
+
     projectile.active = false
   }
 
@@ -77,6 +94,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
     const previousX = projectile.position.x
     const previousY = projectile.position.y
+    const isExplosive = projectile.kind === "grenade" || projectile.kind === "rocket"
     const stepX = projectile.velocity.x * dt
     const stepY = projectile.velocity.y * dt
     projectile.position.x += stepX
@@ -95,7 +113,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     if (projectile.ttl <= 0) {
-      deactivateProjectile(projectileIndex, true)
+      deactivateProjectile(projectileIndex, true, isExplosive)
       continue
     }
 
@@ -108,7 +126,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     if (progress >= 1 || (progress > 0.72 && speed < 4) || speed < 0.6) {
-      deactivateProjectile(projectileIndex, true)
+      deactivateProjectile(projectileIndex, true, isExplosive)
       continue
     }
 
@@ -117,8 +135,92 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       continue
     }
 
-    if (deps.hitObstacle(projectileIndex)) {
-      deactivateProjectile(projectileIndex, true)
+    if (projectile.kind === "rocket") {
+      let proximityFuseTriggered = false
+      for (const unit of world.units) {
+        if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+          continue
+        }
+
+        const fuseRadius = unit.radius + projectile.radius + ROCKET_PROXIMITY_RADIUS
+        if (distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <= fuseRadius * fuseRadius) {
+          proximityFuseTriggered = true
+          break
+        }
+      }
+
+      if (proximityFuseTriggered) {
+        deactivateProjectile(projectileIndex, true, true)
+        continue
+      }
+    }
+
+    if (projectile.kind === "grenade") {
+      const grenadeHitObstacle = deps.hitObstacle(projectileIndex)
+      if (grenadeHitObstacle) {
+        if (projectile.ricochets < GRENADE_PROJECTILE_MAX_RICOCHETS) {
+          const xCell = worldToObstacleGrid(world.obstacleGrid.size, projectile.position.x, previousY)
+          const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, projectile.position.y)
+          const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
+          const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
+          const moveX = projectile.position.x - previousX
+          const moveY = projectile.position.y - previousY
+          const moveLength = Math.hypot(moveX, moveY) || 1
+          const moveDirX = moveX / moveLength
+          const moveDirY = moveY / moveLength
+
+          projectile.position.x = previousX
+          projectile.position.y = previousY
+
+          let normalX = 0
+          let normalY = 0
+          if (blockedX && !blockedY) {
+            normalX = moveDirX > 0 ? -1 : 1
+          } else if (blockedY && !blockedX) {
+            normalY = moveDirY > 0 ? -1 : 1
+          } else {
+            normalX = -moveDirX
+            normalY = -moveDirY
+          }
+
+          const normalLength = Math.hypot(normalX, normalY) || 1
+          normalX /= normalLength
+          normalY /= normalLength
+
+          const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
+          const normalVelocityX = velocityDotNormal * normalX
+          const normalVelocityY = velocityDotNormal * normalY
+          const tangentVelocityX = projectile.velocity.x - normalVelocityX
+          const tangentVelocityY = projectile.velocity.y - normalVelocityY
+
+          projectile.velocity.x = -normalVelocityX * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
+            tangentVelocityX * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
+          projectile.velocity.y = -normalVelocityY * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
+            tangentVelocityY * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
+
+          const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS
+          const jitterCos = Math.cos(ricochetJitter)
+          const jitterSin = Math.sin(ricochetJitter)
+          const jitteredVelocityX = projectile.velocity.x * jitterCos - projectile.velocity.y * jitterSin
+          const jitteredVelocityY = projectile.velocity.x * jitterSin + projectile.velocity.y * jitterCos
+          projectile.velocity.x = jitteredVelocityX
+          projectile.velocity.y = jitteredVelocityY
+
+          projectile.position.x += normalX * 0.02
+          projectile.position.y += normalY * 0.02
+          projectile.ricochets += 1
+
+          if (Math.hypot(projectile.velocity.x, projectile.velocity.y) < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
+            deactivateProjectile(projectileIndex, true, true)
+          }
+          continue
+        }
+
+        deactivateProjectile(projectileIndex, true, true)
+        continue
+      }
+    } else if (deps.hitObstacle(projectileIndex)) {
+      deactivateProjectile(projectileIndex, true, isExplosive)
       continue
     }
 
@@ -142,6 +244,11 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           projectile.position.y,
         ) <= hitDistance * hitDistance
       ) {
+        if (isExplosive) {
+          deactivateProjectile(projectileIndex, true, true)
+          break
+        }
+
         const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
         const impactDirX = projectile.velocity.x / impactLength
         const impactDirY = projectile.velocity.y / impactLength

@@ -76,6 +76,7 @@ import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacl
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
+import { HIGH_TIER_PRIMARY_IDS, PRIMARY_WEAPONS } from "./weapons.ts"
 import {
   botPalette,
   BURNED_FACTION_COLOR,
@@ -84,7 +85,7 @@ import {
   createFactionFlowerCounts,
   type FactionDescriptor,
 } from "./factions.ts"
-import type { GameModeId, Team } from "./types.ts"
+import type { GameModeId, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
@@ -93,6 +94,8 @@ import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSI
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
 const BULLET_TRAIL_COLOR = "#ff9e3a"
+const HIGH_TIER_BOX_DROP_CHANCE_START = 0.07
+const HIGH_TIER_BOX_DROP_CHANCE_END = 0.5
 const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
 const TEAM_COLOR_RAMP = [
   "#ff6f7b",
@@ -323,6 +326,55 @@ export class FlowerArenaGame {
     return this.world.timeRemaining <= MATCH_DURATION_SECONDS * 0.5
   }
 
+  private randomHighTierPrimary() {
+    if (HIGH_TIER_PRIMARY_IDS.length <= 0) {
+      return "battle-rifle" as PrimaryWeaponId
+    }
+
+    const index = Math.floor(Math.random() * HIGH_TIER_PRIMARY_IDS.length)
+    return HIGH_TIER_PRIMARY_IDS[index] ?? HIGH_TIER_PRIMARY_IDS[0]
+  }
+
+  private highTierLootBoxChance() {
+    const elapsedRatio = clamp((MATCH_DURATION_SECONDS - this.world.timeRemaining) / MATCH_DURATION_SECONDS, 0, 1)
+    return lerp(HIGH_TIER_BOX_DROP_CHANCE_START, HIGH_TIER_BOX_DROP_CHANCE_END, elapsedRatio)
+  }
+
+  private spawnGuaranteedCenterHighTierLoot() {
+    spawnPickupAt(this.world, { x: 0, y: 0 }, {
+      force: true,
+      randomLootablePrimary: () => "assault",
+      randomHighTierPrimary: () => this.randomHighTierPrimary(),
+      highTierChance: 1,
+    })
+  }
+
+  private localizePrimaryWeapon(weaponId: PrimaryWeaponId) {
+    if (weaponId === "pistol") {
+      return t`Pistol`
+    }
+    if (weaponId === "assault") {
+      return t`Assault Rifle`
+    }
+    if (weaponId === "shotgun") {
+      return t`Shotgun`
+    }
+    if (weaponId === "flamethrower") {
+      return t`Flamethrower`
+    }
+    if (weaponId === "auto-shotgun") {
+      return t`Auto Shotgun`
+    }
+    if (weaponId === "battle-rifle") {
+      return t`Battle Rifle`
+    }
+    if (weaponId === "grenade-launcher") {
+      return t`Grenade Launcher`
+    }
+
+    return t`Rocket Launcher`
+  }
+
   private randomLootablePrimaryForMatch() {
     if (this.canSpawnFlamethrower()) {
       return randomLootablePrimary()
@@ -331,13 +383,15 @@ export class FlowerArenaGame {
     return Math.random() > 0.5 ? "assault" : "shotgun"
   }
 
-  private spawnLootPickupAt(x: number, y: number, force = false) {
+  private spawnLootPickupAt(x: number, y: number, force = false, allowHighTier = false) {
     spawnPickupAt(this.world, { x, y }, {
       force,
       randomLootablePrimary: () => {
         const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
       },
+      randomHighTierPrimary: () => this.randomHighTierPrimary(),
+      highTierChance: allowHighTier ? this.highTierLootBoxChance() : 0,
     })
   }
 
@@ -450,7 +504,10 @@ export class FlowerArenaGame {
       flower.targetSize = 0
     }
     for (const popup of this.world.damagePopups) popup.active = false
-    for (const pickup of this.world.pickups) pickup.active = false
+    for (const pickup of this.world.pickups) {
+      pickup.active = false
+      pickup.highTier = false
+    }
     for (const zone of this.world.molotovZones) zone.active = false
     for (const obstacle of this.world.obstacles) {
       obstacle.active = false
@@ -468,6 +525,7 @@ export class FlowerArenaGame {
     spawnMapLoot(this.world, {
       spawnPickupAt: (x, y) => this.spawnLootPickupAt(x, y),
     })
+    this.spawnGuaranteedCenterHighTierLoot()
 
     this.world.cameraShake = 0
     this.world.cameraOffset.set(0, 0)
@@ -708,7 +766,11 @@ export class FlowerArenaGame {
   }
 
   private spawnShellCasing(unit: Unit) {
-    if (unit.primaryWeapon === "flamethrower") {
+    if (
+      unit.primaryWeapon === "flamethrower" ||
+      unit.primaryWeapon === "grenade-launcher" ||
+      unit.primaryWeapon === "rocket-launcher"
+    ) {
       return
     }
 
@@ -826,9 +888,13 @@ export class FlowerArenaGame {
       return
     }
 
-    const spacing = projectile.kind === "flame" ? 0.1 : 0.08
+    const spacing = projectile.kind === "flame"
+      ? 0.1
+      : projectile.kind === "rocket"
+      ? 0.09
+      : 0.08
     const sampleCount = Math.max(1, Math.ceil(distance / spacing))
-    const speedFactor = clamp(speed / (projectile.kind === "flame" ? 24 : 44), 0, 2)
+    const speedFactor = clamp(speed / (projectile.kind === "flame" ? 24 : projectile.kind === "rocket" ? 18 : 44), 0, 2)
     let previousX = projectile.trailX
     let previousY = projectile.trailY
     let smoothDirX = projectile.trailDirX
@@ -864,6 +930,29 @@ export class FlowerArenaGame {
           "#ffd8af",
           0.4,
           0.11 + speedFactor * 0.05,
+        )
+      } else if (projectile.kind === "rocket") {
+        this.emitFlightTrailSegment(
+          sampleX,
+          sampleY,
+          smoothDirX,
+          smoothDirY,
+          0.42 + speedFactor * 0.3,
+          (0.08 + speedFactor * 0.03) * BULLET_TRAIL_WIDTH_SCALE,
+          "#f5f8ff",
+          0.78,
+          0.18 + speedFactor * 0.08,
+        )
+        this.emitFlightTrailSegment(
+          sampleX - smoothDirX * 0.15,
+          sampleY - smoothDirY * 0.15,
+          smoothDirX,
+          smoothDirY,
+          0.3 + speedFactor * 0.22,
+          (0.06 + speedFactor * 0.02) * BULLET_TRAIL_WIDTH_SCALE,
+          "#ffba8f",
+          0.62,
+          0.14 + speedFactor * 0.07,
         )
       } else {
         this.emitFlightTrailSegment(
@@ -986,7 +1075,7 @@ export class FlowerArenaGame {
     y: number,
     velocityX: number,
     velocityY: number,
-    kind: "ballistic" | "flame",
+    kind: "ballistic" | "flame" | "grenade" | "rocket",
   ) {
     const speed = Math.hypot(velocityX, velocityY)
     if (speed <= 0.04) {
@@ -995,9 +1084,9 @@ export class FlowerArenaGame {
 
     const directionX = velocityX / speed
     const directionY = velocityY / speed
-    const count = kind === "flame" ? 1 : 2
+    const count = kind === "flame" ? 1 : kind === "rocket" ? 3 : 2
     for (let index = 0; index < count; index += 1) {
-      const back = index * (kind === "flame" ? 0.14 : 0.22)
+      const back = index * (kind === "flame" ? 0.14 : kind === "rocket" ? 0.18 : 0.22)
       if (kind === "flame") {
         this.emitFlightTrailSegment(
           x - directionX * back,
@@ -1009,6 +1098,21 @@ export class FlowerArenaGame {
           "#ffd4a8",
           0.32,
           0.09,
+        )
+        continue
+      }
+
+      if (kind === "rocket") {
+        this.emitFlightTrailSegment(
+          x - directionX * back,
+          y - directionY * back,
+          directionX,
+          directionY,
+          0.62 - index * 0.1,
+          0.068 * BULLET_TRAIL_WIDTH_SCALE,
+          "#f4f7ff",
+          0.68 - index * 0.14,
+          0.14 + index * 0.04,
         )
         continue
       }
@@ -1100,6 +1204,102 @@ export class FlowerArenaGame {
     slot.life = 0.24
   }
 
+  private applyRadialExplosionDamage(
+    x: number,
+    y: number,
+    radius: number,
+    damage: number,
+    sourceId: string,
+    sourceTeam: Team,
+    useFalloff = false,
+  ) {
+    const radiusSq = radius * radius
+    for (const unit of this.world.units) {
+      if (unit.team === sourceTeam && unit.id !== sourceId) {
+        continue
+      }
+
+      const dsq = (unit.position.x - x) ** 2 + (unit.position.y - y) ** 2
+      if (dsq > radiusSq) {
+        continue
+      }
+
+      const distance = Math.sqrt(dsq)
+      const falloff = 1 - clamp(distance / radius, 0, 1)
+      const resolvedDamage = useFalloff
+        ? Math.max(1, damage * (0.35 + falloff * 0.65))
+        : damage
+
+      this.applyDamage(
+        unit.id,
+        resolvedDamage,
+        sourceId,
+        sourceTeam,
+        unit.position.x,
+        unit.position.y,
+        unit.position.x - x,
+        unit.position.y - y,
+        "projectile",
+      )
+    }
+  }
+
+  private damageObstaclesAtExplosion(x: number, y: number, radius: number) {
+    damageObstaclesByExplosion(this.world, x, y, radius, {
+      onSfxHit: () => this.sfx.hit(),
+      onSfxBreak: () => this.sfx.obstacleBreak(),
+      onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
+      onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true, true),
+    })
+  }
+
+  private explodeProjectilePayload(projectile: WorldState["projectiles"][number]) {
+    if (projectile.kind === "grenade") {
+      const explosionRadius = 3.8
+      this.spawnExplosion(projectile.position.x, projectile.position.y, explosionRadius)
+      this.applyRadialExplosionDamage(
+        projectile.position.x,
+        projectile.position.y,
+        explosionRadius,
+        projectile.damage,
+        projectile.ownerId,
+        projectile.ownerTeam,
+        true,
+      )
+      this.damageObstaclesAtExplosion(projectile.position.x, projectile.position.y, explosionRadius)
+      this.world.cameraShake = Math.min(1.6, this.world.cameraShake + 0.24)
+      this.world.hitStop = Math.max(this.world.hitStop, 0.01)
+      this.sfx.explosion()
+      return
+    }
+
+    if (projectile.kind !== "rocket") {
+      return
+    }
+
+    for (let explosionIndex = 0; explosionIndex < 3; explosionIndex += 1) {
+      const angle = randomRange(0, Math.PI * 2)
+      const offset = explosionIndex === 0 ? 0 : randomRange(0.5, 1.1)
+      const explosionX = projectile.position.x + Math.cos(angle) * offset
+      const explosionY = projectile.position.y + Math.sin(angle) * offset
+      const explosionRadius = explosionIndex === 0 ? 2.9 : 2.4
+      this.spawnExplosion(explosionX, explosionY, explosionRadius)
+      this.applyRadialExplosionDamage(
+        explosionX,
+        explosionY,
+        explosionRadius,
+        20,
+        projectile.ownerId,
+        projectile.ownerTeam,
+      )
+      this.damageObstaclesAtExplosion(explosionX, explosionY, explosionRadius)
+    }
+
+    this.world.cameraShake = Math.min(2.4, this.world.cameraShake + 0.42)
+    this.world.hitStop = Math.max(this.world.hitStop, 0.016)
+    this.sfx.explosion()
+  }
+
   private applyDebugOverrides() {
     this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
 
@@ -1147,6 +1347,7 @@ export class FlowerArenaGame {
     slot.trailDirX = 1
     slot.trailDirY = 0
     slot.trailReady = false
+    slot.ricochets = 0
     return slot
   }
 
@@ -1200,7 +1401,7 @@ export class FlowerArenaGame {
     return this.world.units.find((unit) => unit.id === id)
   }
 
-  private equipPrimary(unitId: string, weaponId: "pistol" | "assault" | "shotgun" | "flamethrower", ammo: number) {
+  private equipPrimary(unitId: string, weaponId: PrimaryWeaponId, ammo: number) {
     return equipPrimary(unitId, this.world, weaponId, ammo, () => updatePlayerWeaponSignals(this.world))
   }
 
@@ -1374,15 +1575,9 @@ export class FlowerArenaGame {
       collectNearbyPickup: () => {
         collectNearbyPickup(this.world, this.world.player, {
           equipPrimary: (unit, weaponId, ammo) => this.equipPrimary(unit.id, weaponId, ammo),
-          onPlayerPickup: (label) => {
+          onPlayerPickup: (weaponId) => {
             this.sfx.itemAcquire()
-            const localizedWeapon = label === "pistol"
-              ? t`Pistol`
-              : label === "assault"
-              ? t`Assault Rifle`
-              : label === "shotgun"
-              ? t`Shotgun`
-              : t`Flamethrower`
+            const localizedWeapon = this.localizePrimaryWeapon(weaponId)
             statusMessageSignal.value = t`Picked up ${localizedWeapon}`
           },
         })
@@ -1425,11 +1620,14 @@ export class FlowerArenaGame {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
-          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true),
+          onBoxDestroyed: (x, y) => this.spawnLootPickupAt(x, y, true, true),
         })
       },
       spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
         spawnFlamePatch(this.world, x, y, ownerId, ownerTeam, () => this.allocMolotovZone())
+      },
+      explodeProjectile: (projectile) => {
+        this.explodeProjectilePayload(projectile)
       },
       onTrailEnd: (x, y, velocityX, velocityY, kind) => {
         this.emitProjectileTrailEnd(x, y, velocityX, velocityY, kind)
@@ -1453,7 +1651,7 @@ export class FlowerArenaGame {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-              onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true),
+              onBoxDestroyed: (dropX, dropY) => this.spawnLootPickupAt(dropX, dropY, true, true),
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
@@ -1491,6 +1689,8 @@ export class FlowerArenaGame {
         const id = this.randomLootablePrimaryForMatch()
         return id === "pistol" ? "assault" : id
       },
+      randomHighTierPrimary: () => this.randomHighTierPrimary(),
+      highTierChance: this.highTierLootBoxChance(),
     })
 
     this.updateExplosions(effectDt)

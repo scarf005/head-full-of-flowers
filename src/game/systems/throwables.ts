@@ -5,7 +5,7 @@ import { damageObstacleCell, isObstacleCellSolid, worldToObstacleGrid } from "..
 import type { WorldState } from "../world/state.ts"
 
 const MOLOTOV_THROW_SPEED = 15
-const GRENADE_BULLET_DAMAGE = 10
+const GRENADE_BULLET_DAMAGE = 20
 const GRENADE_BULLET_SPEED = 20
 const GRENADE_BULLET_RANGE = 30
 const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED

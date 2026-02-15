@@ -1,6 +1,7 @@
 import { Pickup, type Unit } from "../entities.ts"
 import { distSquared, randomPointInArena, randomRange } from "../utils.ts"
-import { PRIMARY_WEAPONS } from "../weapons.ts"
+import { isHighTierPrimary, pickupAmmoForWeapon } from "../weapons.ts"
+import type { PrimaryWeaponId } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 import { LOOT_PICKUP_INTERVAL_MAX_SECONDS, LOOT_PICKUP_INTERVAL_MIN_SECONDS } from "../world/constants.ts"
 import { isObstacleCellSolid, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
@@ -50,7 +51,9 @@ const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radiu
 }
 
 export interface PickupDeps {
-  randomLootablePrimary: () => "assault" | "shotgun" | "flamethrower"
+  randomLootablePrimary: () => PrimaryWeaponId
+  randomHighTierPrimary?: () => PrimaryWeaponId
+  highTierChance?: number
   force?: boolean
 }
 
@@ -67,7 +70,14 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
 
   slot.active = true
   slot.position.set(position.x, position.y)
-  slot.weapon = deps.randomLootablePrimary()
+  const highTierRoll = (deps.highTierChance ?? 0) > 0 && Math.random() < (deps.highTierChance ?? 0)
+  if (highTierRoll && deps.randomHighTierPrimary) {
+    slot.weapon = deps.randomHighTierPrimary()
+    slot.highTier = true
+  } else {
+    slot.weapon = deps.randomLootablePrimary()
+    slot.highTier = false
+  }
   slot.radius = 0.8
   slot.bob = randomRange(0, Math.PI * 2)
 }
@@ -110,10 +120,10 @@ export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps) =
 export interface CollectPickupDeps {
   equipPrimary: (
     unit: Unit,
-    weaponId: "pistol" | "assault" | "shotgun" | "flamethrower",
+    weaponId: PrimaryWeaponId,
     ammo: number,
-  ) => "pistol" | "assault" | "shotgun" | "flamethrower" | null
-  onPlayerPickup: (weaponId: "pistol" | "assault" | "shotgun" | "flamethrower") => void
+  ) => PrimaryWeaponId | null
+  onPlayerPickup: (weaponId: PrimaryWeaponId) => void
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
@@ -129,11 +139,11 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
     }
 
     const collectedWeapon = pickup.weapon
-    const config = PRIMARY_WEAPONS[collectedWeapon]
-    const ejectedWeapon = deps.equipPrimary(unit, collectedWeapon, config.pickupAmmo)
+    const ejectedWeapon = deps.equipPrimary(unit, collectedWeapon, pickupAmmoForWeapon(collectedWeapon))
 
     if (ejectedWeapon && ejectedWeapon !== "pistol") {
       pickup.weapon = ejectedWeapon
+      pickup.highTier = isHighTierPrimary(ejectedWeapon)
       pickup.active = true
       const dropDistance = unit.radius + pickup.radius + 0.5
       pickup.position.set(
@@ -143,6 +153,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       pickup.bob = randomRange(0, Math.PI * 2)
     } else {
       pickup.active = false
+      pickup.highTier = false
     }
 
     if (unit.isPlayer) {

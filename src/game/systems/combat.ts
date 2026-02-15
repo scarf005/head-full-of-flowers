@@ -3,7 +3,7 @@ import { sample } from "@std/random"
 import type { PrimaryWeaponId } from "../types.ts"
 import type { Team } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
-import { LOOTABLE_PRIMARY_IDS, PRIMARY_WEAPONS } from "../weapons.ts"
+import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID } from "../factions.ts"
@@ -23,20 +23,24 @@ const KILL_CIRCLE_RADIUS_MAX = 0.95
 const KILL_MAX_HP_BONUS = 1
 const KILL_HP_BONUS = 3
 const PRIMARY_WEAPON_CAP = 2
-const PRIMARY_RESERVE_MAGAZINE_CAP = 2
+const PRIMARY_RESERVE_PICKUP_CAP = 3
 
-const reserveAmmoCapForWeapon = (weaponId: PrimaryWeaponId) => {
-  const magazineSize = PRIMARY_WEAPONS[weaponId].magazineSize
-  if (!Number.isFinite(magazineSize)) {
+const totalAmmoCapForWeapon = (weaponId: PrimaryWeaponId) => {
+  const weapon = PRIMARY_WEAPONS[weaponId]
+  const magazineSize = weapon.magazineSize
+  if (!Number.isFinite(magazineSize) || magazineSize <= 0) {
     return Number.POSITIVE_INFINITY
   }
 
-  return magazineSize * PRIMARY_RESERVE_MAGAZINE_CAP
+  const magazinesPerPickup = Number.isFinite(weapon.pickupMagazineBundle)
+    ? Math.max(1, Math.floor(weapon.pickupMagazineBundle))
+    : 1
+  return magazinesPerPickup * PRIMARY_RESERVE_PICKUP_CAP * magazineSize
 }
 
 const buildPrimarySlot = (weaponId: PrimaryWeaponId, ammo: number, acquiredAt: number): PrimaryWeaponSlot => {
   const config = PRIMARY_WEAPONS[weaponId]
-  const normalizedAmmo = Number.isFinite(ammo) ? Math.max(0, ammo) : config.pickupAmmo
+  const normalizedAmmo = Number.isFinite(ammo) ? Math.max(0, ammo) : pickupAmmoForWeapon(weaponId)
 
   if (!Number.isFinite(config.magazineSize) || !Number.isFinite(normalizedAmmo)) {
     return {
@@ -49,7 +53,7 @@ const buildPrimarySlot = (weaponId: PrimaryWeaponId, ammo: number, acquiredAt: n
   }
 
   const loaded = Math.min(config.magazineSize, normalizedAmmo)
-  const reserveCap = reserveAmmoCapForWeapon(weaponId)
+  const reserveCap = Math.max(0, totalAmmoCapForWeapon(weaponId) - loaded)
   const reserve = Math.min(reserveCap, Math.max(0, normalizedAmmo - loaded))
 
   return {
@@ -90,6 +94,45 @@ const hasUsableAmmo = (slot: PrimaryWeaponSlot) => {
   }
 
   return !Number.isFinite(slot.reserveAmmo) || slot.reserveAmmo > 0
+}
+
+const isDepletedSlot = (slot: PrimaryWeaponSlot) => {
+  return slot.weaponId !== "pistol" &&
+    Number.isFinite(slot.primaryAmmo) &&
+    slot.primaryAmmo <= 0 &&
+    Number.isFinite(slot.reserveAmmo) &&
+    slot.reserveAmmo <= 0
+}
+
+const pruneDepletedPrimarySlots = (unit: Unit) => {
+  const previousIndex = unit.primarySlotIndex
+  let removed = false
+  let removedBeforeActive = 0
+
+  for (let index = unit.primarySlots.length - 1; index >= 0; index -= 1) {
+    if (!isDepletedSlot(unit.primarySlots[index])) {
+      continue
+    }
+
+    removed = true
+    if (index < previousIndex) {
+      removedBeforeActive += 1
+    }
+    unit.primarySlots.splice(index, 1)
+  }
+
+  if (!removed) {
+    return false
+  }
+
+  if (unit.primarySlots.length <= 0) {
+    unit.primarySlotIndex = 0
+    return true
+  }
+
+  const adjustedIndex = previousIndex - removedBeforeActive
+  unit.primarySlotIndex = Math.max(0, Math.min(adjustedIndex, unit.primarySlots.length - 1))
+  return true
 }
 
 const ensureFallbackPistol = (unit: Unit) => {
@@ -151,6 +194,8 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
     return
   }
 
+  pruneDepletedPrimarySlots(unit)
+
   const slot = activePrimarySlot(unit)
   const weapon = PRIMARY_WEAPONS[slot.weaponId]
   if (!Number.isFinite(slot.primaryAmmo)) {
@@ -178,6 +223,8 @@ export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUp
   if (!unit || unit.reloadCooldown > 0 || unit.reloadCooldownMax <= 0) {
     return
   }
+
+  pruneDepletedPrimarySlots(unit)
 
   const slot = activePrimarySlot(unit)
   if (!Number.isFinite(slot.primaryAmmo)) {
@@ -221,6 +268,9 @@ export const equipPrimary = (
   }
 
   syncUnitPrimaryFromSlot(unit)
+  pruneDepletedPrimarySlots(unit)
+  syncUnitPrimaryFromSlot(unit)
+  const hadOnlyFallbackPistol = unit.primarySlots.length === 1 && unit.primarySlots[0].weaponId === "pistol"
   let ejectedWeaponId: PrimaryWeaponId | null = null
   const existingIndex = unit.primarySlots.findIndex((slot) => slot.weaponId === weaponId)
   if (existingIndex >= 0) {
@@ -233,13 +283,16 @@ export const equipPrimary = (
       return null
     }
 
-    const config = PRIMARY_WEAPONS[weaponId]
-    const pickedAmmo = Number.isFinite(ammo) ? Math.max(0, ammo) : config.pickupAmmo
+    const pickedAmmo = Number.isFinite(ammo) ? Math.max(0, ammo) : pickupAmmoForWeapon(weaponId)
     if (!Number.isFinite(pickedAmmo)) {
       existing.reserveAmmo = Number.POSITIVE_INFINITY
     } else {
-      const reserveCap = reserveAmmoCapForWeapon(weaponId)
+      const reserveCap = Math.max(0, totalAmmoCapForWeapon(weaponId) - existing.primaryAmmo)
       existing.reserveAmmo = Math.min(reserveCap, existing.reserveAmmo + pickedAmmo)
+    }
+
+    if (weaponId !== "pistol" && hadOnlyFallbackPistol) {
+      unit.primarySlotIndex = existingIndex
     }
   } else {
     const newSlot = buildPrimarySlot(weaponId, ammo, ++unit.primarySlotSequence)
@@ -286,6 +339,7 @@ export const cyclePrimaryWeapon = (
     return
   }
 
+  pruneDepletedPrimarySlots(unit)
   syncUnitPrimaryFromSlot(unit)
   if (unit.primarySlots.length <= 1) {
     return
@@ -319,6 +373,11 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     return
   }
 
+  if (pruneDepletedPrimarySlots(shooter)) {
+    syncUnitPrimaryFromSlot(shooter)
+    deps.onPrimaryWeaponChanged?.(shooter.id)
+  }
+
   const slot = activePrimarySlot(shooter)
 
   if (Number.isFinite(slot.primaryAmmo) && slot.primaryAmmo <= 0) {
@@ -339,45 +398,60 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
 
   const weaponSlot = activePrimarySlot(shooter)
   const weapon = PRIMARY_WEAPONS[weaponSlot.weaponId]
+  const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
+  const burstShots = Math.max(1, Math.floor(weapon.burstShots ?? 1))
+  const burstSpread = Math.max(0, weapon.burstSpread ?? weapon.spread * 0.24)
+  const shotsToFire = Number.isFinite(weaponSlot.primaryAmmo)
+    ? Math.max(1, Math.min(burstShots, Math.floor(weaponSlot.primaryAmmo)))
+    : burstShots
+  const pelletsPerShot = Math.max(1, weapon.pellets)
 
   shooter.shootCooldown = weapon.cooldown / shooter.fireRateMultiplier
-  shooter.recoil = Math.min(1, shooter.recoil + 0.38 + weapon.pellets * 0.05)
+  shooter.recoil = Math.min(1, shooter.recoil + 0.38 + pelletsPerShot * 0.05)
   if (Number.isFinite(weaponSlot.primaryAmmo)) {
-    weaponSlot.primaryAmmo = Math.max(0, weaponSlot.primaryAmmo - 1)
+    weaponSlot.primaryAmmo = Math.max(0, weaponSlot.primaryAmmo - shotsToFire)
   }
   syncUnitPrimaryFromSlot(shooter)
 
   const baseAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
-  const pelletCount = weapon.pellets
+  const pelletCount = pelletsPerShot * shotsToFire
   if (shooter.isPlayer) {
     deps.onPlayerBulletsFired?.(pelletCount)
   }
   deps.onShellEjected?.(shooter)
-  for (let pellet = 0; pellet < pelletCount; pellet += 1) {
-    const projectile = deps.allocProjectile()
-    const spread = randomRange(-weapon.spread, weapon.spread)
-    const angle = baseAngle + spread
-    const dirX = Math.cos(angle)
-    const dirY = Math.sin(angle)
+  for (let shotIndex = 0; shotIndex < shotsToFire; shotIndex += 1) {
+    const centeredBurstOffset = (shotIndex - (shotsToFire - 1) * 0.5) * burstSpread
+    for (let pellet = 0; pellet < pelletsPerShot; pellet += 1) {
+      const projectile = deps.allocProjectile()
+      const spread = randomRange(-weapon.spread, weapon.spread)
+      const angle = baseAngle + centeredBurstOffset + spread
+      const dirX = Math.cos(angle)
+      const dirY = Math.sin(angle)
 
-    projectile.active = true
-    projectile.kind = weapon.id === "flamethrower" ? "flame" : "ballistic"
-    projectile.ownerId = shooter.id
-    projectile.ownerTeam = shooter.team
-    projectile.position.x = shooter.position.x
-    projectile.position.y = shooter.position.y
-    projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
-    projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
-    projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
-    projectile.damage = weapon.damage * shooter.damageMultiplier
-    projectile.maxRange = weapon.range
-    projectile.traveled = 0
-    projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
-    projectile.glow = weapon.id === "flamethrower" ? randomRange(0.5, 0.95) : randomRange(0.4, 0.9)
-    projectile.trailCooldown = 0
-    projectile.trailX = projectile.position.x
-    projectile.trailY = projectile.position.y
-    projectile.trailReady = false
+      projectile.active = true
+      projectile.kind = projectileKind
+      projectile.ownerId = shooter.id
+      projectile.ownerTeam = shooter.team
+      projectile.position.x = shooter.position.x
+      projectile.position.y = shooter.position.y
+      projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
+      projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
+      projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
+      projectile.damage = weapon.damage * shooter.damageMultiplier
+      projectile.maxRange = weapon.range
+      projectile.traveled = 0
+      projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
+      projectile.glow = projectileKind === "flame"
+        ? randomRange(0.5, 0.95)
+        : projectileKind === "rocket"
+        ? randomRange(0.85, 1.2)
+        : randomRange(0.4, 0.9)
+      projectile.trailCooldown = 0
+      projectile.trailX = projectile.position.x
+      projectile.trailY = projectile.position.y
+      projectile.trailReady = false
+      projectile.ricochets = 0
+    }
   }
 
   if (Number.isFinite(weaponSlot.primaryAmmo) && weaponSlot.primaryAmmo <= 0) {
@@ -387,6 +461,11 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
     if (hasReserve && Number.isFinite(activeSlot.primaryAmmo) && activeSlot.primaryAmmo <= 0) {
       deps.startReload(shooter.id)
     }
+  }
+
+  if (pruneDepletedPrimarySlots(shooter)) {
+    syncUnitPrimaryFromSlot(shooter)
+    deps.onPrimaryWeaponChanged?.(shooter.id)
   }
 
   if (shooter.isPlayer) {

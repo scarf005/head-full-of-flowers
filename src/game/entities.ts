@@ -127,7 +127,7 @@ export class Unit {
 
 export class Projectile {
   active = false
-  kind: "ballistic" | "flame" = "ballistic"
+  kind: "ballistic" | "flame" | "grenade" | "rocket" = "ballistic"
   ownerId = ""
   ownerTeam: Team = "white"
   position = new Vec2()
@@ -144,6 +144,7 @@ export class Projectile {
   trailDirX = 1
   trailDirY = 0
   trailReady = false
+  ricochets = 0
 }
 
 export class Throwable {
@@ -224,6 +225,7 @@ export class DamagePopup {
 export class Pickup {
   active = false
   weapon: PrimaryWeaponId = "assault"
+  highTier = false
   position = new Vec2()
   radius = 16
   bob = 0
