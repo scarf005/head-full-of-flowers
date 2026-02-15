@@ -14,312 +14,374 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
-#: src/game/game.ts:526
+#: src/game/game.ts:642
 msgid "{0} flowers"
 msgstr "{0} flowers"
 
-#: src/game/hud.tsx:94
+#: src/game/hud.tsx:98
 msgid "2 players per team"
 msgstr "2 players per team"
 
-#: src/game/hud.tsx:93
+#: src/game/hud.tsx:97
 msgid "2 teams, even sides"
 msgstr "2 teams, even sides"
 
-#: src/game/hud.tsx:95
+#: src/game/hud.tsx:99
 msgid "4 players per team"
 msgstr "4 players per team"
 
-#. placeholder {0}: primaryAmmoSignal.value
-#: src/game/hud.tsx:326
+#: src/game/hud.tsx:441
+msgid "Aim and fire joystick"
+msgstr "Aim and fire joystick"
+
+#. placeholder {0}: slot.ammo
+#: src/game/hud.tsx:366
 msgid "Ammo {0}"
 msgstr "Ammo {0}"
 
-#: src/game/adapters/hud-sync.ts:38
-#: src/game/game.ts:1275
+#: src/game/adapters/hud-sync.ts:39
+#: src/game/game.ts:388
 msgid "Assault Rifle"
 msgstr "Assault Rifle"
 
-#: src/game/game.ts:155
-#: src/game/game.ts:289
+#: src/game/adapters/hud-sync.ts:45
+#: src/game/game.ts:397
+msgid "Auto Shotgun"
+msgstr "Auto Shotgun"
+
+#: src/app.tsx:26
+msgid "BadaBada arena"
+msgstr "BadaBada arena"
+
+#: src/game/adapters/hud-sync.ts:48
+#: src/game/game.ts:400
+msgid "Battle Rifle"
+msgstr "Battle Rifle"
+
+#: src/game/game.ts:174
+#: src/game/game.ts:328
 msgid "Blue"
 msgstr "Blue"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:275
+#: src/game/game.ts:314
 msgid "Bot {0}"
 msgstr "Bot {0}"
 
-#: src/game/game.ts:145
+#: src/game/game.ts:164
 msgid "Bot {botIndex}"
 msgstr "Bot {botIndex}"
 
-#: src/game/game.ts:528
+#: src/game/game.ts:644
 msgid "Bullets Fired"
 msgstr "Bullets Fired"
 
-#: src/game/game.ts:529
+#: src/game/game.ts:645
 msgid "Bullets Hit"
 msgstr "Bullets Hit"
 
-#: src/game/adapters/hud-sync.ts:59
+#: src/game/adapters/hud-sync.ts:82
 msgid "Burnt"
 msgstr "Burnt"
 
-#: src/game/adapters/hud-sync.ts:111
-#: src/game/game.ts:559
+#: src/game/adapters/hud-sync.ts:140
+#: src/game/game.ts:675
 msgid "Click once to wake audio, then begin fighting"
 msgstr "Click once to wake audio, then begin fighting"
 
-#: src/game/hud.tsx:105
+#: src/game/hud.tsx:115
 msgid "Coverage score"
 msgstr "Coverage score"
 
-#: src/game/game.ts:532
+#: src/game/game.ts:648
 msgid "Damage"
 msgstr "Damage"
 
-#: src/game/hud.tsx:94
+#: src/game/hud.tsx:98
 msgid "Duo"
 msgstr "Duo"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:305
+#: src/game/game.ts:344
 msgid "Duo {0}"
 msgstr "Duo {0}"
 
-#: src/game/game.ts:166
+#: src/game/game.ts:185
 msgid "Duo {teamIndex}"
 msgstr "Duo {teamIndex}"
 
-#: src/game/game.ts:166
-#: src/game/game.ts:305
+#: src/game/game.ts:185
+#: src/game/game.ts:344
 msgid "Duo 1 (You)"
 msgstr "Duo 1 (You)"
 
-#: src/game/hud.tsx:269
+#: src/game/hud.tsx:308
 msgid "Effects Volume"
 msgstr "Effects Volume"
 
-#: src/game/hud.tsx:229
-#: src/game/hud.tsx:292
+#: src/game/hud.tsx:268
+#: src/game/hud.tsx:331
 msgid "English"
 msgstr "English"
 
-#: src/game/hud.tsx:92
+#: src/game/hud.tsx:96
 msgid "Every player for themselves"
 msgstr "Every player for themselves"
 
-#: src/game/hud.tsx:357
+#: src/game/hud.tsx:401
 msgid "Final standings"
 msgstr "Final standings"
 
-#: src/game/adapters/hud-sync.ts:44
-#: src/game/game.ts:1278
+#: src/game/adapters/hud-sync.ts:57
+#: src/game/game.ts:394
 msgid "Flamethrower"
 msgstr "Flamethrower"
 
 #. placeholder {0}: Math.round(fpsSignal.value)
-#: src/game/hud.tsx:125
+#: src/game/hud.tsx:135
 msgid "FPS {0}"
 msgstr "FPS {0}"
 
-#: src/game/hud.tsx:92
+#: src/game/hud.tsx:96
 msgid "Free For All"
 msgstr "Free For All"
 
-#: src/game/hud.tsx:172
+#: src/game/hud.tsx:212
 msgid "Game mode"
 msgstr "Game mode"
 
-#: src/game/hud.tsx:89
+#: src/game/hud.tsx:166
+msgid "Game Speed"
+msgstr "Game Speed"
+
+#: src/game/hud.tsx:93
 msgid "Grenade"
 msgstr "Grenade"
 
-#: src/game/hud.tsx:170
+#: src/game/adapters/hud-sync.ts:51
+#: src/game/game.ts:403
+msgid "Grenade Launcher"
+msgstr "Grenade Launcher"
+
+#: src/game/hud.tsx:210
 msgid "Head Full of Flowers"
 msgstr "Head Full of Flowers"
 
-#: src/game/game.ts:530
+#: src/game/hud.tsx:91
+msgid "Heavy"
+msgstr "Heavy"
+
+#: src/game/game.ts:646
 msgid "Hit Rate"
 msgstr "Hit Rate"
 
-#: src/game/hud.tsx:340
+#: src/game/hud.tsx:384
 msgid "HP"
 msgstr "HP"
 
-#: src/game/hud.tsx:141
+#: src/game/hud.tsx:91
+msgid "Hybrid"
+msgstr "Hybrid"
+
+#: src/game/hud.tsx:180
+msgid "Impact Feel"
+msgstr "Impact Feel"
+
+#: src/game/hud.tsx:152
 msgid "Infinite HP"
 msgstr "Infinite HP"
 
-#: src/game/hud.tsx:151
+#: src/game/hud.tsx:163
 msgid "Infinite Reload"
 msgstr "Infinite Reload"
 
-#: src/game/hud.tsx:239
-#: src/game/hud.tsx:302
+#: src/game/hud.tsx:277
+#: src/game/hud.tsx:340
 msgid "Korean"
 msgstr "Korean"
 
-#: src/game/hud.tsx:219
-#: src/game/hud.tsx:282
+#: src/game/hud.tsx:259
+#: src/game/hud.tsx:322
 msgid "Language"
 msgstr "Language"
 
-#: src/game/game.ts:525
+#: src/game/game.ts:641
 msgid "Lead Margin"
 msgstr "Lead Margin"
 
-#: src/game/hud.tsx:382
+#: src/game/hud.tsx:346
+#: src/game/hud.tsx:426
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: src/game/hud.tsx:254
+#: src/game/hud.tsx:292
 msgid "Match is frozen. Adjust options or resume."
 msgstr "Match is frozen. Adjust options or resume."
 
-#: src/game/hud.tsx:353
+#: src/game/hud.tsx:397
 msgid "Match Results"
 msgstr "Match Results"
 
-#: src/game/hud.tsx:373
+#: src/game/hud.tsx:417
 msgid "Match statistics"
 msgstr "Match statistics"
 
-#: src/game/hud.tsx:89
+#: src/game/hud.tsx:91
+msgid "Medium"
+msgstr "Medium"
+
+#: src/game/hud.tsx:434
+msgid "Mobile controls"
+msgstr "Mobile controls"
+
+#: src/game/hud.tsx:93
 msgid "Molotov"
 msgstr "Molotov"
 
-#: src/game/hud.tsx:256
+#: src/game/hud.tsx:435
+msgid "Move joystick"
+msgstr "Move joystick"
+
+#: src/game/hud.tsx:294
 msgid "Music Volume"
 msgstr "Music Volume"
 
-#: src/game/hud.tsx:104
-#: src/game/hud.tsx:253
+#: src/game/hud.tsx:114
+#: src/game/hud.tsx:291
 msgid "Paused"
 msgstr "Paused"
 
-#: src/game/game.ts:1279
+#: src/game/game.ts:1681
 msgid "Picked up {localizedWeapon}"
 msgstr "Picked up {localizedWeapon}"
 
-#: src/game/adapters/hud-sync.ts:35
-#: src/game/game.ts:1273
+#: src/game/adapters/hud-sync.ts:36
+#: src/game/adapters/hud-sync.ts:132
+#: src/game/game.ts:385
 msgid "Pistol"
 msgstr "Pistol"
 
-#: src/game/game.ts:531
+#: src/game/game.ts:647
 msgid "Player Kills"
 msgstr "Player Kills"
 
-#: src/game/hud.tsx:71
+#: src/game/hud.tsx:73
 msgid "Players {players}"
 msgstr "Players {players}"
 
-#: src/game/hud.tsx:73
+#: src/game/hud.tsx:75
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 
-#: src/game/hud.tsx:319
+#: src/game/hud.tsx:359
 msgid "Primary"
 msgstr "Primary"
 
-#: src/game/game.ts:152
-#: src/game/game.ts:288
+#: src/game/game.ts:171
+#: src/game/game.ts:327
 msgid "Red (You)"
 msgstr "Red (You)"
 
-#: src/game/adapters/hud-sync.ts:133
+#: src/game/adapters/hud-sync.ts:62
 msgid "Reloading..."
 msgstr "Reloading..."
 
-#: src/game/hud.tsx:306
+#: src/game/hud.tsx:345
 msgid "Resume"
 msgstr "Resume"
 
-#: src/game/adapters/hud-sync.ts:109
-#: src/game/adapters/hud-sync.ts:146
+#: src/game/adapters/hud-sync.ts:138
+#: src/game/adapters/hud-sync.ts:184
 msgid "RMB to throw"
 msgstr "RMB to throw"
 
-#: src/game/hud.tsx:330
+#: src/game/adapters/hud-sync.ts:54
+#: src/game/game.ts:406
+msgid "Rocket Launcher"
+msgstr "Rocket Launcher"
+
+#: src/game/hud.tsx:374
 msgid "Secondary"
 msgstr "Secondary"
 
-#: src/game/adapters/hud-sync.ts:41
-#: src/game/game.ts:1277
+#: src/game/adapters/hud-sync.ts:42
+#: src/game/game.ts:391
 msgid "Shotgun"
 msgstr "Shotgun"
 
-#: src/game/hud.tsx:160
+#: src/game/hud.tsx:200
 msgid "Skip to Match End"
 msgstr "Skip to Match End"
 
-#: src/game/hud.tsx:95
+#: src/game/hud.tsx:99
 msgid "Squad"
 msgstr "Squad"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:308
+#: src/game/game.ts:347
 msgid "Squad {0}"
 msgstr "Squad {0}"
 
-#: src/game/game.ts:169
+#: src/game/game.ts:188
 msgid "Squad {teamIndex}"
 msgstr "Squad {teamIndex}"
 
-#: src/game/game.ts:169
-#: src/game/game.ts:307
+#: src/game/game.ts:188
+#: src/game/game.ts:346
 msgid "Squad 1 (You)"
 msgstr "Squad 1 (You)"
 
-#: src/game/hud.tsx:243
+#: src/game/hud.tsx:281
 msgid "Start Match"
 msgstr "Start Match"
 
-#: src/game/hud.tsx:93
+#: src/game/hud.tsx:97
 msgid "Team Deathmatch"
 msgstr "Team Deathmatch"
 
-#: src/game/hud.tsx:75
+#: src/game/hud.tsx:77
 msgid "Teams {duoTeams} ({players} total)"
 msgstr "Teams {duoTeams} ({players} total)"
 
-#: src/game/hud.tsx:76
+#: src/game/hud.tsx:78
 msgid "Teams {squadTeams} ({players} total)"
 msgstr "Teams {squadTeams} ({players} total)"
 
-#: src/game/hud.tsx:171
+#: src/game/hud.tsx:211
 msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 msgstr "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 
+#: src/game/hud.tsx:438
+msgid "Throw {secondaryLabel}"
+msgstr "Throw {secondaryLabel}"
+
 #. placeholder {0}: formatTime(timeRemainingSignal.value)
-#: src/game/hud.tsx:103
+#: src/game/hud.tsx:113
 msgid "Time {0}"
 msgstr "Time {0}"
 
 #. placeholder {0}: winner.label
-#: src/game/game.ts:507
+#: src/game/game.ts:623
 msgid "Time up. {0} overwhelms the field"
 msgstr "Time up. {0} overwhelms the field"
 
-#: src/game/game.ts:506
+#: src/game/game.ts:622
 msgid "Time up. Your trail dominates the arena"
 msgstr "Time up. Your trail dominates the arena"
 
-#: src/game/game.ts:521
+#: src/game/game.ts:637
 msgid "Total Flowers"
 msgstr "Total Flowers"
 
-#: src/game/game.ts:522
+#: src/game/game.ts:638
 msgid "Winner Share"
 msgstr "Winner Share"
 
-#: src/game/game.ts:141
-#: src/game/game.ts:269
+#: src/game/game.ts:160
+#: src/game/game.ts:308
 msgid "You"
 msgstr "You"
 
-#: src/game/game.ts:523
+#: src/game/game.ts:639
 msgid "Your Place"
 msgstr "Your Place"

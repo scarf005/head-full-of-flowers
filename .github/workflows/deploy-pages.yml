@@ -20,6 +20,8 @@ jobs:
         with:
           cache: true
           deno-version: v2.x
+      - name: Build locale catalogs
+        run: deno task i18n:extract
       - name: Build site
         run: deno task build -- --base "/${{ github.event.repository.name }}/"
       - name: Setup Pages

@@ -1,5 +1,6 @@
 import "./app.css"
 
+import { t } from "@lingui/core/macro"
 import { useEffect, useRef } from "preact/hooks"
 
 import { GameHud } from "./game/hud.tsx"
@@ -22,7 +23,7 @@ export const App = () => {
         <canvas
           ref={canvasNode}
           class="arena-canvas"
-          aria-label="BadaBada arena"
+          aria-label={t`BadaBada arena`}
         />
         <GameHud />
       </div>
