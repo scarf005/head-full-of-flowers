@@ -127,7 +127,8 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
                   }
                   if (!flower.renderDirty) {
                     flower.renderDirty = true
-                    world.flowerDirtyCount += 1
+                    world.flowerDirtyIndices.add(flower.slotIndex)
+                    world.flowerDirtyCount = world.flowerDirtyIndices.size
                   }
                 }
               }

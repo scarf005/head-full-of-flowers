@@ -8,6 +8,8 @@ import {
   pausedSignal,
   playerPerksSignal,
   primaryAmmoSignal,
+  renderPathProfileSignal,
+  renderPathRatesSignal,
   primaryWeaponIconSignal,
   primaryWeaponSlotsSignal,
   primaryWeaponSignal,
@@ -22,6 +24,12 @@ import { PERK_POOL } from "../perks.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { MATCH_DURATION_SECONDS } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
+import {
+  cloneRenderPathProfileSnapshot,
+  computeRenderPathWindowRateSnapshot,
+  sameRenderPathProfileSnapshot,
+  type RenderPathProfileSnapshot,
+} from "./render-path-profile-sync.ts"
 import { t } from "@lingui/core/macro"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
 
@@ -32,6 +40,24 @@ const defaultMatchResult = {
   pieGradient: "conic-gradient(#f2ffe8 0deg 360deg)",
   stats: [],
   standings: [],
+}
+
+const renderPathProfileRateHistory: RenderPathProfileSnapshot[] = []
+
+const syncRenderPathRateSignal = (world: WorldState) => {
+  const rates = computeRenderPathWindowRateSnapshot(renderPathProfileRateHistory, world.renderPathProfile)
+  const current = renderPathRatesSignal.value
+  if (
+    current.sampleFrames === rates.sampleFrames &&
+    current.mergedPercent === rates.mergedPercent &&
+    current.splitPercent === rates.splitPercent &&
+    current.pickupVisiblePercent === rates.pickupVisiblePercent &&
+    current.pickupHiddenPercent === rates.pickupHiddenPercent
+  ) {
+    return
+  }
+
+  renderPathRatesSignal.value = rates
 }
 
 const localizeWeapon = (weaponId: PrimaryWeaponId) => {
@@ -223,6 +249,16 @@ const samePlayerPerks = (left: PlayerPerkHudItem[], right: PlayerPerkHudItem[]) 
   return true
 }
 
+const syncRenderPathProfileSignal = (world: WorldState) => {
+  syncRenderPathRateSignal(world)
+
+  if (sameRenderPathProfileSnapshot(renderPathProfileSignal.value, world.renderPathProfile)) {
+    return
+  }
+
+  renderPathProfileSignal.value = cloneRenderPathProfileSnapshot(world.renderPathProfile)
+}
+
 export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) => {
   timeRemainingSignal.value = MATCH_DURATION_SECONDS
   fpsSignal.value = 0
@@ -242,6 +278,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   secondaryWeaponCooldownSignal.value = t`RMB to throw`
   hpSignal.value = { hp: world.player.hp, maxHp: world.player.maxHp }
   playerPerksSignal.value = []
+  syncRenderPathProfileSignal(world)
   statusMessageSignal.value = t`Click once to wake audio, then begin fighting`
   menuVisibleSignal.value = true
   crosshairSignal.value = {
@@ -353,6 +390,7 @@ export const syncHudSignals = (world: WorldState) => {
   updatePlayerWeaponSignals(world)
   updateSecondaryCooldownSignal(world)
   updatePlayerPerkSignals(world)
+  syncRenderPathProfileSignal(world)
 }
 
 export const updatePlayerHpSignal = (world: WorldState) => {

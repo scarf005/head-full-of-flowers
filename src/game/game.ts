@@ -1,4 +1,5 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
+import { buildCullBounds, isInsideCullBounds, type CullBounds } from "./cull.ts"
 import {
   clearMatchResultSignal,
   resetHudSignals,
@@ -12,6 +13,7 @@ import {
 import {
   crosshairSignal,
   debugGameSpeedSignal,
+  debugInfiniteHpSignal,
   debugImpactFeelLevelSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
@@ -44,7 +46,7 @@ import {
   VIEW_WIDTH,
   WORLD_SCALE,
 } from "./world/constants.ts"
-import { createWorldState, type WorldState } from "./world/state.ts"
+import { createWorldState, rebuildUnitLookup, resetRenderPathProfile, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/wfc-map.ts"
 import {
   applyDamage,
@@ -120,12 +122,7 @@ const TEAM_COLOR_RAMP = [
   "#ff9dd2",
 ]
 
-interface FogCullBounds {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-}
+type FogCullBounds = CullBounds
 
 export class FlowerArenaGame {
   private canvas: HTMLCanvasElement
@@ -255,23 +252,11 @@ export class FlowerArenaGame {
   }
 
   private buildFogCullBounds(padding = FX_CULL_PADDING_WORLD): FogCullBounds {
-    const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE + padding
-    const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE + padding
-    return {
-      minX: this.world.camera.x - halfViewX,
-      maxX: this.world.camera.x + halfViewX,
-      minY: this.world.camera.y - halfViewY,
-      maxY: this.world.camera.y + halfViewY,
-    }
+    return buildCullBounds(this.world.camera.x, this.world.camera.y, padding)
   }
 
   private isInsideFogCullBounds(x: number, y: number, bounds: FogCullBounds, padding = 0) {
-    return (
-      x >= bounds.minX - padding &&
-      x <= bounds.maxX + padding &&
-      y >= bounds.minY - padding &&
-      y <= bounds.maxY + padding
-    )
+    return isInsideCullBounds(x, y, bounds, padding)
   }
 
   private resolveScoreOwnerId(ownerId: string) {
@@ -315,6 +300,7 @@ export class FlowerArenaGame {
 
     this.world.bots = activeBots
     this.world.units = [this.world.player, ...activeBots]
+    rebuildUnitLookup(this.world)
 
     let factions: FactionDescriptor[] = []
     if (mode === "ffa") {
@@ -579,11 +565,13 @@ export class FlowerArenaGame {
     this.world.playerKills = 0
     this.world.playerDamageDealt = 0
     this.world.playerFlowerTotal = 0
+    resetRenderPathProfile(this.world)
     this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
     this.world.flowerCellHead = new Int32Array(this.world.terrainMap.size * this.world.terrainMap.size)
     this.world.flowerCellHead.fill(-1)
+    this.world.flowerDirtyIndices.clear()
     this.world.flowerDirtyCount = 0
 
     const player = this.world.player
@@ -1751,6 +1739,7 @@ export class FlowerArenaGame {
         this.world.playerKills += 1
       },
       onPlayerHpChanged: () => updatePlayerHpSignal(this.world),
+      isInfiniteHpEnabled: () => debugInfiniteHpSignal.value,
     }, damageSource)
   }
 

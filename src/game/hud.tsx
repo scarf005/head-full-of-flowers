@@ -17,6 +17,8 @@ import {
   musicVolumeSignal,
   pausedSignal,
   playerPerksSignal,
+  renderPathProfileSignal,
+  renderPathRatesSignal,
   persistAudioOptions,
   primaryWeaponSlotsSignal,
   persistDebugOptions,
@@ -93,6 +95,11 @@ export const GameHud = () => {
   const secondaryMode = secondaryModeSignal.value
   const secondaryLabel = secondaryMode === "grenade" ? t`Grenade` : t`Molotov`
   const perks = playerPerksSignal.value
+  const renderPathProfile = renderPathProfileSignal.value
+  const renderPathRates = renderPathRatesSignal.value
+  const renderFrames = Math.max(1, renderPathProfile.frames)
+  const mergedPercent = (renderPathProfile.mergedCompositeFrames / renderFrames) * 100
+  const splitPercent = (renderPathProfile.splitCompositeFrames / renderFrames) * 100
   const locale = languageSignal.value
   const modeCards: { id: GameModeId; label: string; detail: string }[] = [
     { id: "ffa", label: t`Free For All`, detail: t`Every player for themselves` },
@@ -164,8 +171,8 @@ export const GameHud = () => {
               />
               <span>{t`Infinite Reload`}</span>
             </label>
-            <label class="debug-speed">
-              <span>{t`Game Speed`} {debugGameSpeedSignal.value.toFixed(2)}x</span>
+              <label class="debug-speed">
+                <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>
               <input
                 type="range"
                 min={40}
@@ -178,8 +185,8 @@ export const GameHud = () => {
                 }}
               />
             </label>
-            <label class="debug-speed">
-              <span>{t`Impact Feel`} {impactFeelLabel} ({impactFeelLevel.toFixed(2)}x)</span>
+              <label class="debug-speed">
+                <span>{t`Impact Feel ${impactFeelLabel} (${impactFeelLevel.toFixed(2)}x)`}</span>
               <input
                 type="range"
                 min={1}
@@ -201,6 +208,24 @@ export const GameHud = () => {
             >
               {t`Skip to Match End`}
             </button>
+            <div class="debug-speed">
+                <span>{t`Render Profile ${renderPathProfile.frames} frames`}</span>
+                <span>
+                  {t`Pickups ${renderPathProfile.pickupVisibleFrames} visible / ${renderPathProfile.pickupHiddenFrames} hidden`}
+                </span>
+                <span>
+                  {t`WebGL ${renderPathProfile.obstacleFxWebGlFrames} obstacle fx / ${renderPathProfile.trailWebGlFrames} trails`}
+                </span>
+                <span>
+                  {t`Composite ${renderPathProfile.mergedCompositeFrames} merged (${mergedPercent.toFixed(1)}%) / ${renderPathProfile.splitCompositeFrames} split (${splitPercent.toFixed(1)}%)`}
+                </span>
+                <span>
+                  {t`Window ${renderPathRates.sampleFrames} f: merged ${renderPathRates.mergedPercent.toFixed(1)}% / split ${renderPathRates.splitPercent.toFixed(1)}%`}
+                </span>
+                <span>
+                  {t`Window pickups ${renderPathRates.pickupVisiblePercent.toFixed(1)}% visible / ${renderPathRates.pickupHiddenPercent.toFixed(1)}% hidden`}
+                </span>
+            </div>
           </div>
         )
         : null}
@@ -293,7 +318,7 @@ export const GameHud = () => {
               <div class="pause-title">{t`Paused`}</div>
               <div class="pause-hint">{t`Match is frozen. Adjust options or resume.`}</div>
               <label class="mode-row mode-row-slider">
-                <span>{t`Music Volume`} {Math.round(musicVolumeSignal.value * 100)}%</span>
+                <span>{t`Music Volume ${Math.round(musicVolumeSignal.value * 100)}%`}</span>
                 <input
                   type="range"
                   min={0}
@@ -307,7 +332,7 @@ export const GameHud = () => {
                 />
               </label>
               <label class="mode-row mode-row-slider">
-                <span>{t`Effects Volume`} {Math.round(effectsVolumeSignal.value * 100)}%</span>
+                <span>{t`Effects Volume ${Math.round(effectsVolumeSignal.value * 100)}%`}</span>
                 <input
                   type="range"
                   min={0}

@@ -1,4 +1,5 @@
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
+import { buildCullBounds } from "../cull.ts"
 import type { WorldState } from "../world/state.ts"
 import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
@@ -161,6 +162,8 @@ const ensureCapacity = (state: FlowerGpuState, needed: number) => {
 
   state.capacity = nextCapacity
   state.instanceData = new Float32Array(state.capacity * FLOWER_INSTANCE_STRIDE)
+  state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.instanceBuffer)
+  state.gl.bufferData(state.gl.ARRAY_BUFFER, state.instanceData.byteLength, state.gl.DYNAMIC_DRAW)
 }
 
 const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
@@ -175,6 +178,8 @@ const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
 
   state.quadCapacity = nextCapacity
   state.quadInstanceData = new Float32Array(state.quadCapacity * QUAD_INSTANCE_STRIDE)
+  state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.quadInstanceBuffer)
+  state.gl.bufferData(state.gl.ARRAY_BUFFER, state.quadInstanceData.byteLength, state.gl.DYNAMIC_DRAW)
 }
 
 const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
@@ -189,6 +194,8 @@ const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
 
   state.trailCapacity = nextCapacity
   state.trailInstanceData = new Float32Array(state.trailCapacity * TRAIL_INSTANCE_STRIDE)
+  state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.trailInstanceBuffer)
+  state.gl.bufferData(state.gl.ARRAY_BUFFER, state.trailInstanceData.byteLength, state.gl.DYNAMIC_DRAW)
 }
 
 const initFlowerGpuState = () => {
@@ -675,19 +682,19 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
     state.canvas.height = VIEW_HEIGHT
   }
 
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minX = cameraX - halfViewX - 1.5
-  const maxX = cameraX + halfViewX + 1.5
-  const minY = cameraY - halfViewY - 1.5
-  const maxY = cameraY + halfViewY + 1.5
+  const cullBounds = buildCullBounds(cameraX, cameraY, 1.5)
 
   let instanceCount = 0
   for (const flower of world.flowers) {
     if (!flower.active) {
       continue
     }
-    if (flower.position.x < minX || flower.position.x > maxX || flower.position.y < minY || flower.position.y > maxY) {
+    if (
+      flower.position.x < cullBounds.minX ||
+      flower.position.x > cullBounds.maxX ||
+      flower.position.y < cullBounds.minY ||
+      flower.position.y > cullBounds.maxY
+    ) {
       continue
     }
 
@@ -734,11 +741,7 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
 
   gl.bindVertexArray(state.vao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    state.instanceData.subarray(0, instanceCount * FLOWER_INSTANCE_STRIDE),
-    gl.DYNAMIC_DRAW,
-  )
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.instanceData, 0, instanceCount * FLOWER_INSTANCE_STRIDE)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 
@@ -755,9 +758,13 @@ interface RenderObstacleFxInstancesArgs {
   world: WorldState
   cameraX: number
   cameraY: number
+  drawToContext?: boolean
+  clearCanvas?: boolean
 }
 
-export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: RenderObstacleFxInstancesArgs) => {
+export const renderObstacleFxInstances = (
+  { context, world, cameraX, cameraY, drawToContext = true, clearCanvas = true }: RenderObstacleFxInstancesArgs,
+) => {
   const state = initFlowerGpuState()
   if (!state) {
     return false
@@ -769,19 +776,19 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
     state.canvas.height = VIEW_HEIGHT
   }
 
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minX = cameraX - halfViewX - 2
-  const maxX = cameraX + halfViewX + 2
-  const minY = cameraY - halfViewY - 2
-  const maxY = cameraY + halfViewY + 2
+  const cullBounds = buildCullBounds(cameraX, cameraY, 2)
 
   let instanceCount = 0
   for (const debris of world.obstacleDebris) {
     if (!debris.active || debris.maxLife <= 0) {
       continue
     }
-    if (debris.position.x < minX || debris.position.x > maxX || debris.position.y < minY || debris.position.y > maxY) {
+    if (
+      debris.position.x < cullBounds.minX ||
+      debris.position.x > cullBounds.maxX ||
+      debris.position.y < cullBounds.minY ||
+      debris.position.y > cullBounds.maxY
+    ) {
       continue
     }
 
@@ -808,7 +815,12 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
     if (!casing.active || casing.maxLife <= 0) {
       continue
     }
-    if (casing.position.x < minX || casing.position.x > maxX || casing.position.y < minY || casing.position.y > maxY) {
+    if (
+      casing.position.x < cullBounds.minX ||
+      casing.position.x > cullBounds.maxX ||
+      casing.position.y < cullBounds.minY ||
+      casing.position.y > cullBounds.maxY
+    ) {
       continue
     }
 
@@ -834,7 +846,12 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
     if (!petal.active || petal.maxLife <= 0) {
       continue
     }
-    if (petal.position.x < minX || petal.position.x > maxX || petal.position.y < minY || petal.position.y > maxY) {
+    if (
+      petal.position.x < cullBounds.minX ||
+      petal.position.x > cullBounds.maxX ||
+      petal.position.y < cullBounds.minY ||
+      petal.position.y > cullBounds.maxY
+    ) {
       continue
     }
 
@@ -861,8 +878,10 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
   }
 
   gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-  gl.clearColor(0, 0, 0, 0)
-  gl.clear(gl.COLOR_BUFFER_BIT)
+  if (clearCanvas) {
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+  }
   if (instanceCount <= 0) {
     return true
   }
@@ -874,18 +893,16 @@ export const renderObstacleFxInstances = ({ context, world, cameraX, cameraY }: 
 
   gl.bindVertexArray(state.quadVao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.quadInstanceBuffer)
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    state.quadInstanceData.subarray(0, instanceCount * QUAD_INSTANCE_STRIDE),
-    gl.DYNAMIC_DRAW,
-  )
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.quadInstanceData, 0, instanceCount * QUAD_INSTANCE_STRIDE)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 
-  context.save()
-  context.setTransform(1, 0, 0, 1, 0, 0)
-  context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-  context.restore()
+  if (drawToContext) {
+    context.save()
+    context.setTransform(1, 0, 0, 1, 0, 0)
+    context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+    context.restore()
+  }
 
   return true
 }
@@ -895,9 +912,22 @@ interface RenderFlightTrailInstancesArgs {
   world: WorldState
   cameraX: number
   cameraY: number
+  drawToContext?: boolean
+  clearCanvas?: boolean
+  forceComposite?: boolean
 }
 
-export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }: RenderFlightTrailInstancesArgs) => {
+export const renderFlightTrailInstances = (
+  {
+    context,
+    world,
+    cameraX,
+    cameraY,
+    drawToContext = true,
+    clearCanvas = true,
+    forceComposite = false,
+  }: RenderFlightTrailInstancesArgs,
+) => {
   const state = initFlowerGpuState()
   if (!state) {
     return false
@@ -909,12 +939,7 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
     state.canvas.height = VIEW_HEIGHT
   }
 
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minX = cameraX - halfViewX - 2
-  const maxX = cameraX + halfViewX + 2
-  const minY = cameraY - halfViewY - 2
-  const maxY = cameraY + halfViewY + 2
+  const cullBounds = buildCullBounds(cameraX, cameraY, 2)
 
   let instanceCount = 0
 
@@ -922,7 +947,12 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
     if (!trail.active || trail.maxLife <= 0) {
       continue
     }
-    if (trail.position.x < minX || trail.position.x > maxX || trail.position.y < minY || trail.position.y > maxY) {
+    if (
+      trail.position.x < cullBounds.minX ||
+      trail.position.x > cullBounds.maxX ||
+      trail.position.y < cullBounds.minY ||
+      trail.position.y > cullBounds.maxY
+    ) {
       continue
     }
 
@@ -949,10 +979,18 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
   }
 
   gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-  gl.clearColor(0, 0, 0, 0)
-  gl.clear(gl.COLOR_BUFFER_BIT)
+  if (clearCanvas) {
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+  }
 
   if (instanceCount <= 0) {
+    if (drawToContext && forceComposite) {
+      context.save()
+      context.setTransform(1, 0, 0, 1, 0, 0)
+      context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+      context.restore()
+    }
     return true
   }
 
@@ -963,18 +1001,16 @@ export const renderFlightTrailInstances = ({ context, world, cameraX, cameraY }:
 
   gl.bindVertexArray(state.trailVao)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.trailInstanceBuffer)
-  gl.bufferData(
-    gl.ARRAY_BUFFER,
-    state.trailInstanceData.subarray(0, instanceCount * TRAIL_INSTANCE_STRIDE),
-    gl.DYNAMIC_DRAW,
-  )
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.trailInstanceData, 0, instanceCount * TRAIL_INSTANCE_STRIDE)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 
-  context.save()
-  context.setTransform(1, 0, 0, 1, 0, 0)
-  context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
-  context.restore()
+  if (drawToContext) {
+    context.save()
+    context.setTransform(1, 0, 0, 1, 0, 0)
+    context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+    context.restore()
+  }
 
   return true
 }

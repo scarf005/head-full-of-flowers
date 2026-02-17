@@ -34,6 +34,24 @@ export interface PlayerPerkHudItem {
   stacks: number
 }
 
+export interface RenderPathProfileHud {
+  frames: number
+  pickupVisibleFrames: number
+  pickupHiddenFrames: number
+  obstacleFxWebGlFrames: number
+  trailWebGlFrames: number
+  mergedCompositeFrames: number
+  splitCompositeFrames: number
+}
+
+export interface RenderPathRatesHud {
+  sampleFrames: number
+  mergedPercent: number
+  splitPercent: number
+  pickupVisiblePercent: number
+  pickupHiddenPercent: number
+}
+
 const DEBUG_OPTIONS_STORAGE_KEY = "head-full-of-flowers.debug-options"
 const AUDIO_OPTIONS_STORAGE_KEY = "head-full-of-flowers.audio-options"
 const DEBUG_GAME_SPEED_MIN = 0.4
@@ -209,6 +227,22 @@ export const secondaryModeSignal = signal<SecondaryMode>("grenade")
 export const secondaryWeaponCooldownSignal = signal("RMB to throw")
 export const hpSignal = signal({ hp: UNIT_BASE_HP, maxHp: UNIT_BASE_HP })
 export const playerPerksSignal = signal<PlayerPerkHudItem[]>([])
+export const renderPathProfileSignal = signal<RenderPathProfileHud>({
+  frames: 0,
+  pickupVisibleFrames: 0,
+  pickupHiddenFrames: 0,
+  obstacleFxWebGlFrames: 0,
+  trailWebGlFrames: 0,
+  mergedCompositeFrames: 0,
+  splitCompositeFrames: 0,
+})
+export const renderPathRatesSignal = signal<RenderPathRatesHud>({
+  sampleFrames: 0,
+  mergedPercent: 0,
+  splitPercent: 0,
+  pickupVisiblePercent: 0,
+  pickupHiddenPercent: 0,
+})
 
 export const statusMessageSignal = signal("Click to begin")
 

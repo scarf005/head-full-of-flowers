@@ -354,7 +354,8 @@ export const spawnFlowers = (
     flower.active = true
     if (!flower.renderDirty) {
       flower.renderDirty = true
-      world.flowerDirtyCount += 1
+      world.flowerDirtyIndices.add(flower.slotIndex)
+      world.flowerDirtyCount = world.flowerDirtyIndices.size
     }
     flower.team = palette.team
     flower.ownerId = scoreOwnerId

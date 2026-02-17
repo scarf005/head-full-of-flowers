@@ -4,49 +4,41 @@ import { isHighTierPrimary, pickupAmmoForWeapon } from "../weapons.ts"
 import type { PerkId, PrimaryWeaponId, Team } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 import { LOOT_PICKUP_INTERVAL_MAX_SECONDS, LOOT_PICKUP_INTERVAL_MIN_SECONDS } from "../world/constants.ts"
-import { isObstacleCellSolid, obstacleGridToWorldCenter, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+import { isObstacleCellSolid } from "../world/obstacle-grid.ts"
 
 const EJECTED_PICKUP_THROW_SPEED = 24
 const EJECTED_PICKUP_DRAG = 3.1
 const EJECTED_PICKUP_STOP_SPEED = 2.2
 const EJECTED_PICKUP_DAMAGE = 1
 
-const pointOverlapsRect = (
-  pointX: number,
-  pointY: number,
-  centerX: number,
-  centerY: number,
-  width: number,
-  height: number,
-  radius: number,
-) => {
-  const halfWidth = width * 0.5
-  const halfHeight = height * 0.5
-  const nearestX = Math.max(centerX - halfWidth, Math.min(pointX, centerX + halfWidth))
-  const nearestY = Math.max(centerY - halfHeight, Math.min(pointY, centerY + halfHeight))
-  const dx = pointX - nearestX
-  const dy = pointY - nearestY
-  return dx * dx + dy * dy < radius * radius
-}
-
 const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radius: number) => {
   const grid = world.obstacleGrid
-  const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
-  const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
-
-  const minX = Math.max(0, min.x)
-  const maxX = Math.min(grid.size - 1, max.x)
-  const minY = Math.max(0, min.y)
-  const maxY = Math.min(grid.size - 1, max.y)
+  const half = Math.floor(grid.size * 0.5)
+  const minX = Math.max(0, Math.floor(x - radius) + half)
+  const maxX = Math.min(grid.size - 1, Math.floor(x + radius) + half)
+  const minY = Math.max(0, Math.floor(y - radius) + half)
+  const maxY = Math.min(grid.size - 1, Math.floor(y + radius) + half)
+  const radiusSquared = radius * radius
 
   for (let gy = minY; gy <= maxY; gy += 1) {
+    const centerY = gy - half + 0.5
+    const dy = Math.max(0, Math.abs(y - centerY) - 0.5)
+    if (dy > radius) {
+      continue
+    }
+
     for (let gx = minX; gx <= maxX; gx += 1) {
       if (!isObstacleCellSolid(grid, gx, gy)) {
         continue
       }
 
-      const center = obstacleGridToWorldCenter(grid.size, gx, gy)
-      if (pointOverlapsRect(x, y, center.x, center.y, 1, 1, radius)) {
+      const centerX = gx - half + 0.5
+      const dx = Math.max(0, Math.abs(x - centerX) - 0.5)
+      if (dx > radius) {
+        continue
+      }
+
+      if (dx * dx + dy * dy < radiusSquared) {
         return true
       }
     }

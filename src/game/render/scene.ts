@@ -1,6 +1,9 @@
 import { drawFlameProjectileSprite, drawGrenadeSprite, drawItemPickupSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
 import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
+import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
+import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
 import { clamp, randomRange } from "../utils.ts"
+import { buildCullBounds, isInsideCullBounds, type CullBounds } from "../cull.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import grassBaseTextureUrl from "../../assets/tiles/grass-base-24.png"
@@ -24,12 +27,7 @@ export interface RenderSceneArgs {
   dt: number
 }
 
-interface FogCullBounds {
-  minX: number
-  maxX: number
-  minY: number
-  maxY: number
-}
+type FogCullBounds = CullBounds
 
 let grassWaveTime = Math.random() * Math.PI * 2
 
@@ -60,23 +58,11 @@ const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
 const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#c1c8cf"
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE + padding
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE + padding
-  return {
-    minX: cameraX - halfViewX,
-    maxX: cameraX + halfViewX,
-    minY: cameraY - halfViewY,
-    maxY: cameraY + halfViewY,
-  }
+  return buildCullBounds(cameraX, cameraY, padding)
 }
 
 const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padding = 0) => {
-  return (
-    x >= bounds.minX - padding &&
-    x <= bounds.maxX + padding &&
-    y >= bounds.minY - padding &&
-    y <= bounds.maxY + padding
-  )
+  return isInsideCullBounds(x, y, bounds, padding)
 }
 
 let grassBaseTexture: HTMLImageElement | null = null
@@ -579,15 +565,17 @@ const ensureFlowerLayerCache = (world: WorldState) => {
     context,
   }
 
+  world.flowerDirtyIndices.clear()
   for (const flower of world.flowers) {
     if (!flower.active) {
       continue
     }
-    if (!flower.renderDirty) {
-      flower.renderDirty = true
-      world.flowerDirtyCount += 1
+    flower.renderDirty = true
+    if (flower.slotIndex >= 0) {
+      world.flowerDirtyIndices.add(flower.slotIndex)
     }
   }
+  world.flowerDirtyCount = world.flowerDirtyIndices.size
 
   return flowerLayerCache
 }
@@ -621,7 +609,7 @@ const drawFlowerToLayer = (
 }
 
 const flushFlowerLayer = (world: WorldState) => {
-  if (world.flowerDirtyCount <= 0) {
+  if (world.flowerDirtyIndices.size <= 0) {
     return
   }
 
@@ -631,8 +619,10 @@ const flushFlowerLayer = (world: WorldState) => {
   }
 
   let budget = FLOWER_LAYER_FLUSH_LIMIT
-  for (const flower of world.flowers) {
-    if (!flower.active || !flower.renderDirty) {
+  for (const flowerIndex of world.flowerDirtyIndices) {
+    const flower = world.flowers[flowerIndex]
+    if (!flower || !flower.active || !flower.renderDirty) {
+      world.flowerDirtyIndices.delete(flowerIndex)
       continue
     }
 
@@ -642,12 +632,14 @@ const flushFlowerLayer = (world: WorldState) => {
     }
 
     flower.renderDirty = false
-    world.flowerDirtyCount = Math.max(0, world.flowerDirtyCount - 1)
+    world.flowerDirtyIndices.delete(flowerIndex)
     budget -= 1
     if (budget <= 0) {
       break
     }
   }
+
+  world.flowerDirtyCount = world.flowerDirtyIndices.size
 }
 
 export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
@@ -677,23 +669,51 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMolotovZones(context, world, fogCullBounds)
   renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
+  const hasVisiblePickupLayer = hasVisiblePickups(world, fogCullBounds)
+  const compositionPlan = decideRenderFxCompositionPlan(hasVisiblePickupLayer, true)
   const renderedObstacleFxWithWebGl = renderObstacleFxInstances({
     context,
     world,
     cameraX: renderCameraX,
     cameraY: renderCameraY,
+    drawToContext: compositionPlan.renderObstacleToContext,
+    clearCanvas: true,
   })
+  const resolvedPlan = decideRenderFxCompositionPlan(hasVisiblePickupLayer, renderedObstacleFxWithWebGl)
+
+  let renderedFlightTrailsWithWebGl = false
+  if (resolvedPlan.runCombinedTrailComposite) {
+    renderedFlightTrailsWithWebGl = renderFlightTrailInstances({
+      context,
+      world,
+      cameraX: renderCameraX,
+      cameraY: renderCameraY,
+      drawToContext: true,
+      clearCanvas: false,
+      forceComposite: true,
+    })
+  }
+
   if (!renderedObstacleFxWithWebGl) {
     renderObstacleDebris(context, world, fogCullBounds)
     renderShellCasings(context, world, fogCullBounds)
   }
   renderPickups(context, world, dt, fogCullBounds)
-  const renderedFlightTrailsWithWebGl = renderFlightTrailInstances({
-    context,
-    world,
-    cameraX: renderCameraX,
-    cameraY: renderCameraY,
-  })
+  if (resolvedPlan.runPostPickupTrailPass) {
+    renderedFlightTrailsWithWebGl = renderFlightTrailInstances({
+      context,
+      world,
+      cameraX: renderCameraX,
+      cameraY: renderCameraY,
+    })
+  }
+  recordRenderPathProfileFrame(
+    world.renderPathProfile,
+    hasVisiblePickupLayer,
+    renderedObstacleFxWithWebGl,
+    renderedFlightTrailsWithWebGl,
+    resolvedPlan,
+  )
   renderThrowables(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
   renderProjectiles(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
   renderAimLasers(context, world, fogCullBounds)
@@ -731,12 +751,11 @@ const renderArenaGround = (
   context.arc(0, 0, world.arenaRadius - 0.12, 0, Math.PI * 2)
   context.clip()
 
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minWorldX = renderCameraX - halfViewX - 3
-  const maxWorldX = renderCameraX + halfViewX + 3
-  const minWorldY = renderCameraY - halfViewY - 3
-  const maxWorldY = renderCameraY + halfViewY + 3
+  const groundCullBounds = buildCullBounds(renderCameraX, renderCameraY, 3)
+  const minWorldX = groundCullBounds.minX
+  const maxWorldX = groundCullBounds.maxX
+  const minWorldY = groundCullBounds.minY
+  const maxWorldY = groundCullBounds.maxY
 
   const groundLayer = ensureGroundLayerCache(world)
   if (groundLayer.canvas) {
@@ -815,6 +834,19 @@ const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
   }
 
   return "255, 214, 104"
+}
+
+const hasVisiblePickups = (world: WorldState, fogCullBounds: FogCullBounds) => {
+  for (const pickup of world.pickups) {
+    if (!pickup.active) {
+      continue
+    }
+    if (isInsideFogCullBounds(pickup.position.x, pickup.position.y, fogCullBounds, pickup.radius + 0.5)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 const renderPickups = (
@@ -960,16 +992,14 @@ const renderMolotovZones = (context: CanvasRenderingContext2D, world: WorldState
 
 const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) => {
   const grid = world.obstacleGrid
-  const half = Math.floor(grid.size * 0.5)
-  const halfViewX = VIEW_WIDTH * 0.5 / WORLD_SCALE
-  const halfViewY = VIEW_HEIGHT * 0.5 / WORLD_SCALE
-  const minX = Math.max(0, Math.floor(world.camera.x - halfViewX) + half - 2)
-  const maxX = Math.min(grid.size - 1, Math.floor(world.camera.x + halfViewX) + half + 2)
-  const minY = Math.max(0, Math.floor(world.camera.y - halfViewY) + half - 2)
-  const maxY = Math.min(grid.size - 1, Math.floor(world.camera.y + halfViewY) + half + 2)
+  const cullRange = buildObstacleGridCullRange(grid.size, world.camera.x, world.camera.y, 2)
 
-  for (let gy = minY; gy <= maxY; gy += 1) {
-    for (let gx = minX; gx <= maxX; gx += 1) {
+  if (cullRange.maxX < cullRange.minX || cullRange.maxY < cullRange.minY) {
+    return
+  }
+
+  for (let gy = cullRange.minY; gy <= cullRange.maxY; gy += 1) {
+    for (let gx = cullRange.minX; gx <= cullRange.maxX; gx += 1) {
       const index = gy * grid.size + gx
       if (grid.solid[index] <= 0) {
         continue
