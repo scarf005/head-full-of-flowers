@@ -39,6 +39,16 @@ export interface ExplosionFx {
   radius: number
 }
 
+export interface RenderPathProfile {
+  frames: number
+  pickupVisibleFrames: number
+  pickupHiddenFrames: number
+  obstacleFxWebGlFrames: number
+  trailWebGlFrames: number
+  mergedCompositeFrames: number
+  splitCompositeFrames: number
+}
+
 export interface InputState {
   keys: Set<string>
   leftDown: boolean
@@ -58,6 +68,7 @@ export interface WorldState {
   player: Unit
   bots: Unit[]
   units: Unit[]
+  unitById: Map<string, Unit>
   projectiles: Projectile[]
   throwables: Throwable[]
   flowers: Flower[]
@@ -95,6 +106,7 @@ export interface WorldState {
   playerDamageDealt: number
   flowerDensityGrid: Uint16Array
   flowerCellHead: Int32Array
+  flowerDirtyIndices: Set<number>
   flowerDirtyCount: number
   playerFlowerTotal: number
   impactFeelLevel: number
@@ -103,6 +115,7 @@ export interface WorldState {
   arenaRadius: number
   terrainMap: TerrainMap
   obstacleGrid: ObstacleGridState
+  renderPathProfile: RenderPathProfile
 }
 
 export const createWorldState = (): WorldState => {
@@ -131,6 +144,7 @@ export const createWorldState = (): WorldState => {
     player,
     bots,
     units: [player, ...bots],
+    unitById: new Map([player, ...bots].map((unit) => [unit.id, unit])),
     projectiles: Array.from({ length: PROJECTILE_POOL_SIZE }, () => new Projectile()),
     throwables: Array.from({ length: THROWABLE_POOL_SIZE }, () => new Throwable()),
     flowers: Array.from({ length: FLOWER_POOL_SIZE }, (_, index) => {
@@ -181,6 +195,7 @@ export const createWorldState = (): WorldState => {
     playerDamageDealt: 0,
     flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
     flowerCellHead,
+    flowerDirtyIndices: new Set<number>(),
     flowerDirtyCount: 0,
     playerFlowerTotal: 0,
     impactFeelLevel: 1,
@@ -189,5 +204,31 @@ export const createWorldState = (): WorldState => {
     arenaRadius: ARENA_START_RADIUS,
     terrainMap,
     obstacleGrid: buildObstacleGridFromMap(terrainMap),
+    renderPathProfile: {
+      frames: 0,
+      pickupVisibleFrames: 0,
+      pickupHiddenFrames: 0,
+      obstacleFxWebGlFrames: 0,
+      trailWebGlFrames: 0,
+      mergedCompositeFrames: 0,
+      splitCompositeFrames: 0,
+    },
   }
+}
+
+export const rebuildUnitLookup = (world: Pick<WorldState, "units" | "unitById">) => {
+  world.unitById.clear()
+  for (const unit of world.units) {
+    world.unitById.set(unit.id, unit)
+  }
+}
+
+export const resetRenderPathProfile = (world: Pick<WorldState, "renderPathProfile">) => {
+  world.renderPathProfile.frames = 0
+  world.renderPathProfile.pickupVisibleFrames = 0
+  world.renderPathProfile.pickupHiddenFrames = 0
+  world.renderPathProfile.obstacleFxWebGlFrames = 0
+  world.renderPathProfile.trailWebGlFrames = 0
+  world.renderPathProfile.mergedCompositeFrames = 0
+  world.renderPathProfile.splitCompositeFrames = 0
 }
