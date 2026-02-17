@@ -76,7 +76,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "flamethrower",
     color: "#ffab5d",
     cooldown: 0.06,
-    damage: 1,
+    damage: 4,
     speed: 24,
     range: 11,
     spread: 0.33,
