@@ -5,10 +5,9 @@ import type { Team } from "../types.ts"
 import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
-import type { WorldState } from "../world/state.ts"
+import { rebuildUnitLookup, type WorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID } from "../factions.ts"
 import { randomFlowerBurst } from "./flowers.ts"
-import { debugInfiniteHpSignal } from "../signals.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
   return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
@@ -405,6 +404,8 @@ const resolveAssistedAimAngle = (world: WorldState, shooter: Unit, fallbackAngle
     return fallbackAngle
   }
 
+  const maxAimAssistDistanceSquared = AIM_ASSIST_MAX_DISTANCE * AIM_ASSIST_MAX_DISTANCE
+
   let bestDelta = 0
   let bestScore = Number.POSITIVE_INFINITY
 
@@ -415,8 +416,8 @@ const resolveAssistedAimAngle = (world: WorldState, shooter: Unit, fallbackAngle
 
     const dx = candidate.position.x - shooter.position.x
     const dy = candidate.position.y - shooter.position.y
-    const distance = Math.hypot(dx, dy)
-    if (distance <= 0.001 || distance > AIM_ASSIST_MAX_DISTANCE) {
+    const distanceSquared = dx * dx + dy * dy
+    if (distanceSquared <= 0.000001 || distanceSquared > maxAimAssistDistanceSquared) {
       continue
     }
 
@@ -427,6 +428,7 @@ const resolveAssistedAimAngle = (world: WorldState, shooter: Unit, fallbackAngle
       continue
     }
 
+    const distance = Math.sqrt(distanceSquared)
     const score = absDelta * 8 + distance
     if (score >= bestScore) {
       continue
@@ -673,6 +675,7 @@ export interface DamageDeps {
   onPlayerHit?: (targetId: string, damage: number) => void
   onPlayerKill?: (targetId: string) => void
   onPlayerHpChanged: () => void
+  isInfiniteHpEnabled?: () => boolean
 }
 
 const nearestUnitIdByTeam = (
@@ -686,7 +689,7 @@ const nearestUnitIdByTeam = (
   let nearestDistance = Number.POSITIVE_INFINITY
 
   for (const unit of world.units) {
-    if (unit.team !== team || unit.id === excludedUnitId) {
+    if (unit.team !== team || unit.id === excludedUnitId || unit.hp <= 0) {
       continue
     }
 
@@ -715,7 +718,17 @@ export const applyDamage = (
   deps: DamageDeps,
   damageSource: "projectile" | "throwable" | "molotov" | "arena" | "other" = "other",
 ) => {
-  const target = world.units.find((unit) => unit.id === targetId)
+  if (world.unitById.size !== world.units.length) {
+    rebuildUnitLookup(world)
+  }
+  for (const unit of world.units) {
+    if (world.unitById.get(unit.id) !== unit) {
+      rebuildUnitLookup(world)
+      break
+    }
+  }
+
+  const target = world.unitById.get(targetId)
   if (!target) {
     return
   }
@@ -725,7 +738,7 @@ export const applyDamage = (
   const hitStopScale = 1 + (impactFeel - 1) * 2
   const shakeCapBoost = (impactFeel - 1) * 1.5
 
-  const sourceUnit = world.units.find((unit) => unit.id === sourceId)
+  const sourceUnit = world.unitById.get(sourceId)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
   const isBoundarySource = sourceId === "arena"
   const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
@@ -748,7 +761,9 @@ export const applyDamage = (
   popup.color = target.isPlayer ? "#8fc8ff" : "#fff6cc"
   popup.life = 0.62
 
-  const hitSpeed = Math.hypot(impactX, impactY)
+  const impactLength = Math.hypot(impactX, impactY)
+  const impactLengthSafe = impactLength || 1
+  const hitSpeed = impactLength
   const isPlayerSource = sourceId === world.player.id || sourceId === world.player.team || sourceUnit?.isPlayer === true
   const sourceByNearestTeam = sourceUnit?.id ??
     (!isBoundarySource && resolvedSourceTeam
@@ -756,15 +771,17 @@ export const applyDamage = (
       : "")
   let normalizedSourceId = isPlayerSource ? world.player.id : sourceByNearestTeam || sourceId
 
-  const sourceIdIsUnit = sourceId.length > 0 ? world.units.some((unit) => unit.id === sourceId) : false
+  const sourceIdIsUnit = sourceId.length > 0 ? world.unitById.has(sourceId) : false
   const normalizedSourceIdIsUnit = normalizedSourceId.length > 0
-    ? world.units.some((unit) => unit.id === normalizedSourceId)
+    ? world.unitById.has(normalizedSourceId)
     : false
 
   if (!isPlayerSource && !isBoundarySource && !sourceIdIsUnit && !normalizedSourceIdIsUnit) {
     const fallbackId = resolvedSourceTeam === world.player.team
-      ? world.player.id
-      : world.units.find((unit) => unit.team === resolvedSourceTeam && !unit.isPlayer)?.id
+      ? world.player.hp > 0
+        ? world.player.id
+        : ""
+      : world.units.find((unit) => unit.team === resolvedSourceTeam && !unit.isPlayer && unit.hp > 0)?.id
 
     if (fallbackId) {
       normalizedSourceId = fallbackId
@@ -777,7 +794,7 @@ export const applyDamage = (
   const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
 
   const killer: Unit | null = !isSelfHarm && !isBoundarySource
-    ? sourceUnit ?? world.units.find((unit) => unit.id === normalizedSourceId) ?? null
+    ? sourceUnit ?? world.unitById.get(normalizedSourceId) ?? null
     : null
 
   if (isKilled) {
@@ -799,7 +816,7 @@ export const applyDamage = (
     const deathBurst = randomFlowerBurst(damage, hitSpeed)
     let deathDirX = impactX
     let deathDirY = impactY
-    if (Math.hypot(deathDirX, deathDirY) <= 0.0001) {
+    if (deathDirX * deathDirX + deathDirY * deathDirY <= 0.00000001) {
       const extraDir = randomRange(0, Math.PI * 2)
       deathDirX = Math.cos(extraDir)
       deathDirY = Math.sin(extraDir)
@@ -848,7 +865,7 @@ export const applyDamage = (
     )
   }
 
-  if (target.isPlayer && debugInfiniteHpSignal.value) {
+  if (target.isPlayer && deps.isInfiniteHpEnabled?.()) {
     target.hp = target.maxHp
   }
 
@@ -866,9 +883,8 @@ export const applyDamage = (
     world.hitStop = Math.max(world.hitStop, 0.016 * hitStopScale)
   }
 
-  const impactLength = Math.hypot(impactX, impactY) || 1
-  const impactDirX = impactX / impactLength
-  const impactDirY = impactY / impactLength
+  const impactDirX = impactX / impactLengthSafe
+  const impactDirY = impactY / impactLengthSafe
   target.velocity.x += impactDirX * 2.7
   target.velocity.y += impactDirY * 2.7
 
@@ -884,9 +900,10 @@ export const applyDamage = (
     world.cameraKick.y -= impactDirY * defenseKick
   }
 
-  const kickLength = Math.hypot(world.cameraKick.x, world.cameraKick.y)
   const kickCap = 0.3 + (impactFeel - 1) * 0.7
-  if (kickLength > kickCap) {
+  const kickLengthSquared = world.cameraKick.x * world.cameraKick.x + world.cameraKick.y * world.cameraKick.y
+  if (kickLengthSquared > kickCap * kickCap) {
+    const kickLength = Math.sqrt(kickLengthSquared)
     const scale = kickCap / kickLength
     world.cameraKick.x *= scale
     world.cameraKick.y *= scale
