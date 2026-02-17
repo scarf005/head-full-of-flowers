@@ -1,8 +1,14 @@
 import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 
+const parseBotIndex = (botId: string) => {
+  const parsed = Number(botId.replace("bot-", ""))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 const updateBotAim = (
   bot: WorldState["bots"][number],
+  botIndex: number,
   toTargetX: number,
   toTargetY: number,
   distanceToTarget: number,
@@ -10,7 +16,6 @@ const updateBotAim = (
   nowMs: number,
   panic = 0,
 ) => {
-  const botIndex = Number(bot.id.replace("bot-", "")) || 0
   const baseAngle = Math.atan2(toTargetY, toTargetX)
   const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
   const movementFactor = clamp(bot.velocity.length() / (bot.speed || 1), 0, 1)
@@ -76,7 +81,9 @@ export interface UpdateAIDeps {
 }
 
 export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
+  const nowMs = deps.nowMs()
   for (const bot of world.bots) {
+    const botIndex = parseBotIndex(bot.id)
     bot.shootCooldown = Math.max(0, bot.shootCooldown - dt)
     bot.secondaryCooldown = Math.max(0, bot.secondaryCooldown - dt)
     if (bot.secondaryCooldown <= 0) {
@@ -90,7 +97,6 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     bot.aiDecisionTimer -= dt
     let desiredVelocityX = bot.velocity.x
     let desiredVelocityY = bot.velocity.y
-    const nowMs = deps.nowMs()
 
     const nearestTarget = findNearestTarget(world, bot.id, bot.team, bot.position.x, bot.position.y, 36)
     const hasTarget = nearestTarget.targetId !== ""
@@ -127,11 +133,11 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const distanceSafe = distanceToTarget || 1
       const towardX = toTargetX / distanceSafe
       const towardY = toTargetY / distanceSafe
-      const strafe = Math.sin(nowMs * 0.001 + Number(bot.id.replace("bot-", "")))
+      const strafe = Math.sin(nowMs * 0.001 + botIndex)
       desiredVelocityX = (towardX + -towardY * strafe * 0.45) * bot.speed
       desiredVelocityY = (towardY + towardX * strafe * 0.45) * bot.speed
 
-      updateBotAim(bot, toTargetX, toTargetY, distanceToTarget, dt, nowMs)
+      updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs)
       const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
       const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
       const requiredAlignment = lerp(0.8, 0.91, farBias)
@@ -159,7 +165,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       desiredVelocityY = fromY * bot.speed * 1.15
       const towardX = toTargetX / distanceSafe
       const towardY = toTargetY / distanceSafe
-      updateBotAim(bot, toTargetX, toTargetY, distanceToTarget, dt, nowMs, 0.45)
+      updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs, 0.45)
       const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
       const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
       const requiredAlignment = lerp(0.78, 0.89, farBias)
