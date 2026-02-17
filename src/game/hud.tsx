@@ -17,6 +17,8 @@ import {
   musicVolumeSignal,
   pausedSignal,
   playerPerksSignal,
+  renderPathProfileSignal,
+  renderPathRatesSignal,
   persistAudioOptions,
   primaryWeaponSlotsSignal,
   persistDebugOptions,
@@ -93,6 +95,11 @@ export const GameHud = () => {
   const secondaryMode = secondaryModeSignal.value
   const secondaryLabel = secondaryMode === "grenade" ? t`Grenade` : t`Molotov`
   const perks = playerPerksSignal.value
+  const renderPathProfile = renderPathProfileSignal.value
+  const renderPathRates = renderPathRatesSignal.value
+  const renderFrames = Math.max(1, renderPathProfile.frames)
+  const mergedPercent = (renderPathProfile.mergedCompositeFrames / renderFrames) * 100
+  const splitPercent = (renderPathProfile.splitCompositeFrames / renderFrames) * 100
   const locale = languageSignal.value
   const modeCards: { id: GameModeId; label: string; detail: string }[] = [
     { id: "ffa", label: t`Free For All`, detail: t`Every player for themselves` },
@@ -201,6 +208,36 @@ export const GameHud = () => {
             >
               {t`Skip to Match End`}
             </button>
+            <div class="debug-speed">
+              <span>
+                {t`Render Profile`} {renderPathProfile.frames}
+                {t` frames`}
+              </span>
+              <span>
+                {t`Pickups`} {renderPathProfile.pickupVisibleFrames}
+                {t` visible`} / {renderPathProfile.pickupHiddenFrames}
+                {t` hidden`}
+              </span>
+              <span>
+                {t`WebGL`} {renderPathProfile.obstacleFxWebGlFrames}
+                {t` obstacle fx`} / {renderPathProfile.trailWebGlFrames}
+                {t` trails`}
+              </span>
+              <span>
+                {t`Composite`} {renderPathProfile.mergedCompositeFrames}
+                {t` merged`} ({mergedPercent.toFixed(1)}%) / {renderPathProfile.splitCompositeFrames}
+                {t` split`} ({splitPercent.toFixed(1)}%)
+              </span>
+              <span>
+                {t`Window`} {renderPathRates.sampleFrames}
+                {t`f: merged`} {renderPathRates.mergedPercent.toFixed(1)}% / {t`split`} {renderPathRates.splitPercent.toFixed(1)}%
+              </span>
+              <span>
+                {t`Window pickups`} {renderPathRates.pickupVisiblePercent.toFixed(1)}%
+                {t` visible`} / {renderPathRates.pickupHiddenPercent.toFixed(1)}%
+                {t` hidden`}
+              </span>
+            </div>
           </div>
         )
         : null}
