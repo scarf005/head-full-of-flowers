@@ -14,6 +14,71 @@ const BALLISTIC_RICOCHET_RESTITUTION = 0.72
 const BALLISTIC_RICOCHET_TANGENT_FRICTION = 0.9
 const BALLISTIC_RICOCHET_MIN_SPEED = 4
 const BALLISTIC_RICOCHET_DAMAGE_SCALE = 0.8
+const PROJECTILE_BROADPHASE_BUCKET_SIZE = 3
+
+const bucketKey = (x: number, y: number) => `${x}:${y}`
+
+interface ProjectileBroadphase {
+  unitBucketIndices: Map<string, number[]>
+  maxUnitRadius: number
+}
+
+const buildProjectileBroadphase = (world: WorldState): ProjectileBroadphase => {
+  const unitBucketIndices = new Map<string, number[]>()
+  let maxUnitRadius = 0
+
+  for (let unitIndex = 0; unitIndex < world.units.length; unitIndex += 1) {
+    const unit = world.units[unitIndex]
+    maxUnitRadius = Math.max(maxUnitRadius, unit.radius)
+    const cellX = Math.floor(unit.position.x / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+    const cellY = Math.floor(unit.position.y / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+    const key = bucketKey(cellX, cellY)
+    const bucket = unitBucketIndices.get(key)
+    if (bucket) {
+      bucket.push(unitIndex)
+    } else {
+      unitBucketIndices.set(key, [unitIndex])
+    }
+  }
+
+  return {
+    unitBucketIndices,
+    maxUnitRadius,
+  }
+}
+
+const forEachNearbyProjectileUnit = (
+  world: WorldState,
+  broadphase: ProjectileBroadphase,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+  visit: (unit: WorldState["units"][number]) => boolean,
+) => {
+  const minCellX = Math.floor(minX / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+  const maxCellX = Math.floor(maxX / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+  const minCellY = Math.floor(minY / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+  const maxCellY = Math.floor(maxY / PROJECTILE_BROADPHASE_BUCKET_SIZE)
+
+  for (let cellY = minCellY; cellY <= maxCellY; cellY += 1) {
+    for (let cellX = minCellX; cellX <= maxCellX; cellX += 1) {
+      const bucket = broadphase.unitBucketIndices.get(bucketKey(cellX, cellY))
+      if (!bucket) {
+        continue
+      }
+
+      for (let index = 0; index < bucket.length; index += 1) {
+        const unit = world.units[bucket[index]]
+        if (visit(unit)) {
+          return true
+        }
+      }
+    }
+  }
+
+  return false
+}
 
 const distToSegmentSquared = (
   pointX: number,
@@ -114,6 +179,8 @@ export interface ProjectileDeps {
 }
 
 export const updateProjectiles = (world: WorldState, dt: number, deps: ProjectileDeps) => {
+  const broadphase = buildProjectileBroadphase(world)
+
   const deactivateProjectile = (
     projectileIndex: number,
     createFlamePatch: boolean,
@@ -182,8 +249,8 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       projectile.velocity.y *= drag
     }
 
-    const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
-    if (progress >= 1 || (progress > 0.72 && speed < 4) || speed < 0.6) {
+    const speedSquared = projectile.velocity.x * projectile.velocity.x + projectile.velocity.y * projectile.velocity.y
+    if (progress >= 1 || (progress > 0.72 && speedSquared < 16) || speedSquared < 0.36) {
       deactivateProjectile(projectileIndex, true, isExplosive)
       continue
     }
@@ -194,18 +261,24 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     if (projectile.kind === "rocket") {
-      let proximityFuseTriggered = false
-      for (const unit of world.units) {
-        if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
-          continue
-        }
+      const searchRadius = projectile.radius + ROCKET_PROXIMITY_RADIUS + broadphase.maxUnitRadius
+      const proximityFuseTriggered = forEachNearbyProjectileUnit(
+        world,
+        broadphase,
+        projectile.position.x - searchRadius,
+        projectile.position.y - searchRadius,
+        projectile.position.x + searchRadius,
+        projectile.position.y + searchRadius,
+        (unit) => {
+          if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+            return false
+          }
 
-        const fuseRadius = unit.radius + projectile.radius + ROCKET_PROXIMITY_RADIUS
-        if (distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <= fuseRadius * fuseRadius) {
-          proximityFuseTriggered = true
-          break
-        }
-      }
+          const fuseRadius = unit.radius + projectile.radius + ROCKET_PROXIMITY_RADIUS
+          return distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <=
+            fuseRadius * fuseRadius
+        },
+      )
 
       if (proximityFuseTriggered) {
         deactivateProjectile(projectileIndex, true, true)
@@ -215,27 +288,35 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
     if (projectile.kind === "grenade") {
       if (projectile.contactFuse) {
-        let proximityFuseTriggered = false
-        for (const unit of world.units) {
-          if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
-            continue
-          }
+        const searchRadius = projectile.radius + GRENADE_PROXIMITY_RADIUS + broadphase.maxUnitRadius
+        const minSegmentX = Math.min(previousX, projectile.position.x) - searchRadius
+        const maxSegmentX = Math.max(previousX, projectile.position.x) + searchRadius
+        const minSegmentY = Math.min(previousY, projectile.position.y) - searchRadius
+        const maxSegmentY = Math.max(previousY, projectile.position.y) + searchRadius
+        const proximityFuseTriggered = forEachNearbyProjectileUnit(
+          world,
+          broadphase,
+          minSegmentX,
+          minSegmentY,
+          maxSegmentX,
+          maxSegmentY,
+          (unit) => {
+            if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+              return false
+            }
 
-          const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS
-          if (
-            distToSegmentSquared(
-              unit.position.x,
-              unit.position.y,
-              previousX,
-              previousY,
-              projectile.position.x,
-              projectile.position.y,
-            ) <= fuseRadius * fuseRadius
-          ) {
-            proximityFuseTriggered = true
-            break
-          }
-        }
+            const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS
+            return distToSegmentSquared(
+                unit.position.x,
+                unit.position.y,
+                previousX,
+                previousY,
+                projectile.position.x,
+                projectile.position.y,
+              ) <=
+              fuseRadius * fuseRadius
+          },
+        )
 
         if (proximityFuseTriggered) {
           deactivateProjectile(projectileIndex, true, true)
@@ -297,7 +378,9 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           projectile.position.y += normalY * 0.02
           projectile.ricochets += 1
 
-          if (Math.hypot(projectile.velocity.x, projectile.velocity.y) < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
+          const ricochetSpeedSquared = projectile.velocity.x * projectile.velocity.x +
+            projectile.velocity.y * projectile.velocity.y
+          if (ricochetSpeedSquared < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED * GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
             deactivateProjectile(projectileIndex, true, true)
           }
           continue
@@ -309,7 +392,8 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     } else if (deps.hitObstacle(projectileIndex)) {
       if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
         ricochetBallisticProjectile(world, projectile, previousX, previousY)
-        if (Math.hypot(projectile.velocity.x, projectile.velocity.y) < BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8) {
+        const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x + projectile.velocity.y * projectile.velocity.y
+        if (ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8) {
           deactivateProjectile(projectileIndex, true)
         }
         continue
@@ -319,13 +403,15 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       continue
     }
 
-    for (const unit of world.units) {
-      if (unit.id === projectile.ownerId) {
-        continue
-      }
+    const hitSearchRadius = projectile.radius + broadphase.maxUnitRadius
+    const minHitX = Math.min(previousX, projectile.position.x) - hitSearchRadius
+    const maxHitX = Math.max(previousX, projectile.position.x) + hitSearchRadius
+    const minHitY = Math.min(previousY, projectile.position.y) - hitSearchRadius
+    const maxHitY = Math.max(previousY, projectile.position.y) + hitSearchRadius
 
-      if (unit.team === projectile.ownerTeam) {
-        continue
+    forEachNearbyProjectileUnit(world, broadphase, minHitX, minHitY, maxHitX, maxHitY, (unit) => {
+      if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+        return false
       }
 
       const hitDistance = unit.radius + projectile.radius
@@ -337,31 +423,33 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           previousY,
           projectile.position.x,
           projectile.position.y,
-        ) <= hitDistance * hitDistance
+        ) > hitDistance * hitDistance
       ) {
-        if (isExplosive) {
-          deactivateProjectile(projectileIndex, true, true)
-          break
-        }
-
-        const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
-        const impactDirX = projectile.velocity.x / impactLength
-        const impactDirY = projectile.velocity.y / impactLength
-        const hitX = unit.position.x + impactDirX * unit.radius
-        const hitY = unit.position.y + impactDirY * unit.radius
-        deps.applyDamage(
-          unit.id,
-          projectile.damage,
-          projectile.ownerId,
-          projectile.ownerTeam,
-          hitX,
-          hitY,
-          projectile.velocity.x,
-          projectile.velocity.y,
-        )
-        deactivateProjectile(projectileIndex, true)
-        break
+        return false
       }
-    }
+
+      if (isExplosive) {
+        deactivateProjectile(projectileIndex, true, true)
+        return true
+      }
+
+      const impactLength = Math.hypot(projectile.velocity.x, projectile.velocity.y) || 1
+      const impactDirX = projectile.velocity.x / impactLength
+      const impactDirY = projectile.velocity.y / impactLength
+      const hitX = unit.position.x + impactDirX * unit.radius
+      const hitY = unit.position.y + impactDirY * unit.radius
+      deps.applyDamage(
+        unit.id,
+        projectile.damage,
+        projectile.ownerId,
+        projectile.ownerTeam,
+        hitX,
+        hitY,
+        projectile.velocity.x,
+        projectile.velocity.y,
+      )
+      deactivateProjectile(projectileIndex, true)
+      return true
+    })
   }
 }
