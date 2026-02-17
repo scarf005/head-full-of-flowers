@@ -171,8 +171,8 @@ export const GameHud = () => {
               />
               <span>{t`Infinite Reload`}</span>
             </label>
-            <label class="debug-speed">
-              <span>{t`Game Speed`} {debugGameSpeedSignal.value.toFixed(2)}x</span>
+              <label class="debug-speed">
+                <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>
               <input
                 type="range"
                 min={40}
@@ -185,8 +185,8 @@ export const GameHud = () => {
                 }}
               />
             </label>
-            <label class="debug-speed">
-              <span>{t`Impact Feel`} {impactFeelLabel} ({impactFeelLevel.toFixed(2)}x)</span>
+              <label class="debug-speed">
+                <span>{t`Impact Feel ${impactFeelLabel} (${impactFeelLevel.toFixed(2)}x)`}</span>
               <input
                 type="range"
                 min={1}
@@ -209,34 +209,22 @@ export const GameHud = () => {
               {t`Skip to Match End`}
             </button>
             <div class="debug-speed">
-              <span>
-                {t`Render Profile`} {renderPathProfile.frames}
-                {t` frames`}
-              </span>
-              <span>
-                {t`Pickups`} {renderPathProfile.pickupVisibleFrames}
-                {t` visible`} / {renderPathProfile.pickupHiddenFrames}
-                {t` hidden`}
-              </span>
-              <span>
-                {t`WebGL`} {renderPathProfile.obstacleFxWebGlFrames}
-                {t` obstacle fx`} / {renderPathProfile.trailWebGlFrames}
-                {t` trails`}
-              </span>
-              <span>
-                {t`Composite`} {renderPathProfile.mergedCompositeFrames}
-                {t` merged`} ({mergedPercent.toFixed(1)}%) / {renderPathProfile.splitCompositeFrames}
-                {t` split`} ({splitPercent.toFixed(1)}%)
-              </span>
-              <span>
-                {t`Window`} {renderPathRates.sampleFrames}
-                {t`f: merged`} {renderPathRates.mergedPercent.toFixed(1)}% / {t`split`} {renderPathRates.splitPercent.toFixed(1)}%
-              </span>
-              <span>
-                {t`Window pickups`} {renderPathRates.pickupVisiblePercent.toFixed(1)}%
-                {t` visible`} / {renderPathRates.pickupHiddenPercent.toFixed(1)}%
-                {t` hidden`}
-              </span>
+                <span>{t`Render Profile ${renderPathProfile.frames} frames`}</span>
+                <span>
+                  {t`Pickups ${renderPathProfile.pickupVisibleFrames} visible / ${renderPathProfile.pickupHiddenFrames} hidden`}
+                </span>
+                <span>
+                  {t`WebGL ${renderPathProfile.obstacleFxWebGlFrames} obstacle fx / ${renderPathProfile.trailWebGlFrames} trails`}
+                </span>
+                <span>
+                  {t`Composite ${renderPathProfile.mergedCompositeFrames} merged (${mergedPercent.toFixed(1)}%) / ${renderPathProfile.splitCompositeFrames} split (${splitPercent.toFixed(1)}%)`}
+                </span>
+                <span>
+                  {t`Window ${renderPathRates.sampleFrames} f: merged ${renderPathRates.mergedPercent.toFixed(1)}% / split ${renderPathRates.splitPercent.toFixed(1)}%`}
+                </span>
+                <span>
+                  {t`Window pickups ${renderPathRates.pickupVisiblePercent.toFixed(1)}% visible / ${renderPathRates.pickupHiddenPercent.toFixed(1)}% hidden`}
+                </span>
             </div>
           </div>
         )
@@ -330,7 +318,7 @@ export const GameHud = () => {
               <div class="pause-title">{t`Paused`}</div>
               <div class="pause-hint">{t`Match is frozen. Adjust options or resume.`}</div>
               <label class="mode-row mode-row-slider">
-                <span>{t`Music Volume`} {Math.round(musicVolumeSignal.value * 100)}%</span>
+                <span>{t`Music Volume ${Math.round(musicVolumeSignal.value * 100)}%`}</span>
                 <input
                   type="range"
                   min={0}
@@ -344,7 +332,7 @@ export const GameHud = () => {
                 />
               </label>
               <label class="mode-row mode-row-slider">
-                <span>{t`Effects Volume`} {Math.round(effectsVolumeSignal.value * 100)}%</span>
+                <span>{t`Effects Volume ${Math.round(effectsVolumeSignal.value * 100)}%`}</span>
                 <input
                   type="range"
                   min={0}
