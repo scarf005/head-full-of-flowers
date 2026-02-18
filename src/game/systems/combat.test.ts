@@ -157,7 +157,7 @@ Deno.test("applyDamage heals killer on lethal hit and triggers respawn", () => {
     },
   )
 
-  assertEquals(attacker.hp, 7)
+  assertEquals(attacker.hp, attacker.maxHp)
   assertEquals(respawnedId, target.id)
 })
 

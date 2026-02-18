@@ -2,6 +2,7 @@ import { drawFlameProjectileSprite, drawGrenadeSprite, drawItemPickupSprite, dra
 import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
+import { buildOffscreenIndicatorAnchor, isOffscreenIndicatorAnchorInView } from "./offscreen-indicator-visibility.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { buildCullBounds, isInsideCullBounds, type CullBounds } from "../cull.ts"
 import { botPalette } from "../factions.ts"
@@ -20,6 +21,7 @@ import {
 } from "../world/obstacle-grid.ts"
 import { terrainAt, type TerrainTile } from "../world/wfc-map.ts"
 import type { WorldState } from "../world/state.ts"
+import { computeDamageTakenRatio } from "./vignette.ts"
 
 export interface RenderSceneArgs {
   context: CanvasRenderingContext2D
@@ -56,6 +58,10 @@ const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.22
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
 const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#c1c8cf"
+const DAMAGE_VIGNETTE_MAX_ALPHA = 0.76
+const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
+const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
+const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
   return buildCullBounds(cameraX, cameraY, padding)
@@ -727,6 +733,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
   renderAtmosphere(context)
+  renderDamageVignette(context, world)
 }
 
 const renderArenaGround = (
@@ -1525,9 +1532,10 @@ const renderOffscreenEnemyIndicators = (
       continue
     }
 
-    const screenX = (enemy.position.x - renderCameraX) * WORLD_SCALE + centerX
-    const screenY = (enemy.position.y - renderCameraY) * WORLD_SCALE + centerY
-    const isOnScreen = screenX >= 0 && screenX <= VIEW_WIDTH && screenY >= 0 && screenY <= VIEW_HEIGHT
+    const anchor = buildOffscreenIndicatorAnchor(enemy)
+    const screenX = (anchor.x - renderCameraX) * WORLD_SCALE + centerX
+    const screenY = (anchor.y - renderCameraY) * WORLD_SCALE + centerY
+    const isOnScreen = isOffscreenIndicatorAnchorInView(anchor, renderCameraX, renderCameraY)
     if (isOnScreen) {
       continue
     }
@@ -1667,6 +1675,30 @@ const renderAtmosphere = (context: CanvasRenderingContext2D) => {
   )
   gradient.addColorStop(0, "rgba(212, 216, 214, 0)")
   gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")
+  context.fillStyle = gradient
+  context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+}
+
+const renderDamageVignette = (context: CanvasRenderingContext2D, world: WorldState) => {
+  const damageRatio = computeDamageTakenRatio(world.player.hp, world.player.maxHp)
+  if (damageRatio <= 0) {
+    return
+  }
+
+  const intensity = damageRatio ** DAMAGE_VIGNETTE_INTENSITY_CURVE
+  const alpha = intensity * DAMAGE_VIGNETTE_MAX_ALPHA
+  const gradient = context.createRadialGradient(
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    Math.max(VIEW_WIDTH, VIEW_HEIGHT) * DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO,
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    Math.max(VIEW_WIDTH, VIEW_HEIGHT) * DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO,
+  )
+
+  gradient.addColorStop(0, "rgba(255, 0, 0, 0)")
+  gradient.addColorStop(0.55, `rgba(255, 0, 0, ${alpha * 0.42})`)
+  gradient.addColorStop(1, `rgba(255, 0, 0, ${alpha})`)
   context.fillStyle = gradient
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 }
