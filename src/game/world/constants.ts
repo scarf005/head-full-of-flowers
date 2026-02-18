@@ -1,6 +1,6 @@
 export const VIEW_WIDTH = 960
 export const VIEW_HEIGHT = 540
-export const VISIBLE_WORLD_WIDTH_METERS = 25
+export const VISIBLE_WORLD_WIDTH_METERS = 30
 export const WORLD_SCALE = VIEW_WIDTH / VISIBLE_WORLD_WIDTH_METERS
 export const GAME_SPEED = 0.75
 export const EFFECT_SPEED = 1
@@ -20,7 +20,7 @@ export const LOOT_PICKUP_INTERVAL_MAX_SECONDS = 12
 export const LOOT_PICKUP_INTERVAL_SECONDS = 10
 export const PLAYER_BASE_SPEED = 10
 export const BOT_BASE_SPEED = PLAYER_BASE_SPEED
-export const UNIT_BASE_HP = 6
+export const UNIT_BASE_HP = 10
 export const PLAYER_RADIUS = 0.3
 export const BOT_RADIUS = 0.28
 export const ARENA_BORDER_DAMAGE = 1
