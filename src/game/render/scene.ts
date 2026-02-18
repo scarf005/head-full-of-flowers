@@ -1390,9 +1390,13 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
     const gunLength = unit.radius * 1.25 + unit.recoil * 0.24
     const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
     const weaponScale = Math.max(0.09, unit.radius * 0.36)
+    const flipWeapon = unit.aim.x < 0
     context.save()
     context.translate(drawX, drawY)
-    context.rotate(weaponAngle)
+    if (flipWeapon) {
+      context.scale(1, -1)
+    }
+    context.rotate(flipWeapon ? -weaponAngle : weaponAngle)
     drawWeaponPickupSprite(context, unit.primaryWeapon, gunLength, 0, weaponScale)
     context.restore()
 
