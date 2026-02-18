@@ -115,9 +115,6 @@ const localizePerk = (perkId: PerkId) => {
   if (perkId === "extra_heart") {
     return t`Extra Heart`
   }
-  if (perkId === "overpressure_rounds") {
-    return t`Overpressure Rounds`
-  }
   if (perkId === "extra_stamina") {
     return t`Extra Stamina`
   }
@@ -143,9 +140,6 @@ const localizePerkDetail = (perkId: PerkId, stacks: number) => {
   }
   if (perkId === "extra_heart") {
     return t`Max HP +${stacks * 3}`
-  }
-  if (perkId === "overpressure_rounds") {
-    return t`Damage +15%, fire rate -8%`
   }
   if (perkId === "extra_stamina") {
     return t`Move speed +12%`

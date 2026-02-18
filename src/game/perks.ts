@@ -41,11 +41,6 @@ export const PERK_CONFIGS: Record<PerkId, PerkConfig> = {
     label: "Extra Heart",
     maxStacks: 4,
   },
-  overpressure_rounds: {
-    id: "overpressure_rounds",
-    label: "Overpressure Rounds",
-    maxStacks: 1,
-  },
   extra_stamina: {
     id: "extra_stamina",
     label: "Extra Stamina",
@@ -65,7 +60,6 @@ export const PERK_POOL: PerkId[] = [
   "rapid_reload",
   "heavy_pellets",
   "extra_heart",
-  "overpressure_rounds",
   "extra_stamina",
   "kevlar_vest",
 ]
@@ -104,9 +98,6 @@ export const applyPerkToUnit = (unit: Unit, perkId: PerkId) => {
   } else if (perkId === "extra_heart") {
     unit.maxHp += VITAL_BLOOM_HP
     unit.hp = Math.min(unit.maxHp, unit.hp + VITAL_BLOOM_HP)
-  } else if (perkId === "overpressure_rounds") {
-    unit.damageMultiplier *= 1.15
-    unit.fireRateMultiplier *= 0.92
   } else if (perkId === "extra_stamina") {
     unit.speed *= 1.12
   } else if (perkId === "kevlar_vest") {

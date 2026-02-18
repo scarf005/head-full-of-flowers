@@ -11,7 +11,6 @@ import contactGrenadesSprite from "../../assets/perks/contact-grenades.png"
 import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
 import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
 import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
-import thornRoundsSprite from "../../assets/perks/thorn-rounds.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
 import ironBarkSprite from "../../assets/perks/iron-bark.png"
 
@@ -37,7 +36,6 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   rapid_reload: rapidReloadSprite,
   heavy_pellets: heavyPelletsSprite,
   extra_heart: vitalBloomSprite,
-  overpressure_rounds: thornRoundsSprite,
   extra_stamina: quickstepSprite,
   kevlar_vest: ironBarkSprite,
 }
@@ -49,7 +47,6 @@ const legacyPerkSpriteAlias: Record<string, PerkId> = {
   "rapid-reload": "rapid_reload",
   "heavy-pellets": "heavy_pellets",
   "vital-bloom": "extra_heart",
-  "thorn-rounds": "overpressure_rounds",
   quickstep: "extra_stamina",
   "iron-bark": "kevlar_vest",
 }

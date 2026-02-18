@@ -304,11 +304,6 @@ msgstr "Move speed +12%"
 msgid "Music Volume {0}%"
 msgstr "Music Volume {0}%"
 
-#: src/game/adapters/hud-sync.ts:119
-#: src/game/game.ts:482
-msgid "Overpressure Rounds"
-msgstr "Overpressure Rounds"
-
 #: src/game/hud.tsx:123
 #: src/game/hud.tsx:318
 msgid "Paused"

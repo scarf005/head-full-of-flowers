@@ -488,9 +488,6 @@ export class FlowerArenaGame {
     if (perkId === "extra_heart") {
       return t`Extra Heart`
     }
-    if (perkId === "overpressure_rounds") {
-      return t`Overpressure Rounds`
-    }
     if (perkId === "extra_stamina") {
       return t`Extra Stamina`
     }

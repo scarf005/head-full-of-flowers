@@ -21,7 +21,6 @@ export type PerkId =
   | "rapid_reload"
   | "heavy_pellets"
   | "extra_heart"
-  | "overpressure_rounds"
   | "extra_stamina"
   | "kevlar_vest"
 
