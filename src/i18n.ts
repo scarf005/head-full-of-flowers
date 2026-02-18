@@ -1,14 +1,18 @@
-import { i18n, type Messages } from "@lingui/core"
+import { i18n } from "@lingui/core"
 import { messages as enMessages } from "./locales/en/messages.po"
+import { messages as koMessages } from "./locales/ko/messages.po"
 
 export type LocaleId = "en" | "ko"
 
 export const defaultLocale: LocaleId = "en"
 const LOCALE_STORAGE_KEY = "head-full-of-flowers.locale"
 
-const loadedLocales = new Set<LocaleId>([defaultLocale])
+const loadedLocales = new Set<LocaleId>(["en", "ko"])
 
-i18n.load(defaultLocale, enMessages)
+i18n.load({
+  en: enMessages,
+  ko: koMessages,
+})
 i18n.activate(defaultLocale)
 
 const isLocaleId = (value: string): value is LocaleId => {
@@ -60,23 +64,16 @@ if (!storedLocale) {
   writeStoredLocale(preferredLocale)
 }
 
-const localeLoaders: Record<Exclude<LocaleId, "en">, () => Promise<{ messages: Messages }>> = {
-  ko: () => import("./locales/ko/messages.po"),
-}
-
-export const activateLocale = async (locale: LocaleId) => {
-  if (locale !== "en" && !loadedLocales.has(locale)) {
-    const { messages } = await localeLoaders[locale]()
-    i18n.load(locale, messages)
-    loadedLocales.add(locale)
+export const activateLocale = (locale: LocaleId) => {
+  if (!loadedLocales.has(locale)) {
+    return
   }
-
   i18n.activate(locale)
   writeStoredLocale(locale)
 }
 
 if (preferredLocale !== defaultLocale) {
-  void activateLocale(preferredLocale)
+  activateLocale(preferredLocale)
 }
 
 export { i18n }

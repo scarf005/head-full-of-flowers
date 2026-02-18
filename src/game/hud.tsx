@@ -109,9 +109,8 @@ export const GameHud = () => {
   ]
 
   const onSelectLocale = (nextLocale: "en" | "ko") => {
-    void activateLocale(nextLocale).then(() => {
-      languageSignal.value = nextLocale
-    })
+    activateLocale(nextLocale)
+    languageSignal.value = nextLocale
   }
 
   return (
