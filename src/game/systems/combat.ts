@@ -20,6 +20,7 @@ const KILL_CIRCLE_EXTRA_AMOUNT_MULTIPLIER = 0.85
 const KILL_CIRCLE_RADIUS_MIN = 0.2
 const KILL_CIRCLE_RADIUS_MAX = 0.95
 const KILL_HP_BONUS = 3
+const PLAYER_KILL_SCREEN_SHAKE_MULTIPLIER = 5
 const PRIMARY_WEAPON_CAP = 2
 const PRIMARY_RESERVE_PICKUP_CAP = 3
 const AIM_ASSIST_MAX_DISTANCE = 24
@@ -869,7 +870,11 @@ export const applyDamage = (
   }
 
   if (isPlayerSource && target.id !== world.player.id) {
-    world.cameraShake = Math.min(2.8 + shakeCapBoost, world.cameraShake + 0.48 * shakeScale)
+    const killShakeScale = isKilled ? PLAYER_KILL_SCREEN_SHAKE_MULTIPLIER : 1
+    world.cameraShake = Math.min(
+      2.8 + shakeCapBoost,
+      world.cameraShake + 0.48 * shakeScale * killShakeScale,
+    )
     world.hitStop = Math.max(world.hitStop, 0.012 * hitStopScale)
   }
 
@@ -904,7 +909,9 @@ export const applyDamage = (
     world.cameraKick.y *= scale
   }
 
-  world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.09 * shakeScale)
+  if (!isPlayerSource || target.id === world.player.id || !isKilled) {
+    world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.09 * shakeScale)
+  }
 
   if (isKilled) {
     deps.onUnitKilled?.(target, isSelfHarm, killer)
