@@ -25,3 +25,5 @@ export type PerkId =
   | "kevlar_vest"
 
 export type GameModeId = "ffa" | "tdm" | "duo" | "squad"
+
+export type MatchDifficulty = "easy" | "hard"

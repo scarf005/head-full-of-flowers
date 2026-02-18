@@ -1,10 +1,11 @@
 import { clamp } from "../utils.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
+import type { MatchDifficulty } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 
 export interface InputAdapterHandlers {
   onPrimeAudio: () => void
-  onBeginMatch: () => void
+  onBeginMatch: (difficulty: MatchDifficulty) => void
   onReturnToMenu: () => void
   onTogglePause: () => void
   onPrimaryDown: () => void
@@ -144,30 +145,6 @@ export const setupInputAdapter = (
     return false
   }
 
-  const isMenuStartTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".menu-start-button"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".menu-start-button"))) {
-        return true
-      }
-    }
-
-    const button = document.querySelector<HTMLButtonElement>(".menu-start-button")
-    if (!button) {
-      return false
-    }
-
-    const bounds = button.getBoundingClientRect()
-    return event.clientX >= bounds.left &&
-      event.clientX <= bounds.right &&
-      event.clientY >= bounds.top &&
-      event.clientY <= bounds.bottom
-  }
-
   const isRematchButtonTarget = (event: PointerEvent) => {
     if (event.target instanceof Element && Boolean(event.target.closest(".match-result-rematch"))) {
       return true
@@ -262,7 +239,7 @@ export const setupInputAdapter = (
           if (performance.now() < menuStartBlockUntilMs) {
             return
           }
-          handlers.onBeginMatch()
+          handlers.onBeginMatch("hard")
         }
       }
       return
@@ -369,11 +346,6 @@ export const setupInputAdapter = (
     }
 
     if (!world.started) {
-      if (event.button !== 0 || !isMenuStartTarget(event)) {
-        return
-      }
-
-      handlers.onBeginMatch()
       return
     }
 

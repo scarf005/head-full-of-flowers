@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals"
 import { debounce } from "@std/async/debounce"
 import { GAME_SPEED, MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
-import type { GameModeId, PerkId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
+import type { GameModeId, MatchDifficulty, PerkId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
 import { type LocaleId, preferredLocale } from "../i18n.ts"
 
 export interface CoverageSlice {
@@ -284,6 +284,7 @@ export const tdmTeamSizeSignal = signal(storedGameModeOptions.tdmTeamSize)
 export const duoTeamCountSignal = signal(storedGameModeOptions.duoTeamCount)
 export const squadTeamCountSignal = signal(storedGameModeOptions.squadTeamCount)
 export const menuVisibleSignal = signal(true)
+export const menuStartDifficultySignal = signal<MatchDifficulty | null>(null)
 export const languageSignal = signal<LocaleId>(preferredLocale)
 export const musicVolumeSignal = signal(storedAudioOptions.musicVolume)
 export const effectsVolumeSignal = signal(storedAudioOptions.effectsVolume)

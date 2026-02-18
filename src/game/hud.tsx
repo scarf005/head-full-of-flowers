@@ -13,6 +13,7 @@ import {
   hpSignal,
   languageSignal,
   matchResultSignal,
+  menuStartDifficultySignal,
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
@@ -240,6 +241,9 @@ export const GameHud = () => {
         ? (
           <div class="hud menu-layer">
             <div class="menu-panel">
+              <div class="menu-subtitle">
+                {t`Bada² and the`}
+              </div>
               <div class="menu-title">{t`Head Full of Flowers`}</div>
               <div class="menu-subtitle">
                 {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
@@ -318,7 +322,28 @@ export const GameHud = () => {
                   </button>
                 </div>
               </div>
-              <button type="button" class="menu-start-button">{t`Start Match`}</button>
+              <div class="menu-start-actions">
+                <button
+                  type="button"
+                  class="menu-start-button menu-start-easy"
+                  data-difficulty="easy"
+                  onClick={() => {
+                    menuStartDifficultySignal.value = "easy"
+                  }}
+                >
+                  {t`Easy Mode`}
+                </button>
+                <button
+                  type="button"
+                  class="menu-start-button menu-start-hard"
+                  data-difficulty="hard"
+                  onClick={() => {
+                    menuStartDifficultySignal.value = "hard"
+                  }}
+                >
+                  {t`Hard Mode`}
+                </button>
+              </div>
             </div>
           </div>
         )

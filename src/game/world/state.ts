@@ -30,7 +30,8 @@ import {
   VIEW_WIDTH,
 } from "./constants.ts"
 import { buildObstacleGridFromMap, type ObstacleGridState } from "./obstacle-grid.ts"
-import { createBarrenGardenMap, type TerrainMap } from "./wfc-map.ts"
+import { createBarrenGardenMap, type TerrainMap } from "./terrain-map.ts"
+import type { MatchDifficulty } from "../types.ts"
 
 export interface ExplosionFx {
   active: boolean
@@ -94,6 +95,7 @@ export interface WorldState {
   running: boolean
   paused: boolean
   finished: boolean
+  aiDifficulty: MatchDifficulty
   audioPrimed: boolean
   timeRemaining: number
   pickupTimer: number
@@ -183,6 +185,7 @@ export const createWorldState = (): WorldState => {
     running: false,
     paused: false,
     finished: false,
+    aiDifficulty: "hard",
     audioPrimed: false,
     timeRemaining: MATCH_DURATION_SECONDS,
     pickupTimer: LOOT_PICKUP_INTERVAL_SECONDS,

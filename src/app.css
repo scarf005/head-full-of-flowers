@@ -244,6 +244,12 @@
   color: #c4ddb0;
 }
 
+.menu-start-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
 .menu-start-button {
   border: 1px solid #d5ebc0;
   color: #f2ffe8;
@@ -262,6 +268,15 @@
 
 .menu-start-button:active {
   transform: translateY(1px);
+}
+
+.menu-start-easy {
+  background: linear-gradient(135deg, rgba(46, 82, 44, 0.92), rgba(34, 66, 33, 0.92));
+}
+
+.menu-start-hard {
+  background: linear-gradient(135deg, rgba(76, 47, 28, 0.94), rgba(58, 33, 20, 0.94));
+  border-color: rgba(235, 205, 173, 0.92);
 }
 
 .mode-row {
@@ -890,6 +905,11 @@
   .menu-start-button {
     font-size: 0.74rem;
     padding: 0.52rem 0.56rem;
+  }
+
+  .menu-start-actions {
+    grid-template-columns: 1fr;
+    gap: 0.34rem;
   }
 
   .debug-row {

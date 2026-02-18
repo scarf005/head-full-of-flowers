@@ -82,6 +82,7 @@ export interface UpdateAIDeps {
 
 export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
   const nowMs = deps.nowMs()
+  const easyMode = world.aiDifficulty === "easy"
   for (const bot of world.bots) {
     const botIndex = parseBotIndex(bot.id)
     bot.shootCooldown = Math.max(0, bot.shootCooldown - dt)
@@ -106,22 +107,23 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
 
     if (bot.hp <= bot.maxHp * 0.32) {
       bot.aiState = "flee"
-    } else if (hasTarget && distanceToTarget < 24) {
+    } else if (hasTarget && distanceToTarget < (easyMode ? 14 : 24)) {
       bot.aiState = "aggro"
     } else {
       bot.aiState = "wander"
     }
 
     if (bot.aiDecisionTimer <= 0) {
-      bot.aiDecisionTimer = randomRange(0.4, 1.4)
+      bot.aiDecisionTimer = easyMode ? randomRange(1.4, 3) : randomRange(0.4, 1.4)
       const angle = randomRange(0, Math.PI * 2)
       bot.aiMove.x = Math.cos(angle)
       bot.aiMove.y = Math.sin(angle)
     }
 
     if (bot.aiState === "wander") {
-      desiredVelocityX = bot.aiMove.x * bot.speed * 0.7
-      desiredVelocityY = bot.aiMove.y * bot.speed * 0.7
+      const wanderSpeed = easyMode ? 0.46 : 0.7
+      desiredVelocityX = bot.aiMove.x * bot.speed * wanderSpeed
+      desiredVelocityY = bot.aiMove.y * bot.speed * wanderSpeed
     }
 
     if (bot.aiState === "aggro") {
@@ -134,21 +136,30 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const towardX = toTargetX / distanceSafe
       const towardY = toTargetY / distanceSafe
       const strafe = Math.sin(nowMs * 0.001 + botIndex)
-      desiredVelocityX = (towardX + -towardY * strafe * 0.45) * bot.speed
-      desiredVelocityY = (towardY + towardX * strafe * 0.45) * bot.speed
+      const strafeScale = easyMode ? 0.14 : 0.45
+      const pursuitSpeed = easyMode ? 0.68 : 1
+      desiredVelocityX = (towardX + -towardY * strafe * strafeScale) * bot.speed * pursuitSpeed
+      desiredVelocityY = (towardY + towardX * strafe * strafeScale) * bot.speed * pursuitSpeed
 
-      updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs)
-      const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
-      const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
-      const requiredAlignment = lerp(0.8, 0.91, farBias)
-      const hesitationChance = lerp(0.02, 0.16, farBias)
+      if (easyMode && bot.aiDecisionTimer > 1.1) {
+        desiredVelocityX = towardX * bot.speed * 0.42
+        desiredVelocityY = towardY * bot.speed * 0.42
+      } else {
+        updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs, easyMode ? 1.2 : 0)
+        const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
+        const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
+        const requiredAlignment = lerp(0.8, 0.91, farBias) + (easyMode ? 0.12 : 0)
+        const hesitationChance = Math.min(0.98, lerp(0.02, 0.16, farBias) + (easyMode ? 0.34 : 0))
+        const fireDistance = easyMode ? 19 : 32
 
-      if (distanceToTarget < 32 && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
-        deps.firePrimary(bot.id)
-      }
+        if (distanceToTarget < fireDistance && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
+          deps.firePrimary(bot.id)
+        }
 
-      if (distanceToTarget < 12 && Math.random() < 0.014) {
-        deps.throwSecondary(bot.id)
+        const throwChance = easyMode ? 0.0006 : 0.014
+        if (distanceToTarget < 12 && Math.random() < throwChance) {
+          deps.throwSecondary(bot.id)
+        }
       }
     }
 
@@ -161,23 +172,26 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const distanceSafe = distanceToTarget || 1
       const fromX = -toTargetX / distanceSafe
       const fromY = -toTargetY / distanceSafe
-      desiredVelocityX = fromX * bot.speed * 1.15
-      desiredVelocityY = fromY * bot.speed * 1.15
+      const fleeSpeed = easyMode ? 0.8 : 1.15
+      desiredVelocityX = fromX * bot.speed * fleeSpeed
+      desiredVelocityY = fromY * bot.speed * fleeSpeed
       const towardX = toTargetX / distanceSafe
       const towardY = toTargetY / distanceSafe
-      updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs, 0.45)
+      updateBotAim(bot, botIndex, toTargetX, toTargetY, distanceToTarget, dt, nowMs, easyMode ? 1.3 : 0.45)
       const farBias = clamp((distanceToTarget - 8) / 24, 0, 1)
       const aimAlignment = bot.aim.x * towardX + bot.aim.y * towardY
-      const requiredAlignment = lerp(0.78, 0.89, farBias)
-      const hesitationChance = lerp(0.06, 0.22, farBias)
+      const requiredAlignment = lerp(0.78, 0.89, farBias) + (easyMode ? 0.1 : 0)
+      const hesitationChance = Math.min(0.98, lerp(0.06, 0.22, farBias) + (easyMode ? 0.26 : 0))
+      const fleeFireDistance = easyMode ? 15 : 24
 
-      if (distanceToTarget < 24 && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
+      if (distanceToTarget < fleeFireDistance && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
         deps.firePrimary(bot.id)
       }
     }
 
-    bot.velocity.x = lerp(bot.velocity.x, desiredVelocityX, clamp(dt * 16, 0, 1))
-    bot.velocity.y = lerp(bot.velocity.y, desiredVelocityY, clamp(dt * 16, 0, 1))
+    const acceleration = easyMode ? 6 : 16
+    bot.velocity.x = lerp(bot.velocity.x, desiredVelocityX, clamp(dt * acceleration, 0, 1))
+    bot.velocity.y = lerp(bot.velocity.y, desiredVelocityY, clamp(dt * acceleration, 0, 1))
 
     bot.position.x += bot.velocity.x * dt
     bot.position.y += bot.velocity.y * dt

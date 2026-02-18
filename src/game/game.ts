@@ -21,6 +21,7 @@ import {
   effectsVolumeSignal,
   ffaPlayerCountSignal,
   languageSignal,
+  menuStartDifficultySignal,
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
@@ -56,7 +57,7 @@ import {
   WORLD_SCALE,
 } from "./world/constants.ts"
 import { createWorldState, rebuildUnitLookup, resetRenderPathProfile, type WorldState } from "./world/state.ts"
-import { createBarrenGardenMap } from "./world/wfc-map.ts"
+import { createBarrenGardenMap } from "./world/terrain-map.ts"
 import {
   applyDamage,
   continueBurstFire,
@@ -77,6 +78,7 @@ import {
 } from "./systems/collisions.ts"
 import {
   OBSTACLE_MATERIAL_BOX,
+  OBSTACLE_MATERIAL_HEDGE,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
@@ -102,7 +104,7 @@ import {
   createFactionFlowerCounts,
   type FactionDescriptor,
 } from "./factions.ts"
-import type { GameModeId, PerkId, PrimaryWeaponId, Team } from "./types.ts"
+import type { GameModeId, MatchDifficulty, PerkId, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
 
 import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
@@ -533,7 +535,7 @@ export class FlowerArenaGame {
   private setupInput() {
     this.inputAdapter = setupInputAdapter(this.canvas, this.world, {
       onPrimeAudio: () => this.primeAudio(),
-      onBeginMatch: () => this.beginMatch(),
+      onBeginMatch: (difficulty) => this.beginMatch(difficulty),
       onReturnToMenu: () => this.returnToMenu(),
       onTogglePause: () => this.togglePause(),
       onPrimaryDown: () => this.firePrimary(this.world.player.id),
@@ -556,12 +558,14 @@ export class FlowerArenaGame {
     this.audioDirector.startMenu()
   }
 
-  private beginMatch() {
+  private beginMatch(difficulty: MatchDifficulty = "hard") {
     this.applyMatchMode()
     this.world.started = true
     this.world.running = true
     this.world.paused = false
     this.world.finished = false
+    this.world.aiDifficulty = difficulty
+    menuStartDifficultySignal.value = null
     this.world.timeRemaining = MATCH_DURATION_SECONDS
     this.world.arenaRadius = ARENA_START_RADIUS
     this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
@@ -797,6 +801,7 @@ export class FlowerArenaGame {
     this.world.paused = false
     this.world.finished = false
     this.world.started = false
+    menuStartDifficultySignal.value = null
     this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
     updateCoverageSignals(this.world)
     menuVisibleSignal.value = true
@@ -848,6 +853,9 @@ export class FlowerArenaGame {
     }
     if (material === OBSTACLE_MATERIAL_ROCK) {
       return ["#8f948b", "#676a64", "#5d605a"]
+    }
+    if (material === OBSTACLE_MATERIAL_HEDGE) {
+      return ["#d2e6c7", "#a9c99a", "#496d41"]
     }
     return ["#b9beb5", "#8f948b", "#696f67"]
   }
@@ -1806,6 +1814,11 @@ export class FlowerArenaGame {
 
   private update(frameDt: number, gameplayDt: number) {
     this.syncPlayerOptions()
+
+    const menuStartDifficulty = menuStartDifficultySignal.value
+    if (!this.world.started && !this.world.finished && menuStartDifficulty) {
+      this.beginMatch(menuStartDifficulty)
+    }
 
     const effectDt = frameDt * EFFECT_SPEED
 
