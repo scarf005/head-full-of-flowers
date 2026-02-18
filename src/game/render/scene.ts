@@ -20,12 +20,13 @@ import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 import {
   OBSTACLE_MATERIAL_BOX,
+  OBSTACLE_MATERIAL_HEDGE,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
   obstacleGridToWorldCenter,
 } from "../world/obstacle-grid.ts"
-import { terrainAt, type TerrainTile } from "../world/wfc-map.ts"
+import { terrainAt, type TerrainTile } from "../world/terrain-map.ts"
 import type { WorldState } from "../world/state.ts"
 import { computeDamageTakenRatio } from "./vignette.ts"
 
@@ -1072,6 +1073,15 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
         context.fillRect(tileX + 0.08, tileY + 0.08, 0.84, 0.84)
         context.fillStyle = "#5d605a"
         context.fillRect(tileX + 0.14, tileY + 0.14, 0.72, 0.08)
+      } else if (material === OBSTACLE_MATERIAL_HEDGE) {
+        context.fillStyle = "#496d41"
+        context.fillRect(tileX, tileY, 1, 1)
+        context.fillStyle = "#a9c99a"
+        context.fillRect(tileX + 0.06, tileY + 0.06, 0.88, 0.88)
+        context.fillStyle = "#d2e6c7"
+        context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.2)
+        context.fillStyle = "#7ea976"
+        context.fillRect(tileX + 0.08, tileY + 0.56, 0.84, 0.12)
       }
 
       const flash = grid.flash[index]

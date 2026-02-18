@@ -1,10 +1,11 @@
-import type { MapObstacleBlueprint, TerrainMap } from "./wfc-map.ts"
+import type { MapObstacleBlueprint, TerrainMap } from "./terrain-map.ts"
 
 export const OBSTACLE_MATERIAL_NONE = 0
 export const OBSTACLE_MATERIAL_WALL = 1
 export const OBSTACLE_MATERIAL_WAREHOUSE = 2
 export const OBSTACLE_MATERIAL_ROCK = 3
 export const OBSTACLE_MATERIAL_BOX = 4
+export const OBSTACLE_MATERIAL_HEDGE = 5
 
 export interface ObstacleGridState {
   size: number
@@ -17,7 +18,7 @@ export interface ObstacleGridState {
 
 const hpForMaterial = (material: number) => {
   if (material === OBSTACLE_MATERIAL_WALL) {
-    return 4
+    return 3
   }
   if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
     return 4
@@ -28,7 +29,20 @@ const hpForMaterial = (material: number) => {
   if (material === OBSTACLE_MATERIAL_BOX) {
     return 8
   }
+  if (material === OBSTACLE_MATERIAL_HEDGE) {
+    return 2
+  }
 
+  return 0
+}
+
+const armorForMaterial = (material: number) => {
+  if (material === OBSTACLE_MATERIAL_WALL) {
+    return 2
+  }
+  if (material === OBSTACLE_MATERIAL_HEDGE) {
+    return 1
+  }
   return 0
 }
 
@@ -38,6 +52,12 @@ const materialForKind = (kind: MapObstacleBlueprint["kind"]) => {
   }
   if (kind === "warehouse") {
     return OBSTACLE_MATERIAL_WAREHOUSE
+  }
+  if (kind === "house") {
+    return OBSTACLE_MATERIAL_WAREHOUSE
+  }
+  if (kind === "hedge") {
+    return OBSTACLE_MATERIAL_HEDGE
   }
   if (kind === "box") {
     return OBSTACLE_MATERIAL_BOX
@@ -112,7 +132,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
 
     const left = Math.floor(obstacle.x - obstacle.width * 0.5 + half)
     const top = Math.floor(obstacle.y - obstacle.height * 0.5 + half)
-    if (obstacle.kind === "warehouse") {
+    if (obstacle.kind === "warehouse" || obstacle.kind === "house" || obstacle.kind === "hedge") {
       for (let row = 0; row < obstacle.tiles.length; row += 1) {
         for (let col = 0; col < obstacle.tiles[row].length; col += 1) {
           if (!obstacle.tiles[row][col]) {
@@ -144,9 +164,11 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
 
   const index = obstacleGridIndex(grid.size, x, y)
   const material = grid.material[index]
+  const armor = armorForMaterial(material)
   const highTierLoot = grid.highTierLoot[index] > 0
   const hpBefore = grid.hp[index]
-  grid.hp[index] = Math.max(0, grid.hp[index] - amount)
+  const damageDealt = Math.max(1, amount - armor)
+  grid.hp[index] = Math.max(0, grid.hp[index] - damageDealt)
   grid.flash[index] = 1
   const destroyed = hpBefore > 0 && grid.hp[index] <= 0
   if (destroyed) {
