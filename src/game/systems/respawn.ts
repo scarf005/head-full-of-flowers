@@ -6,6 +6,12 @@ import { buildObstacleGridFromMap, obstacleGridToWorldCenter, worldToObstacleGri
 import { BOT_BASE_SPEED, BOT_RADIUS, PLAYER_BASE_SPEED, PLAYER_RADIUS, UNIT_BASE_HP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
+const RESPAWN_BORDER_PADDING = 2
+const RESPAWN_RING_COUNT = 6
+const RESPAWN_RING_STEP = 0.9
+const RESPAWN_SAMPLE_ANGLE_COUNT = 96
+const RESPAWN_COLLISION_RADIUS = 0.9
+
 const pointOverlapsRect = (
   pointX: number,
   pointY: number,
@@ -51,13 +57,63 @@ const collidesWithObstacleGrid = (world: WorldState, x: number, y: number, radiu
   return false
 }
 
-export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
+export const findSafeSpawn = (world: WorldState, occupied: Vec2[], unitRadius = RESPAWN_COLLISION_RADIUS) => {
   let bestCandidate: Vec2 | null = null
   let bestDistanceScore = -1
+  let bestArenaDistanceScore = -1
+  let bestTotalDistanceScore = -1
+
+  const angleStep = (Math.PI * 2) / RESPAWN_SAMPLE_ANGLE_COUNT
+  const ringStartAngle = Math.random() * Math.PI * 2
+  const outerRadius = Math.max(1, world.arenaRadius - Math.max(unitRadius, 0) - RESPAWN_BORDER_PADDING)
+
+  for (let ringIndex = 0; ringIndex < RESPAWN_RING_COUNT; ringIndex += 1) {
+    const radius = Math.max(1, outerRadius - ringIndex * RESPAWN_RING_STEP)
+    const ringOffset = (ringIndex % 2) * angleStep * 0.5
+
+    for (let sampleIndex = 0; sampleIndex < RESPAWN_SAMPLE_ANGLE_COUNT; sampleIndex += 1) {
+      const angle = ringStartAngle + ringOffset + sampleIndex * angleStep
+      const candidate = new Vec2(Math.cos(angle) * radius, Math.sin(angle) * radius)
+
+      if (collidesWithObstacleGrid(world, candidate.x, candidate.y, RESPAWN_COLLISION_RADIUS)) {
+        continue
+      }
+
+      let minDistanceScore = occupied.length > 0 ? Number.POSITIVE_INFINITY : 0
+      let totalDistanceScore = 0
+      for (const existing of occupied) {
+        const score = distSquared(candidate.x, candidate.y, existing.x, existing.y)
+        totalDistanceScore += score
+        if (score < minDistanceScore) {
+          minDistanceScore = score
+        }
+      }
+
+      const arenaDistanceScore = candidate.x * candidate.x + candidate.y * candidate.y
+      const shouldReplace = minDistanceScore > bestDistanceScore ||
+        (minDistanceScore === bestDistanceScore && arenaDistanceScore > bestArenaDistanceScore) ||
+        (
+          minDistanceScore === bestDistanceScore &&
+          arenaDistanceScore === bestArenaDistanceScore &&
+          totalDistanceScore > bestTotalDistanceScore
+        )
+
+      if (shouldReplace) {
+        bestDistanceScore = minDistanceScore
+        bestArenaDistanceScore = arenaDistanceScore
+        bestTotalDistanceScore = totalDistanceScore
+        bestCandidate = candidate
+      }
+    }
+  }
+
+  if (bestCandidate) {
+    return bestCandidate
+  }
 
   for (let attempt = 0; attempt < 64; attempt += 1) {
-    const candidate = randomPointInArena(world.arenaRadius)
-    if (collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
+    const candidate = randomPointInArena(world.arenaRadius, RESPAWN_BORDER_PADDING)
+    if (collidesWithObstacleGrid(world, candidate.x, candidate.y, RESPAWN_COLLISION_RADIUS)) {
       continue
     }
 
@@ -80,13 +136,13 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[]) => {
   }
 
   for (let attempt = 0; attempt < 24; attempt += 1) {
-    const candidate = randomPointInArena(world.arenaRadius)
-    if (!collidesWithObstacleGrid(world, candidate.x, candidate.y, 0.9)) {
+    const candidate = randomPointInArena(world.arenaRadius, RESPAWN_BORDER_PADDING)
+    if (!collidesWithObstacleGrid(world, candidate.x, candidate.y, RESPAWN_COLLISION_RADIUS)) {
       return candidate
     }
   }
 
-  return randomPointInArena(world.arenaRadius)
+  return randomPointInArena(world.arenaRadius, RESPAWN_BORDER_PADDING)
 }
 
 export const spawnAllUnits = (world: WorldState) => {
@@ -162,7 +218,7 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
   }
 
   const occupied = world.units.filter((current) => current.id !== unit.id).map((current) => current.position)
-  unit.respawn(findSafeSpawn(world, occupied))
+  unit.respawn(findSafeSpawn(world, occupied, unit.radius))
 
   if (!unit.isPlayer) {
     const maybeLoot = Math.random() > 0.54
