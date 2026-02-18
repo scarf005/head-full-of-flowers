@@ -1,10 +1,16 @@
-import { drawFlameProjectileSprite, drawGrenadeSprite, drawItemPickupSprite, drawMolotovSprite, drawWeaponPickupSprite } from "./pixel-art.ts"
+import {
+  drawFlameProjectileSprite,
+  drawGrenadeSprite,
+  drawItemPickupSprite,
+  drawMolotovSprite,
+  drawWeaponPickupSprite,
+} from "./pixel-art.ts"
 import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
 import { buildOffscreenIndicatorAnchor, isOffscreenIndicatorAnchorInView } from "./offscreen-indicator-visibility.ts"
 import { clamp, randomRange } from "../utils.ts"
-import { buildCullBounds, isInsideCullBounds, type CullBounds } from "../cull.ts"
+import { buildCullBounds, type CullBounds, isInsideCullBounds } from "../cull.ts"
 import { botPalette } from "../factions.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import grassBaseTextureUrl from "../../assets/tiles/grass-base-24.png"
@@ -54,10 +60,13 @@ const FLOWER_SPRITE_PIXEL_SIZE = 16
 const GROUND_LAYER_PIXELS_PER_TILE = GRASS_TILE_PIXEL_SIZE
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
 const FLOWER_LAYER_FLUSH_LIMIT = 1200
-const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
+const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 3 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.22
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
 const PRIMARY_RELOAD_PROGRESS_RING_COLOR = "#c1c8cf"
+const SECONDARY_RELOAD_RING_THICKNESS_WORLD = 2 / WORLD_SCALE
+const SECONDARY_RELOAD_RING_COLOR = "#ffbf66"
+const SECONDARY_RELOAD_PROGRESS_RING_COLOR = "#fff0d8"
 const DAMAGE_VIGNETTE_MAX_ALPHA = 0.76
 const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
@@ -1178,7 +1187,9 @@ const renderProjectiles = (
       continue
     }
 
-    if (!isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.7)) {
+    if (
+      !isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.7)
+    ) {
       continue
     }
 
@@ -1307,9 +1318,7 @@ const renderAimLasers = (context: CanvasRenderingContext2D, world: WorldState, f
     const baseRightY = startY - normalY * halfBaseWidth
     const alpha = unit.isPlayer ? 0.72 * pulse : 0.48 * pulse
 
-    context.fillStyle = unit.isPlayer
-      ? `rgba(255, 106, 106, ${alpha})`
-      : `rgba(255, 80, 80, ${alpha})`
+    context.fillStyle = unit.isPlayer ? `rgba(255, 106, 106, ${alpha})` : `rgba(255, 80, 80, ${alpha})`
     context.beginPath()
     context.moveTo(baseLeftX, baseLeftY)
     context.lineTo(baseRightX, baseRightY)
@@ -1328,20 +1337,32 @@ const renderUnitStatusRings = (
   drawY: number,
   body: number,
 ) => {
-  const isReloading = unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0
-  const progress = isReloading
+  const isPrimaryReloading = unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0
+  const primaryProgress = isPrimaryReloading
     ? clamp(1 - unit.reloadCooldown / unit.reloadCooldownMax, 0, 1)
     : Number.isFinite(unit.primaryAmmo) && Number.isFinite(unit.magazineSize) && unit.magazineSize > 0
     ? clamp(unit.primaryAmmo / unit.magazineSize, 0, 1)
     : 1
-  const radius = body + PRIMARY_RELOAD_RING_OFFSET_WORLD
+  const primaryRadius = body + PRIMARY_RELOAD_RING_OFFSET_WORLD
+  const secondaryRadius = primaryRadius -
+    (PRIMARY_RELOAD_RING_THICKNESS_WORLD + SECONDARY_RELOAD_RING_THICKNESS_WORLD) * 0.5
+  const isSecondaryReloading = unit.secondaryCooldown > 0 && unit.secondaryCooldownMax > 0
+  const secondaryProgress = isSecondaryReloading
+    ? clamp(1 - unit.secondaryCooldown / unit.secondaryCooldownMax, 0, 1)
+    : 1
 
   context.save()
   context.lineCap = "butt"
   context.beginPath()
-  context.arc(drawX, drawY, radius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * progress)
-  context.strokeStyle = isReloading ? PRIMARY_RELOAD_PROGRESS_RING_COLOR : PRIMARY_RELOAD_RING_COLOR
+  context.arc(drawX, drawY, primaryRadius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * primaryProgress)
+  context.strokeStyle = isPrimaryReloading ? PRIMARY_RELOAD_PROGRESS_RING_COLOR : PRIMARY_RELOAD_RING_COLOR
   context.lineWidth = PRIMARY_RELOAD_RING_THICKNESS_WORLD
+  context.stroke()
+
+  context.beginPath()
+  context.arc(drawX, drawY, secondaryRadius, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * secondaryProgress)
+  context.strokeStyle = isSecondaryReloading ? SECONDARY_RELOAD_PROGRESS_RING_COLOR : SECONDARY_RELOAD_RING_COLOR
+  context.lineWidth = SECONDARY_RELOAD_RING_THICKNESS_WORLD
   context.stroke()
 
   context.restore()
