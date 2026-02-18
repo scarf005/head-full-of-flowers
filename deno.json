@@ -27,5 +27,6 @@
     "@preact/preset-vite": "npm:@preact/preset-vite@^2.10.2",
     "preact": "npm:preact@^10.28.0",
     "vite": "npm:vite@^7.2.7"
-  }
+  },
+  "lint": { "rules": { "exclude": ["no-import-prefix", "no-unversioned-import"] } }
 }

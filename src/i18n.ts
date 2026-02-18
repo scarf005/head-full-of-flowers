@@ -24,7 +24,7 @@ const detectNavigatorLocale = (): LocaleId => {
     return defaultLocale
   }
 
-  const language = window.navigator.language.toLowerCase()
+  const language = globalThis.navigator.language.toLowerCase()
   if (language.startsWith("ko")) {
     return "ko"
   }
@@ -38,7 +38,7 @@ const readStoredLocale = (): LocaleId | null => {
   }
 
   try {
-    const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY)
+    const stored = globalThis.localStorage.getItem(LOCALE_STORAGE_KEY)
     return stored && isLocaleId(stored) ? stored : null
   } catch {
     return null
@@ -51,7 +51,7 @@ const writeStoredLocale = (locale: LocaleId) => {
   }
 
   try {
-    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
+    globalThis.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
   } catch {
     // noop
   }

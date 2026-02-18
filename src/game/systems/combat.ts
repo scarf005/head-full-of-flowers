@@ -495,9 +495,8 @@ const emitPrimaryShot = (
     projectile.trailY = projectile.position.y
     projectile.trailReady = false
     projectile.ricochets = 0
-    projectile.ballisticRicochetRemaining = shooter.shotgunRicochet && (weapon.id === "shotgun" || weapon.id === "auto-shotgun")
-      ? 5
-      : 0
+    projectile.ballisticRicochetRemaining =
+      shooter.shotgunRicochet && (weapon.id === "shotgun" || weapon.id === "auto-shotgun") ? 5 : 0
     projectile.contactFuse = shooter.proximityGrenades && projectileKind === "grenade"
     projectile.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
   }
@@ -772,15 +771,11 @@ export const applyDamage = (
   let normalizedSourceId = isPlayerSource ? world.player.id : sourceByNearestTeam || sourceId
 
   const sourceIdIsUnit = sourceId.length > 0 ? world.unitById.has(sourceId) : false
-  const normalizedSourceIdIsUnit = normalizedSourceId.length > 0
-    ? world.unitById.has(normalizedSourceId)
-    : false
+  const normalizedSourceIdIsUnit = normalizedSourceId.length > 0 ? world.unitById.has(normalizedSourceId) : false
 
   if (!isPlayerSource && !isBoundarySource && !sourceIdIsUnit && !normalizedSourceIdIsUnit) {
     const fallbackId = resolvedSourceTeam === world.player.team
-      ? world.player.hp > 0
-        ? world.player.id
-        : ""
+      ? world.player.hp > 0 ? world.player.id : ""
       : world.units.find((unit) => unit.team === resolvedSourceTeam && !unit.isPlayer && unit.hp > 0)?.id
 
     if (fallbackId) {

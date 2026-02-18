@@ -5,8 +5,8 @@ import { assertAlmostEquals, assertEquals, assertNotStrictEquals } from "jsr:@st
 import {
   cloneRenderPathProfileSnapshot,
   computeRenderPathWindowRateSnapshot,
-  sameRenderPathProfileSnapshot,
   type RenderPathProfileSnapshot,
+  sameRenderPathProfileSnapshot,
 } from "./render-path-profile-sync.ts"
 
 const createSnapshot = (overrides: Partial<RenderPathProfileSnapshot> = {}): RenderPathProfileSnapshot => {
@@ -49,12 +49,24 @@ Deno.test("computeRenderPathWindowRateSnapshot reports windowed merged/split and
 
   computeRenderPathWindowRateSnapshot(
     history,
-    createSnapshot({ frames: 100, pickupVisibleFrames: 60, pickupHiddenFrames: 40, mergedCompositeFrames: 40, splitCompositeFrames: 20 }),
+    createSnapshot({
+      frames: 100,
+      pickupVisibleFrames: 60,
+      pickupHiddenFrames: 40,
+      mergedCompositeFrames: 40,
+      splitCompositeFrames: 20,
+    }),
   )
 
   const rates = computeRenderPathWindowRateSnapshot(
     history,
-    createSnapshot({ frames: 130, pickupVisibleFrames: 80, pickupHiddenFrames: 50, mergedCompositeFrames: 55, splitCompositeFrames: 30 }),
+    createSnapshot({
+      frames: 130,
+      pickupVisibleFrames: 80,
+      pickupHiddenFrames: 50,
+      mergedCompositeFrames: 55,
+      splitCompositeFrames: 30,
+    }),
   )
 
   assertEquals(rates.sampleFrames, 30)

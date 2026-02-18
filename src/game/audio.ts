@@ -249,13 +249,15 @@ export class SfxSynth {
   }
 
   private preloadSamples() {
-    for (const sample of [
-      ...this.killSamplePool,
-      ...this.itemAcquireSamplePool,
-      ...this.damageSamplePool,
-      ...this.playerDeathSamplePool,
-      ...this.reloadSamplePool,
-    ]) {
+    for (
+      const sample of [
+        ...this.killSamplePool,
+        ...this.itemAcquireSamplePool,
+        ...this.damageSamplePool,
+        ...this.playerDeathSamplePool,
+        ...this.reloadSamplePool,
+      ]
+    ) {
       sample.load()
     }
   }
@@ -285,7 +287,7 @@ export class SfxSynth {
         }
 
         const stopDelay = Math.max(0, (endAt - startAt) * 1000)
-        const stopTimer = window.setTimeout(() => {
+        const stopTimer = globalThis.setTimeout(() => {
           sample.pause()
           this.sampleStopTimers.delete(sample)
         }, stopDelay)

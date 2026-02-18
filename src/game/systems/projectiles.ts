@@ -307,13 +307,13 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
             const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS
             return distToSegmentSquared(
-                unit.position.x,
-                unit.position.y,
-                previousX,
-                previousY,
-                projectile.position.x,
-                projectile.position.y,
-              ) <=
+              unit.position.x,
+              unit.position.y,
+              previousX,
+              previousY,
+              projectile.position.x,
+              projectile.position.y,
+            ) <=
               fuseRadius * fuseRadius
           },
         )
@@ -392,8 +392,11 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     } else if (deps.hitObstacle(projectileIndex)) {
       if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
         ricochetBallisticProjectile(world, projectile, previousX, previousY)
-        const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x + projectile.velocity.y * projectile.velocity.y
-        if (ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8) {
+        const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x +
+          projectile.velocity.y * projectile.velocity.y
+        if (
+          ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8
+        ) {
           deactivateProjectile(projectileIndex, true)
         }
         continue

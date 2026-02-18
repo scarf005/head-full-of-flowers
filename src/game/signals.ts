@@ -122,7 +122,7 @@ const readStoredDebugOptions = (): DebugOptions => {
   }
 
   try {
-    const raw = window.localStorage.getItem(DEBUG_OPTIONS_STORAGE_KEY)
+    const raw = globalThis.localStorage.getItem(DEBUG_OPTIONS_STORAGE_KEY)
     if (!raw) {
       return fallback
     }
@@ -158,7 +158,7 @@ const readStoredAudioOptions = (): AudioOptions => {
   }
 
   try {
-    const raw = window.localStorage.getItem(AUDIO_OPTIONS_STORAGE_KEY)
+    const raw = globalThis.localStorage.getItem(AUDIO_OPTIONS_STORAGE_KEY)
     if (!raw) {
       return fallback
     }
@@ -191,7 +191,7 @@ const readStoredGameModeOptions = (): GameModeOptions => {
   }
 
   try {
-    const raw = window.localStorage.getItem(GAME_MODE_OPTIONS_STORAGE_KEY)
+    const raw = globalThis.localStorage.getItem(GAME_MODE_OPTIONS_STORAGE_KEY)
     if (!raw) {
       return fallback
     }
@@ -224,7 +224,7 @@ const createDebouncedStorageWriter = <T>(storageKey: string) => {
     }
 
     try {
-      window.localStorage.setItem(storageKey, JSON.stringify(payload))
+      globalThis.localStorage.setItem(storageKey, JSON.stringify(payload))
     } catch {
       // noop
     }

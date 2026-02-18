@@ -8,11 +8,11 @@ import {
   pausedSignal,
   playerPerksSignal,
   primaryAmmoSignal,
+  primaryWeaponIconSignal,
+  primaryWeaponSignal,
+  primaryWeaponSlotsSignal,
   renderPathProfileSignal,
   renderPathRatesSignal,
-  primaryWeaponIconSignal,
-  primaryWeaponSlotsSignal,
-  primaryWeaponSignal,
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
   statusMessageSignal,
@@ -27,8 +27,8 @@ import type { WorldState } from "../world/state.ts"
 import {
   cloneRenderPathProfileSnapshot,
   computeRenderPathWindowRateSnapshot,
-  sameRenderPathProfileSnapshot,
   type RenderPathProfileSnapshot,
+  sameRenderPathProfileSnapshot,
 } from "./render-path-profile-sync.ts"
 import { t } from "@lingui/core/macro"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
@@ -311,15 +311,13 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   }
 
   const activeSlotIndex = Math.max(0, Math.min(world.player.primarySlotIndex, world.player.primarySlots.length - 1))
-  const slots = world.player.primarySlots.length > 0
-    ? world.player.primarySlots
-    : [{
-      weaponId: world.player.primaryWeapon,
-      primaryAmmo: world.player.primaryAmmo,
-      reserveAmmo: world.player.reserveAmmo,
-      magazineSize: world.player.magazineSize,
-      acquiredAt: 0,
-    }]
+  const slots = world.player.primarySlots.length > 0 ? world.player.primarySlots : [{
+    weaponId: world.player.primaryWeapon,
+    primaryAmmo: world.player.primaryAmmo,
+    reserveAmmo: world.player.reserveAmmo,
+    magazineSize: world.player.magazineSize,
+    acquiredAt: 0,
+  }]
 
   const nextSlots = slots.slice(0, 2).map((slot, index) => ({
     label: localizeWeapon(slot.weaponId),
