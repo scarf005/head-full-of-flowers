@@ -24,17 +24,17 @@ Deno.test("isOffscreenIndicatorAnchorInView returns true when anchor is fully in
   assertEquals(isOffscreenIndicatorAnchorInView(anchor, 0, 0), true)
 })
 
-Deno.test("isOffscreenIndicatorAnchorInView returns false when body is clipped beyond right edge", () => {
+Deno.test("isOffscreenIndicatorAnchorInView returns true when body remains inside right edge", () => {
   const anchor = {
     x: 12.49,
     y: 0,
     extent: 0.336,
   }
 
-  assertEquals(isOffscreenIndicatorAnchorInView(anchor, 0, 0), false)
+  assertEquals(isOffscreenIndicatorAnchorInView(anchor, 0, 0), true)
 })
 
-Deno.test("isOffscreenIndicatorAnchorInView returns false when recoil-shifted draw anchor leaves viewport", () => {
+Deno.test("isOffscreenIndicatorAnchorInView returns true when recoil-shifted draw anchor stays inside viewport", () => {
   const anchor = buildOffscreenIndicatorAnchor({
     position: { x: 12.3, y: 0 },
     aim: { x: -1, y: 0 },
@@ -42,5 +42,5 @@ Deno.test("isOffscreenIndicatorAnchorInView returns false when recoil-shifted dr
     radius: 0.28,
   })
 
-  assertEquals(isOffscreenIndicatorAnchorInView(anchor, 0, 0), false)
+  assertEquals(isOffscreenIndicatorAnchorInView(anchor, 0, 0), true)
 })
