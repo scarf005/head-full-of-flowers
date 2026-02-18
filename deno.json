@@ -14,6 +14,7 @@
   "exclude": [".vite"],
   "fmt": { "semiColons": false, "lineWidth": 120, "proseWrap": "never" },
   "imports": {
+    "@std/async": "jsr:@std/async@^1.0.18",
     "@std/random": "jsr:@std/random@^0.1.5",
     "@deno/vite-plugin": "npm:@deno/vite-plugin@^1.0.5",
     "@lingui/cli": "npm:@lingui/cli@6.0.0-next.0",

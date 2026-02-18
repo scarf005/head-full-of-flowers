@@ -1,7 +1,8 @@
 import { signal } from "@preact/signals"
+import { debounce } from "@std/async/debounce"
 import { GAME_SPEED, MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 import type { GameModeId, PerkId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
-import { preferredLocale, type LocaleId } from "../i18n.ts"
+import { type LocaleId, preferredLocale } from "../i18n.ts"
 
 export interface CoverageSlice {
   id: string
@@ -54,8 +55,15 @@ export interface RenderPathRatesHud {
 
 const DEBUG_OPTIONS_STORAGE_KEY = "head-full-of-flowers.debug-options"
 const AUDIO_OPTIONS_STORAGE_KEY = "head-full-of-flowers.audio-options"
+const GAME_MODE_OPTIONS_STORAGE_KEY = "head-full-of-flowers.game-mode-options"
 const DEBUG_GAME_SPEED_MIN = 0.4
 const DEBUG_GAME_SPEED_MAX = 1.5
+const FFA_PLAYER_COUNT_MIN = 2
+const FFA_PLAYER_COUNT_MAX = 8
+const TEAM_SIZE_MIN = 2
+const TEAM_SIZE_MAX = 6
+const SQUAD_TEAM_COUNT_MAX = 3
+const LOCAL_STORAGE_WRITE_DEBOUNCE_MS = 150
 
 interface DebugOptions {
   infiniteHp: boolean
@@ -67,6 +75,30 @@ interface DebugOptions {
 interface AudioOptions {
   musicVolume: number
   effectsVolume: number
+}
+
+interface GameModeOptions {
+  mode: GameModeId
+  ffaPlayerCount: number
+  tdmTeamSize: number
+  duoTeamCount: number
+  squadTeamCount: number
+}
+
+const isGameModeId = (value: string): value is GameModeId => {
+  return value === "ffa" || value === "tdm" || value === "duo" || value === "squad"
+}
+
+const clampFfaPlayerCount = (value: number) => {
+  return Math.max(FFA_PLAYER_COUNT_MIN, Math.min(FFA_PLAYER_COUNT_MAX, value))
+}
+
+const clampTeamSize = (value: number) => {
+  return Math.max(TEAM_SIZE_MIN, Math.min(TEAM_SIZE_MAX, value))
+}
+
+const clampSquadTeamCount = (value: number) => {
+  return Math.max(TEAM_SIZE_MIN, Math.min(SQUAD_TEAM_COUNT_MAX, value))
 }
 
 const clampGameSpeed = (value: number) => {
@@ -145,11 +177,67 @@ const readStoredAudioOptions = (): AudioOptions => {
 
 const storedAudioOptions = readStoredAudioOptions()
 
-const writeStoredDebugOptions = () => {
-  if (typeof window === "undefined") {
-    return
+const readStoredGameModeOptions = (): GameModeOptions => {
+  const fallback: GameModeOptions = {
+    mode: "ffa",
+    ffaPlayerCount: 4,
+    tdmTeamSize: 4,
+    duoTeamCount: 4,
+    squadTeamCount: 2,
   }
 
+  if (typeof window === "undefined") {
+    return fallback
+  }
+
+  try {
+    const raw = window.localStorage.getItem(GAME_MODE_OPTIONS_STORAGE_KEY)
+    if (!raw) {
+      return fallback
+    }
+
+    const parsed = JSON.parse(raw) as Partial<GameModeOptions>
+    return {
+      mode: typeof parsed.mode === "string" && isGameModeId(parsed.mode) ? parsed.mode : fallback.mode,
+      ffaPlayerCount: typeof parsed.ffaPlayerCount === "number"
+        ? clampFfaPlayerCount(parsed.ffaPlayerCount)
+        : fallback.ffaPlayerCount,
+      tdmTeamSize: typeof parsed.tdmTeamSize === "number" ? clampTeamSize(parsed.tdmTeamSize) : fallback.tdmTeamSize,
+      duoTeamCount: typeof parsed.duoTeamCount === "number"
+        ? clampTeamSize(parsed.duoTeamCount)
+        : fallback.duoTeamCount,
+      squadTeamCount: typeof parsed.squadTeamCount === "number"
+        ? clampSquadTeamCount(parsed.squadTeamCount)
+        : fallback.squadTeamCount,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+const storedGameModeOptions = readStoredGameModeOptions()
+
+const createDebouncedStorageWriter = <T>(storageKey: string) => {
+  const writeStorage = (payload: T) => {
+    if (typeof window === "undefined") {
+      return
+    }
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(payload))
+    } catch {
+      // noop
+    }
+  }
+
+  return debounce(writeStorage, LOCAL_STORAGE_WRITE_DEBOUNCE_MS)
+}
+
+const writeStoredDebugOptionsDebounced = createDebouncedStorageWriter<DebugOptions>(DEBUG_OPTIONS_STORAGE_KEY)
+const writeStoredAudioOptionsDebounced = createDebouncedStorageWriter<AudioOptions>(AUDIO_OPTIONS_STORAGE_KEY)
+const writeStoredGameModeOptionsDebounced = createDebouncedStorageWriter<GameModeOptions>(GAME_MODE_OPTIONS_STORAGE_KEY)
+
+const writeStoredDebugOptions = () => {
   const payload: DebugOptions = {
     infiniteHp: debugInfiniteHpSignal.value,
     infiniteReload: debugInfiniteReloadSignal.value,
@@ -157,28 +245,28 @@ const writeStoredDebugOptions = () => {
     impactFeelLevel: clampImpactFeelLevel(debugImpactFeelLevelSignal.value),
   }
 
-  try {
-    window.localStorage.setItem(DEBUG_OPTIONS_STORAGE_KEY, JSON.stringify(payload))
-  } catch {
-    // noop
-  }
+  writeStoredDebugOptionsDebounced(payload)
 }
 
 const writeStoredAudioOptions = () => {
-  if (typeof window === "undefined") {
-    return
-  }
-
   const payload: AudioOptions = {
     musicVolume: clampVolume(musicVolumeSignal.value),
     effectsVolume: clampVolume(effectsVolumeSignal.value),
   }
 
-  try {
-    window.localStorage.setItem(AUDIO_OPTIONS_STORAGE_KEY, JSON.stringify(payload))
-  } catch {
-    // noop
+  writeStoredAudioOptionsDebounced(payload)
+}
+
+const writeStoredGameModeOptions = () => {
+  const payload: GameModeOptions = {
+    mode: selectedGameModeSignal.value,
+    ffaPlayerCount: clampFfaPlayerCount(ffaPlayerCountSignal.value),
+    tdmTeamSize: clampTeamSize(tdmTeamSizeSignal.value),
+    duoTeamCount: clampTeamSize(duoTeamCountSignal.value),
+    squadTeamCount: clampSquadTeamCount(squadTeamCountSignal.value),
   }
+
+  writeStoredGameModeOptionsDebounced(payload)
 }
 
 export const debugInfiniteHpSignal = signal(storedDebugOptions.infiniteHp)
@@ -188,12 +276,13 @@ export const debugImpactFeelLevelSignal = signal(storedDebugOptions.impactFeelLe
 export const debugSkipToMatchEndSignal = signal(false)
 export const persistDebugOptions = () => writeStoredDebugOptions()
 export const persistAudioOptions = () => writeStoredAudioOptions()
+export const persistGameModeOptions = () => writeStoredGameModeOptions()
 
-export const selectedGameModeSignal = signal<GameModeId>("ffa")
-export const ffaPlayerCountSignal = signal(4)
-export const tdmTeamSizeSignal = signal(4)
-export const duoTeamCountSignal = signal(4)
-export const squadTeamCountSignal = signal(2)
+export const selectedGameModeSignal = signal<GameModeId>(storedGameModeOptions.mode)
+export const ffaPlayerCountSignal = signal(storedGameModeOptions.ffaPlayerCount)
+export const tdmTeamSizeSignal = signal(storedGameModeOptions.tdmTeamSize)
+export const duoTeamCountSignal = signal(storedGameModeOptions.duoTeamCount)
+export const squadTeamCountSignal = signal(storedGameModeOptions.squadTeamCount)
 export const menuVisibleSignal = signal(true)
 export const languageSignal = signal<LocaleId>(preferredLocale)
 export const musicVolumeSignal = signal(storedAudioOptions.musicVolume)

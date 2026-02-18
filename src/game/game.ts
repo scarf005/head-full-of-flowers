@@ -1,5 +1,5 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
-import { buildCullBounds, isInsideCullBounds, type CullBounds } from "./cull.ts"
+import { buildCullBounds, type CullBounds, isInsideCullBounds } from "./cull.ts"
 import {
   clearMatchResultSignal,
   resetHudSignals,
@@ -13,8 +13,8 @@ import {
 import {
   crosshairSignal,
   debugGameSpeedSignal,
-  debugInfiniteHpSignal,
   debugImpactFeelLevelSignal,
+  debugInfiniteHpSignal,
   debugInfiniteReloadSignal,
   debugSkipToMatchEndSignal,
   duoTeamCountSignal,
@@ -24,6 +24,7 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
+  persistGameModeOptions,
   secondaryModeSignal,
   selectedGameModeSignal,
   squadTeamCountSignal,
@@ -32,7 +33,15 @@ import {
 } from "./signals.ts"
 import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
-import { ARENA_END_RADIUS, ARENA_START_RADIUS, clamp, distSquared, lerp, randomPointInArena, randomRange } from "./utils.ts"
+import {
+  ARENA_END_RADIUS,
+  ARENA_START_RADIUS,
+  clamp,
+  distSquared,
+  lerp,
+  randomPointInArena,
+  randomRange,
+} from "./utils.ts"
 import {
   BOT_BASE_SPEED,
   BOT_RADIUS,
@@ -53,9 +62,9 @@ import {
   continueBurstFire,
   cyclePrimaryWeapon,
   equipPrimary,
-  type FirePrimaryDeps,
   finishReload,
   firePrimary,
+  type FirePrimaryDeps,
   randomLootablePrimary,
   startReload,
 } from "./systems/combat.ts"
@@ -297,6 +306,7 @@ export class FlowerArenaGame {
     if (mode === "squad") {
       squadTeamCountSignal.value = Math.max(2, Math.floor(totalPlayers / 4))
     }
+    persistGameModeOptions()
 
     this.world.bots = activeBots
     this.world.units = [this.world.player, ...activeBots]
@@ -373,8 +383,8 @@ export class FlowerArenaGame {
 
   private whiteLootBoxSpawnIntervalSeconds() {
     const progressToMaxFrequency = clamp(
-      (MATCH_DURATION_SECONDS - this.world.timeRemaining)
-        / Math.max(1, MATCH_DURATION_SECONDS - WHITE_LOOT_BOX_MAX_FREQUENCY_TIME_REMAINING_SECONDS),
+      (MATCH_DURATION_SECONDS - this.world.timeRemaining) /
+        Math.max(1, MATCH_DURATION_SECONDS - WHITE_LOOT_BOX_MAX_FREQUENCY_TIME_REMAINING_SECONDS),
       0,
       1,
     )
@@ -872,7 +882,10 @@ export class FlowerArenaGame {
         continue
       }
 
-      if (fogCullBounds && !this.isInsideFogCullBounds(debris.position.x, debris.position.y, fogCullBounds, debris.size + 0.35)) {
+      if (
+        fogCullBounds &&
+        !this.isInsideFogCullBounds(debris.position.x, debris.position.y, fogCullBounds, debris.size + 0.35)
+      ) {
         debris.active = false
         continue
       }
@@ -926,7 +939,10 @@ export class FlowerArenaGame {
         continue
       }
 
-      if (fogCullBounds && !this.isInsideFogCullBounds(petal.position.x, petal.position.y, fogCullBounds, petal.size + 0.65)) {
+      if (
+        fogCullBounds &&
+        !this.isInsideFogCullBounds(petal.position.x, petal.position.y, fogCullBounds, petal.size + 0.65)
+      ) {
         petal.active = false
         continue
       }
@@ -980,7 +996,10 @@ export class FlowerArenaGame {
         continue
       }
 
-      if (fogCullBounds && !this.isInsideFogCullBounds(casing.position.x, casing.position.y, fogCullBounds, casing.size + 0.3)) {
+      if (
+        fogCullBounds &&
+        !this.isInsideFogCullBounds(casing.position.x, casing.position.y, fogCullBounds, casing.size + 0.3)
+      ) {
         casing.active = false
         continue
       }
@@ -1049,7 +1068,14 @@ export class FlowerArenaGame {
       return
     }
 
-    if (!this.isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.9)) {
+    if (
+      !this.isInsideFogCullBounds(
+        projectile.position.x,
+        projectile.position.y,
+        fogCullBounds,
+        projectile.radius * 3.2 + 0.9,
+      )
+    ) {
       projectile.trailX = projectile.position.x
       projectile.trailY = projectile.position.y
       projectile.trailReady = false
@@ -1080,11 +1106,7 @@ export class FlowerArenaGame {
       return
     }
 
-    const spacing = projectile.kind === "flame"
-      ? 0.1
-      : projectile.kind === "rocket"
-      ? 0.09
-      : 0.08
+    const spacing = projectile.kind === "flame" ? 0.1 : projectile.kind === "rocket" ? 0.09 : 0.08
     const sampleCount = Math.max(1, Math.ceil(distance / spacing))
     const speedFactor = clamp(speed / (projectile.kind === "flame" ? 24 : projectile.kind === "rocket" ? 18 : 44), 0, 2)
     let previousX = projectile.trailX
@@ -1175,7 +1197,9 @@ export class FlowerArenaGame {
       return
     }
 
-    if (!this.isInsideFogCullBounds(throwable.position.x, throwable.position.y, fogCullBounds, throwable.radius + 1.1)) {
+    if (
+      !this.isInsideFogCullBounds(throwable.position.x, throwable.position.y, fogCullBounds, throwable.radius + 1.1)
+    ) {
       throwable.trailX = throwable.position.x
       throwable.trailY = throwable.position.y
       throwable.trailReady = false
@@ -1388,7 +1412,15 @@ export class FlowerArenaGame {
         continue
       }
 
-      if (fogCullBounds && !this.isInsideFogCullBounds(trail.position.x, trail.position.y, fogCullBounds, trail.length + trail.width + 0.35)) {
+      if (
+        fogCullBounds &&
+        !this.isInsideFogCullBounds(
+          trail.position.x,
+          trail.position.y,
+          fogCullBounds,
+          trail.length + trail.width + 0.35,
+        )
+      ) {
         trail.active = false
         continue
       }
@@ -1442,9 +1474,7 @@ export class FlowerArenaGame {
 
       const distance = Math.sqrt(dsq)
       const falloff = 1 - clamp(distance / radius, 0, 1)
-      const resolvedDamage = useFalloff
-        ? Math.max(1, damage * (0.35 + falloff * 0.65))
-        : damage
+      const resolvedDamage = useFalloff ? Math.max(1, damage * (0.35 + falloff * 0.65)) : damage
 
       this.applyDamage(
         unit.id,
@@ -1703,13 +1733,26 @@ export class FlowerArenaGame {
       allocPopup: () => this.allocPopup(),
       spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt, options) => {
         const scoreOwnerId = this.resolveScoreOwnerId(ownerId)
-        spawnFlowers(this.world, ownerId, scoreOwnerId, x, y, dirX, dirY, amountValue, sizeScale, {
-          allocFlower: () => this.allocFlower(),
-          playerId: this.playerCoverageId(),
-          botPalette: (id) => botPalette(id),
-          factionColor: (id) => this.world.factions.find((faction) => faction.id === id)?.color ?? null,
-          onCoverageUpdated: () => updateCoverageSignals(this.world),
-        }, isBurnt, options)
+        spawnFlowers(
+          this.world,
+          ownerId,
+          scoreOwnerId,
+          x,
+          y,
+          dirX,
+          dirY,
+          amountValue,
+          sizeScale,
+          {
+            allocFlower: () => this.allocFlower(),
+            playerId: this.playerCoverageId(),
+            botPalette: (id) => botPalette(id),
+            factionColor: (id) => this.world.factions.find((faction) => faction.id === id)?.color ?? null,
+            onCoverageUpdated: () => updateCoverageSignals(this.world),
+          },
+          isBurnt,
+          options,
+        )
       },
       respawnUnit: (id) => this.respawnUnit(id),
       onKillPetalBurst: (x, y) => this.spawnKillPetalBurst(x, y),
@@ -1905,7 +1948,8 @@ export class FlowerArenaGame {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
-              onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
+              onBoxDestroyed: (dropX, dropY, highTier) =>
+                this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),

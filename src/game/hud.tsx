@@ -16,12 +16,13 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
+  persistAudioOptions,
+  persistDebugOptions,
+  persistGameModeOptions,
   playerPerksSignal,
+  primaryWeaponSlotsSignal,
   renderPathProfileSignal,
   renderPathRatesSignal,
-  persistAudioOptions,
-  primaryWeaponSlotsSignal,
-  persistDebugOptions,
   secondaryModeSignal,
   secondaryWeaponCooldownSignal,
   selectedGameModeSignal,
@@ -170,8 +171,8 @@ export const GameHud = () => {
               />
               <span>{t`Infinite Reload`}</span>
             </label>
-              <label class="debug-speed">
-                <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>
+            <label class="debug-speed">
+              <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>
               <input
                 type="range"
                 min={40}
@@ -184,8 +185,8 @@ export const GameHud = () => {
                 }}
               />
             </label>
-              <label class="debug-speed">
-                <span>{t`Impact Feel ${impactFeelLabel} (${impactFeelLevel.toFixed(2)}x)`}</span>
+            <label class="debug-speed">
+              <span>{t`Impact Feel ${impactFeelLabel} (${impactFeelLevel.toFixed(2)}x)`}</span>
               <input
                 type="range"
                 min={1}
@@ -208,22 +209,28 @@ export const GameHud = () => {
               {t`Skip to Match End`}
             </button>
             <div class="debug-speed">
-                <span>{t`Render Profile ${renderPathProfile.frames} frames`}</span>
-                <span>
-                  {t`Pickups ${renderPathProfile.pickupVisibleFrames} visible / ${renderPathProfile.pickupHiddenFrames} hidden`}
-                </span>
-                <span>
-                  {t`WebGL ${renderPathProfile.obstacleFxWebGlFrames} obstacle fx / ${renderPathProfile.trailWebGlFrames} trails`}
-                </span>
-                <span>
-                  {t`Composite ${renderPathProfile.mergedCompositeFrames} merged (${mergedPercent.toFixed(1)}%) / ${renderPathProfile.splitCompositeFrames} split (${splitPercent.toFixed(1)}%)`}
-                </span>
-                <span>
-                  {t`Window ${renderPathRates.sampleFrames} f: merged ${renderPathRates.mergedPercent.toFixed(1)}% / split ${renderPathRates.splitPercent.toFixed(1)}%`}
-                </span>
-                <span>
-                  {t`Window pickups ${renderPathRates.pickupVisiblePercent.toFixed(1)}% visible / ${renderPathRates.pickupHiddenPercent.toFixed(1)}% hidden`}
-                </span>
+              <span>{t`Render Profile ${renderPathProfile.frames} frames`}</span>
+              <span>
+                {t`Pickups ${renderPathProfile.pickupVisibleFrames} visible / ${renderPathProfile.pickupHiddenFrames} hidden`}
+              </span>
+              <span>
+                {t`WebGL ${renderPathProfile.obstacleFxWebGlFrames} obstacle fx / ${renderPathProfile.trailWebGlFrames} trails`}
+              </span>
+              <span>
+                {t`Composite ${renderPathProfile.mergedCompositeFrames} merged (${
+                  mergedPercent.toFixed(1)
+                }%) / ${renderPathProfile.splitCompositeFrames} split (${splitPercent.toFixed(1)}%)`}
+              </span>
+              <span>
+                {t`Window ${renderPathRates.sampleFrames} f: merged ${
+                  renderPathRates.mergedPercent.toFixed(1)
+                }% / split ${renderPathRates.splitPercent.toFixed(1)}%`}
+              </span>
+              <span>
+                {t`Window pickups ${renderPathRates.pickupVisiblePercent.toFixed(1)}% visible / ${
+                  renderPathRates.pickupHiddenPercent.toFixed(1)
+                }% hidden`}
+              </span>
             </div>
           </div>
         )
@@ -234,7 +241,9 @@ export const GameHud = () => {
           <div class="hud menu-layer">
             <div class="menu-panel">
               <div class="menu-title">{t`Head Full of Flowers`}</div>
-              <div class="menu-subtitle">{t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}</div>
+              <div class="menu-subtitle">
+                {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
+              </div>
               <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
                 {modeCards.map((mode) => (
                   <button
@@ -244,6 +253,7 @@ export const GameHud = () => {
                     aria-pressed={selectedMode === mode.id}
                     onClick={() => {
                       selectedGameModeSignal.value = mode.id
+                      persistGameModeOptions()
                     }}
                   >
                     <span class="mode-card-title">{mode.label}</span>
@@ -264,20 +274,24 @@ export const GameHud = () => {
                     const mode = selectedGameModeSignal.value
                     if (mode === "ffa") {
                       ffaPlayerCountSignal.value = next
+                      persistGameModeOptions()
                       return
                     }
 
                     if (mode === "tdm") {
                       tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
+                      persistGameModeOptions()
                       return
                     }
 
                     if (mode === "duo") {
                       duoTeamCountSignal.value = next
+                      persistGameModeOptions()
                       return
                     }
 
                     squadTeamCountSignal.value = next
+                    persistGameModeOptions()
                   }}
                 />
               </label>
@@ -385,7 +399,10 @@ export const GameHud = () => {
               <div class="weapon-title">{t`Primary`}</div>
               <div class="primary-slot-list">
                 {primaryWeaponSlotsSignal.value.map((slot, index) => (
-                  <div class={`primary-slot ${slot.selected ? "selected" : "dimmed"}`} key={`${slot.label}-${slot.ammo}-${index}`}>
+                  <div
+                    class={`primary-slot ${slot.selected ? "selected" : "dimmed"}`}
+                    key={`${slot.label}-${slot.ammo}-${index}`}
+                  >
                     <WeaponIcon icon={slot.icon} fallback={slot.label.slice(0, 2).toUpperCase()} />
                     <div>
                       <div class="weapon-value compact">{slot.label}</div>
