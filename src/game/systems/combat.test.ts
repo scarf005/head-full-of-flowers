@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { assertEquals } from "jsr:@std/assert"
+import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
 import { BURNED_FACTION_ID } from "../factions.ts"
 import { applyDamage } from "./combat.ts"
@@ -119,7 +119,7 @@ Deno.test("applyDamage ignores friendly fire from non-self sources", () => {
   assertEquals(target.hp, hpBefore)
 })
 
-Deno.test("applyDamage heals killer on lethal hit and triggers respawn", () => {
+Deno.test("applyDamage grants killer hp bonus on lethal hit and triggers respawn", () => {
   const world = createWorldState()
   const attacker = world.player
   const target = world.bots[0]
@@ -157,8 +157,9 @@ Deno.test("applyDamage heals killer on lethal hit and triggers respawn", () => {
     },
   )
 
-  assertEquals(attacker.hp, attacker.maxHp)
+  assertEquals(attacker.hp, 7)
   assertEquals(respawnedId, target.id)
+  assertAlmostEquals(world.cameraShake, 0.48 * 5, 0.00001)
 })
 
 Deno.test("applyDamage resolves non-unit source fallback to nearest teammate for attribution", () => {
