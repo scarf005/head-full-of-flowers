@@ -118,6 +118,7 @@ export interface WorldState {
   terrainMap: TerrainMap
   obstacleGrid: ObstacleGridState
   renderPathProfile: RenderPathProfile
+  pickupSpawnSequence: number
 }
 
 export const createWorldState = (): WorldState => {
@@ -216,6 +217,7 @@ export const createWorldState = (): WorldState => {
       mergedCompositeFrames: 0,
       splitCompositeFrames: 0,
     },
+    pickupSpawnSequence: 1,
   }
 }
 

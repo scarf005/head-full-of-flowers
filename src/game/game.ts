@@ -570,6 +570,7 @@ export class FlowerArenaGame {
     this.world.arenaRadius = ARENA_START_RADIUS
     this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
     this.world.lootBoxTimer = this.whiteLootBoxSpawnIntervalSeconds()
+    this.world.pickupSpawnSequence = 1
     this.world.factionFlowerCounts = createFactionFlowerCounts(this.world.factions)
     this.world.playerBulletsFired = 0
     this.world.playerBulletsHit = 0
@@ -674,6 +675,7 @@ export class FlowerArenaGame {
     for (const pickup of this.world.pickups) {
       pickup.active = false
       pickup.highTier = false
+      pickup.spawnOrder = 0
       pickup.velocity.set(0, 0)
       pickup.throwOwnerId = ""
       pickup.throwOwnerTeam = "white"

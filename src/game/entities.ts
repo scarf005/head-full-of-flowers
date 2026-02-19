@@ -255,6 +255,7 @@ export class Pickup {
   weapon: PrimaryWeaponId = "assault"
   perkId: PerkId | null = null
   highTier = false
+  spawnOrder = 0
   position = new Vec2()
   velocity = new Vec2()
   throwOwnerId = ""

@@ -1,4 +1,4 @@
-import { Pickup, type Unit } from "../entities.ts"
+import { type Unit } from "../entities.ts"
 import { clamp, distSquared, limitToArena, randomPointInArena, randomRange } from "../utils.ts"
 import { isHighTierPrimary, pickupAmmoForWeapon } from "../weapons.ts"
 import type { PerkId, PrimaryWeaponId, Team } from "../types.ts"
@@ -54,17 +54,53 @@ export interface PickupDeps {
   force?: boolean
 }
 
+const pickupRecyclePriority = (pickup: WorldState["pickups"][number]) => {
+  if (pickup.kind === "perk") {
+    return 2
+  }
+
+  return pickup.highTier ? 1 : 0
+}
+
+const acquirePickupSlot = (world: WorldState, force = false) => {
+  const inactive = world.pickups.find((pickup) => !pickup.active)
+  if (inactive) {
+    return inactive
+  }
+
+  if (!force || world.pickups.length <= 0) {
+    return null
+  }
+
+  let candidate: WorldState["pickups"][number] | null = null
+  for (const pickup of world.pickups) {
+    if (!candidate) {
+      candidate = pickup
+      continue
+    }
+
+    const priority = pickupRecyclePriority(pickup)
+    const candidatePriority = pickupRecyclePriority(candidate)
+    if (priority < candidatePriority) {
+      candidate = pickup
+      continue
+    }
+
+    if (priority === candidatePriority && pickup.spawnOrder < candidate.spawnOrder) {
+      candidate = pickup
+    }
+  }
+
+  return candidate
+}
+
 export interface PerkPickupDeps {
   randomPerk: () => PerkId
   force?: boolean
 }
 
 export const spawnPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PickupDeps) => {
-  let slot = world.pickups.find((pickup) => !pickup.active)
-  if (!slot && deps.force) {
-    slot = new Pickup()
-    world.pickups.push(slot)
-  }
+  const slot = acquirePickupSlot(world, deps.force)
 
   if (!slot) {
     return
@@ -81,6 +117,8 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
     slot.weapon = deps.randomLootablePrimary()
     slot.highTier = false
   }
+  slot.spawnOrder = world.pickupSpawnSequence
+  world.pickupSpawnSequence += 1
   slot.radius = 0.8
   slot.bob = randomRange(0, Math.PI * 2)
   slot.perkId = null
@@ -91,11 +129,7 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
 }
 
 export const spawnPerkPickupAt = (world: WorldState, position: { x: number; y: number }, deps: PerkPickupDeps) => {
-  let slot = world.pickups.find((pickup) => !pickup.active)
-  if (!slot && deps.force) {
-    slot = new Pickup()
-    world.pickups.push(slot)
-  }
+  const slot = acquirePickupSlot(world, deps.force)
 
   if (!slot) {
     return
@@ -107,6 +141,8 @@ export const spawnPerkPickupAt = (world: WorldState, position: { x: number; y: n
   slot.perkId = deps.randomPerk()
   slot.weapon = "assault"
   slot.highTier = false
+  slot.spawnOrder = world.pickupSpawnSequence
+  world.pickupSpawnSequence += 1
   slot.radius = 0.8
   slot.bob = randomRange(0, Math.PI * 2)
   slot.velocity.set(0, 0)
@@ -147,11 +183,28 @@ export interface PickupImpactDamageDeps {
   ) => void
 }
 
+const deactivatePickup = (pickup: WorldState["pickups"][number]) => {
+  pickup.active = false
+  pickup.highTier = false
+  pickup.velocity.set(0, 0)
+  pickup.throwOwnerId = ""
+  pickup.throwOwnerTeam = "white"
+  pickup.throwDamageArmed = false
+  pickup.kind = "weapon"
+  pickup.perkId = null
+  pickup.spawnOrder = 0
+}
+
 export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps & PickupImpactDamageDeps) => {
   world.pickupTimer -= dt
 
   for (const pickup of world.pickups) {
     if (!pickup.active) {
+      continue
+    }
+
+    if (limitToArena(pickup.position, pickup.radius, world.arenaRadius)) {
+      deactivatePickup(pickup)
       continue
     }
 
@@ -164,7 +217,12 @@ export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps & 
 
       const collidedArena = limitToArena(pickup.position, pickup.radius, world.arenaRadius)
       const collidedObstacle = collidesWithObstacleGrid(world, pickup.position.x, pickup.position.y, pickup.radius)
-      if (collidedArena || collidedObstacle) {
+      if (collidedArena) {
+        deactivatePickup(pickup)
+        continue
+      }
+
+      if (collidedObstacle) {
         pickup.position.x = previousX
         pickup.position.y = previousY
         pickup.velocity.set(0, 0)
@@ -223,6 +281,7 @@ export interface CollectPickupDeps {
   perkStacks: (unit: Unit, perkId: PerkId) => number
   onPlayerPickup: (weaponId: PrimaryWeaponId) => void
   onPlayerPerkPickup: (perkId: PerkId, stacks: number) => void
+  shouldCollectPickup?: (unit: Unit, pickup: WorldState["pickups"][number]) => boolean
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
@@ -234,6 +293,11 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
     const limit = unit.radius + pickup.radius
     const dsq = distSquared(unit.position.x, unit.position.y, pickup.position.x, pickup.position.y)
     if (dsq > limit * limit) {
+      continue
+    }
+
+    const shouldCollectPickup = deps.shouldCollectPickup?.(unit, pickup) ?? true
+    if (!shouldCollectPickup) {
       continue
     }
 
@@ -257,6 +321,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       pickup.throwDamageArmed = false
       pickup.kind = "weapon"
       pickup.perkId = null
+      pickup.spawnOrder = 0
 
       if (unit.isPlayer) {
         deps.onPlayerPerkPickup(perkId, deps.perkStacks(unit, perkId))
@@ -288,6 +353,8 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       pickup.throwOwnerTeam = unit.team
       pickup.throwDamageArmed = true
       pickup.bob = randomRange(0, Math.PI * 2)
+      pickup.spawnOrder = world.pickupSpawnSequence
+      world.pickupSpawnSequence += 1
     } else {
       pickup.active = false
       pickup.highTier = false
@@ -297,6 +364,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       pickup.throwDamageArmed = false
       pickup.kind = "weapon"
       pickup.perkId = null
+      pickup.spawnOrder = 0
     }
 
     if (unit.isPlayer) {
