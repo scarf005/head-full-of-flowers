@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import { assertEquals } from "jsr:@std/assert"
 
 import { Projectile } from "../entities.ts"
@@ -22,9 +24,17 @@ const createSingleWallMap = (): TerrainMap => ({
   pickupSpawnPoints: [],
 })
 
-const createProjectileAtWall = (damage: number) => {
+const createSingleHedgeMap = (): TerrainMap => ({
+  size: 8,
+  tiles: createTiles(8),
+  obstacles: [{ kind: "hedge", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [[true]] }],
+  pickupSpawnPoints: [],
+})
+
+const createProjectileAtWall = (damage: number, kind: Projectile["kind"] = "ballistic") => {
   const projectile = new Projectile()
   projectile.active = true
+  projectile.kind = kind
   projectile.position.set(0.5, 0.5)
   projectile.velocity.set(12, 0)
   projectile.damage = damage
@@ -83,6 +93,39 @@ Deno.test("hitObstacle emits damage callback and damaged flash for effective dam
   assertEquals(hit, true)
   assertEquals(damageCallbackCalls, 1)
   assertEquals(damageValue, 2)
+  assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_DAMAGED)
+})
+
+Deno.test("hitObstacle prevents flamethrowers from damaging non-bush walls", () => {
+  const world = createWorldState()
+  world.obstacleGrid = buildObstacleGridFromMap(createSingleWallMap())
+
+  const cell = worldToObstacleGrid(world.obstacleGrid.size, 0.5, 0.5)
+  const index = obstacleGridIndex(world.obstacleGrid.size, cell.x, cell.y)
+  const hpBefore = world.obstacleGrid.hp[index]
+
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const hit = hitObstacle(world, createProjectileAtWall(999, "flame"), {})
+    assertEquals(hit, true)
+  }
+
+  assertEquals(world.obstacleGrid.hp[index], hpBefore)
+  assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_BLOCKED)
+})
+
+Deno.test("hitObstacle lets flamethrowers damage garden bushes", () => {
+  const world = createWorldState()
+  world.obstacleGrid = buildObstacleGridFromMap(createSingleHedgeMap())
+  const projectile = createProjectileAtWall(2, "flame")
+
+  const cell = worldToObstacleGrid(world.obstacleGrid.size, 0.5, 0.5)
+  const index = obstacleGridIndex(world.obstacleGrid.size, cell.x, cell.y)
+  const hpBefore = world.obstacleGrid.hp[index]
+
+  const hit = hitObstacle(world, projectile, {})
+
+  assertEquals(hit, true)
+  assertEquals(world.obstacleGrid.hp[index] < hpBefore, true)
   assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_DAMAGED)
 })
 

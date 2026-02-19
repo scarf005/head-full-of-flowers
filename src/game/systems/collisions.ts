@@ -5,7 +5,11 @@ import {
   decayObstacleFlash,
   isObstacleCellSolid,
   OBSTACLE_MATERIAL_BOX,
+  OBSTACLE_MATERIAL_HEDGE,
   OBSTACLE_MATERIAL_NONE,
+  OBSTACLE_MATERIAL_WALL,
+  OBSTACLE_MATERIAL_WAREHOUSE,
+  obstacleGridIndex,
   obstacleGridToWorldCenter,
   worldToObstacleGrid,
 } from "../world/obstacle-grid.ts"
@@ -208,7 +212,14 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
     return false
   }
 
-  const result = damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, Math.max(1, projectile.damage))
+  const obstacleIndex = obstacleGridIndex(world.obstacleGrid.size, hitCell.x, hitCell.y)
+  const obstacleMaterial = world.obstacleGrid.material[obstacleIndex]
+  const isFlameBlockedByWall = projectile.kind === "flame" &&
+    obstacleMaterial !== OBSTACLE_MATERIAL_HEDGE &&
+    (obstacleMaterial === OBSTACLE_MATERIAL_WALL || obstacleMaterial === OBSTACLE_MATERIAL_WAREHOUSE)
+  const obstacleDamage = isFlameBlockedByWall ? 0 : Math.max(1, projectile.damage)
+
+  const result = damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, obstacleDamage)
   if (!result.damaged) {
     return false
   }
