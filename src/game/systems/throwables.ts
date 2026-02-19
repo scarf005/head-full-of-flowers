@@ -339,6 +339,14 @@ export interface GrenadeExplosionDeps {
   ) => void
   damageObstaclesByExplosion: (x: number, y: number, radius: number) => void
   spawnExplosion: (x: number, y: number, radius: number) => void
+  applyExplosionImpulse?: (
+    x: number,
+    y: number,
+    radius: number,
+    explosivePower: number,
+    sourceId: string,
+    sourceTeam: Team,
+  ) => void
 }
 
 export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: GrenadeExplosionDeps) => {
@@ -347,9 +355,18 @@ export const explodeGrenade = (world: WorldState, throwableIndex: number, deps: 
     return
   }
 
-  const explosionRadius = 3.8 * Math.max(0.6, throwable.explosiveRadiusMultiplier)
+  const explosivePower = Math.max(0.6, throwable.explosiveRadiusMultiplier)
+  const explosionRadius = 3.8 * explosivePower
   const explosionRadiusSquared = explosionRadius * explosionRadius
   deps.spawnExplosion(throwable.position.x, throwable.position.y, explosionRadius)
+  deps.applyExplosionImpulse?.(
+    throwable.position.x,
+    throwable.position.y,
+    explosionRadius,
+    explosivePower,
+    throwable.ownerId,
+    throwable.ownerTeam,
+  )
 
   for (const unit of world.units) {
     if (unit.team === throwable.ownerTeam && unit.id !== throwable.ownerId) {

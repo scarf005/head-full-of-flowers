@@ -88,7 +88,13 @@ import {
 } from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
-import { collectNearbyPickup, spawnPerkPickupAt, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
+import {
+  collectNearbyPickup,
+  destroyPickupsByExplosion,
+  spawnPerkPickupAt,
+  spawnPickupAt,
+  updatePickups,
+} from "./systems/pickups.ts"
 import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
@@ -133,6 +139,8 @@ const TEAM_COLOR_RAMP = [
   "#c9a5ff",
   "#ff9dd2",
 ]
+const EXPLOSION_UNIT_FLING_BASE = 6.5
+const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
 
 type FogCullBounds = CullBounds
 
@@ -1490,6 +1498,60 @@ export class FlowerArenaGame {
     slot.life = 0.24
   }
 
+  private applyExplosionImpulse(
+    x: number,
+    y: number,
+    radius: number,
+    explosivePower: number,
+    sourceId: string,
+    sourceTeam: Team,
+  ) {
+    if (radius <= 0.001) {
+      return
+    }
+
+    const radiusSq = radius * radius
+    const resolvedPower = Math.max(0.4, explosivePower)
+
+    for (const unit of this.world.units) {
+      if (unit.team === sourceTeam && unit.id !== sourceId) {
+        continue
+      }
+
+      const dx = unit.position.x - x
+      const dy = unit.position.y - y
+      const dsq = dx * dx + dy * dy
+      if (dsq > radiusSq) {
+        continue
+      }
+
+      const distance = Math.sqrt(dsq)
+      const falloff = 1 - clamp(distance / radius, 0, 1)
+      if (falloff <= 0) {
+        continue
+      }
+
+      let dirX = 1
+      let dirY = 0
+      if (distance > 0.0001) {
+        dirX = dx / distance
+        dirY = dy / distance
+      } else {
+        const angle = randomRange(0, Math.PI * 2)
+        dirX = Math.cos(angle)
+        dirY = Math.sin(angle)
+      }
+
+      const unitImpulse = (EXPLOSION_UNIT_FLING_BASE + radius * EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER) *
+        resolvedPower *
+        (0.25 + falloff * 0.75)
+      unit.velocity.x += dirX * unitImpulse
+      unit.velocity.y += dirY * unitImpulse
+    }
+
+    destroyPickupsByExplosion(this.world, x, y, radius)
+  }
+
   private applyRadialExplosionDamage(
     x: number,
     y: number,
@@ -1498,7 +1560,9 @@ export class FlowerArenaGame {
     sourceId: string,
     sourceTeam: Team,
     useFalloff = false,
+    explosivePower = 1,
   ) {
+    this.applyExplosionImpulse(x, y, radius, explosivePower, sourceId, sourceTeam)
     const radiusSq = radius * radius
     for (const unit of this.world.units) {
       if (unit.team === sourceTeam && unit.id !== sourceId) {
@@ -1551,6 +1615,7 @@ export class FlowerArenaGame {
         projectile.ownerId,
         projectile.ownerTeam,
         true,
+        explosionScale,
       )
       this.damageObstaclesAtExplosion(projectile.position.x, projectile.position.y, explosionRadius)
       this.world.cameraShake = Math.min(1.6, this.world.cameraShake + 0.24)
@@ -1563,41 +1628,20 @@ export class FlowerArenaGame {
       return
     }
 
-    for (let explosionIndex = 0; explosionIndex < 3; explosionIndex += 1) {
-      const angle = randomRange(0, Math.PI * 2)
-      const offset = explosionIndex === 0 ? 0 : randomRange(0.5, 1.1)
-      const explosionX = projectile.position.x + Math.cos(angle) * offset
-      const explosionY = projectile.position.y + Math.sin(angle) * offset
-      const explosionRadius = (explosionIndex === 0 ? 2.9 : 2.4) * explosionScale
-      this.spawnExplosion(explosionX, explosionY, explosionRadius)
-      this.applyRadialExplosionDamage(
-        explosionX,
-        explosionY,
-        explosionRadius,
-        20,
-        projectile.ownerId,
-        projectile.ownerTeam,
-      )
-      this.damageObstaclesAtExplosion(explosionX, explosionY, explosionRadius)
-    }
-
-    for (let miniExplosionIndex = 0; miniExplosionIndex < 3; miniExplosionIndex += 1) {
-      const angle = randomRange(0, Math.PI * 2)
-      const offset = randomRange(0.35, 0.85)
-      const miniExplosionX = projectile.position.x + Math.cos(angle) * offset
-      const miniExplosionY = projectile.position.y + Math.sin(angle) * offset
-      const miniExplosionRadius = 1.5 * explosionScale
-      this.spawnExplosion(miniExplosionX, miniExplosionY, miniExplosionRadius)
-      this.applyRadialExplosionDamage(
-        miniExplosionX,
-        miniExplosionY,
-        miniExplosionRadius,
-        10,
-        projectile.ownerId,
-        projectile.ownerTeam,
-      )
-      this.damageObstaclesAtExplosion(miniExplosionX, miniExplosionY, miniExplosionRadius)
-    }
+    const grenadeExplosionRadius = 3.8 * explosionScale
+    const explosionRadius = grenadeExplosionRadius * 1.4
+    this.spawnExplosion(projectile.position.x, projectile.position.y, explosionRadius)
+    this.applyRadialExplosionDamage(
+      projectile.position.x,
+      projectile.position.y,
+      explosionRadius,
+      20,
+      projectile.ownerId,
+      projectile.ownerTeam,
+      false,
+      explosionScale,
+    )
+    this.damageObstaclesAtExplosion(projectile.position.x, projectile.position.y, explosionRadius)
 
     this.world.cameraShake = Math.min(2.4, this.world.cameraShake + 0.42)
     this.world.hitStop = Math.max(this.world.hitStop, 0.016)
@@ -2030,6 +2074,9 @@ export class FlowerArenaGame {
             })
           },
           spawnExplosion: (x, y, radius) => this.spawnExplosion(x, y, radius),
+          applyExplosionImpulse: (x, y, radius, explosivePower, sourceId, sourceTeam) => {
+            this.applyExplosionImpulse(x, y, radius, explosivePower, sourceId, sourceTeam)
+          },
         })
       },
       igniteMolotov: (throwableIndex) => {
