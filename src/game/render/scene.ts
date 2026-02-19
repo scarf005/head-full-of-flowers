@@ -9,6 +9,7 @@ import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInst
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
 import { buildOffscreenIndicatorAnchor, isOffscreenIndicatorAnchorInView } from "./offscreen-indicator-visibility.ts"
+import { hasVisiblePickupsInCullBounds } from "./pickup-visibility.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { buildCullBounds, type CullBounds, isInsideCullBounds } from "../cull.ts"
 import { botPalette } from "../factions.ts"
@@ -685,7 +686,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderMolotovZones(context, world, fogCullBounds)
   renderFlowers(context, world, renderCameraX, renderCameraY)
   renderObstacles(context, world)
-  const hasVisiblePickupLayer = hasVisiblePickups(world, fogCullBounds)
+  const hasVisiblePickupLayer = hasVisiblePickupsInCullBounds(world.pickups, fogCullBounds)
   const compositionPlan = decideRenderFxCompositionPlan(hasVisiblePickupLayer, true)
   const renderedObstacleFxWithWebGl = renderObstacleFxInstances({
     context,
@@ -851,19 +852,6 @@ const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
   }
 
   return "255, 214, 104"
-}
-
-const hasVisiblePickups = (world: WorldState, fogCullBounds: FogCullBounds) => {
-  for (const pickup of world.pickups) {
-    if (!pickup.active) {
-      continue
-    }
-    if (isInsideFogCullBounds(pickup.position.x, pickup.position.y, fogCullBounds, pickup.radius + 0.5)) {
-      return true
-    }
-  }
-
-  return false
 }
 
 const renderPickups = (
