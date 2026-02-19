@@ -257,11 +257,16 @@ export const damageObstaclesByExplosion = (
       }
 
       const center = obstacleGridToWorldCenter(grid.size, gx, gy)
-      if (distSquared(center.x, center.y, x, y) > radius * radius) {
+      const nearestX = clamp(x, center.x - 0.5, center.x + 0.5)
+      const nearestY = clamp(y, center.y - 0.5, center.y + 0.5)
+      const distanceToCellEdge = Math.hypot(nearestX - x, nearestY - y)
+      if (distanceToCellEdge > radius) {
         continue
       }
 
-      const result = damageObstacleCell(grid, gx, gy, 2.5)
+      const proximity = 1 - clamp(distanceToCellEdge / Math.max(0.0001, radius), 0, 1)
+      const explosionDamage = 2.5 + radius * 0.65 + proximity * 1.1
+      const result = damageObstacleCell(grid, gx, gy, explosionDamage)
       if (result.damaged) {
         tookDamage = true
         if (result.damageDealt > 0) {
