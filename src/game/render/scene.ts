@@ -714,6 +714,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   context.fillStyle = "#889684"
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  const viewportOverflow = measureCanvasViewportOverflowPx(context)
 
   const renderCameraX = world.camera.x + world.cameraOffset.x
   const renderCameraY = world.camera.y + world.cameraOffset.y
@@ -800,8 +801,8 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   renderAtmosphere(context)
   renderDamageVignette(context, world)
-  renderMinimap(context, world, renderCameraX, renderCameraY)
-  renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
+  renderMinimap(context, world, renderCameraX, renderCameraY, viewportOverflow)
+  renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY, viewportOverflow)
 }
 
 const renderMinimap = (
@@ -809,6 +810,7 @@ const renderMinimap = (
   world: WorldState,
   renderCameraX: number,
   renderCameraY: number,
+  viewportOverflow: CanvasViewportOverflowPx,
 ) => {
   const mapSize = world.terrainMap.size
   if (mapSize <= 0) {
@@ -819,7 +821,6 @@ const renderMinimap = (
   const canvasHeight = context.canvas.height
   const maxSizeByViewport = Math.max(64, Math.min(canvasWidth, canvasHeight) - MINIMAP_PADDING_PX * 2)
   const sizePx = Math.min(MINIMAP_SIZE_PX, maxSizeByViewport)
-  const viewportOverflow = measureCanvasViewportOverflowPx(context)
 
   const left = Math.max(1, canvasWidth - MINIMAP_PADDING_PX - sizePx - viewportOverflow.right)
   const top = Math.max(1, canvasHeight - MINIMAP_PADDING_PX - sizePx - viewportOverflow.bottom)
@@ -1726,13 +1727,13 @@ const renderOffscreenEnemyIndicators = (
   world: WorldState,
   renderCameraX: number,
   renderCameraY: number,
+  viewportOverflow: CanvasViewportOverflowPx,
 ) => {
   if (!world.running || world.finished) {
     return
   }
 
   const margin = 24
-  const viewportOverflow = measureCanvasViewportOverflowPx(context)
   const visibleLeft = clamp(viewportOverflow.left, 0, VIEW_WIDTH - 1)
   const visibleTop = clamp(viewportOverflow.top, 0, VIEW_HEIGHT - 1)
   const visibleRight = clamp(VIEW_WIDTH - viewportOverflow.right, visibleLeft + 1, VIEW_WIDTH)
