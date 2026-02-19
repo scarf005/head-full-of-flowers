@@ -537,8 +537,6 @@
   transform: scale(1.14);
   transform-origin: center;
   object-fit: contain;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 @media (max-width: 760px) {

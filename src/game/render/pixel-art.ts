@@ -2,7 +2,9 @@ import type { PerkId, PrimaryWeaponId } from "../types.ts"
 import pistolSprite from "../../assets/items/pistol.png"
 import assaultSprite from "../../assets/items/assault.png"
 import shotgunSprite from "../../assets/items/shotgun.png"
+import autoShotgunSprite from "../../assets/items/auto-shotgun.png"
 import flamethrowerSprite from "../../assets/items/flamethrower.png"
+import rocketLauncherSprite from "../../assets/items/rocket-launcher.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
 import laserSightSprite from "../../assets/perks/laser-sight.png"
@@ -24,10 +26,10 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   assault: assaultSprite,
   shotgun: shotgunSprite,
   flamethrower: flamethrowerSprite,
-  "auto-shotgun": shotgunSprite,
+  "auto-shotgun": autoShotgunSprite,
   "battle-rifle": assaultSprite,
   "grenade-launcher": assaultSprite,
-  "rocket-launcher": flamethrowerSprite,
+  "rocket-launcher": rocketLauncherSprite,
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
   laser_sight: laserSightSprite,
@@ -66,6 +68,9 @@ export const getItemSpritePath = (id: ItemSpriteId | string) => {
 }
 
 const itemSpriteCache = new Map<ItemSpriteId, HTMLImageElement | null>()
+let itemSpritePreloadPromise: Promise<void> | null = null
+
+const itemSpriteIds = Object.keys(itemSpritePath) as ItemSpriteId[]
 
 const ensureItemSprite = (id: ItemSpriteId) => {
   const cached = itemSpriteCache.get(id)
@@ -90,6 +95,42 @@ const ensureItemSprite = (id: ItemSpriteId) => {
   return image
 }
 
+const waitForSpriteReady = (image: HTMLImageElement) => {
+  if (image.complete && image.naturalWidth > 0) {
+    return Promise.resolve()
+  }
+
+  return new Promise<void>((resolve) => {
+    const complete = () => {
+      image.removeEventListener("load", complete)
+      image.removeEventListener("error", complete)
+      resolve()
+    }
+
+    image.addEventListener("load", complete)
+    image.addEventListener("error", complete)
+  })
+}
+
+export const preloadItemSprites = () => {
+  if (itemSpritePreloadPromise) {
+    return itemSpritePreloadPromise
+  }
+
+  itemSpritePreloadPromise = Promise
+    .all(itemSpriteIds.map((id) => {
+      const sprite = ensureItemSprite(id)
+      if (!sprite) {
+        return Promise.resolve()
+      }
+
+      return waitForSpriteReady(sprite)
+    }))
+    .then(() => undefined)
+
+  return itemSpritePreloadPromise
+}
+
 const drawItemSpritePng = (
   context: CanvasRenderingContext2D,
   spriteId: ItemSpriteId,
@@ -105,131 +146,39 @@ const drawItemSpritePng = (
   const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
   const half = drawSize * 0.5
   const smoothBefore = context.imageSmoothingEnabled
-  context.imageSmoothingEnabled = false
+  context.imageSmoothingEnabled = true
   context.drawImage(image, x - half, y - half, drawSize, drawSize)
   context.imageSmoothingEnabled = smoothBefore
   return true
 }
 
+const drawItemSpriteFallback = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+) => {
+  const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
+  const half = drawSize * 0.5
+  context.fillStyle = "rgba(243, 245, 240, 0.9)"
+  context.beginPath()
+  context.roundRect(x - half, y - half, drawSize, drawSize, drawSize * 0.18)
+  context.fill()
+  context.strokeStyle = "rgba(187, 47, 47, 0.9)"
+  context.lineWidth = Math.max(0.02, drawSize * 0.18)
+  context.beginPath()
+  context.moveTo(x - half * 0.55, y)
+  context.lineTo(x + half * 0.55, y)
+  context.moveTo(x, y - half * 0.55)
+  context.lineTo(x, y + half * 0.55)
+  context.stroke()
+}
+
 const palette = {
-  k: "#1e1b22",
-  m: "#5f6772",
-  M: "#8e99a8",
-  y: "#d4aa3a",
-  G: "#6f8f4f",
-  c: "#7ac7b8",
-  C: "#b6f5e9",
-  N: "#b59652",
-  x: "#4a3a2a",
-  X: "#7a5a3e",
-  W: "#9b704a",
   r: "#8f3a2e",
+  C: "#b6f5e9",
+  y: "#d4aa3a",
 }
-
-const weaponSprites: Record<PrimaryWeaponId, SpriteRow[]> = {
-  pistol: [
-    "........",
-    "..kk....",
-    "..kMkk..",
-    "..kMMk..",
-    "...kMk..",
-    "...kmy..",
-    "....k...",
-    "........",
-  ],
-  assault: [
-    "........",
-    ".kkk....",
-    ".kMMkkkk",
-    ".kMMMMMk",
-    "..kMMkkk",
-    "...ky...",
-    "...k....",
-    "........",
-  ],
-  shotgun: [
-    "........",
-    ".kkkk...",
-    ".kMMMk..",
-    ".kMMMMkk",
-    "..kMMMk.",
-    "...kWy..",
-    "...k....",
-    "........",
-  ],
-  flamethrower: [
-    "........",
-    "..cc....",
-    ".ckCCk..",
-    ".ckMMkkk",
-    "..kMMMk.",
-    "...kry..",
-    "...k....",
-    "........",
-  ],
-  "auto-shotgun": [
-    "........",
-    ".kkkk...",
-    ".kMMMk..",
-    ".kMMMMkk",
-    "..kMMMk.",
-    "...kWy..",
-    "...k....",
-    "........",
-  ],
-  "battle-rifle": [
-    "........",
-    ".kkk....",
-    ".kMMkkkk",
-    ".kMMMMMk",
-    "..kMMkkk",
-    "...ky...",
-    "...k....",
-    "........",
-  ],
-  "grenade-launcher": [
-    "........",
-    "..kk....",
-    ".kMMkkkk",
-    ".kMMMNMk",
-    "..kMMkk.",
-    "...kWy..",
-    "...k....",
-    "........",
-  ],
-  "rocket-launcher": [
-    "........",
-    "..cc....",
-    ".ckCCkkk",
-    ".ckMMNMk",
-    "..kMMMk.",
-    "...kry..",
-    "...k....",
-    "........",
-  ],
-}
-
-const grenadeSprite: SpriteRow[] = [
-  "........",
-  "...kk...",
-  "..kGGk..",
-  "..kGGk..",
-  "..kGGk..",
-  "...kkk..",
-  "....k...",
-  "........",
-]
-
-const molotovSprite: SpriteRow[] = [
-  "...y....",
-  "..yyy...",
-  "...k....",
-  "..krrk..",
-  "..krMk..",
-  "..krrk..",
-  "...kk...",
-  "........",
-]
 
 const flameProjectileSprite: SpriteRow[] = [
   "........",
@@ -290,7 +239,7 @@ export const drawWeaponPickupSprite = (
     return
   }
 
-  draw(context, weaponSprites[weaponId], x, y, size)
+  drawItemSpriteFallback(context, x, y, size)
 }
 
 export const drawItemPickupSprite = (
@@ -304,15 +253,7 @@ export const drawItemPickupSprite = (
     return
   }
 
-  if (spriteId in weaponSprites) {
-    draw(context, weaponSprites[spriteId as PrimaryWeaponId], x, y, size)
-    return
-  }
-
-  context.fillStyle = "#f3f5f0"
-  context.fillRect(x - size * 2, y - size * 2, size * 4, size * 4)
-  context.fillStyle = "#bb2f2f"
-  context.fillRect(x - size, y - size, size * 2, size * 2)
+  drawItemSpriteFallback(context, x, y, size)
 }
 
 export const drawGrenadeSprite = (
@@ -325,7 +266,7 @@ export const drawGrenadeSprite = (
     return
   }
 
-  draw(context, grenadeSprite, x, y, size)
+  drawItemSpriteFallback(context, x, y, size)
 }
 
 export const drawMolotovSprite = (
@@ -338,7 +279,7 @@ export const drawMolotovSprite = (
     return
   }
 
-  draw(context, molotovSprite, x, y, size)
+  drawItemSpriteFallback(context, x, y, size)
 }
 
 export const drawFlameProjectileSprite = (

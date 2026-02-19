@@ -7,6 +7,8 @@ import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 const FLOWER_INSTANCE_STRIDE = 9
 const QUAD_INSTANCE_STRIDE = 9
 const TRAIL_INSTANCE_STRIDE = 10
+const MAX_GPU_EXPLOSIONS = 24
+const GPU_EXPLOSION_PARTICLES = 28
 const FLOWER_PETAL_URL = flowerPetalMaskUrl
 const FLOWER_CENTER_URL = flowerAccentMaskUrl
 
@@ -27,9 +29,13 @@ interface FlowerGpuState {
   trailVao: WebGLVertexArrayObject
   trailStaticBuffer: WebGLBuffer
   trailInstanceBuffer: WebGLBuffer
+  explosionProgram: WebGLProgram
+  explosionVao: WebGLVertexArrayObject
+  explosionStaticBuffer: WebGLBuffer
   instanceData: Float32Array
   quadInstanceData: Float32Array
   trailInstanceData: Float32Array
+  explosionUniformData: Float32Array
   capacity: number
   quadCapacity: number
   trailCapacity: number
@@ -42,6 +48,11 @@ interface FlowerGpuState {
   trailUniformCamera: WebGLUniformLocation
   trailUniformView: WebGLUniformLocation
   trailUniformScale: WebGLUniformLocation
+  explosionUniformCamera: WebGLUniformLocation
+  explosionUniformView: WebGLUniformLocation
+  explosionUniformScale: WebGLUniformLocation
+  explosionUniformCount: WebGLUniformLocation
+  explosionUniformExplosions: WebGLUniformLocation
 }
 
 let flowerGpuState: FlowerGpuState | null = null
@@ -414,6 +425,109 @@ void main() {
     return null
   }
 
+  const explosionVertexSource = `#version 300 es
+layout(location = 0) in vec2 aCorner;
+
+uniform vec2 uCamera;
+uniform vec2 uView;
+uniform float uScale;
+uniform int uExplosionCount;
+uniform vec4 uExplosions[${MAX_GPU_EXPLOSIONS}];
+
+out vec2 vUv;
+out float vAlpha;
+out float vHeat;
+
+float hash(float value) {
+  return fract(sin(value * 91.723 + 13.125) * 43758.5453123);
+}
+
+void main() {
+  int explosionIndex = gl_InstanceID / ${GPU_EXPLOSION_PARTICLES};
+  if (explosionIndex >= uExplosionCount) {
+    gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
+    vUv = vec2(0.0);
+    vAlpha = 0.0;
+    vHeat = 0.0;
+    return;
+  }
+
+  int particleIndex = gl_InstanceID - explosionIndex * ${GPU_EXPLOSION_PARTICLES};
+  vec4 explosion = uExplosions[explosionIndex];
+  vec2 center = explosion.xy;
+  float radius = explosion.z;
+  float lifeRatio = clamp(explosion.w, 0.0, 1.0);
+  float age = 1.0 - lifeRatio;
+
+  float idSeed = float(explosionIndex) * 61.0 + float(particleIndex);
+  float randAngle = hash(idSeed + 0.17);
+  float randSpeed = hash(idSeed + 0.49);
+  float randSize = hash(idSeed + 0.93);
+  float randLift = hash(idSeed + 1.31);
+
+  float angle = randAngle * 6.28318530718 + age * (2.6 + randSpeed * 1.8);
+  vec2 dir = vec2(cos(angle), sin(angle));
+  float burst = (0.28 + randSpeed * 1.24) * radius;
+  float drag = mix(1.0, 0.46, age);
+  float travel = burst * age * drag;
+  vec2 tangent = vec2(-dir.y, dir.x);
+  float swirl = (randLift - 0.5) * radius * (0.22 + age * 0.7);
+
+  vec2 particleCenter = center + dir * travel + tangent * swirl;
+  float innerBoost = step(float(particleIndex), 4.0);
+  particleCenter = mix(particleCenter, center + dir * radius * age * 0.4, innerBoost * 0.55);
+
+  float baseSize = radius * mix(0.04, 0.17, randSize);
+  float shrink = mix(1.28, 0.38, age);
+  float size = max(0.028, baseSize * shrink);
+
+  vec2 world = particleCenter + aCorner * size;
+  vec2 screen = (world - uCamera) * uScale + uView * 0.5;
+  vec2 clip = screen / uView * 2.0 - 1.0;
+  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+
+  float fadeOut = lifeRatio * lifeRatio;
+  float fadeIn = min(1.0, age * 7.2 + 0.28);
+  float density = mix(0.52, 1.0, randSize);
+  vAlpha = fadeIn * fadeOut * density;
+  vHeat = mix(0.0, 1.0, innerBoost * 0.68 + randLift * 0.52);
+  vUv = aCorner * 0.5 + 0.5;
+}
+`
+
+  const explosionFragmentSource = `#version 300 es
+precision mediump float;
+
+in vec2 vUv;
+in float vAlpha;
+in float vHeat;
+
+out vec4 outColor;
+
+void main() {
+  vec2 centered = vUv * 2.0 - 1.0;
+  float radius = dot(centered, centered);
+  float glow = 1.0 - smoothstep(0.12, 1.0, radius);
+  float ember = 1.0 - smoothstep(0.0, 0.82, radius);
+  float alpha = vAlpha * glow;
+  if (alpha <= 0.01) {
+    discard;
+  }
+
+  vec3 hot = vec3(1.0, 0.94, 0.7);
+  vec3 warm = vec3(1.0, 0.54, 0.18);
+  vec3 smoke = vec3(0.34, 0.3, 0.28);
+  vec3 fire = mix(warm, hot, vHeat);
+  vec3 color = mix(smoke, fire, ember);
+  outColor = vec4(color, alpha);
+}
+`
+
+  const explosionProgram = createProgram(gl, explosionVertexSource, explosionFragmentSource)
+  if (!explosionProgram) {
+    return null
+  }
+
   const vao = gl.createVertexArray()
   const quadBuffer = gl.createBuffer()
   const instanceBuffer = gl.createBuffer()
@@ -423,6 +537,8 @@ void main() {
   const trailVao = gl.createVertexArray()
   const trailStaticBuffer = gl.createBuffer()
   const trailInstanceBuffer = gl.createBuffer()
+  const explosionVao = gl.createVertexArray()
+  const explosionStaticBuffer = gl.createBuffer()
   const petalTexture = createTexture(gl)
   const centerTexture = createTexture(gl)
   if (
@@ -435,6 +551,8 @@ void main() {
     !trailVao ||
     !trailStaticBuffer ||
     !trailInstanceBuffer ||
+    !explosionVao ||
+    !explosionStaticBuffer ||
     !petalTexture ||
     !centerTexture
   ) {
@@ -450,6 +568,11 @@ void main() {
   const trailUniformCamera = gl.getUniformLocation(trailProgram, "uCamera")
   const trailUniformView = gl.getUniformLocation(trailProgram, "uView")
   const trailUniformScale = gl.getUniformLocation(trailProgram, "uScale")
+  const explosionUniformCamera = gl.getUniformLocation(explosionProgram, "uCamera")
+  const explosionUniformView = gl.getUniformLocation(explosionProgram, "uView")
+  const explosionUniformScale = gl.getUniformLocation(explosionProgram, "uScale")
+  const explosionUniformCount = gl.getUniformLocation(explosionProgram, "uExplosionCount")
+  const explosionUniformExplosions = gl.getUniformLocation(explosionProgram, "uExplosions")
   if (
     !uniformCamera ||
     !uniformView ||
@@ -459,7 +582,12 @@ void main() {
     !quadUniformScale ||
     !trailUniformCamera ||
     !trailUniformView ||
-    !trailUniformScale
+    !trailUniformScale ||
+    !explosionUniformCamera ||
+    !explosionUniformView ||
+    !explosionUniformScale ||
+    !explosionUniformCount ||
+    !explosionUniformExplosions
   ) {
     return null
   }
@@ -503,6 +631,28 @@ void main() {
   gl.enableVertexAttribArray(4)
   gl.vertexAttribPointer(4, 3, gl.FLOAT, false, stride, 6 * 4)
   gl.vertexAttribDivisor(4, 1)
+
+  gl.bindVertexArray(null)
+
+  gl.bindVertexArray(explosionVao)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, explosionStaticBuffer)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1,
+      -1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+    ]),
+    gl.STATIC_DRAW,
+  )
+  gl.enableVertexAttribArray(0)
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
 
   gl.bindVertexArray(null)
 
@@ -623,6 +773,10 @@ void main() {
   gl.uniform2f(trailUniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(trailUniformScale, WORLD_SCALE)
 
+  gl.useProgram(explosionProgram)
+  gl.uniform2f(explosionUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(explosionUniformScale, WORLD_SCALE)
+
   loadTextureFromUrl(gl, petalTexture, FLOWER_PETAL_URL)
   loadTextureFromUrl(gl, centerTexture, FLOWER_CENTER_URL)
 
@@ -641,11 +795,15 @@ void main() {
     trailVao,
     trailStaticBuffer,
     trailInstanceBuffer,
+    explosionProgram,
+    explosionVao,
+    explosionStaticBuffer,
     petalTexture,
     centerTexture,
     instanceData: new Float32Array(512 * FLOWER_INSTANCE_STRIDE),
     quadInstanceData: new Float32Array(256 * QUAD_INSTANCE_STRIDE),
     trailInstanceData: new Float32Array(512 * TRAIL_INSTANCE_STRIDE),
+    explosionUniformData: new Float32Array(MAX_GPU_EXPLOSIONS * 4),
     capacity: 512,
     quadCapacity: 256,
     trailCapacity: 512,
@@ -658,6 +816,11 @@ void main() {
     trailUniformCamera,
     trailUniformView,
     trailUniformScale,
+    explosionUniformCamera,
+    explosionUniformView,
+    explosionUniformScale,
+    explosionUniformCount,
+    explosionUniformExplosions,
   }
 
   return flowerGpuState
@@ -1004,6 +1167,92 @@ export const renderFlightTrailInstances = (
   gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.trailInstanceData, 0, instanceCount * TRAIL_INSTANCE_STRIDE)
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
+
+  if (drawToContext) {
+    context.save()
+    context.setTransform(1, 0, 0, 1, 0, 0)
+    context.drawImage(state.canvas, 0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+    context.restore()
+  }
+
+  return true
+}
+
+interface RenderExplosionInstancesArgs {
+  context: CanvasRenderingContext2D
+  world: WorldState
+  cameraX: number
+  cameraY: number
+  drawToContext?: boolean
+  clearCanvas?: boolean
+}
+
+export const renderExplosionInstances = (
+  { context, world, cameraX, cameraY, drawToContext = true, clearCanvas = true }: RenderExplosionInstancesArgs,
+) => {
+  const state = initFlowerGpuState()
+  if (!state) {
+    return false
+  }
+
+  const { gl } = state
+  if (state.canvas.width !== VIEW_WIDTH || state.canvas.height !== VIEW_HEIGHT) {
+    state.canvas.width = VIEW_WIDTH
+    state.canvas.height = VIEW_HEIGHT
+  }
+
+  const cullBounds = buildCullBounds(cameraX, cameraY, 2.2)
+  let explosionCount = 0
+
+  for (const explosion of world.explosions) {
+    if (!explosion.active || explosion.radius <= 0.01) {
+      continue
+    }
+    if (
+      explosion.position.x < cullBounds.minX - explosion.radius - 1 ||
+      explosion.position.x > cullBounds.maxX + explosion.radius + 1 ||
+      explosion.position.y < cullBounds.minY - explosion.radius - 1 ||
+      explosion.position.y > cullBounds.maxY + explosion.radius + 1
+    ) {
+      continue
+    }
+    if (explosionCount >= MAX_GPU_EXPLOSIONS) {
+      break
+    }
+
+    const writeIndex = explosionCount * 4
+    state.explosionUniformData[writeIndex] = explosion.position.x
+    state.explosionUniformData[writeIndex + 1] = explosion.position.y
+    state.explosionUniformData[writeIndex + 2] = explosion.radius
+    state.explosionUniformData[writeIndex + 3] = Math.max(0, Math.min(1, explosion.life / 0.24))
+    explosionCount += 1
+  }
+
+  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  if (clearCanvas) {
+    gl.clearColor(0, 0, 0, 0)
+    gl.clear(gl.COLOR_BUFFER_BIT)
+  }
+
+  if (explosionCount <= 0) {
+    return true
+  }
+
+  gl.useProgram(state.explosionProgram)
+  gl.uniform2f(state.explosionUniformCamera, cameraX, cameraY)
+  gl.uniform2f(state.explosionUniformView, VIEW_WIDTH, VIEW_HEIGHT)
+  gl.uniform1f(state.explosionUniformScale, WORLD_SCALE)
+  gl.uniform1i(state.explosionUniformCount, explosionCount)
+  gl.uniform4fv(state.explosionUniformExplosions, state.explosionUniformData)
+
+  gl.enable(gl.BLEND)
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+
+  gl.bindVertexArray(state.explosionVao)
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, explosionCount * GPU_EXPLOSION_PARTICLES)
+  gl.bindVertexArray(null)
+
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
   if (drawToContext) {
     context.save()
