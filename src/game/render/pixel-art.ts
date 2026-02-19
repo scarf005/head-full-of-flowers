@@ -23,6 +23,7 @@ export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
 
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
+const LOOT_SPRITE_SIZE = 0.15
 const itemSpritePath: Record<ItemSpriteId, string> = {
   pistol: pistolSprite,
   assault: assaultSprite,
@@ -139,6 +140,7 @@ const drawItemSpritePng = (
   x: number,
   y: number,
   size: number,
+  anchorX = 0.5,
 ) => {
   const image = ensureItemSprite(spriteId)
   if (!image || !image.complete || image.naturalWidth <= 0) {
@@ -149,11 +151,12 @@ const drawItemSpritePng = (
   const aspect = image.naturalWidth / image.naturalHeight
   const drawHeight = drawSize
   const drawWidth = drawHeight * aspect
-  const halfWidth = drawWidth * 0.5
+  const clampedAnchorX = Math.max(0, Math.min(1, anchorX))
+  const left = x - drawWidth * clampedAnchorX
   const halfHeight = drawHeight * 0.5
   const smoothBefore = context.imageSmoothingEnabled
   context.imageSmoothingEnabled = false
-  context.drawImage(image, x - halfWidth, y - halfHeight, drawWidth, drawHeight)
+  context.drawImage(image, left, y - halfHeight, drawWidth, drawHeight)
   context.imageSmoothingEnabled = smoothBefore
   return true
 }
@@ -163,20 +166,24 @@ const drawItemSpriteFallback = (
   x: number,
   y: number,
   size: number,
+  anchorX = 0.5,
 ) => {
   const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
+  const clampedAnchorX = Math.max(0, Math.min(1, anchorX))
+  const left = x - drawSize * clampedAnchorX
+  const centerX = left + drawSize * 0.5
   const half = drawSize * 0.5
   context.fillStyle = "rgba(243, 245, 240, 0.9)"
   context.beginPath()
-  context.roundRect(x - half, y - half, drawSize, drawSize, drawSize * 0.18)
+  context.roundRect(left, y - half, drawSize, drawSize, drawSize * 0.18)
   context.fill()
   context.strokeStyle = "rgba(187, 47, 47, 0.9)"
   context.lineWidth = Math.max(0.02, drawSize * 0.18)
   context.beginPath()
-  context.moveTo(x - half * 0.55, y)
-  context.lineTo(x + half * 0.55, y)
-  context.moveTo(x, y - half * 0.55)
-  context.lineTo(x, y + half * 0.55)
+  context.moveTo(centerX - half * 0.55, y)
+  context.lineTo(centerX + half * 0.55, y)
+  context.moveTo(centerX, y - half * 0.55)
+  context.lineTo(centerX, y + half * 0.55)
   context.stroke()
 }
 
@@ -240,12 +247,13 @@ export const drawWeaponPickupSprite = (
   x: number,
   y: number,
   size = 0.1,
+  anchorX = 0.5,
 ) => {
-  if (drawItemSpritePng(context, weaponId, x, y, size)) {
+  if (drawItemSpritePng(context, weaponId, x, y, size, anchorX)) {
     return
   }
 
-  drawItemSpriteFallback(context, x, y, size)
+  drawItemSpriteFallback(context, x, y, size, anchorX)
 }
 
 export const drawItemPickupSprite = (
@@ -253,7 +261,7 @@ export const drawItemPickupSprite = (
   spriteId: ItemSpriteId,
   x: number,
   y: number,
-  size = 0.1,
+  size = LOOT_SPRITE_SIZE,
 ) => {
   if (drawItemSpritePng(context, spriteId, x, y, size)) {
     return

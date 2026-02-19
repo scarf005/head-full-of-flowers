@@ -907,7 +907,7 @@ const renderPickups = (
     context.fill()
 
     const spriteId = pickup.kind === "perk" && pickup.perkId ? pickup.perkId : pickup.weapon
-    drawItemPickupSprite(context, spriteId, pickup.position.x, pickup.position.y + bobOffset, 0.1)
+    drawItemPickupSprite(context, spriteId, pickup.position.x, pickup.position.y + bobOffset)
   }
 }
 
@@ -1475,7 +1475,7 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
     )
     const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
     const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
-    const weaponScale = Math.max(0.1, unit.radius * 0.36)
+    const weaponScale = Math.max(0.1, unit.radius * 0.36) * 1.5
     const flipWeapon = unit.aim.x < 0
     context.save()
     if (flipWeapon) {
