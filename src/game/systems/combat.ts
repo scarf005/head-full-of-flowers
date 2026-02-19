@@ -458,6 +458,7 @@ const emitPrimaryShot = (
   const pelletsPerShot = Math.max(1, weapon.pellets)
   const baseAngle = resolveAssistedAimAngle(world, shooter, Math.atan2(shooter.aim.y, shooter.aim.x))
   const centeredBurstOffset = (shotIndex - (shotsTotal - 1) * 0.5) * burstSpread
+  const shotAngle = baseAngle + centeredBurstOffset
 
   shooter.recoil = Math.min(1, shooter.recoil + 0.38 + pelletsPerShot * 0.05)
   deps.onShellEjected?.(shooter)
@@ -468,7 +469,7 @@ const emitPrimaryShot = (
   for (let pellet = 0; pellet < pelletsPerShot; pellet += 1) {
     const projectile = deps.allocProjectile()
     const spread = randomRange(-weapon.spread, weapon.spread)
-    const angle = baseAngle + centeredBurstOffset + spread
+    const angle = shotAngle + spread
     const dirX = Math.cos(angle)
     const dirY = Math.sin(angle)
 

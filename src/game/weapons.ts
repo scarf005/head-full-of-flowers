@@ -16,6 +16,7 @@ export interface PrimaryWeaponConfig {
   burstShots?: number
   burstSpread?: number
   burstInterval?: number
+  firingKnockback: number
   pickupMagazineBundle: number
   magazineSize: number
   reload: number
@@ -34,6 +35,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.045,
     pellets: 1,
     bulletRadius: 0.24,
+    firingKnockback: 12,
     pickupMagazineBundle: Infinity,
     magazineSize: 8,
     reload: 0.75,
@@ -50,6 +52,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.085,
     pellets: 1,
     bulletRadius: 0.24,
+    firingKnockback: 14,
     pickupMagazineBundle: 2,
     magazineSize: 30,
     reload: 0.6,
@@ -66,6 +69,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.3,
     pellets: 8,
     bulletRadius: 0.26,
+    firingKnockback: 44,
     pickupMagazineBundle: 2,
     magazineSize: 6,
     reload: 0.8,
@@ -82,6 +86,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.33,
     pellets: 1,
     bulletRadius: 0.18,
+    firingKnockback: 8,
     pickupMagazineBundle: 2,
     magazineSize: 45,
     reload: 0.9,
@@ -98,6 +103,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     spread: 0.35,
     pellets: 8,
     bulletRadius: 0.25,
+    firingKnockback: 40,
     pickupMagazineBundle: 2,
     magazineSize: 6,
     reload: 0.78,
@@ -117,6 +123,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     burstShots: 3,
     burstSpread: 0.028,
     burstInterval: 0.06,
+    firingKnockback: 20,
     pickupMagazineBundle: 2,
     magazineSize: 20,
     reload: 1,
@@ -134,6 +141,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     pellets: 1,
     bulletRadius: 0.34,
     projectileKind: "grenade",
+    firingKnockback: 52,
     pickupMagazineBundle: 1,
     magazineSize: 6,
     reload: 1.5,
@@ -151,6 +159,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     pellets: 1,
     bulletRadius: 0.38,
     projectileKind: "rocket",
+    firingKnockback: 60,
     pickupMagazineBundle: 3,
     magazineSize: 1,
     reload: 2,

@@ -10,9 +10,11 @@ import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./c
 import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
 import { buildOffscreenIndicatorAnchor, isOffscreenIndicatorAnchorInView } from "./offscreen-indicator-visibility.ts"
 import { hasVisiblePickupsInCullBounds } from "./pickup-visibility.ts"
+import { computeHorizontalSkewX, computeWeaponKickbackDistance } from "./unit-motion-transform.ts"
 import { clamp, randomRange } from "../utils.ts"
 import { buildCullBounds, type CullBounds, isInsideCullBounds } from "../cull.ts"
 import { botPalette } from "../factions.ts"
+import { PRIMARY_WEAPONS } from "../weapons.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import grassBaseTextureUrl from "../../assets/tiles/grass-base-24.png"
 import grassDarkTextureUrl from "../../assets/tiles/grass-dark-24.png"
@@ -1397,9 +1399,14 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
     const palette = paletteForUnit(world, unit)
     const tone = palette.tone
     const edge = palette.edge
-    const earLeftX = drawX - body * 0.7
-    const earRightX = drawX + body * 0.7
-    const earY = drawY - body * 0.95
+    const horizontalSkew = computeHorizontalSkewX(unit.velocity.x, unit.speed)
+    const earLeftX = -body * 0.7
+    const earRightX = body * 0.7
+    const earY = -body * 0.95
+
+    context.save()
+    context.translate(drawX, drawY)
+    context.transform(1, 0, horizontalSkew, 1, 0, 0)
 
     context.fillStyle = edge
     context.fillRect(earLeftX - ear * 0.5, earY - ear, ear, ear * 1.2)
@@ -1409,16 +1416,20 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
     context.fillRect(earRightX - ear * 0.25, earY - ear * 0.55, ear * 0.5, ear * 0.55)
 
     context.fillStyle = edge
-    context.fillRect(drawX - body * 0.85, drawY - body, body * 1.7, body * 2)
+    context.fillRect(-body * 0.85, -body, body * 1.7, body * 2)
     context.fillStyle = tone
-    context.fillRect(drawX - body * 0.68, drawY - body * 0.82, body * 1.36, body * 1.64)
+    context.fillRect(-body * 0.68, -body * 0.82, body * 1.36, body * 1.64)
 
-    const gunLength = unit.radius * 1.25 + unit.recoil * 0.24
+    const weaponKickback = computeWeaponKickbackDistance(
+      unit.recoil,
+      PRIMARY_WEAPONS[unit.primaryWeapon].firingKnockback,
+      unit.radius,
+    )
+    const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
     const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
     const weaponScale = Math.max(0.09, unit.radius * 0.36)
     const flipWeapon = unit.aim.x < 0
     context.save()
-    context.translate(drawX, drawY)
     if (flipWeapon) {
       context.scale(1, -1)
     }
@@ -1430,10 +1441,12 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
       const flicker = 0.42 + Math.sin((1 - unit.hitFlash) * 42) * 0.38
       context.globalAlpha = clamp(unit.hitFlash * flicker, 0, 1)
       context.fillStyle = unit.isPlayer ? "#ff8a8a" : "#ff5454"
-      context.fillRect(drawX - body * 0.75, drawY - body * 0.85, body * 1.5, body * 1.7)
+      context.fillRect(-body * 0.75, -body * 0.85, body * 1.5, body * 1.7)
       context.fillRect(earLeftX - body * 0.18, earY - body * 0.25, body * 1.36, body * 0.32)
       context.globalAlpha = 1
     }
+
+    context.restore()
 
     const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
     context.fillStyle = "rgba(0, 0, 0, 0.4)"
