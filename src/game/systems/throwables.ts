@@ -8,6 +8,7 @@ import {
   worldToObstacleGrid,
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
+import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
 
 const MOLOTOV_THROW_SPEED = 15
 const GRENADE_BULLET_DAMAGE = 20
@@ -178,55 +179,17 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
       }
 
       if (isGrenade && throwable.ricochets < GRENADE_MAX_RICOCHETS) {
-        const xCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, previousY)
-        const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, throwable.position.y)
-        const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
-        const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
-        const moveX = throwable.position.x - previousX
-        const moveY = throwable.position.y - previousY
-        const moveLength = Math.hypot(moveX, moveY) || 1
-        const moveDirX = moveX / moveLength
-        const moveDirY = moveY / moveLength
-
-        throwable.position.x = previousX
-        throwable.position.y = previousY
-
-        let normalX = 0
-        let normalY = 0
-        if (blockedX && !blockedY) {
-          normalX = moveDirX > 0 ? -1 : 1
-        } else if (blockedY && !blockedX) {
-          normalY = moveDirY > 0 ? -1 : 1
-        } else {
-          normalX = -moveDirX
-          normalY = -moveDirY
-        }
-
-        const normalLength = Math.hypot(normalX, normalY) || 1
-        normalX /= normalLength
-        normalY /= normalLength
-
-        const velocityDotNormal = throwable.velocity.x * normalX + throwable.velocity.y * normalY
-        const normalVelocityX = velocityDotNormal * normalX
-        const normalVelocityY = velocityDotNormal * normalY
-        const tangentVelocityX = throwable.velocity.x - normalVelocityX
-        const tangentVelocityY = throwable.velocity.y - normalVelocityY
-
-        throwable.velocity.x = -normalVelocityX * GRENADE_RICOCHET_RESTITUTION +
-          tangentVelocityX * GRENADE_RICOCHET_TANGENT_FRICTION
-        throwable.velocity.y = -normalVelocityY * GRENADE_RICOCHET_RESTITUTION +
-          tangentVelocityY * GRENADE_RICOCHET_TANGENT_FRICTION
-
-        const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_RICOCHET_RANDOM_RADIANS
-        const jitterCos = Math.cos(ricochetJitter)
-        const jitterSin = Math.sin(ricochetJitter)
-        const jitteredVelocityX = throwable.velocity.x * jitterCos - throwable.velocity.y * jitterSin
-        const jitteredVelocityY = throwable.velocity.x * jitterSin + throwable.velocity.y * jitterCos
-        throwable.velocity.x = jitteredVelocityX
-        throwable.velocity.y = jitteredVelocityY
-
-        throwable.position.x += normalX * 0.02
-        throwable.position.y += normalY * 0.02
+        applyObstacleRicochet({
+          obstacleGrid: world.obstacleGrid,
+          previousX,
+          previousY,
+          position: throwable.position,
+          velocity: throwable.velocity,
+          restitution: GRENADE_RICOCHET_RESTITUTION,
+          tangentFriction: GRENADE_RICOCHET_TANGENT_FRICTION,
+          jitterRadians: GRENADE_RICOCHET_RANDOM_RADIANS,
+          separation: 0.02,
+        })
 
         if (Math.hypot(throwable.velocity.x, throwable.velocity.y) < GRENADE_RICOCHET_MIN_SPEED) {
           throwable.ricochets = GRENADE_MAX_RICOCHETS

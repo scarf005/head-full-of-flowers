@@ -1,7 +1,7 @@
 import { clamp, distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 import type { Team } from "../types.ts"
-import { isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
 
 const ROCKET_PROXIMITY_RADIUS = 1.2
 const ROCKET_HOMING_SEARCH_RADIUS = 18
@@ -195,51 +195,22 @@ const ricochetBallisticProjectile = (
   previousX: number,
   previousY: number,
 ) => {
-  const xCell = worldToObstacleGrid(world.obstacleGrid.size, projectile.position.x, previousY)
-  const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, projectile.position.y)
-  const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
-  const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
-  const moveX = projectile.position.x - previousX
-  const moveY = projectile.position.y - previousY
-  const moveLength = Math.hypot(moveX, moveY) || 1
-  const moveDirX = moveX / moveLength
-  const moveDirY = moveY / moveLength
-
-  projectile.position.x = previousX
-  projectile.position.y = previousY
-
-  let normalX = 0
-  let normalY = 0
-  if (blockedX && !blockedY) {
-    normalX = moveDirX > 0 ? -1 : 1
-  } else if (blockedY && !blockedX) {
-    normalY = moveDirY > 0 ? -1 : 1
-  } else {
-    normalX = -moveDirX
-    normalY = -moveDirY
-  }
-
-  const normalLength = Math.hypot(normalX, normalY) || 1
-  normalX /= normalLength
-  normalY /= normalLength
-
-  const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
-  const normalVelocityX = velocityDotNormal * normalX
-  const normalVelocityY = velocityDotNormal * normalY
-  const tangentVelocityX = projectile.velocity.x - normalVelocityX
-  const tangentVelocityY = projectile.velocity.y - normalVelocityY
-
-  projectile.velocity.x = -normalVelocityX * BALLISTIC_RICOCHET_RESTITUTION +
-    tangentVelocityX * BALLISTIC_RICOCHET_TANGENT_FRICTION
-  projectile.velocity.y = -normalVelocityY * BALLISTIC_RICOCHET_RESTITUTION +
-    tangentVelocityY * BALLISTIC_RICOCHET_TANGENT_FRICTION
+  applyObstacleRicochet({
+    obstacleGrid: world.obstacleGrid,
+    previousX,
+    previousY,
+    position: projectile.position,
+    velocity: projectile.velocity,
+    restitution: BALLISTIC_RICOCHET_RESTITUTION,
+    tangentFriction: BALLISTIC_RICOCHET_TANGENT_FRICTION,
+    jitterRadians: 0,
+    separation: 0.02,
+  })
 
   projectile.velocity.x *= 0.78
   projectile.velocity.y *= 0.78
   projectile.damage *= BALLISTIC_RICOCHET_DAMAGE_SCALE
   projectile.ballisticRicochetRemaining = Math.max(0, projectile.ballisticRicochetRemaining - 1)
-  projectile.position.x += normalX * 0.02
-  projectile.position.y += normalY * 0.02
 }
 
 const ricochetBallisticProjectileOnArenaBorder = (
@@ -521,55 +492,17 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       const grenadeHitObstacle = deps.hitObstacle(projectileIndex)
       if (grenadeHitObstacle) {
         if (projectile.ricochets < GRENADE_PROJECTILE_MAX_RICOCHETS) {
-          const xCell = worldToObstacleGrid(world.obstacleGrid.size, projectile.position.x, previousY)
-          const yCell = worldToObstacleGrid(world.obstacleGrid.size, previousX, projectile.position.y)
-          const blockedX = isObstacleCellSolid(world.obstacleGrid, xCell.x, xCell.y)
-          const blockedY = isObstacleCellSolid(world.obstacleGrid, yCell.x, yCell.y)
-          const moveX = projectile.position.x - previousX
-          const moveY = projectile.position.y - previousY
-          const moveLength = Math.hypot(moveX, moveY) || 1
-          const moveDirX = moveX / moveLength
-          const moveDirY = moveY / moveLength
-
-          projectile.position.x = previousX
-          projectile.position.y = previousY
-
-          let normalX = 0
-          let normalY = 0
-          if (blockedX && !blockedY) {
-            normalX = moveDirX > 0 ? -1 : 1
-          } else if (blockedY && !blockedX) {
-            normalY = moveDirY > 0 ? -1 : 1
-          } else {
-            normalX = -moveDirX
-            normalY = -moveDirY
-          }
-
-          const normalLength = Math.hypot(normalX, normalY) || 1
-          normalX /= normalLength
-          normalY /= normalLength
-
-          const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
-          const normalVelocityX = velocityDotNormal * normalX
-          const normalVelocityY = velocityDotNormal * normalY
-          const tangentVelocityX = projectile.velocity.x - normalVelocityX
-          const tangentVelocityY = projectile.velocity.y - normalVelocityY
-
-          projectile.velocity.x = -normalVelocityX * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
-            tangentVelocityX * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
-          projectile.velocity.y = -normalVelocityY * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
-            tangentVelocityY * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
-
-          const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS
-          const jitterCos = Math.cos(ricochetJitter)
-          const jitterSin = Math.sin(ricochetJitter)
-          const jitteredVelocityX = projectile.velocity.x * jitterCos - projectile.velocity.y * jitterSin
-          const jitteredVelocityY = projectile.velocity.x * jitterSin + projectile.velocity.y * jitterCos
-          projectile.velocity.x = jitteredVelocityX
-          projectile.velocity.y = jitteredVelocityY
-
-          projectile.position.x += normalX * 0.02
-          projectile.position.y += normalY * 0.02
+          applyObstacleRicochet({
+            obstacleGrid: world.obstacleGrid,
+            previousX,
+            previousY,
+            position: projectile.position,
+            velocity: projectile.velocity,
+            restitution: GRENADE_PROJECTILE_RICOCHET_RESTITUTION,
+            tangentFriction: GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION,
+            jitterRadians: GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS,
+            separation: 0.02,
+          })
           projectile.ricochets += 1
 
           const ricochetSpeedSquared = projectile.velocity.x * projectile.velocity.x +
