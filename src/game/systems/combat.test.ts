@@ -277,7 +277,7 @@ Deno.test("applyDamage resolves non-unit source fallback to nearest teammate for
   assertEquals(flowerOwnerId, attacker.id)
 })
 
-Deno.test("applyDamage attributes arena boundary flowers to the damaged unit", () => {
+Deno.test("applyDamage attributes arena boundary flowers to neutral burnt faction", () => {
   const world = createWorldState()
   const target = world.player
 
@@ -310,7 +310,7 @@ Deno.test("applyDamage attributes arena boundary flowers to the damaged unit", (
     "arena",
   )
 
-  assertEquals(flowerOwnerId, target.id)
+  assertEquals(flowerOwnerId, BURNED_FACTION_ID)
   assertEquals(burntFlag, false)
 })
 
@@ -505,6 +505,37 @@ Deno.test("firePrimary adds +1 projectile damage when heavy pellets perk is acti
   assertEquals(projectile.active, true)
   assertAlmostEquals(projectile.damage, PRIMARY_WEAPONS.assault.damage + 1, 0.000001)
   assertAlmostEquals(projectile.radius, PRIMARY_WEAPONS.assault.bulletRadius * 1.5, 0.000001)
+})
+
+Deno.test("firePrimary emits muzzle flash callback with weapon and angle", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+  equipPrimary(shooter.id, world, "assault", 1, () => {})
+
+  let muzzleFlashCount = 0
+  let muzzleWeapon = ""
+  let muzzleAngle = Number.NaN
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {},
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+    onMuzzleFlash: (_unit, shotAngle, weaponId) => {
+      muzzleFlashCount += 1
+      muzzleWeapon = weaponId
+      muzzleAngle = shotAngle
+    },
+  })
+
+  assertEquals(muzzleFlashCount, 1)
+  assertEquals(muzzleWeapon, "assault")
+  assertAlmostEquals(muzzleAngle, 0, 0.000001)
 })
 
 Deno.test("firePrimary uses rocket weapon config acceleration in runtime projectile updates", () => {

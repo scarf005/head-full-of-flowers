@@ -414,6 +414,7 @@ export interface FirePrimaryDeps {
   startReload: (unitId: string) => void
   onPlayerShoot: () => void
   onOtherShoot: () => void
+  onMuzzleFlash?: (shooter: Unit, shotAngle: number, weaponId: PrimaryWeaponId) => void
   onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
   onShellEjected?: (shooter: Unit) => void
@@ -494,6 +495,7 @@ const emitPrimaryShot = (
 
   shooter.recoil = Math.min(1, shooter.recoil + 0.38 + pelletsPerShot * 0.05)
   deps.onShellEjected?.(shooter)
+  deps.onMuzzleFlash?.(shooter, shotAngle, weapon.id)
   if (shooter.isPlayer) {
     deps.onPlayerBulletsFired?.(pelletsPerShot)
   }
@@ -822,11 +824,7 @@ export const applyDamage = (
     }
   }
 
-  const flowerSourceId = isSelfInflictedExplosive
-    ? BURNED_FACTION_ID
-    : isBoundarySource
-    ? target.id
-    : normalizedSourceId
+  const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
   const isBurntFlowers = isSelfInflictedExplosive
   const isKilled = target.hp <= 0
   const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
