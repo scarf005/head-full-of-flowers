@@ -6,7 +6,6 @@ import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import { rebuildUnitLookup, type WorldState } from "../world/state.ts"
-import { BURNED_FACTION_ID } from "../factions.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
@@ -784,8 +783,8 @@ export const applyDamage = (
     }
   }
 
-  const flowerSourceId = isSelfHarm || isBoundarySource ? BURNED_FACTION_ID : normalizedSourceId
-  const isBurntFlowers = isSelfHarm || isBoundarySource
+  const flowerSourceId = isBoundarySource ? target.id : normalizedSourceId
+  const isBurntFlowers = false
   const isKilled = target.hp <= 0
   const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
 

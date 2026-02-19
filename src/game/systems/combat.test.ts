@@ -2,7 +2,6 @@
 
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
-import { BURNED_FACTION_ID } from "../factions.ts"
 import { applyDamage } from "./combat.ts"
 import { createWorldState } from "../world/state.ts"
 
@@ -201,7 +200,7 @@ Deno.test("applyDamage resolves non-unit source fallback to nearest teammate for
   assertEquals(flowerOwnerId, attacker.id)
 })
 
-Deno.test("applyDamage uses burned attribution for arena boundary damage", () => {
+Deno.test("applyDamage attributes arena boundary flowers to the damaged unit", () => {
   const world = createWorldState()
   const target = world.player
 
@@ -234,8 +233,8 @@ Deno.test("applyDamage uses burned attribution for arena boundary damage", () =>
     "arena",
   )
 
-  assertEquals(flowerOwnerId, BURNED_FACTION_ID)
-  assertEquals(burntFlag, true)
+  assertEquals(flowerOwnerId, target.id)
+  assertEquals(burntFlag, false)
 })
 
 Deno.test("applyDamage skips dead-team fallback attribution for non-unit sources", () => {
