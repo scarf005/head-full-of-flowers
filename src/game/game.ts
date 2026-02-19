@@ -171,6 +171,7 @@ export class FlowerArenaGame {
   private lastMusicVolume = -1
   private lastEffectsVolume = -1
   private lastLocale = languageSignal.value
+  private beginMatchGenerationToken = 0
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -265,6 +266,7 @@ export class FlowerArenaGame {
   }
 
   destroy() {
+    this.beginMatchGenerationToken += 1
     cancelAnimationFrame(this.raf)
     this.inputAdapter?.destroy()
     this.audioDirector.stopAll()
@@ -583,11 +585,12 @@ export class FlowerArenaGame {
     this.audioDirector.startMenu()
   }
 
-  private beginMatch(difficulty: MatchDifficulty = "hard") {
+  private async beginMatch(difficulty: MatchDifficulty = "hard") {
+    const generationToken = ++this.beginMatchGenerationToken
     this.applyMatchMode()
     this.world.started = true
-    this.world.running = true
-    this.world.paused = false
+    this.world.running = false
+    this.world.paused = true
     this.world.finished = false
     this.world.aiDifficulty = difficulty
     menuStartDifficultySignal.value = null
@@ -604,6 +607,19 @@ export class FlowerArenaGame {
     this.world.playerFlowerTotal = 0
     resetRenderPathProfile(this.world)
     this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
+    menuVisibleSignal.value = true
+    pausedSignal.value = true
+    clearMatchResultSignal()
+    statusMessageSignal.value = t`Generating arena...`
+
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+
+    if (generationToken !== this.beginMatchGenerationToken || !this.world.started) {
+      return
+    }
+
     this.world.terrainMap = createBarrenGardenMap(112)
     this.world.flowerDensityGrid = new Uint16Array(this.world.terrainMap.size * this.world.terrainMap.size)
     this.world.flowerCellHead = new Int32Array(this.world.terrainMap.size * this.world.terrainMap.size)
@@ -740,6 +756,8 @@ export class FlowerArenaGame {
     this.world.cameraOffset.set(0, 0)
     this.world.cameraKick.set(0, 0)
     this.world.hitStop = 0
+    this.world.running = true
+    this.world.paused = false
 
     updateCoverageSignals(this.world)
     syncHudSignals(this.world)
@@ -859,6 +877,7 @@ export class FlowerArenaGame {
   }
 
   private returnToMenu() {
+    this.beginMatchGenerationToken += 1
     this.world.running = false
     this.world.paused = false
     this.world.finished = false
