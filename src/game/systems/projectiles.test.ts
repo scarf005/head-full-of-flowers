@@ -179,6 +179,72 @@ Deno.test("updateProjectiles keeps rocket acceleration increasing speed even in 
   assertEquals(projectile.active, true)
 })
 
+Deno.test("updateProjectiles steers rockets slightly toward nearby enemies in front", () => {
+  const world = createWorldState()
+  const player = world.player
+  const enemy = world.bots[0]
+
+  player.position.set(0, 0)
+  enemy.position.set(16, 4)
+  world.units = [player, enemy]
+  world.bots = [enemy]
+
+  const projectile = world.projectiles[0]
+  projectile.active = true
+  projectile.kind = "rocket"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(0, 0)
+  projectile.velocity.set(10, 0)
+  projectile.radius = 0.1
+  projectile.maxRange = 100
+  projectile.ttl = 2
+
+  updateProjectiles(world, 0.1, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  assertEquals(projectile.velocity.y > 0, true)
+  assertAlmostEquals(Math.hypot(projectile.velocity.x, projectile.velocity.y), 10, 0.000001)
+  assertEquals(projectile.active, true)
+})
+
+Deno.test("updateProjectiles does not home rockets toward enemies behind flight direction", () => {
+  const world = createWorldState()
+  const player = world.player
+  const enemy = world.bots[0]
+
+  player.position.set(0, 0)
+  enemy.position.set(-16, 0)
+  world.units = [player, enemy]
+  world.bots = [enemy]
+
+  const projectile = world.projectiles[0]
+  projectile.active = true
+  projectile.kind = "rocket"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(0, 0)
+  projectile.velocity.set(10, 0)
+  projectile.radius = 0.1
+  projectile.maxRange = 100
+  projectile.ttl = 2
+
+  updateProjectiles(world, 0.1, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  assertAlmostEquals(projectile.velocity.y, 0, 0.000001)
+  assertAlmostEquals(projectile.velocity.x, 10, 0.000001)
+  assertEquals(projectile.active, true)
+})
+
 Deno.test("updateProjectiles applies projectile proximity bonus additively for rocket fuse", () => {
   const runFuse = (proximityRadiusBonus: number) => {
     const world = createWorldState()

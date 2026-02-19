@@ -4,6 +4,10 @@ import type { Team } from "../types.ts"
 import { isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
 
 const ROCKET_PROXIMITY_RADIUS = 1.2
+const ROCKET_HOMING_SEARCH_RADIUS = 18
+const ROCKET_HOMING_MIN_ALIGNMENT = 0.2
+const ROCKET_HOMING_TURN_RATE = 2.8
+const ROCKET_HOMING_MAX_BLEND_PER_TICK = 0.14
 const GRENADE_PROXIMITY_RADIUS = 1.25
 const GRENADE_PROJECTILE_MAX_RICOCHETS = 2
 const GRENADE_PROJECTILE_RICOCHET_RESTITUTION = 0.58
@@ -100,6 +104,89 @@ const distToSegmentSquared = (
   const nearestX = startX + segmentX * t
   const nearestY = startY + segmentY * t
   return distSquared(pointX, pointY, nearestX, nearestY)
+}
+
+const steerRocketTowardNearbyEnemy = (
+  world: WorldState,
+  broadphase: ProjectileBroadphase,
+  projectile: WorldState["projectiles"][number],
+  dt: number,
+) => {
+  const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+  if (speed <= 0.00001) {
+    return
+  }
+
+  const currentDirX = projectile.velocity.x / speed
+  const currentDirY = projectile.velocity.y / speed
+  let targetDirX = 0
+  let targetDirY = 0
+  let bestScore = Number.NEGATIVE_INFINITY
+  const searchRadius = ROCKET_HOMING_SEARCH_RADIUS + broadphase.maxUnitRadius
+
+  forEachNearbyProjectileUnit(
+    world,
+    broadphase,
+    projectile.position.x - searchRadius,
+    projectile.position.y - searchRadius,
+    projectile.position.x + searchRadius,
+    projectile.position.y + searchRadius,
+    (unit) => {
+      if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+        return false
+      }
+
+      const toEnemyX = unit.position.x - projectile.position.x
+      const toEnemyY = unit.position.y - projectile.position.y
+      const distanceSquared = toEnemyX * toEnemyX + toEnemyY * toEnemyY
+      if (distanceSquared <= 0.00001) {
+        return false
+      }
+
+      const homingRadius = ROCKET_HOMING_SEARCH_RADIUS + unit.radius
+      if (distanceSquared > homingRadius * homingRadius) {
+        return false
+      }
+
+      const distance = Math.sqrt(distanceSquared)
+      const desiredDirX = toEnemyX / distance
+      const desiredDirY = toEnemyY / distance
+      const alignment = currentDirX * desiredDirX + currentDirY * desiredDirY
+      if (alignment < ROCKET_HOMING_MIN_ALIGNMENT) {
+        return false
+      }
+
+      const distanceScore = 1 - clamp(distance / homingRadius, 0, 1)
+      const score = alignment * 0.75 + distanceScore * 0.25
+      if (score <= bestScore) {
+        return false
+      }
+
+      bestScore = score
+      targetDirX = desiredDirX
+      targetDirY = desiredDirY
+      return false
+    },
+  )
+
+  if (!Number.isFinite(bestScore)) {
+    return
+  }
+
+  const blend = clamp(dt * ROCKET_HOMING_TURN_RATE, 0, ROCKET_HOMING_MAX_BLEND_PER_TICK)
+  if (blend <= 0) {
+    return
+  }
+
+  const steeredDirX = currentDirX * (1 - blend) + targetDirX * blend
+  const steeredDirY = currentDirY * (1 - blend) + targetDirY * blend
+  const steeredLength = Math.hypot(steeredDirX, steeredDirY)
+  if (steeredLength <= 0.00001) {
+    return
+  }
+
+  projectile.velocity.x = (steeredDirX / steeredLength) * speed
+  projectile.velocity.y = (steeredDirY / steeredLength) * speed
 }
 
 const ricochetBallisticProjectile = (
@@ -225,6 +312,10 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         projectile.velocity.x *= speedScale
         projectile.velocity.y *= speedScale
       }
+    }
+
+    if (projectile.kind === "rocket") {
+      steerRocketTowardNearbyEnemy(world, broadphase, projectile, dt)
     }
 
     const previousX = projectile.position.x
