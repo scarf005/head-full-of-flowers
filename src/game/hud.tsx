@@ -94,6 +94,7 @@ export const GameHud = () => {
     ? duoTeams
     : squadTeams
   const showMenu = menuVisibleSignal.value
+  const isPaused = pausedSignal.value
   const impactFeelLevel = debugImpactFeelLevelSignal.value
   const impactFeelLabel = impactFeelLevel >= 1.75 ? t`Heavy` : impactFeelLevel <= 1.25 ? t`Medium` : t`Hybrid`
   const secondaryMode = secondaryModeSignal.value
@@ -123,7 +124,7 @@ export const GameHud = () => {
         ? (
           <div class="hud hud-top">
             <div class="hud-pill">{t`Time ${formatTime(timeRemainingSignal.value)}`}</div>
-            {pausedSignal.value ? <div class="hud-pill hud-pill-warn">{t`Paused`}</div> : null}
+            {isPaused ? <div class="hud-pill hud-pill-warn">{t`Paused`}</div> : null}
             <div class="score-panel" aria-label={t`Coverage score`}>
               <div class="score-track score-track-ffa">
                 {slices.map((slice) => (
@@ -560,7 +561,7 @@ export const GameHud = () => {
         )
         : null}
 
-      {!showMenu
+      {!showMenu && !isPaused
         ? (
           <div
             class={`crosshair ${crosshairSignal.value.visible ? "visible" : ""}`}
