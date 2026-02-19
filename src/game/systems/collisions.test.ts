@@ -1,0 +1,80 @@
+import { assertEquals } from "jsr:@std/assert"
+
+import { Projectile } from "../entities.ts"
+import { hitObstacle } from "./collisions.ts"
+import {
+  buildObstacleGridFromMap,
+  OBSTACLE_FLASH_BLOCKED,
+  OBSTACLE_FLASH_DAMAGED,
+  obstacleGridIndex,
+  worldToObstacleGrid,
+} from "../world/obstacle-grid.ts"
+import type { TerrainMap, TerrainTile } from "../world/terrain-map.ts"
+import { createWorldState } from "../world/state.ts"
+
+const createTiles = (size: number) =>
+  Array.from({ length: size }, () => Array.from({ length: size }, () => "grass" as TerrainTile))
+
+const createSingleWallMap = (): TerrainMap => ({
+  size: 8,
+  tiles: createTiles(8),
+  obstacles: [{ kind: "wall", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [] }],
+  pickupSpawnPoints: [],
+})
+
+const createProjectileAtWall = (damage: number) => {
+  const projectile = new Projectile()
+  projectile.active = true
+  projectile.position.set(0.5, 0.5)
+  projectile.velocity.set(12, 0)
+  projectile.damage = damage
+  return projectile
+}
+
+Deno.test("hitObstacle uses blocked flash and does not emit damage callback on fully blocked hit", () => {
+  const world = createWorldState()
+  world.obstacleGrid = buildObstacleGridFromMap(createSingleWallMap())
+  const projectile = createProjectileAtWall(2)
+
+  let hitSfxCalls = 0
+  let damageCallbackCalls = 0
+
+  const hit = hitObstacle(world, projectile, {
+    onSfxHit: () => {
+      hitSfxCalls += 1
+    },
+    onObstacleDamaged: () => {
+      damageCallbackCalls += 1
+    },
+  })
+
+  const cell = worldToObstacleGrid(world.obstacleGrid.size, 0.5, 0.5)
+  const index = obstacleGridIndex(world.obstacleGrid.size, cell.x, cell.y)
+  assertEquals(hit, true)
+  assertEquals(hitSfxCalls, 1)
+  assertEquals(damageCallbackCalls, 0)
+  assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_BLOCKED)
+})
+
+Deno.test("hitObstacle emits damage callback and damaged flash for effective damage", () => {
+  const world = createWorldState()
+  world.obstacleGrid = buildObstacleGridFromMap(createSingleWallMap())
+  const projectile = createProjectileAtWall(4)
+
+  let damageCallbackCalls = 0
+  let damageValue = 0
+
+  const hit = hitObstacle(world, projectile, {
+    onObstacleDamaged: (_x, _y, _material, damage) => {
+      damageCallbackCalls += 1
+      damageValue = damage
+    },
+  })
+
+  const cell = worldToObstacleGrid(world.obstacleGrid.size, 0.5, 0.5)
+  const index = obstacleGridIndex(world.obstacleGrid.size, cell.x, cell.y)
+  assertEquals(hit, true)
+  assertEquals(damageCallbackCalls, 1)
+  assertEquals(damageValue, 2)
+  assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_DAMAGED)
+})

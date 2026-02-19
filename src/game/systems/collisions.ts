@@ -169,6 +169,7 @@ export interface ObstacleDamageDeps {
   onSfxBreak?: () => void
   onBoxDestroyed?: (x: number, y: number, highTier: boolean) => void
   onObstacleDestroyed?: (x: number, y: number, material: number) => void
+  onObstacleDamaged?: (x: number, y: number, material: number, damage: number) => void
 }
 
 const sampleObstacleRay = (
@@ -210,6 +211,11 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
   const result = damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, Math.max(1, projectile.damage))
   if (!result.damaged) {
     return false
+  }
+
+  if (result.damageDealt > 0) {
+    const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
+    deps.onObstacleDamaged?.(center.x, center.y, result.material, result.damageDealt)
   }
 
   deps.onSfxHit?.()
@@ -258,6 +264,9 @@ export const damageObstaclesByExplosion = (
       const result = damageObstacleCell(grid, gx, gy, 2.5)
       if (result.damaged) {
         tookDamage = true
+        if (result.damageDealt > 0) {
+          deps.onObstacleDamaged?.(center.x, center.y, result.material, result.damageDealt)
+        }
         if (result.destroyed) {
           destroyedAny = true
           if (result.destroyedMaterial !== OBSTACLE_MATERIAL_NONE) {

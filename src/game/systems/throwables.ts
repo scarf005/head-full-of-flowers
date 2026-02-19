@@ -1,7 +1,12 @@
 import { clamp, distSquared, limitToArena, randomRange } from "../utils.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
 import type { Team } from "../types.ts"
-import { damageObstacleCell, isObstacleCellSolid, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+import {
+  damageObstacleCell,
+  isObstacleCellSolid,
+  obstacleGridToWorldCenter,
+  worldToObstacleGrid,
+} from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 
 const MOLOTOV_THROW_SPEED = 15
@@ -120,6 +125,7 @@ export interface ThrowableUpdateDeps {
     mode: "grenade" | "molotov",
   ) => void
   onExplosion: () => void
+  onObstacleDamaged?: (x: number, y: number, material: number, damage: number) => void
   applyDamage: (
     targetId: string,
     amount: number,
@@ -165,7 +171,11 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     const hitCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, throwable.position.y)
     if (isObstacleCellSolid(world.obstacleGrid, hitCell.x, hitCell.y)) {
       const damage = throwable.mode === "grenade" ? 3 : 1.5
-      damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, damage)
+      const result = damageObstacleCell(world.obstacleGrid, hitCell.x, hitCell.y, damage)
+      if (result.damageDealt > 0) {
+        const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
+        deps.onObstacleDamaged?.(center.x, center.y, result.material, result.damageDealt)
+      }
 
       if (isGrenade && throwable.ricochets < GRENADE_MAX_RICOCHETS) {
         const xCell = worldToObstacleGrid(world.obstacleGrid.size, throwable.position.x, previousY)

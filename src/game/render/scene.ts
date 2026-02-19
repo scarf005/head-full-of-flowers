@@ -5,7 +5,12 @@ import {
   drawMolotovSprite,
   drawWeaponPickupSprite,
 } from "./pixel-art.ts"
-import { renderFlightTrailInstances, renderFlowerInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
+import {
+  renderExplosionInstances,
+  renderFlightTrailInstances,
+  renderFlowerInstances,
+  renderObstacleFxInstances,
+} from "./flower-instanced.ts"
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { buildObstacleGridCullRange } from "./obstacle-cull.ts"
 import { buildOffscreenIndicatorAnchor, isOffscreenIndicatorAnchorInView } from "./offscreen-indicator-visibility.ts"
@@ -22,6 +27,8 @@ import grassTransitionsTextureUrl from "../../assets/tiles/grass-transitions-24.
 import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 import {
+  OBSTACLE_FLASH_BLOCKED,
+  OBSTACLE_FLASH_DAMAGED,
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_HEDGE,
   OBSTACLE_MATERIAL_ROCK,
@@ -737,7 +744,15 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderProjectiles(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
   renderAimLasers(context, world, fogCullBounds)
   renderUnits(context, world, fogCullBounds)
-  renderExplosions(context, world, fogCullBounds)
+  const renderedExplosionsWithWebGl = renderExplosionInstances({
+    context,
+    world,
+    cameraX: renderCameraX,
+    cameraY: renderCameraY,
+  })
+  if (!renderedExplosionsWithWebGl) {
+    renderExplosions(context, world, fogCullBounds)
+  }
   renderDamagePopups(context, world, fogCullBounds)
 
   context.restore()
@@ -1076,9 +1091,19 @@ const renderObstacles = (context: CanvasRenderingContext2D, world: WorldState) =
 
       const flash = grid.flash[index]
       if (flash > 0.01) {
-        const flicker = 0.42 + Math.sin((1 - flash) * 42) * 0.38
-        context.fillStyle = `rgba(255, 96, 96, ${clamp(flash * flicker, 0, 1) * 0.55})`
-        context.fillRect(tileX + 0.04, tileY + 0.04, 0.92, 0.92)
+        const flashKind = grid.flashKind[index]
+        if (flashKind === OBSTACLE_FLASH_BLOCKED) {
+          const flicker = 0.4 + Math.sin((1 - flash) * 40) * 0.3
+          context.fillStyle = `rgba(255, 255, 255, ${clamp(flash * flicker, 0, 1) * 0.72})`
+          context.fillRect(tileX + 0.04, tileY + 0.04, 0.92, 0.92)
+        } else if (flashKind === OBSTACLE_FLASH_DAMAGED) {
+          const flicker = 0.6 + Math.sin((1 - flash) * 44) * 0.4
+          const intensity = clamp(flash * flicker, 0, 1)
+          context.fillStyle = `rgba(255, 112, 38, ${intensity * 0.95})`
+          context.fillRect(tileX + 0.03, tileY + 0.03, 0.94, 0.94)
+          context.fillStyle = `rgba(255, 214, 138, ${intensity * 0.5})`
+          context.fillRect(tileX + 0.12, tileY + 0.12, 0.76, 0.76)
+        }
       }
     }
   }
@@ -1195,7 +1220,9 @@ const renderProjectiles = (
 
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     const angle = Math.atan2(projectile.velocity.y, projectile.velocity.x)
-    const stretch = clamp(speed / 25, 1.1, projectile.kind === "flame" ? 2.2 : 2.9)
+    const stretch = projectile.kind === "rocket"
+      ? clamp(speed / 25, 0.2, 2.9)
+      : clamp(speed / 25, 1.1, projectile.kind === "flame" ? 2.2 : 2.9)
     const length = projectile.radius * 2.6 * stretch
     const width = projectile.radius * 1.4
     const glow = projectile.radius * (2.2 + projectile.glow)
@@ -1230,24 +1257,45 @@ const renderProjectiles = (
       context.translate(projectile.position.x, projectile.position.y)
       context.rotate(angle)
 
-      const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
-      for (let index = 0; index < 6; index += 1) {
-        const t = index / 5
-        const alpha = projectile.kind === "flame" ? (1 - t) * 0.2 : (1 - t) * 0.22
-        context.fillStyle = projectile.kind === "flame"
-          ? `rgba(255, 177, 122, ${alpha})`
-          : `rgba(255, 230, 170, ${alpha})`
-        context.beginPath()
-        context.ellipse(
-          -trailLength * (0.3 + t * 0.58),
-          0,
-          width * (0.9 - t * 0.36),
-          width * (0.56 - t * 0.24),
-          0,
-          0,
-          Math.PI * 2,
-        )
-        context.fill()
+      if (projectile.kind === "rocket") {
+        const trailLength = length * 1.45
+        for (let index = 0; index < 7; index += 1) {
+          const t = index / 6
+          const alpha = (1 - t) * 0.28
+          const spread = (index - 3) * width * (0.12 + t * 0.12)
+          context.fillStyle = `rgba(86, 94, 104, ${alpha})`
+          context.beginPath()
+          context.ellipse(
+            -trailLength * (0.24 + t * 0.62),
+            spread,
+            width * (0.42 + t * 0.28),
+            width * (0.42 + t * 0.28),
+            0,
+            0,
+            Math.PI * 2,
+          )
+          context.fill()
+        }
+      } else {
+        const trailLength = projectile.kind === "flame" ? length * 1.1 : length * 1.65
+        for (let index = 0; index < 6; index += 1) {
+          const t = index / 5
+          const alpha = projectile.kind === "flame" ? (1 - t) * 0.2 : (1 - t) * 0.22
+          context.fillStyle = projectile.kind === "flame"
+            ? `rgba(255, 177, 122, ${alpha})`
+            : `rgba(255, 230, 170, ${alpha})`
+          context.beginPath()
+          context.ellipse(
+            -trailLength * (0.3 + t * 0.58),
+            0,
+            width * (0.9 - t * 0.36),
+            width * (0.56 - t * 0.24),
+            0,
+            0,
+            Math.PI * 2,
+          )
+          context.fill()
+        }
       }
 
       context.restore()
@@ -1427,7 +1475,7 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
     )
     const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
     const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
-    const weaponScale = Math.max(0.09, unit.radius * 0.36)
+    const weaponScale = Math.max(0.1, unit.radius * 0.36)
     const flipWeapon = unit.aim.x < 0
     context.save()
     if (flipWeapon) {

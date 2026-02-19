@@ -7,6 +7,10 @@ export const OBSTACLE_MATERIAL_ROCK = 3
 export const OBSTACLE_MATERIAL_BOX = 4
 export const OBSTACLE_MATERIAL_HEDGE = 5
 
+export const OBSTACLE_FLASH_NONE = 0
+export const OBSTACLE_FLASH_BLOCKED = 1
+export const OBSTACLE_FLASH_DAMAGED = 2
+
 export interface ObstacleGridState {
   size: number
   solid: Uint8Array
@@ -14,6 +18,7 @@ export interface ObstacleGridState {
   material: Uint8Array
   highTierLoot: Uint8Array
   flash: Float32Array
+  flashKind: Uint8Array
 }
 
 const hpForMaterial = (material: number) => {
@@ -38,6 +43,9 @@ const hpForMaterial = (material: number) => {
 
 const armorForMaterial = (material: number) => {
   if (material === OBSTACLE_MATERIAL_WALL) {
+    return 2
+  }
+  if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
     return 2
   }
   if (material === OBSTACLE_MATERIAL_HEDGE) {
@@ -77,6 +85,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     material: new Uint8Array(cellCount),
     highTierLoot: new Uint8Array(cellCount),
     flash: new Float32Array(cellCount),
+    flashKind: new Uint8Array(cellCount),
   }
 }
 
@@ -121,6 +130,7 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
     grid.hp[index] = hpForMaterial(material)
     grid.highTierLoot[index] = highTierLoot ? 1 : 0
     grid.flash[index] = 0
+    grid.flashKind[index] = OBSTACLE_FLASH_NONE
   }
 
   for (const obstacle of map.obstacles) {
@@ -159,7 +169,13 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
 
 export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number, amount: number) => {
   if (!isObstacleCellSolid(grid, x, y)) {
-    return { damaged: false, destroyed: false, destroyedMaterial: OBSTACLE_MATERIAL_NONE }
+    return {
+      damaged: false,
+      destroyed: false,
+      damageDealt: 0,
+      material: OBSTACLE_MATERIAL_NONE,
+      destroyedMaterial: OBSTACLE_MATERIAL_NONE,
+    }
   }
 
   const index = obstacleGridIndex(grid.size, x, y)
@@ -167,19 +183,25 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
   const armor = armorForMaterial(material)
   const highTierLoot = grid.highTierLoot[index] > 0
   const hpBefore = grid.hp[index]
-  const damageDealt = Math.max(1, amount - armor)
-  grid.hp[index] = Math.max(0, grid.hp[index] - damageDealt)
+  const damageDealt = Math.max(0, amount - armor)
+  if (damageDealt > 0) {
+    grid.hp[index] = Math.max(0, grid.hp[index] - damageDealt)
+  }
   grid.flash[index] = 1
+  grid.flashKind[index] = damageDealt > 0 ? OBSTACLE_FLASH_DAMAGED : OBSTACLE_FLASH_BLOCKED
   const destroyed = hpBefore > 0 && grid.hp[index] <= 0
   if (destroyed) {
     grid.hp[index] = 0
     grid.solid[index] = 0
     grid.material[index] = OBSTACLE_MATERIAL_NONE
     grid.highTierLoot[index] = 0
+    grid.flashKind[index] = OBSTACLE_FLASH_NONE
   }
   return {
     damaged: true,
     destroyed,
+    damageDealt,
+    material,
     destroyedMaterial: destroyed ? material : OBSTACLE_MATERIAL_NONE,
     destroyedHighTierLoot: destroyed && highTierLoot,
   }
@@ -190,5 +212,8 @@ export const decayObstacleFlash = (grid: ObstacleGridState, dt: number) => {
   for (let index = 0; index < grid.flash.length; index += 1) {
     const next = grid.flash[index] - decay
     grid.flash[index] = next > 0 ? next : 0
+    if (grid.flash[index] <= 0) {
+      grid.flashKind[index] = OBSTACLE_FLASH_NONE
+    }
   }
 }
