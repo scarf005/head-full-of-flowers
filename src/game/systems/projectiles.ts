@@ -242,6 +242,43 @@ const ricochetBallisticProjectile = (
   projectile.position.y += normalY * 0.02
 }
 
+const ricochetBallisticProjectileOnArenaBorder = (
+  world: WorldState,
+  projectile: WorldState["projectiles"][number],
+) => {
+  const distance = projectile.position.length()
+  if (distance <= 0.00001) {
+    return
+  }
+
+  const maxDistance = Math.max(0, world.arenaRadius - projectile.radius)
+  let normalX = projectile.position.x / distance
+  let normalY = projectile.position.y / distance
+  projectile.position.x = normalX * maxDistance
+  projectile.position.y = normalY * maxDistance
+
+  const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
+  const normalVelocityX = velocityDotNormal * normalX
+  const normalVelocityY = velocityDotNormal * normalY
+  const tangentVelocityX = projectile.velocity.x - normalVelocityX
+  const tangentVelocityY = projectile.velocity.y - normalVelocityY
+
+  projectile.velocity.x = -normalVelocityX * BALLISTIC_RICOCHET_RESTITUTION +
+    tangentVelocityX * BALLISTIC_RICOCHET_TANGENT_FRICTION
+  projectile.velocity.y = -normalVelocityY * BALLISTIC_RICOCHET_RESTITUTION +
+    tangentVelocityY * BALLISTIC_RICOCHET_TANGENT_FRICTION
+
+  projectile.velocity.x *= 0.78
+  projectile.velocity.y *= 0.78
+  projectile.damage *= BALLISTIC_RICOCHET_DAMAGE_SCALE
+  projectile.ballisticRicochetRemaining = Math.max(0, projectile.ballisticRicochetRemaining - 1)
+
+  normalX = -normalX
+  normalY = -normalY
+  projectile.position.x += normalX * 0.02
+  projectile.position.y += normalY * 0.02
+}
+
 export interface ProjectileDeps {
   hitObstacle: (projectileIndex: number) => boolean
   spawnFlamePatch: (x: number, y: number, ownerId: string, ownerTeam: Team) => void
@@ -356,8 +393,64 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       continue
     }
 
-    if (projectile.position.length() > world.arenaRadius + 4) {
-      deactivateProjectile(projectileIndex, false)
+    const arenaDistance = projectile.position.length()
+    const arenaMaxDistance = Math.max(0, world.arenaRadius - projectile.radius)
+    if (arenaDistance > arenaMaxDistance) {
+      if (projectile.kind === "grenade" && projectile.ricochets < GRENADE_PROJECTILE_MAX_RICOCHETS) {
+        const normalX = arenaDistance > 0.00001 ? projectile.position.x / arenaDistance : 1
+        const normalY = arenaDistance > 0.00001 ? projectile.position.y / arenaDistance : 0
+        projectile.position.x = normalX * arenaMaxDistance
+        projectile.position.y = normalY * arenaMaxDistance
+
+        const velocityDotNormal = projectile.velocity.x * normalX + projectile.velocity.y * normalY
+        const normalVelocityX = velocityDotNormal * normalX
+        const normalVelocityY = velocityDotNormal * normalY
+        const tangentVelocityX = projectile.velocity.x - normalVelocityX
+        const tangentVelocityY = projectile.velocity.y - normalVelocityY
+
+        projectile.velocity.x = -normalVelocityX * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
+          tangentVelocityX * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
+        projectile.velocity.y = -normalVelocityY * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
+          tangentVelocityY * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
+
+        const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS
+        const jitterCos = Math.cos(ricochetJitter)
+        const jitterSin = Math.sin(ricochetJitter)
+        const jitteredVelocityX = projectile.velocity.x * jitterCos - projectile.velocity.y * jitterSin
+        const jitteredVelocityY = projectile.velocity.x * jitterSin + projectile.velocity.y * jitterCos
+        projectile.velocity.x = jitteredVelocityX
+        projectile.velocity.y = jitteredVelocityY
+
+        projectile.position.x -= normalX * 0.02
+        projectile.position.y -= normalY * 0.02
+        projectile.ricochets += 1
+
+        const ricochetSpeedSquared = projectile.velocity.x * projectile.velocity.x +
+          projectile.velocity.y * projectile.velocity.y
+        if (ricochetSpeedSquared < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED * GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
+          deactivateProjectile(projectileIndex, true, true)
+        }
+        continue
+      }
+
+      if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
+        ricochetBallisticProjectileOnArenaBorder(world, projectile)
+        const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x +
+          projectile.velocity.y * projectile.velocity.y
+        if (
+          ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8
+        ) {
+          deactivateProjectile(projectileIndex, true)
+        }
+        continue
+      }
+
+      if (arenaDistance > world.arenaRadius + 4) {
+        deactivateProjectile(projectileIndex, false)
+        continue
+      }
+
+      deactivateProjectile(projectileIndex, false, isExplosive)
       continue
     }
 

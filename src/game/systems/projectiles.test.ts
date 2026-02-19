@@ -401,6 +401,82 @@ Deno.test("updateProjectiles deactivates slow grenade after ricochet", () => {
   assertEquals(projectile.active, false)
 })
 
+Deno.test("updateProjectiles ricochets ballistic projectiles at arena border when ricochet remains", () => {
+  const world = createWorldState()
+  const player = world.player
+  const projectile = world.projectiles[0]
+
+  world.units = [player]
+  world.bots = []
+
+  projectile.active = true
+  projectile.kind = "ballistic"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.radius = 0.1
+  projectile.position.set(world.arenaRadius - projectile.radius - 0.05, 0)
+  projectile.velocity.set(10, 0)
+  projectile.damage = 2
+  projectile.maxRange = 100
+  projectile.ttl = 2
+  projectile.ballisticRicochetRemaining = 1
+
+  updateProjectiles(world, 0.1, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  assertEquals(projectile.active, true)
+  assertEquals(projectile.ballisticRicochetRemaining, 0)
+  assertEquals(projectile.velocity.x < 0, true)
+  assertEquals(projectile.position.length() <= world.arenaRadius - projectile.radius + 0.05, true)
+})
+
+Deno.test("updateProjectiles ricochets grenades at arena border while ricochets remain", () => {
+  const world = createWorldState()
+  const player = world.player
+  const projectile = world.projectiles[0]
+
+  world.units = [player]
+  world.bots = []
+
+  projectile.active = true
+  projectile.kind = "grenade"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.radius = 0.1
+  projectile.position.set(world.arenaRadius - projectile.radius - 0.05, 0)
+  projectile.velocity.set(20, 0)
+  projectile.damage = 2
+  projectile.maxRange = 100
+  projectile.ttl = 2
+  projectile.ricochets = 0
+
+  let explodeCalls = 0
+  const originalRandom = Math.random
+  Math.random = () => 0.5
+
+  try {
+    updateProjectiles(world, 0.1, {
+      hitObstacle: () => false,
+      spawnFlamePatch: () => {},
+      explodeProjectile: () => {
+        explodeCalls += 1
+      },
+      applyDamage: () => {},
+    })
+  } finally {
+    Math.random = originalRandom
+  }
+
+  assertEquals(explodeCalls, 0)
+  assertEquals(projectile.active, true)
+  assertEquals(projectile.ricochets, 1)
+  assertEquals(projectile.velocity.x < 0, true)
+})
+
 Deno.test("updateProjectiles broadphase handles dense unit clusters and still hits intended enemy", () => {
   const world = createWorldState()
   const player = world.player
