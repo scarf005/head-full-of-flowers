@@ -2,10 +2,23 @@ import { Vec2 } from "./entities.ts"
 
 export const ARENA_START_RADIUS = 50
 export const ARENA_END_RADIUS = 20
+export const ARENA_SCALE_MIN_PLAYERS = 2
+export const ARENA_SCALE_BASE_PLAYERS = 8
+export const ARENA_MIN_START_RADIUS = 30
+export const ARENA_MIN_END_RADIUS = 15
 
 export const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
 export const lerp = (from: number, to: number, t: number) => from + (to - from) * t
+
+export const arenaRadiiForPlayerCount = (playerCount: number) => {
+  const clampedPlayers = clamp(playerCount, ARENA_SCALE_MIN_PLAYERS, ARENA_SCALE_BASE_PLAYERS)
+  const scale = (clampedPlayers - ARENA_SCALE_MIN_PLAYERS) / (ARENA_SCALE_BASE_PLAYERS - ARENA_SCALE_MIN_PLAYERS)
+  return {
+    start: lerp(ARENA_MIN_START_RADIUS, ARENA_START_RADIUS, scale),
+    end: lerp(ARENA_MIN_END_RADIUS, ARENA_END_RADIUS, scale),
+  }
+}
 
 export const randomRange = (min: number, max: number) => min + Math.random() * (max - min)
 
