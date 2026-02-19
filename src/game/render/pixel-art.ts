@@ -144,10 +144,14 @@ const drawItemSpritePng = (
   }
 
   const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
-  const half = drawSize * 0.5
+  const aspect = image.naturalWidth / image.naturalHeight
+  const drawHeight = drawSize
+  const drawWidth = drawHeight * aspect
+  const halfWidth = drawWidth * 0.5
+  const halfHeight = drawHeight * 0.5
   const smoothBefore = context.imageSmoothingEnabled
   context.imageSmoothingEnabled = true
-  context.drawImage(image, x - half, y - half, drawSize, drawSize)
+  context.drawImage(image, x - halfWidth, y - halfHeight, drawWidth, drawHeight)
   context.imageSmoothingEnabled = smoothBefore
   return true
 }
