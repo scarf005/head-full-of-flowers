@@ -63,6 +63,7 @@ import {
 } from "./world/constants.ts"
 import { createWorldState, rebuildUnitLookup, resetRenderPathProfile, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/terrain-map.ts"
+import { localizeFactionLabel } from "./i18n/faction-label.ts"
 import { localizePerk, localizePrimaryWeapon } from "./i18n/localize.ts"
 import {
   applyDamage,
@@ -196,40 +197,6 @@ export class FlowerArenaGame {
     renderScene({ context: this.context, world: this.world, dt: 0 })
   }
 
-  private localizeFactionLabel(factionId: string) {
-    if (this.currentMode === "ffa") {
-      if (factionId === this.world.player.id) {
-        return t`You`
-      }
-      const botIndex = Number(factionId.replace("bot-", ""))
-      if (Number.isFinite(botIndex) && botIndex > 0) {
-        return t`Bot ${botIndex}`
-      }
-      return factionId
-    }
-
-    if (this.currentMode === "tdm") {
-      if (factionId === "red") {
-        return t`Red (You)`
-      }
-      if (factionId === "blue") {
-        return t`Blue`
-      }
-      return factionId
-    }
-
-    const teamIndex = Number(factionId.replace("team-", ""))
-    if (!Number.isFinite(teamIndex) || teamIndex <= 0) {
-      return factionId
-    }
-
-    if (this.currentMode === "duo") {
-      return teamIndex === 1 ? t`Duo 1 (You)` : t`Duo ${teamIndex}`
-    }
-
-    return teamIndex === 1 ? t`Squad 1 (You)` : t`Squad ${teamIndex}`
-  }
-
   private syncPlayerOptions() {
     const musicVolume = musicVolumeSignal.value
     if (musicVolume !== this.lastMusicVolume) {
@@ -248,7 +215,7 @@ export class FlowerArenaGame {
       this.lastLocale = locale
       this.world.factions = this.world.factions.map((faction) => ({
         ...faction,
-        label: this.localizeFactionLabel(faction.id),
+        label: localizeFactionLabel(this.currentMode, faction.id, this.world.player.id),
       }))
       updateCoverageSignals(this.world)
     }
