@@ -82,9 +82,47 @@ const DAMAGE_VIGNETTE_MAX_ALPHA = 0.76
 const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
 const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
+const MINIMAP_SIZE_PX = 164 * 0.8
+const MINIMAP_PADDING_PX = 12
+const MINIMAP_UNIT_RADIUS_PX = 2.1
+const MINIMAP_PLAYER_RADIUS_PX = 2.8
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
   return buildCullBounds(cameraX, cameraY, padding)
+}
+
+interface CanvasViewportOverflowPx {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+const measureCanvasViewportOverflowPx = (context: CanvasRenderingContext2D): CanvasViewportOverflowPx => {
+  if (
+    typeof globalThis === "undefined" ||
+    typeof globalThis.innerWidth !== "number" ||
+    typeof globalThis.innerHeight !== "number"
+  ) {
+    return { left: 0, top: 0, right: 0, bottom: 0 }
+  }
+
+  const rect = context.canvas.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) {
+    return { left: 0, top: 0, right: 0, bottom: 0 }
+  }
+
+  const canvasWidth = context.canvas.width
+  const canvasHeight = context.canvas.height
+  const scaleX = canvasWidth / rect.width
+  const scaleY = canvasHeight / rect.height
+
+  return {
+    left: Math.max(0, -rect.left) * scaleX,
+    top: Math.max(0, -rect.top) * scaleY,
+    right: Math.max(0, rect.right - globalThis.innerWidth) * scaleX,
+    bottom: Math.max(0, rect.bottom - globalThis.innerHeight) * scaleY,
+  }
 }
 
 const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padding = 0) => {
@@ -759,9 +797,153 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderArenaBoundary(context, world)
   context.restore()
 
-  renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
   renderAtmosphere(context)
   renderDamageVignette(context, world)
+  renderMinimap(context, world, renderCameraX, renderCameraY)
+  renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY)
+}
+
+const renderMinimap = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  renderCameraX: number,
+  renderCameraY: number,
+) => {
+  const mapSize = world.terrainMap.size
+  if (mapSize <= 0) {
+    return
+  }
+
+  const canvasWidth = context.canvas.width
+  const canvasHeight = context.canvas.height
+  const maxSizeByViewport = Math.max(64, Math.min(canvasWidth, canvasHeight) - MINIMAP_PADDING_PX * 2)
+  const sizePx = Math.min(MINIMAP_SIZE_PX, maxSizeByViewport)
+  const viewportOverflow = measureCanvasViewportOverflowPx(context)
+
+  const left = Math.max(1, canvasWidth - MINIMAP_PADDING_PX - sizePx - viewportOverflow.right)
+  const top = Math.max(1, canvasHeight - MINIMAP_PADDING_PX - sizePx - viewportOverflow.bottom)
+  const centerX = left + sizePx * 0.5
+  const centerY = top + sizePx * 0.5
+  const minimapRadiusPx = sizePx * 0.5
+  const arenaRadiusWorld = Math.max(1, world.arenaRadius)
+  const halfMap = mapSize * 0.5
+
+  const toMinimap = (worldX: number, worldY: number) => {
+    return {
+      x: centerX + (worldX / arenaRadiusWorld) * minimapRadiusPx,
+      y: centerY + (worldY / arenaRadiusWorld) * minimapRadiusPx,
+    }
+  }
+
+  const layerSlice = (layerCanvas: HTMLCanvasElement) => {
+    const normalizedSpan = (arenaRadiusWorld * 2) / mapSize
+    const normalizedMin = (-arenaRadiusWorld + halfMap) / mapSize
+    const srcX = clamp(normalizedMin * layerCanvas.width, 0, layerCanvas.width - 1)
+    const srcY = clamp(normalizedMin * layerCanvas.height, 0, layerCanvas.height - 1)
+    const srcW = clamp(normalizedSpan * layerCanvas.width, 1, layerCanvas.width - srcX)
+    const srcH = clamp(normalizedSpan * layerCanvas.height, 1, layerCanvas.height - srcY)
+    return { srcX, srcY, srcW, srcH }
+  }
+
+  flushFlowerLayer(world)
+  const groundLayer = ensureGroundLayerCache(world)
+  const flowerLayer = ensureFlowerLayerCache(world)
+
+  context.save()
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.imageSmoothingEnabled = false
+  context.globalAlpha = 0.5
+
+  context.fillStyle = "#111611"
+  context.beginPath()
+  context.arc(centerX, centerY, minimapRadiusPx + 2, 0, Math.PI * 2)
+  context.fill()
+
+  context.save()
+  context.beginPath()
+  context.arc(centerX, centerY, minimapRadiusPx, 0, Math.PI * 2)
+  context.clip()
+
+  context.fillStyle = "#5f6d5d"
+  context.fillRect(left, top, sizePx, sizePx)
+
+  if (groundLayer.canvas) {
+    const slice = layerSlice(groundLayer.canvas)
+    context.drawImage(groundLayer.canvas, slice.srcX, slice.srcY, slice.srcW, slice.srcH, left, top, sizePx, sizePx)
+  }
+
+  if (flowerLayer.canvas) {
+    const slice = layerSlice(flowerLayer.canvas)
+    context.drawImage(flowerLayer.canvas, slice.srcX, slice.srcY, slice.srcW, slice.srcH, left, top, sizePx, sizePx)
+  }
+
+  const obstacleGrid = world.obstacleGrid
+  if (obstacleGrid.size > 0) {
+    const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
+    const cellSizePx = Math.max(1, worldToMinimapScale)
+    for (let gy = 0; gy < obstacleGrid.size; gy += 1) {
+      for (let gx = 0; gx < obstacleGrid.size; gx += 1) {
+        const index = gy * obstacleGrid.size + gx
+        if (obstacleGrid.solid[index] <= 0) {
+          continue
+        }
+
+        const material = obstacleGrid.material[index]
+        let color = "#838883"
+        if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
+          color = "#8b9188"
+        } else if (material === OBSTACLE_MATERIAL_WALL) {
+          color = "#b06f57"
+        } else if (material === OBSTACLE_MATERIAL_BOX) {
+          color = obstacleGrid.highTierLoot[index] > 0 ? "#eef4ff" : "#de7d4f"
+        } else if (material === OBSTACLE_MATERIAL_ROCK) {
+          color = "#979b94"
+        } else if (material === OBSTACLE_MATERIAL_HEDGE) {
+          color = "#98bb8b"
+        }
+
+        context.fillStyle = color
+        const center = obstacleGridToWorldCenter(obstacleGrid.size, gx, gy)
+        const marker = toMinimap(center.x, center.y)
+        context.fillRect(marker.x - cellSizePx * 0.5, marker.y - cellSizePx * 0.5, cellSizePx, cellSizePx)
+      }
+    }
+  }
+
+  const viewBounds = buildCullBounds(renderCameraX, renderCameraY, 0)
+  const viewTopLeft = toMinimap(viewBounds.minX, viewBounds.minY)
+  const viewBottomRight = toMinimap(viewBounds.maxX, viewBounds.maxY)
+  const viewWidth = Math.max(1, viewBottomRight.x - viewTopLeft.x)
+  const viewHeight = Math.max(1, viewBottomRight.y - viewTopLeft.y)
+  context.strokeStyle = "rgba(255, 246, 188, 0.72)"
+  context.lineWidth = 1
+  context.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
+
+  for (const unit of world.units) {
+    const marker = toMinimap(unit.position.x, unit.position.y)
+    if (marker.x < left || marker.x > left + sizePx || marker.y < top || marker.y > top + sizePx) {
+      continue
+    }
+
+    const palette = paletteForUnit(world, unit)
+    context.fillStyle = unit.isPlayer ? "#fff7bf" : palette.tone
+    context.strokeStyle = "rgba(0, 0, 0, 0.75)"
+    context.lineWidth = 1
+    context.beginPath()
+    context.arc(marker.x, marker.y, unit.isPlayer ? MINIMAP_PLAYER_RADIUS_PX : MINIMAP_UNIT_RADIUS_PX, 0, Math.PI * 2)
+    context.fill()
+    context.stroke()
+  }
+
+  context.restore()
+
+  context.strokeStyle = "rgba(233, 238, 231, 0.82)"
+  context.lineWidth = 1.5
+  context.beginPath()
+  context.arc(centerX, centerY, minimapRadiusPx, 0, Math.PI * 2)
+  context.stroke()
+
+  context.restore()
 }
 
 const renderArenaGround = (
@@ -1515,10 +1697,15 @@ const renderOffscreenEnemyIndicators = (
   }
 
   const margin = 24
-  const innerLeft = margin
-  const innerTop = margin
-  const innerRight = VIEW_WIDTH - margin
-  const innerBottom = VIEW_HEIGHT - margin
+  const viewportOverflow = measureCanvasViewportOverflowPx(context)
+  const visibleLeft = clamp(viewportOverflow.left, 0, VIEW_WIDTH - 1)
+  const visibleTop = clamp(viewportOverflow.top, 0, VIEW_HEIGHT - 1)
+  const visibleRight = clamp(VIEW_WIDTH - viewportOverflow.right, visibleLeft + 1, VIEW_WIDTH)
+  const visibleBottom = clamp(VIEW_HEIGHT - viewportOverflow.bottom, visibleTop + 1, VIEW_HEIGHT)
+  const innerLeft = clamp(visibleLeft + margin, visibleLeft, visibleRight - 1)
+  const innerTop = clamp(visibleTop + margin, visibleTop, visibleBottom - 1)
+  const innerRight = clamp(visibleRight - margin, innerLeft + 1, visibleRight)
+  const innerBottom = clamp(visibleBottom - margin, innerTop + 1, visibleBottom)
   const centerX = VIEW_WIDTH * 0.5
   const centerY = VIEW_HEIGHT * 0.5
   const markerSpacing = 34
@@ -1527,6 +1714,8 @@ const renderOffscreenEnemyIndicators = (
   const sideMaxY = Math.max(sideMinY, innerBottom - cornerPadding)
   const sideMinX = Math.min(innerRight, innerLeft + cornerPadding)
   const sideMaxX = Math.max(sideMinX, innerRight - cornerPadding)
+  const halfWidthToVisibleEdge = Math.max(1, Math.min(centerX - innerLeft, innerRight - centerX))
+  const halfHeightToVisibleEdge = Math.max(1, Math.min(centerY - innerTop, innerBottom - centerY))
 
   type OffscreenMarkerSide = "left" | "right" | "top" | "bottom"
 
@@ -1623,8 +1812,8 @@ const renderOffscreenEnemyIndicators = (
     const dx = screenX - centerX
     const dy = screenY - centerY
     const angle = Math.atan2(dy, dx)
-    const horizontalRatio = Math.abs(dx) / Math.max(1, VIEW_WIDTH * 0.5 - margin)
-    const verticalRatio = Math.abs(dy) / Math.max(1, VIEW_HEIGHT * 0.5 - margin)
+    const horizontalRatio = Math.abs(dx) / halfWidthToVisibleEdge
+    const verticalRatio = Math.abs(dy) / halfHeightToVisibleEdge
     const dominantHorizontal = horizontalRatio >= verticalRatio
     let side: OffscreenMarkerSide = "right"
     let markerX = centerX
