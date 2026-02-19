@@ -9,6 +9,7 @@ const QUAD_INSTANCE_STRIDE = 9
 const TRAIL_INSTANCE_STRIDE = 10
 const MAX_GPU_EXPLOSIONS = 24
 const GPU_EXPLOSION_PARTICLES = 28
+const GPU_EXPLOSION_INSTANCES = GPU_EXPLOSION_PARTICLES + 1
 const FLOWER_PETAL_URL = flowerPetalMaskUrl
 const FLOWER_CENTER_URL = flowerAccentMaskUrl
 
@@ -437,27 +438,44 @@ uniform vec4 uExplosions[${MAX_GPU_EXPLOSIONS}];
 out vec2 vUv;
 out float vAlpha;
 out float vHeat;
+out float vMode;
 
 float hash(float value) {
   return fract(sin(value * 91.723 + 13.125) * 43758.5453123);
 }
 
 void main() {
-  int explosionIndex = gl_InstanceID / ${GPU_EXPLOSION_PARTICLES};
+  int explosionIndex = gl_InstanceID / ${GPU_EXPLOSION_INSTANCES};
   if (explosionIndex >= uExplosionCount) {
     gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     vUv = vec2(0.0);
     vAlpha = 0.0;
     vHeat = 0.0;
+    vMode = 0.0;
     return;
   }
 
-  int particleIndex = gl_InstanceID - explosionIndex * ${GPU_EXPLOSION_PARTICLES};
+  int localIndex = gl_InstanceID - explosionIndex * ${GPU_EXPLOSION_INSTANCES};
   vec4 explosion = uExplosions[explosionIndex];
   vec2 center = explosion.xy;
   float radius = explosion.z;
   float lifeRatio = clamp(explosion.w, 0.0, 1.0);
   float age = 1.0 - lifeRatio;
+
+  if (localIndex == ${GPU_EXPLOSION_PARTICLES}) {
+    float size = radius * (1.04 + age * 0.06);
+    vec2 world = center + aCorner * size;
+    vec2 screen = (world - uCamera) * uScale + uView * 0.5;
+    vec2 clip = screen / uView * 2.0 - 1.0;
+    gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+    vAlpha = min(1.0, age * 9.0 + 0.2) * lifeRatio * 0.85;
+    vHeat = 0.92;
+    vMode = 1.0;
+    vUv = aCorner * 0.5 + 0.5;
+    return;
+  }
+
+  int particleIndex = localIndex;
 
   float idSeed = float(explosionIndex) * 61.0 + float(particleIndex);
   float randAngle = hash(idSeed + 0.17);
@@ -465,15 +483,15 @@ void main() {
   float randSize = hash(idSeed + 0.93);
   float randLift = hash(idSeed + 1.31);
 
-  float angle = randAngle * 6.28318530718 + age * (2.6 + randSpeed * 1.8);
+  float angle = randAngle * 6.28318530718;
   vec2 dir = vec2(cos(angle), sin(angle));
   float burst = (0.28 + randSpeed * 1.24) * radius;
   float drag = mix(1.0, 0.46, age);
   float travel = burst * age * drag;
   vec2 tangent = vec2(-dir.y, dir.x);
-  float swirl = (randLift - 0.5) * radius * (0.22 + age * 0.7);
+  float lateralJitter = (randLift - 0.5) * radius * 0.18;
 
-  vec2 particleCenter = center + dir * travel + tangent * swirl;
+  vec2 particleCenter = center + dir * travel + tangent * lateralJitter;
   float innerBoost = step(float(particleIndex), 4.0);
   particleCenter = mix(particleCenter, center + dir * radius * age * 0.4, innerBoost * 0.55);
 
@@ -491,6 +509,7 @@ void main() {
   float density = mix(0.52, 1.0, randSize);
   vAlpha = fadeIn * fadeOut * density;
   vHeat = mix(0.0, 1.0, innerBoost * 0.68 + randLift * 0.52);
+  vMode = 0.0;
   vUv = aCorner * 0.5 + 0.5;
 }
 `
@@ -501,11 +520,31 @@ precision mediump float;
 in vec2 vUv;
 in float vAlpha;
 in float vHeat;
+in float vMode;
 
 out vec4 outColor;
 
 void main() {
   vec2 centered = vUv * 2.0 - 1.0;
+
+  if (vMode > 0.5) {
+    float ringRadius = length(centered);
+    float outerFade = 1.0 - smoothstep(0.92, 0.99, ringRadius);
+    float innerFade = smoothstep(0.72, 0.84, ringRadius);
+    float band = outerFade * innerFade;
+    float alpha = vAlpha * band;
+    if (alpha <= 0.01) {
+      discard;
+    }
+
+    vec3 outer = vec3(1.0, 0.64, 0.2);
+    vec3 inner = vec3(1.0, 0.9, 0.68);
+    float blend = 1.0 - smoothstep(0.72, 0.98, ringRadius);
+    vec3 color = mix(outer, inner, blend);
+    outColor = vec4(color, alpha);
+    return;
+  }
+
   float radius = dot(centered, centered);
   float glow = 1.0 - smoothstep(0.12, 1.0, radius);
   float ember = 1.0 - smoothstep(0.0, 0.82, radius);
@@ -1249,7 +1288,7 @@ export const renderExplosionInstances = (
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
 
   gl.bindVertexArray(state.explosionVao)
-  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, explosionCount * GPU_EXPLOSION_PARTICLES)
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, explosionCount * GPU_EXPLOSION_INSTANCES)
   gl.bindVertexArray(null)
 
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
