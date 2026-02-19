@@ -1773,43 +1773,43 @@ const renderOffscreenEnemyIndicators = (
     side: OffscreenMarkerSide,
   ) => {
     if (markers.length <= 0) {
-      return [] as OffscreenMarker[]
+      return markers
     }
 
-    const sorted = markers
-      .slice()
-      .sort((left, right) => left.sideAxis - right.sideAxis)
-      .map((marker) => ({ ...marker, sideAxis: clamp(marker.sideAxis, minAxis, maxAxis) }))
+    markers.sort((left, right) => left.sideAxis - right.sideAxis)
+    for (const marker of markers) {
+      marker.sideAxis = clamp(marker.sideAxis, minAxis, maxAxis)
+    }
 
     const availableRange = Math.max(0, maxAxis - minAxis)
-    const requiredRange = spacing * Math.max(0, sorted.length - 1)
+    const requiredRange = spacing * Math.max(0, markers.length - 1)
 
-    if (requiredRange > availableRange && sorted.length > 1) {
-      const spreadStep = availableRange / (sorted.length - 1)
-      for (let index = 0; index < sorted.length; index += 1) {
-        sorted[index].sideAxis = minAxis + spreadStep * index
+    if (requiredRange > availableRange && markers.length > 1) {
+      const spreadStep = availableRange / (markers.length - 1)
+      for (let index = 0; index < markers.length; index += 1) {
+        markers[index].sideAxis = minAxis + spreadStep * index
       }
     } else {
-      for (let index = 1; index < sorted.length; index += 1) {
-        sorted[index].sideAxis = Math.max(sorted[index].sideAxis, sorted[index - 1].sideAxis + spacing)
+      for (let index = 1; index < markers.length; index += 1) {
+        markers[index].sideAxis = Math.max(markers[index].sideAxis, markers[index - 1].sideAxis + spacing)
       }
 
-      if (sorted[sorted.length - 1].sideAxis > maxAxis) {
-        sorted[sorted.length - 1].sideAxis = maxAxis
-        for (let index = sorted.length - 2; index >= 0; index -= 1) {
-          sorted[index].sideAxis = Math.min(sorted[index].sideAxis, sorted[index + 1].sideAxis - spacing)
+      if (markers[markers.length - 1].sideAxis > maxAxis) {
+        markers[markers.length - 1].sideAxis = maxAxis
+        for (let index = markers.length - 2; index >= 0; index -= 1) {
+          markers[index].sideAxis = Math.min(markers[index].sideAxis, markers[index + 1].sideAxis - spacing)
         }
 
-        if (sorted[0].sideAxis < minAxis) {
-          sorted[0].sideAxis = minAxis
-          for (let index = 1; index < sorted.length; index += 1) {
-            sorted[index].sideAxis = Math.max(sorted[index].sideAxis, sorted[index - 1].sideAxis + spacing)
+        if (markers[0].sideAxis < minAxis) {
+          markers[0].sideAxis = minAxis
+          for (let index = 1; index < markers.length; index += 1) {
+            markers[index].sideAxis = Math.max(markers[index].sideAxis, markers[index - 1].sideAxis + spacing)
           }
         }
       }
     }
 
-    for (const marker of sorted) {
+    for (const marker of markers) {
       if (side === "left" || side === "right") {
         marker.y = clamp(marker.sideAxis, sideMinY, sideMaxY)
       } else {
@@ -1817,7 +1817,7 @@ const renderOffscreenEnemyIndicators = (
       }
     }
 
-    return sorted
+    return markers
   }
 
   const sideMarkers: Record<OffscreenMarkerSide, OffscreenMarker[]> = {
@@ -1895,14 +1895,12 @@ const renderOffscreenEnemyIndicators = (
     })
   }
 
-  const placedMarkers: OffscreenMarker[] = [
-    ...distributeSideMarkers(sideMarkers.left, sideMinY, sideMaxY, markerSpacing, "left"),
-    ...distributeSideMarkers(sideMarkers.right, sideMinY, sideMaxY, markerSpacing, "right"),
-    ...distributeSideMarkers(sideMarkers.top, sideMinX, sideMaxX, markerSpacing, "top"),
-    ...distributeSideMarkers(sideMarkers.bottom, sideMinX, sideMaxX, markerSpacing, "bottom"),
-  ]
+  distributeSideMarkers(sideMarkers.left, sideMinY, sideMaxY, markerSpacing, "left")
+  distributeSideMarkers(sideMarkers.right, sideMinY, sideMaxY, markerSpacing, "right")
+  distributeSideMarkers(sideMarkers.top, sideMinX, sideMaxX, markerSpacing, "top")
+  distributeSideMarkers(sideMarkers.bottom, sideMinX, sideMaxX, markerSpacing, "bottom")
 
-  for (const marker of placedMarkers) {
+  const drawMarker = (marker: OffscreenMarker) => {
     const { enemy, x: markerX, y: markerY, angle, distanceMeters } = marker
     const palette = paletteForUnit(world, enemy)
 
@@ -1937,6 +1935,19 @@ const renderOffscreenEnemyIndicators = (
     context.fillStyle = "#eaf5e1"
     context.fillText(`${distanceMeters.toFixed(1)}m`, 8, 16)
     context.restore()
+  }
+
+  for (const marker of sideMarkers.left) {
+    drawMarker(marker)
+  }
+  for (const marker of sideMarkers.right) {
+    drawMarker(marker)
+  }
+  for (const marker of sideMarkers.top) {
+    drawMarker(marker)
+  }
+  for (const marker of sideMarkers.bottom) {
+    drawMarker(marker)
   }
 
   context.restore()
