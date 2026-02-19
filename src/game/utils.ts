@@ -1,6 +1,6 @@
 import { Vec2 } from "./entities.ts"
 
-export const ARENA_START_RADIUS = 50
+export const ARENA_START_RADIUS = 40
 export const ARENA_END_RADIUS = 20
 export const ARENA_SCALE_MIN_PLAYERS = 2
 export const ARENA_SCALE_BASE_PLAYERS = 8
