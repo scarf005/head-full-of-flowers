@@ -31,7 +31,7 @@ import {
   sameRenderPathProfileSnapshot,
 } from "./render-path-profile-sync.ts"
 import { t } from "@lingui/core/macro"
-import type { PerkId, PrimaryWeaponId } from "../types.ts"
+import { localizePerk, localizePerkDetail, localizePrimaryWeapon } from "../i18n/localize.ts"
 
 const defaultMatchResult = {
   visible: false,
@@ -60,32 +60,6 @@ const syncRenderPathRateSignal = (world: WorldState) => {
   renderPathRatesSignal.value = rates
 }
 
-const localizeWeapon = (weaponId: PrimaryWeaponId) => {
-  if (weaponId === "pistol") {
-    return t`Pistol`
-  }
-  if (weaponId === "assault") {
-    return t`Assault Rifle`
-  }
-  if (weaponId === "shotgun") {
-    return t`Shotgun`
-  }
-  if (weaponId === "auto-shotgun") {
-    return t`Auto Shotgun`
-  }
-  if (weaponId === "battle-rifle") {
-    return t`Battle Rifle`
-  }
-  if (weaponId === "grenade-launcher") {
-    return t`Grenade Launcher`
-  }
-  if (weaponId === "rocket-launcher") {
-    return t`Rocket Launcher`
-  }
-
-  return t`Flamethrower`
-}
-
 const formatAmmo = (primaryAmmo: number, reserveAmmo: number, reloading = false) => {
   if (reloading) {
     return t`Reloading...`
@@ -94,58 +68,6 @@ const formatAmmo = (primaryAmmo: number, reserveAmmo: number, reloading = false)
   return Number.isFinite(primaryAmmo)
     ? `${Math.floor(primaryAmmo)} / ${Number.isFinite(reserveAmmo) ? Math.floor(reserveAmmo) : "∞"}`
     : "∞"
-}
-
-const localizePerk = (perkId: PerkId) => {
-  if (perkId === "laser_sight") {
-    return t`Laser Sight`
-  }
-  if (perkId === "ricochet_shells") {
-    return t`Ricochet Shells`
-  }
-  if (perkId === "proximity_grenades") {
-    return t`Proximity Grenades`
-  }
-  if (perkId === "rapid_reload") {
-    return t`Rapid Reload`
-  }
-  if (perkId === "heavy_pellets") {
-    return t`Heavy Pellets`
-  }
-  if (perkId === "extra_heart") {
-    return t`Extra Heart`
-  }
-  if (perkId === "extra_stamina") {
-    return t`Extra Stamina`
-  }
-
-  return t`Kevlar Vest`
-}
-
-const localizePerkDetail = (perkId: PerkId, stacks: number) => {
-  if (perkId === "laser_sight") {
-    return t`Soft aim assist cone`
-  }
-  if (perkId === "ricochet_shells") {
-    return t`Shotgun bounces x5`
-  }
-  if (perkId === "proximity_grenades") {
-    return t`Grenades explode near enemies`
-  }
-  if (perkId === "rapid_reload") {
-    return t`Reload speed +25%`
-  }
-  if (perkId === "heavy_pellets") {
-    return t`Pellet size +50%, fire rate -25%, damage +1`
-  }
-  if (perkId === "extra_heart") {
-    return t`Max HP +${stacks * 3}`
-  }
-  if (perkId === "extra_stamina") {
-    return t`Move speed +12%`
-  }
-
-  return t`Damage taken -1 (min 1)`
 }
 
 const buildCoverageSlices = (world: WorldState) => {
@@ -296,7 +218,7 @@ export const resetHudSignals = (world: WorldState, canvas: HTMLCanvasElement) =>
   pausedSignal.value = false
   coverageSlicesSignal.value = buildCoverageSlices(world)
   matchResultSignal.value = defaultMatchResult
-  primaryWeaponSignal.value = localizeWeapon(world.player.primaryWeapon)
+  primaryWeaponSignal.value = localizePrimaryWeapon(world.player.primaryWeapon)
   primaryWeaponIconSignal.value = PRIMARY_WEAPONS[world.player.primaryWeapon].icon
   primaryAmmoSignal.value = "∞"
   primaryWeaponSlotsSignal.value = [{
@@ -334,7 +256,7 @@ export const updateCoverageSignals = (world: WorldState) => {
 
 export const updatePlayerWeaponSignals = (world: WorldState) => {
   const config = PRIMARY_WEAPONS[world.player.primaryWeapon]
-  const nextWeaponLabel = localizeWeapon(config.id)
+  const nextWeaponLabel = localizePrimaryWeapon(config.id)
   if (primaryWeaponSignal.value !== nextWeaponLabel) {
     primaryWeaponSignal.value = nextWeaponLabel
   }
@@ -357,7 +279,7 @@ export const updatePlayerWeaponSignals = (world: WorldState) => {
   }]
 
   const nextSlots = slots.slice(0, 2).map((slot, index) => ({
-    label: localizeWeapon(slot.weaponId),
+    label: localizePrimaryWeapon(slot.weaponId),
     icon: PRIMARY_WEAPONS[slot.weaponId].icon,
     ammo: formatAmmo(slot.primaryAmmo, slot.reserveAmmo, world.player.reloadCooldown > 0 && index === activeSlotIndex),
     selected: index === activeSlotIndex,

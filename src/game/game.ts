@@ -63,6 +63,7 @@ import {
 } from "./world/constants.ts"
 import { createWorldState, rebuildUnitLookup, resetRenderPathProfile, type WorldState } from "./world/state.ts"
 import { createBarrenGardenMap } from "./world/terrain-map.ts"
+import { localizePerk, localizePrimaryWeapon } from "./i18n/localize.ts"
 import {
   applyDamage,
   continueBurstFire,
@@ -115,7 +116,7 @@ import {
   createFactionFlowerCounts,
   type FactionDescriptor,
 } from "./factions.ts"
-import type { GameModeId, MatchDifficulty, PerkId, PrimaryWeaponId, Team } from "./types.ts"
+import type { GameModeId, MatchDifficulty, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
 import { i18n } from "@lingui/core"
 
@@ -470,58 +471,6 @@ export class FlowerArenaGame {
       randomHighTierPrimary: () => this.randomHighTierPrimary(),
       highTierChance: 1,
     })
-  }
-
-  private localizePrimaryWeapon(weaponId: PrimaryWeaponId) {
-    if (weaponId === "pistol") {
-      return t`Pistol`
-    }
-    if (weaponId === "assault") {
-      return t`Assault Rifle`
-    }
-    if (weaponId === "shotgun") {
-      return t`Shotgun`
-    }
-    if (weaponId === "flamethrower") {
-      return t`Flamethrower`
-    }
-    if (weaponId === "auto-shotgun") {
-      return t`Auto Shotgun`
-    }
-    if (weaponId === "battle-rifle") {
-      return t`Battle Rifle`
-    }
-    if (weaponId === "grenade-launcher") {
-      return t`Grenade Launcher`
-    }
-
-    return t`Rocket Launcher`
-  }
-
-  private localizePerk(perkId: PerkId) {
-    if (perkId === "laser_sight") {
-      return t`Laser Sight`
-    }
-    if (perkId === "ricochet_shells") {
-      return t`Ricochet Shells`
-    }
-    if (perkId === "proximity_grenades") {
-      return t`Proximity Grenades`
-    }
-    if (perkId === "rapid_reload") {
-      return t`Rapid Reload`
-    }
-    if (perkId === "heavy_pellets") {
-      return t`Heavy Pellets`
-    }
-    if (perkId === "extra_heart") {
-      return t`Extra Heart`
-    }
-    if (perkId === "extra_stamina") {
-      return t`Extra Stamina`
-    }
-
-    return t`Kevlar Vest`
   }
 
   private randomLootablePrimaryForMatch() {
@@ -2072,12 +2021,12 @@ export class FlowerArenaGame {
           perkStacks: (unit, perkId) => perkStacks(unit, perkId),
           onPlayerPickup: (weaponId) => {
             this.sfx.itemAcquire()
-            const localizedWeapon = this.localizePrimaryWeapon(weaponId)
+            const localizedWeapon = localizePrimaryWeapon(weaponId)
             statusMessageSignal.value = t`Picked up ${localizedWeapon}`
           },
           onPlayerPerkPickup: (perkId, stacks) => {
             this.sfx.itemAcquire()
-            const localizedPerk = this.localizePerk(perkId)
+            const localizedPerk = localizePerk(perkId)
             statusMessageSignal.value = stacks > 1
               ? t`Perk acquired ${localizedPerk} x${stacks}`
               : t`Perk acquired ${localizedPerk}`
