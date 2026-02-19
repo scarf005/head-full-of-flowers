@@ -1,4 +1,12 @@
 import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
+import { PRIMARY_WEAPONS } from "../weapons.ts"
+import {
+  isObstacleCellSolid,
+  obstacleArmorForMaterial,
+  obstacleGridIndex,
+  obstacleGridToWorldCenter,
+  worldToObstacleGrid,
+} from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 
 const parseBotIndex = (botId: string) => {
@@ -71,6 +79,65 @@ const findNearestTarget = (
   }
 }
 
+const sampleBlockingObstacleCell = (
+  world: WorldState,
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+) => {
+  const dx = toX - fromX
+  const dy = toY - fromY
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 4))
+  const grid = world.obstacleGrid
+
+  for (let step = 1; step <= steps; step += 1) {
+    const t = step / steps
+    const sampleX = lerp(fromX, toX, t)
+    const sampleY = lerp(fromY, toY, t)
+    const cell = worldToObstacleGrid(grid.size, sampleX, sampleY)
+    if (!isObstacleCellSolid(grid, cell.x, cell.y)) {
+      continue
+    }
+
+    return cell
+  }
+
+  return null
+}
+
+const assessShotBlocker = (
+  world: WorldState,
+  bot: WorldState["bots"][number],
+  toTargetX: number,
+  toTargetY: number,
+  distanceToTarget: number,
+) => {
+  if (distanceToTarget <= 0 || !Number.isFinite(distanceToTarget)) {
+    return null
+  }
+
+  const targetX = bot.position.x + toTargetX
+  const targetY = bot.position.y + toTargetY
+  const blocker = sampleBlockingObstacleCell(world, bot.position.x, bot.position.y, targetX, targetY)
+  if (!blocker) {
+    return null
+  }
+
+  const weapon = PRIMARY_WEAPONS[bot.primaryWeapon]
+  const index = obstacleGridIndex(world.obstacleGrid.size, blocker.x, blocker.y)
+  const obstacleMaterial = world.obstacleGrid.material[index]
+  const obstacleArmor = obstacleArmorForMaterial(obstacleMaterial)
+  const canBypassWithExplosive = weapon.projectileKind === "grenade" || weapon.projectileKind === "rocket"
+  const weaponDamage = Math.max(1, weapon.damage * bot.damageMultiplier + bot.projectileDamageBonus)
+  const obstacleCenter = obstacleGridToWorldCenter(world.obstacleGrid.size, blocker.x, blocker.y)
+
+  return {
+    canDamageWithPrimary: canBypassWithExplosive || weaponDamage > obstacleArmor,
+    obstacleCenter,
+  }
+}
+
 export interface UpdateAIDeps {
   firePrimary: (botId: string) => void
   continueBurst: (botId: string) => void
@@ -104,6 +171,10 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const distanceToTarget = nearestTarget.distance
     const toTargetX = nearestTarget.deltaX
     const toTargetY = nearestTarget.deltaY
+    const shotBlocker = !easyMode && hasTarget
+      ? assessShotBlocker(world, bot, toTargetX, toTargetY, distanceToTarget)
+      : null
+    const blockedByIndestructibleCover = shotBlocker !== null && !shotBlocker.canDamageWithPrimary
 
     if (bot.hp <= bot.maxHp * 0.32) {
       bot.aiState = "flee"
@@ -152,12 +223,17 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
         const hesitationChance = Math.min(0.98, lerp(0.02, 0.16, farBias) + (easyMode ? 0.34 : 0))
         const fireDistance = easyMode ? 19 : 32
 
-        if (distanceToTarget < fireDistance && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
+        if (
+          !blockedByIndestructibleCover &&
+          distanceToTarget < fireDistance &&
+          aimAlignment > requiredAlignment &&
+          Math.random() > hesitationChance
+        ) {
           deps.firePrimary(bot.id)
         }
 
         const throwChance = easyMode ? 0.0006 : 0.014
-        if (distanceToTarget < 12 && Math.random() < throwChance) {
+        if (!blockedByIndestructibleCover && distanceToTarget < 12 && Math.random() < throwChance) {
           deps.throwSecondary(bot.id)
         }
       }
@@ -184,9 +260,40 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       const hesitationChance = Math.min(0.98, lerp(0.06, 0.22, farBias) + (easyMode ? 0.26 : 0))
       const fleeFireDistance = easyMode ? 15 : 24
 
-      if (distanceToTarget < fleeFireDistance && aimAlignment > requiredAlignment && Math.random() > hesitationChance) {
+      if (
+        !blockedByIndestructibleCover &&
+        distanceToTarget < fleeFireDistance &&
+        aimAlignment > requiredAlignment &&
+        Math.random() > hesitationChance
+      ) {
         deps.firePrimary(bot.id)
       }
+    }
+
+    if (blockedByIndestructibleCover && shotBlocker) {
+      const obstacleAwayX = bot.position.x - shotBlocker.obstacleCenter.x
+      const obstacleAwayY = bot.position.y - shotBlocker.obstacleCenter.y
+      const obstacleAwayLength = Math.hypot(obstacleAwayX, obstacleAwayY) || 1
+      const awayX = obstacleAwayX / obstacleAwayLength
+      const awayY = obstacleAwayY / obstacleAwayLength
+      const strafeSign = Math.sin(nowMs * 0.001 + botIndex * 0.73) >= 0 ? 1 : -1
+      const strafeX = (-toTargetY / Math.max(distanceToTarget, 0.0001)) * strafeSign
+      const strafeY = (toTargetX / Math.max(distanceToTarget, 0.0001)) * strafeSign
+
+      const distanceFromArenaCenter = Math.hypot(bot.position.x, bot.position.y) || 1
+      const nearArenaEdge = distanceFromArenaCenter > world.arenaRadius - Math.max(3.5, bot.radius * 0.4)
+      const centerPullX = -bot.position.x / distanceFromArenaCenter
+      const centerPullY = -bot.position.y / distanceFromArenaCenter
+
+      let escapeX = awayX * 1.1 + strafeX * 0.7 + centerPullX * (nearArenaEdge ? 1.9 : 0.5)
+      let escapeY = awayY * 1.1 + strafeY * 0.7 + centerPullY * (nearArenaEdge ? 1.9 : 0.5)
+      const escapeLength = Math.hypot(escapeX, escapeY) || 1
+      escapeX /= escapeLength
+      escapeY /= escapeLength
+
+      const retreatSpeed = bot.speed * (nearArenaEdge ? 1 : 0.88)
+      desiredVelocityX = escapeX * retreatSpeed
+      desiredVelocityY = escapeY * retreatSpeed
     }
 
     const acceleration = easyMode ? 6 : 16

@@ -41,7 +41,7 @@ const hpForMaterial = (material: number) => {
   return 0
 }
 
-const armorForMaterial = (material: number) => {
+export const obstacleArmorForMaterial = (material: number) => {
   if (material === OBSTACLE_MATERIAL_WALL) {
     return 2
   }
@@ -180,7 +180,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
 
   const index = obstacleGridIndex(grid.size, x, y)
   const material = grid.material[index]
-  const armor = armorForMaterial(material)
+  const armor = obstacleArmorForMaterial(material)
   const highTierLoot = grid.highTierLoot[index] > 0
   const hpBefore = grid.hp[index]
   const damageDealt = Math.max(0, amount - armor)
