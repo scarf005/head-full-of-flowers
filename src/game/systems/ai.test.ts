@@ -43,6 +43,9 @@ Deno.test("updateAI enters aggro and can fire when aligned", () => {
   const world = createWorldState()
   const bot = world.bots[0]
 
+  world.obstacleGrid.solid.fill(0)
+  world.obstacleGrid.material.fill(0)
+  world.obstacleGrid.hp.fill(0)
   bot.position.set(0, 0)
   bot.aim.set(1, 0)
   bot.aiDecisionTimer = 0.8
@@ -261,4 +264,61 @@ Deno.test("updateAI hard mode still fires through destructible obstacle", () => 
   }
 
   assertEquals(firedBy.includes(bot.id), true)
+})
+
+Deno.test("updateAI hard mode throws grenade when trapped against indestructible cover", () => {
+  const world = createWorldState()
+  const bot = world.bots[0]
+
+  world.aiDifficulty = "hard"
+  world.obstacleGrid.solid.fill(0)
+  world.obstacleGrid.material.fill(0)
+  world.obstacleGrid.hp.fill(0)
+
+  bot.position.set(world.arenaRadius - bot.radius - 0.06, 0)
+  bot.velocity.set(0, 0)
+  bot.aim.set(1, 0)
+  bot.aiDecisionTimer = 0.8
+  bot.secondaryMode = "grenade"
+  bot.secondaryCooldown = 0
+  world.player.position.set(bot.position.x + 3, 0)
+
+  const placeSolid = (x: number, y: number, material = OBSTACLE_MATERIAL_WAREHOUSE) => {
+    const cell = worldToObstacleGrid(world.obstacleGrid.size, x, y)
+    const index = obstacleGridIndex(world.obstacleGrid.size, cell.x, cell.y)
+    world.obstacleGrid.solid[index] = 1
+    world.obstacleGrid.material[index] = material
+    world.obstacleGrid.hp[index] = 4
+  }
+
+  placeSolid(bot.position.x + 0.8, 0)
+  placeSolid(bot.position.x - 0.8, 0)
+  placeSolid(bot.position.x - 0.8, 0.8)
+  placeSolid(bot.position.x - 0.8, -0.8)
+  placeSolid(bot.position.x, 0.8)
+  placeSolid(bot.position.x, -0.8)
+
+  world.bots = [bot]
+  world.units = [world.player, bot]
+
+  let throwCount = 0
+  const originalRandom = Math.random
+  Math.random = () => 0.999
+
+  try {
+    updateAI(world, 1 / 60, {
+      firePrimary: () => {},
+      continueBurst: () => {},
+      throwSecondary: () => {
+        throwCount += 1
+      },
+      finishReload: () => {},
+      collectNearbyPickup: () => {},
+      nowMs: () => 0,
+    })
+  } finally {
+    Math.random = originalRandom
+  }
+
+  assertEquals(throwCount > 0, true)
 })

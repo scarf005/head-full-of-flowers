@@ -138,6 +138,178 @@ const assessShotBlocker = (
   }
 }
 
+const isPositionNavigable = (world: WorldState, x: number, y: number, radius: number) => {
+  const maxArenaDistance = world.arenaRadius - radius
+  if (Math.hypot(x, y) > maxArenaDistance) {
+    return false
+  }
+
+  const grid = world.obstacleGrid
+  const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
+  const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
+  const minX = Math.max(0, min.x)
+  const maxX = Math.min(grid.size - 1, max.x)
+  const minY = Math.max(0, min.y)
+  const maxY = Math.min(grid.size - 1, max.y)
+
+  for (let gy = minY; gy <= maxY; gy += 1) {
+    for (let gx = minX; gx <= maxX; gx += 1) {
+      if (!isObstacleCellSolid(grid, gx, gy)) {
+        continue
+      }
+
+      const cellCenter = obstacleGridToWorldCenter(grid.size, gx, gy)
+      const nearestX = clamp(x, cellCenter.x - 0.5, cellCenter.x + 0.5)
+      const nearestY = clamp(y, cellCenter.y - 0.5, cellCenter.y + 0.5)
+      const dx = x - nearestX
+      const dy = y - nearestY
+      if (dx * dx + dy * dy <= radius * radius) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
+const clearanceAlongDirection = (
+  world: WorldState,
+  bot: WorldState["bots"][number],
+  dirX: number,
+  dirY: number,
+  maxDistance: number,
+) => {
+  const dirLength = Math.hypot(dirX, dirY)
+  if (dirLength <= 0.0001) {
+    return 0
+  }
+
+  const nx = dirX / dirLength
+  const ny = dirY / dirLength
+  const step = 0.2
+  let lastClear = 0
+
+  for (let distance = step; distance <= maxDistance; distance += step) {
+    const sampleX = bot.position.x + nx * distance
+    const sampleY = bot.position.y + ny * distance
+    if (!isPositionNavigable(world, sampleX, sampleY, bot.radius)) {
+      return lastClear
+    }
+
+    lastClear = distance
+  }
+
+  return lastClear
+}
+
+const findNearestSolidCellAround = (world: WorldState, x: number, y: number, searchRadius = 2.4) => {
+  const grid = world.obstacleGrid
+  const center = worldToObstacleGrid(grid.size, x, y)
+  const maxCellOffset = Math.max(1, Math.ceil(searchRadius + 1))
+  let best: { x: number; y: number; distance: number } | null = null
+
+  for (let offsetY = -maxCellOffset; offsetY <= maxCellOffset; offsetY += 1) {
+    for (let offsetX = -maxCellOffset; offsetX <= maxCellOffset; offsetX += 1) {
+      const gx = center.x + offsetX
+      const gy = center.y + offsetY
+      if (gx < 0 || gy < 0 || gx >= grid.size || gy >= grid.size || !isObstacleCellSolid(grid, gx, gy)) {
+        continue
+      }
+
+      const worldCenter = obstacleGridToWorldCenter(grid.size, gx, gy)
+      const distance = Math.hypot(worldCenter.x - x, worldCenter.y - y)
+      if (distance > searchRadius) {
+        continue
+      }
+
+      if (!best || distance < best.distance) {
+        best = {
+          x: worldCenter.x,
+          y: worldCenter.y,
+          distance,
+        }
+      }
+    }
+  }
+
+  return best
+}
+
+const findEscapeDirection = (
+  world: WorldState,
+  bot: WorldState["bots"][number],
+  toTargetX: number,
+  toTargetY: number,
+  nearArenaEdge: boolean,
+  shotBlocker: ReturnType<typeof assessShotBlocker>,
+) => {
+  const distanceToTarget = Math.hypot(toTargetX, toTargetY) || 1
+  const centerDistance = Math.hypot(bot.position.x, bot.position.y) || 1
+  const centerPullX = -bot.position.x / centerDistance
+  const centerPullY = -bot.position.y / centerDistance
+  const obstaclePoint = shotBlocker?.obstacleCenter ?? findNearestSolidCellAround(world, bot.position.x, bot.position.y)
+  const awayObstacleX = obstaclePoint ? bot.position.x - obstaclePoint.x : centerPullX
+  const awayObstacleY = obstaclePoint ? bot.position.y - obstaclePoint.y : centerPullY
+
+  const candidateDirections: Array<{ x: number; y: number }> = [
+    { x: centerPullX, y: centerPullY },
+    { x: awayObstacleX, y: awayObstacleY },
+    { x: -toTargetY, y: toTargetX },
+    { x: toTargetY, y: -toTargetX },
+    { x: bot.aiMove.x, y: bot.aiMove.y },
+    { x: -toTargetX, y: -toTargetY },
+  ]
+
+  for (let index = 0; index < 12; index += 1) {
+    const angle = index / 12 * Math.PI * 2
+    candidateDirections.push({ x: Math.cos(angle), y: Math.sin(angle) })
+  }
+
+  let best: { x: number; y: number; clearance: number } | null = null
+  for (const candidate of candidateDirections) {
+    const candidateLength = Math.hypot(candidate.x, candidate.y)
+    if (candidateLength <= 0.0001) {
+      continue
+    }
+
+    const directionX = candidate.x / candidateLength
+    const directionY = candidate.y / candidateLength
+    const clearance = clearanceAlongDirection(world, bot, directionX, directionY, 2.2)
+    const centerScore = directionX * centerPullX + directionY * centerPullY
+    const awayObstacleLength = Math.hypot(awayObstacleX, awayObstacleY) || 1
+    const awayObstacleScore = directionX * (awayObstacleX / awayObstacleLength) +
+      directionY * (awayObstacleY / awayObstacleLength)
+    const lateralScore = Math.abs(
+      directionX * (-toTargetY / distanceToTarget) + directionY * (toTargetX / distanceToTarget),
+    )
+    const totalScore = clearance * 1.8 + centerScore * (nearArenaEdge ? 1.2 : 0.5) + awayObstacleScore * 0.9 +
+      lateralScore * 0.3
+
+    if (!best || totalScore > best.clearance) {
+      best = {
+        x: directionX,
+        y: directionY,
+        clearance: totalScore,
+      }
+    }
+  }
+
+  if (!best) {
+    return {
+      dirX: centerPullX,
+      dirY: centerPullY,
+      blocked: true,
+    }
+  }
+
+  const escapeClearance = clearanceAlongDirection(world, bot, best.x, best.y, 1.2)
+  return {
+    dirX: best.x,
+    dirY: best.y,
+    blocked: escapeClearance < 0.25,
+  }
+}
+
 export interface UpdateAIDeps {
   firePrimary: (botId: string) => void
   continueBurst: (botId: string) => void
@@ -175,6 +347,8 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       ? assessShotBlocker(world, bot, toTargetX, toTargetY, distanceToTarget)
       : null
     const blockedByIndestructibleCover = shotBlocker !== null && !shotBlocker.canDamageWithPrimary
+    const distanceFromArenaCenter = Math.hypot(bot.position.x, bot.position.y) || 1
+    const nearArenaEdge = distanceFromArenaCenter > world.arenaRadius - Math.max(3.5, bot.radius * 0.4)
 
     if (bot.hp <= bot.maxHp * 0.32) {
       bot.aiState = "flee"
@@ -270,30 +444,28 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       }
     }
 
-    if (blockedByIndestructibleCover && shotBlocker) {
-      const obstacleAwayX = bot.position.x - shotBlocker.obstacleCenter.x
-      const obstacleAwayY = bot.position.y - shotBlocker.obstacleCenter.y
-      const obstacleAwayLength = Math.hypot(obstacleAwayX, obstacleAwayY) || 1
-      const awayX = obstacleAwayX / obstacleAwayLength
-      const awayY = obstacleAwayY / obstacleAwayLength
-      const strafeSign = Math.sin(nowMs * 0.001 + botIndex * 0.73) >= 0 ? 1 : -1
-      const strafeX = (-toTargetY / Math.max(distanceToTarget, 0.0001)) * strafeSign
-      const strafeY = (toTargetX / Math.max(distanceToTarget, 0.0001)) * strafeSign
+    const desiredSpeed = Math.hypot(desiredVelocityX, desiredVelocityY)
+    const desiredDirX = desiredSpeed > 0 ? desiredVelocityX / desiredSpeed : 0
+    const desiredDirY = desiredSpeed > 0 ? desiredVelocityY / desiredSpeed : 0
+    const desiredClearance = desiredSpeed > 0 ? clearanceAlongDirection(world, bot, desiredDirX, desiredDirY, 1.1) : 0
+    const trappedByGeometry = hasTarget && nearArenaEdge && desiredClearance < 0.25
+    if (!easyMode && (blockedByIndestructibleCover || trappedByGeometry)) {
+      const escape = findEscapeDirection(world, bot, toTargetX, toTargetY, nearArenaEdge, shotBlocker)
+      const escapeSpeed = bot.speed * (nearArenaEdge ? 1 : 0.9)
+      desiredVelocityX = escape.dirX * escapeSpeed
+      desiredVelocityY = escape.dirY * escapeSpeed
 
-      const distanceFromArenaCenter = Math.hypot(bot.position.x, bot.position.y) || 1
-      const nearArenaEdge = distanceFromArenaCenter > world.arenaRadius - Math.max(3.5, bot.radius * 0.4)
-      const centerPullX = -bot.position.x / distanceFromArenaCenter
-      const centerPullY = -bot.position.y / distanceFromArenaCenter
-
-      let escapeX = awayX * 1.1 + strafeX * 0.7 + centerPullX * (nearArenaEdge ? 1.9 : 0.5)
-      let escapeY = awayY * 1.1 + strafeY * 0.7 + centerPullY * (nearArenaEdge ? 1.9 : 0.5)
-      const escapeLength = Math.hypot(escapeX, escapeY) || 1
-      escapeX /= escapeLength
-      escapeY /= escapeLength
-
-      const retreatSpeed = bot.speed * (nearArenaEdge ? 1 : 0.88)
-      desiredVelocityX = escapeX * retreatSpeed
-      desiredVelocityY = escapeY * retreatSpeed
+      if (
+        escape.blocked && blockedByIndestructibleCover && bot.secondaryMode === "grenade" && bot.secondaryCooldown <= 0
+      ) {
+        const nearbyObstacle = findNearestSolidCellAround(world, bot.position.x, bot.position.y, 1.8)
+        const aimX = nearbyObstacle ? nearbyObstacle.x - bot.position.x : bot.position.x
+        const aimY = nearbyObstacle ? nearbyObstacle.y - bot.position.y : bot.position.y
+        const aimLength = Math.hypot(aimX, aimY) || 1
+        bot.aim.x = aimX / aimLength
+        bot.aim.y = aimY / aimLength
+        deps.throwSecondary(bot.id)
+      }
     }
 
     const acceleration = easyMode ? 6 : 16
