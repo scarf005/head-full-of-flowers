@@ -212,7 +212,7 @@ export interface RespawnDeps {
 }
 
 export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps) => {
-  const unit = world.units.find((candidate) => candidate.id === unitId)
+  const unit = world.unitById.get(unitId)
   if (!unit) {
     return
   }

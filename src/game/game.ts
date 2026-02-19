@@ -296,7 +296,7 @@ export class FlowerArenaGame {
       return ownerId
     }
 
-    const owner = this.world.units.find((unit) => unit.id === ownerId)
+    const owner = this.world.unitById.get(ownerId)
     return owner?.team ?? ownerId
   }
 
@@ -1834,7 +1834,7 @@ export class FlowerArenaGame {
   }
 
   private getUnit(id: string) {
-    return this.world.units.find((unit) => unit.id === id)
+    return this.world.unitById.get(id)
   }
 
   private equipPrimary(unitId: string, weaponId: PrimaryWeaponId, ammo: number) {

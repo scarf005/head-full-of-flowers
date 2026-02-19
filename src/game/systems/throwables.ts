@@ -56,7 +56,7 @@ export interface ThrowSecondaryDeps {
 }
 
 export const throwSecondary = (world: WorldState, shooterId: string, deps: ThrowSecondaryDeps) => {
-  const shooter = world.units.find((unit) => unit.id === shooterId)
+  const shooter = world.unitById.get(shooterId)
   if (!shooter || shooter.secondaryCooldown > 0) {
     return
   }

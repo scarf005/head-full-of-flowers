@@ -36,6 +36,10 @@ const isWorldPointInView = (world: WorldState, x: number, y: number) => {
     y <= world.camera.y + halfHeight
 }
 
+const getUnitById = (world: WorldState, unitId: string) => {
+  return world.unitById.get(unitId) ?? world.units.find((candidate) => candidate.id === unitId)
+}
+
 const resetBurstState = (unit: Unit) => {
   unit.burstShotsRemaining = 0
   unit.burstTotalShots = 0
@@ -216,7 +220,7 @@ const swapToUsablePrimaryIfNeeded = (shooter: Unit, onPrimaryWeaponChanged?: (un
 }
 
 export const startReload = (unitId: string, world: WorldState, onPlayerReloading: () => void) => {
-  const unit = world.units.find((candidate) => candidate.id === unitId)
+  const unit = getUnitById(world, unitId)
   if (!unit || unit.reloadCooldown > 0) {
     return
   }
@@ -248,7 +252,7 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
 }
 
 export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUpdate: () => void) => {
-  const unit = world.units.find((candidate) => candidate.id === unitId)
+  const unit = getUnitById(world, unitId)
   if (!unit) {
     return
   }
@@ -311,7 +315,7 @@ export const equipPrimary = (
   ammo: number,
   onPlayerWeaponUpdate: () => void,
 ): PrimaryWeaponId | null => {
-  const unit = world.units.find((candidate) => candidate.id === unitId)
+  const unit = getUnitById(world, unitId)
   if (!unit) {
     return null
   }
@@ -385,7 +389,7 @@ export const cyclePrimaryWeapon = (
   direction: number,
   onPlayerWeaponUpdate: () => void,
 ) => {
-  const unit = world.units.find((candidate) => candidate.id === unitId)
+  const unit = getUnitById(world, unitId)
   if (!unit) {
     return
   }
@@ -607,7 +611,7 @@ const fireQueuedBurstShot = (world: WorldState, shooter: Unit, deps: FirePrimary
 }
 
 export const continueBurstFire = (world: WorldState, shooterId: string, deps: FirePrimaryDeps) => {
-  const shooter = world.units.find((unit) => unit.id === shooterId)
+  const shooter = getUnitById(world, shooterId)
   if (!shooter || shooter.shootCooldown > 0 || shooter.reloadCooldown > 0) {
     return
   }
@@ -620,7 +624,7 @@ export const continueBurstFire = (world: WorldState, shooterId: string, deps: Fi
 }
 
 export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrimaryDeps) => {
-  const shooter = world.units.find((unit) => unit.id === shooterId)
+  const shooter = getUnitById(world, shooterId)
   if (!shooter || shooter.shootCooldown > 0 || shooter.reloadCooldown > 0) {
     return
   }
