@@ -161,6 +161,20 @@ const drawItemSpritePng = (
   return true
 }
 
+const measureItemSpriteWorldWidth = (spriteId: ItemSpriteId, size: number) => {
+  const drawSize = ITEM_SPRITE_UNIT * size * (size < 1 ? ITEM_WORLD_SCALE : 1)
+  const image = ensureItemSprite(spriteId)
+  if (!image || !image.complete || image.naturalWidth <= 0 || image.naturalHeight <= 0) {
+    return drawSize
+  }
+
+  return drawSize * (image.naturalWidth / image.naturalHeight)
+}
+
+export const getWeaponSpriteHalfLength = (weaponId: PrimaryWeaponId, size: number) => {
+  return measureItemSpriteWorldWidth(weaponId, size) * 0.5
+}
+
 const drawItemSpriteFallback = (
   context: CanvasRenderingContext2D,
   x: number,

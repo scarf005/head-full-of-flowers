@@ -40,6 +40,12 @@ export interface ExplosionFx {
   radius: number
 }
 
+export interface MuzzleFlashFx {
+  active: boolean
+  position: Vec2
+  radius: number
+}
+
 export interface RenderPathProfile {
   frames: number
   pickupVisibleFrames: number
@@ -82,6 +88,7 @@ export interface WorldState {
   shellCasings: ShellCasing[]
   flightTrails: FlightTrailSegment[]
   explosions: ExplosionFx[]
+  muzzleFlashes: MuzzleFlashFx[]
   projectileCursor: number
   throwableCursor: number
   flowerCursor: number
@@ -171,6 +178,11 @@ export const createWorldState = (): WorldState => {
       active: false,
       position: new Vec2(),
       life: 0,
+      radius: 0,
+    })),
+    muzzleFlashes: Array.from({ length: 96 }, () => ({
+      active: false,
+      position: new Vec2(),
       radius: 0,
     })),
     projectileCursor: 0,

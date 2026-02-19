@@ -35,6 +35,7 @@ import {
 } from "./signals.ts"
 import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
+import { getWeaponSpriteHalfLength } from "./render/pixel-art.ts"
 import { computeWeaponKickbackDistance } from "./render/unit-motion-transform.ts"
 import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
 import {
@@ -116,8 +117,9 @@ import {
 } from "./factions.ts"
 import type { GameModeId, MatchDifficulty, PerkId, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
+import { i18n } from "@lingui/core"
 
-import menuTrackUrl from "../assets/music/MY BLOOD IS YOURS.opus"
+import menuTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
 import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
 
 const BULLET_TRAIL_WIDTH_SCALE = 4
@@ -144,9 +146,9 @@ const TEAM_COLOR_RAMP = [
 ]
 const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
-const MUZZLE_FLASH_LIFE_SECONDS = 0.07
-const MUZZLE_FLASH_RADIUS_MIN = 0.14
-const MUZZLE_FLASH_RADIUS_MAX = 0.34
+const MUZZLE_FLASH_BASE_RADIUS = 0.18
+const MUZZLE_FLASH_REFERENCE_SPEED = 40
+const MUZZLE_FLASH_MIN_RADIUS = 0.08
 
 type FogCullBounds = CullBounds
 
@@ -772,7 +774,7 @@ export class FlowerArenaGame {
     if (burntCount > 0) {
       standings.push({
         id: BURNED_FACTION_ID,
-        label: BURNED_FACTION_LABEL,
+        label: i18n._(BURNED_FACTION_LABEL),
         color: BURNED_FACTION_COLOR,
         flowers: burntCount,
       })
@@ -1090,29 +1092,18 @@ export class FlowerArenaGame {
     const drawY = unit.position.y - aimY * unit.recoil * 0.32
     const weaponKickback = computeWeaponKickbackDistance(unit.recoil, weapon.firingKnockback, unit.radius)
     const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
-    const muzzleOffset = gunLength + unit.radius * 0.2
+    const weaponScale = Math.max(0.1, unit.radius * 0.36) * 1.5
+    const muzzleOffset = gunLength + getWeaponSpriteHalfLength(weaponId, weaponScale)
     const muzzleX = drawX + dirX * muzzleOffset
     const muzzleY = drawY + dirY * muzzleOffset
 
-    const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
-    const knockbackScale = clamp(weapon.firingKnockback / 60, 0.3, 1.35)
-    let radius = (0.11 + weapon.bulletRadius * 0.42) * (0.82 + knockbackScale * 0.42)
-    if (projectileKind === "flame") {
-      radius *= 1.28
-    } else if (projectileKind === "rocket" || projectileKind === "grenade") {
-      radius *= 1.18
-    } else if (weapon.id === "shotgun" || weapon.id === "auto-shotgun") {
-      radius *= 1.16
-    }
-
-    const slot = this.world.explosions.find((explosion) => !explosion.active) ?? this.world.explosions[0]
+    const slot = this.world.muzzleFlashes.find((flash) => !flash.active) ?? this.world.muzzleFlashes[0]
+    const speedScale = Number.isFinite(weapon.speed) && weapon.speed > 0
+      ? weapon.speed / MUZZLE_FLASH_REFERENCE_SPEED
+      : 1
     slot.active = true
-    slot.position.set(
-      muzzleX + dirX * randomRange(0.01, 0.06),
-      muzzleY + dirY * randomRange(0.01, 0.06),
-    )
-    slot.radius = clamp(radius, MUZZLE_FLASH_RADIUS_MIN, MUZZLE_FLASH_RADIUS_MAX)
-    slot.life = MUZZLE_FLASH_LIFE_SECONDS * randomRange(0.86, 1.18)
+    slot.position.set(muzzleX, muzzleY)
+    slot.radius = Math.max(MUZZLE_FLASH_MIN_RADIUS, MUZZLE_FLASH_BASE_RADIUS * speedScale)
   }
 
   private updateShellCasings(dt: number, fogCullBounds?: FogCullBounds) {

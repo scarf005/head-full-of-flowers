@@ -792,6 +792,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
     renderExplosions(context, world, fogCullBounds)
   }
   renderDamagePopups(context, world, fogCullBounds)
+  renderMuzzleFlashes(context, world, fogCullBounds)
 
   context.restore()
   renderArenaBoundary(context, world)
@@ -1380,6 +1381,40 @@ const renderExplosions = (context: CanvasRenderingContext2D, world: WorldState, 
         0.16,
       )
     }
+  }
+}
+
+const renderMuzzleFlashes = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
+  for (const flash of world.muzzleFlashes) {
+    if (!flash.active) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(flash.position.x, flash.position.y, fogCullBounds, flash.radius * 2.4)) {
+      flash.active = false
+      continue
+    }
+
+    const radius = Math.max(0.08, flash.radius)
+    context.save()
+    context.globalCompositeOperation = "lighter"
+    context.fillStyle = "rgba(255, 120, 42, 0.42)"
+    context.beginPath()
+    context.arc(flash.position.x, flash.position.y, radius * 1.9, 0, Math.PI * 2)
+    context.fill()
+
+    context.fillStyle = "rgba(255, 166, 68, 0.78)"
+    context.beginPath()
+    context.arc(flash.position.x, flash.position.y, radius * 1.16, 0, Math.PI * 2)
+    context.fill()
+
+    context.fillStyle = "rgba(255, 214, 150, 0.96)"
+    context.beginPath()
+    context.arc(flash.position.x, flash.position.y, radius * 0.56, 0, Math.PI * 2)
+    context.fill()
+    context.restore()
+
+    flash.active = false
   }
 }
 
