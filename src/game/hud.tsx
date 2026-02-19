@@ -260,6 +260,9 @@ export const GameHud = () => {
               <div class="menu-subtitle">
                 {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
               </div>
+              <div class="menu-subtitle">
+                {t`wasd: move, mouse: aim and shoot, LMB: primary, RMB: secondary, wheel: swap primary`}
+              </div>
               <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
                 {modeCards.map((mode) => (
                   <button
