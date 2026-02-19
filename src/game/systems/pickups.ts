@@ -183,7 +183,7 @@ export interface PickupImpactDamageDeps {
   ) => void
 }
 
-const deactivatePickup = (pickup: WorldState["pickups"][number]) => {
+export const deactivatePickup = (pickup: WorldState["pickups"][number]) => {
   pickup.active = false
   pickup.highTier = false
   pickup.velocity.set(0, 0)
@@ -193,6 +193,30 @@ const deactivatePickup = (pickup: WorldState["pickups"][number]) => {
   pickup.kind = "weapon"
   pickup.perkId = null
   pickup.spawnOrder = 0
+}
+
+export const destroyPickupsByExplosion = (world: WorldState, x: number, y: number, radius: number) => {
+  if (radius <= 0.001) {
+    return 0
+  }
+
+  const radiusSq = radius * radius
+  let destroyed = 0
+
+  for (const pickup of world.pickups) {
+    if (!pickup.active) {
+      continue
+    }
+
+    if (distSquared(pickup.position.x, pickup.position.y, x, y) > radiusSq) {
+      continue
+    }
+
+    deactivatePickup(pickup)
+    destroyed += 1
+  }
+
+  return destroyed
 }
 
 export const updatePickups = (world: WorldState, dt: number, deps: PickupDeps & PickupImpactDamageDeps) => {
@@ -303,7 +327,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
 
     if (pickup.kind === "perk") {
       if (!pickup.perkId) {
-        pickup.active = false
+        deactivatePickup(pickup)
         continue
       }
 
@@ -313,15 +337,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       }
 
       const perkId = pickup.perkId
-      pickup.active = false
-      pickup.highTier = false
-      pickup.velocity.set(0, 0)
-      pickup.throwOwnerId = ""
-      pickup.throwOwnerTeam = "white"
-      pickup.throwDamageArmed = false
-      pickup.kind = "weapon"
-      pickup.perkId = null
-      pickup.spawnOrder = 0
+      deactivatePickup(pickup)
 
       if (unit.isPlayer) {
         deps.onPlayerPerkPickup(perkId, deps.perkStacks(unit, perkId))
@@ -356,15 +372,7 @@ export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: Collect
       pickup.spawnOrder = world.pickupSpawnSequence
       world.pickupSpawnSequence += 1
     } else {
-      pickup.active = false
-      pickup.highTier = false
-      pickup.velocity.set(0, 0)
-      pickup.throwOwnerId = ""
-      pickup.throwOwnerTeam = "white"
-      pickup.throwDamageArmed = false
-      pickup.kind = "weapon"
-      pickup.perkId = null
-      pickup.spawnOrder = 0
+      deactivatePickup(pickup)
     }
 
     if (unit.isPlayer) {

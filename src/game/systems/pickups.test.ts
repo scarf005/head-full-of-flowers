@@ -2,7 +2,7 @@
 
 import { assertEquals } from "jsr:@std/assert"
 
-import { collectNearbyPickup, spawnPickupAt, updatePickups } from "./pickups.ts"
+import { collectNearbyPickup, destroyPickupsByExplosion, spawnPickupAt, updatePickups } from "./pickups.ts"
 import { createWorldState } from "../world/state.ts"
 import { obstacleGridIndex } from "../world/obstacle-grid.ts"
 
@@ -190,4 +190,57 @@ Deno.test("spawnPickupAt skips spawn when pool is full and force is false", () =
   for (const pickup of world.pickups) {
     assertEquals(pickup.weapon, "assault")
   }
+})
+
+Deno.test("destroyPickupsByExplosion destroys both weapon and perk pickups in radius", () => {
+  const world = createWorldState()
+  const weaponPickup = world.pickups[0]
+  const perkPickup = world.pickups[1]
+  const untouchedPickup = world.pickups[2]
+
+  weaponPickup.active = true
+  weaponPickup.kind = "weapon"
+  weaponPickup.weapon = "shotgun"
+  weaponPickup.position.set(1, 1)
+  weaponPickup.throwOwnerId = "unit-a"
+  weaponPickup.throwOwnerTeam = "blue"
+  weaponPickup.throwDamageArmed = true
+  weaponPickup.spawnOrder = 3
+
+  perkPickup.active = true
+  perkPickup.kind = "perk"
+  perkPickup.perkId = "laser_sight"
+  perkPickup.position.set(1.2, 1.1)
+  perkPickup.throwOwnerId = "unit-b"
+  perkPickup.throwOwnerTeam = "blue"
+  perkPickup.throwDamageArmed = true
+  perkPickup.spawnOrder = 7
+
+  untouchedPickup.active = true
+  untouchedPickup.kind = "perk"
+  untouchedPickup.perkId = "rapid_reload"
+  untouchedPickup.position.set(6, 6)
+
+  const destroyed = destroyPickupsByExplosion(world, 1, 1, 1.2)
+
+  assertEquals(destroyed, 2)
+  assertEquals(weaponPickup.active, false)
+  assertEquals(weaponPickup.kind, "weapon")
+  assertEquals(weaponPickup.perkId, null)
+  assertEquals(weaponPickup.throwOwnerId, "")
+  assertEquals(weaponPickup.throwOwnerTeam, "white")
+  assertEquals(weaponPickup.throwDamageArmed, false)
+  assertEquals(weaponPickup.spawnOrder, 0)
+
+  assertEquals(perkPickup.active, false)
+  assertEquals(perkPickup.kind, "weapon")
+  assertEquals(perkPickup.perkId, null)
+  assertEquals(perkPickup.throwOwnerId, "")
+  assertEquals(perkPickup.throwOwnerTeam, "white")
+  assertEquals(perkPickup.throwDamageArmed, false)
+  assertEquals(perkPickup.spawnOrder, 0)
+
+  assertEquals(untouchedPickup.active, true)
+  assertEquals(untouchedPickup.kind, "perk")
+  assertEquals(untouchedPickup.perkId, "rapid_reload")
 })
