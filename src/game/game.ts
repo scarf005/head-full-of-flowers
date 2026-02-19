@@ -113,13 +113,11 @@ import {
   botPalette,
   BURNED_FACTION_COLOR,
   BURNED_FACTION_ID,
-  BURNED_FACTION_LABEL,
   createFactionFlowerCounts,
   type FactionDescriptor,
 } from "./factions.ts"
 import type { GameModeId, MatchDifficulty, PrimaryWeaponId, Team } from "./types.ts"
 import { t } from "@lingui/core/macro"
-import { i18n } from "@lingui/core"
 
 import menuTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
 import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"
@@ -708,7 +706,7 @@ export class FlowerArenaGame {
     if (burntCount > 0) {
       standings.push({
         id: BURNED_FACTION_ID,
-        label: i18n._(BURNED_FACTION_LABEL),
+        label: t`Burnt`,
         color: BURNED_FACTION_COLOR,
         flowers: burntCount,
       })
