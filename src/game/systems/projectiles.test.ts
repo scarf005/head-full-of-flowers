@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { assertEquals } from "jsr:@std/assert"
+import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
 import { updateProjectiles } from "./projectiles.ts"
 import { createWorldState } from "../world/state.ts"
@@ -116,7 +116,111 @@ Deno.test("updateProjectiles triggers rocket proximity fuse for nearby enemies",
   assertEquals(projectile.active, false)
 })
 
-Deno.test("updateProjectiles triggers grenade contact fuse when path crosses enemy", () => {
+Deno.test("updateProjectiles applies rocket acceleration each tick", () => {
+  const world = createWorldState()
+  const player = world.player
+
+  player.position.set(0, 0)
+  world.units = [player]
+  world.bots = []
+
+  const projectile = world.projectiles[0]
+  projectile.active = true
+  projectile.kind = "rocket"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(0, 0)
+  projectile.velocity.set(10, 0)
+  projectile.acceleration = 5
+  projectile.radius = 0.1
+  projectile.maxRange = 100
+  projectile.ttl = 2
+
+  updateProjectiles(world, 0.2, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  assertAlmostEquals(Math.hypot(projectile.velocity.x, projectile.velocity.y), 11, 0.000001)
+  assertEquals(projectile.active, true)
+})
+
+Deno.test("updateProjectiles keeps rocket acceleration increasing speed even in late flight", () => {
+  const world = createWorldState()
+  const player = world.player
+
+  player.position.set(0, 0)
+  world.units = [player]
+  world.bots = []
+
+  const projectile = world.projectiles[0]
+  projectile.active = true
+  projectile.kind = "rocket"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(0, 0)
+  projectile.velocity.set(10, 0)
+  projectile.acceleration = 5
+  projectile.radius = 0.1
+  projectile.maxRange = 100
+  projectile.traveled = 80
+  projectile.ttl = 2
+
+  updateProjectiles(world, 0.2, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  assertAlmostEquals(Math.hypot(projectile.velocity.x, projectile.velocity.y), 11, 0.000001)
+  assertEquals(projectile.active, true)
+})
+
+Deno.test("updateProjectiles applies projectile proximity bonus additively for rocket fuse", () => {
+  const runFuse = (proximityRadiusBonus: number) => {
+    const world = createWorldState()
+    const player = world.player
+    const enemy = world.bots[0]
+
+    player.position.set(0, 0)
+    enemy.position.set(0.008, 15.65)
+    world.units = [player, enemy]
+    world.bots = [enemy]
+
+    const projectile = world.projectiles[0]
+    projectile.active = true
+    projectile.kind = "rocket"
+    projectile.ownerId = player.id
+    projectile.ownerTeam = player.team
+    projectile.position.set(0, 0)
+    projectile.velocity.set(1, 0)
+    projectile.radius = 0.1
+    projectile.maxRange = 100
+    projectile.ttl = 2
+    projectile.proximityRadiusBonus = proximityRadiusBonus
+
+    let explodeCalls = 0
+
+    updateProjectiles(world, 1 / 60, {
+      hitObstacle: () => false,
+      spawnFlamePatch: () => {},
+      explodeProjectile: () => {
+        explodeCalls += 1
+      },
+      applyDamage: () => {},
+    })
+
+    return explodeCalls
+  }
+
+  assertEquals(runFuse(0), 0)
+  assertEquals(runFuse(0.45), 1)
+})
+
+Deno.test("updateProjectiles triggers grenade proximity fuse near enemy even without contact-fuse perk", () => {
   const world = createWorldState()
   const player = world.player
   const enemy = world.bots[0]
@@ -129,7 +233,7 @@ Deno.test("updateProjectiles triggers grenade contact fuse when path crosses ene
   const projectile = world.projectiles[0]
   projectile.active = true
   projectile.kind = "grenade"
-  projectile.contactFuse = true
+  projectile.contactFuse = false
   projectile.ownerId = player.id
   projectile.ownerTeam = player.team
   projectile.position.set(0, 0)
@@ -151,6 +255,44 @@ Deno.test("updateProjectiles triggers grenade contact fuse when path crosses ene
 
   assertEquals(explodeCalls, 1)
   assertEquals(projectile.active, false)
+})
+
+Deno.test("updateProjectiles grenade proximity fuse ignores nearby teammates", () => {
+  const world = createWorldState()
+  const player = world.player
+  const teammate = world.bots[0]
+
+  player.position.set(0, 0)
+  teammate.team = player.team
+  teammate.position.set(0.6, 0)
+  world.units = [player, teammate]
+  world.bots = [teammate]
+
+  const projectile = world.projectiles[0]
+  projectile.active = true
+  projectile.kind = "grenade"
+  projectile.contactFuse = false
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(0, 0)
+  projectile.velocity.set(1, 0)
+  projectile.radius = 0.1
+  projectile.maxRange = 100
+  projectile.ttl = 2
+
+  let explodeCalls = 0
+
+  updateProjectiles(world, 1 / 60, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {
+      explodeCalls += 1
+    },
+    applyDamage: () => {},
+  })
+
+  assertEquals(explodeCalls, 0)
+  assertEquals(projectile.active, true)
 })
 
 Deno.test("updateProjectiles deactivates slow grenade after ricochet", () => {

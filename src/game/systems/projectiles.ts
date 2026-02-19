@@ -217,6 +217,16 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       continue
     }
 
+    if (projectile.acceleration > 0) {
+      const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+      if (speed > 0.00001) {
+        const nextSpeed = speed + projectile.acceleration * dt
+        const speedScale = nextSpeed / speed
+        projectile.velocity.x *= speedScale
+        projectile.velocity.y *= speedScale
+      }
+    }
+
     const previousX = projectile.position.x
     const previousY = projectile.position.y
     const isExplosive = projectile.kind === "grenade" || projectile.kind === "rocket"
@@ -243,7 +253,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     const progress = projectile.traveled / projectile.maxRange
-    if (progress > 0.62) {
+    if (progress > 0.62 && projectile.kind !== "rocket") {
       const drag = clamp(1 - dt * (5 + progress * 10), 0, 1)
       projectile.velocity.x *= drag
       projectile.velocity.y *= drag
@@ -261,7 +271,8 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     if (projectile.kind === "rocket") {
-      const searchRadius = projectile.radius + ROCKET_PROXIMITY_RADIUS + broadphase.maxUnitRadius
+      const proximityBonus = Math.max(0, projectile.proximityRadiusBonus)
+      const searchRadius = projectile.radius + ROCKET_PROXIMITY_RADIUS + proximityBonus + broadphase.maxUnitRadius
       const proximityFuseTriggered = forEachNearbyProjectileUnit(
         world,
         broadphase,
@@ -274,7 +285,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
             return false
           }
 
-          const fuseRadius = unit.radius + projectile.radius + ROCKET_PROXIMITY_RADIUS
+          const fuseRadius = unit.radius + projectile.radius + ROCKET_PROXIMITY_RADIUS + proximityBonus
           return distSquared(unit.position.x, unit.position.y, projectile.position.x, projectile.position.y) <=
             fuseRadius * fuseRadius
         },
@@ -287,41 +298,40 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     if (projectile.kind === "grenade") {
-      if (projectile.contactFuse) {
-        const searchRadius = projectile.radius + GRENADE_PROXIMITY_RADIUS + broadphase.maxUnitRadius
-        const minSegmentX = Math.min(previousX, projectile.position.x) - searchRadius
-        const maxSegmentX = Math.max(previousX, projectile.position.x) + searchRadius
-        const minSegmentY = Math.min(previousY, projectile.position.y) - searchRadius
-        const maxSegmentY = Math.max(previousY, projectile.position.y) + searchRadius
-        const proximityFuseTriggered = forEachNearbyProjectileUnit(
-          world,
-          broadphase,
-          minSegmentX,
-          minSegmentY,
-          maxSegmentX,
-          maxSegmentY,
-          (unit) => {
-            if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
-              return false
-            }
+      const proximityBonus = Math.max(0, projectile.proximityRadiusBonus)
+      const searchRadius = projectile.radius + GRENADE_PROXIMITY_RADIUS + proximityBonus + broadphase.maxUnitRadius
+      const minSegmentX = Math.min(previousX, projectile.position.x) - searchRadius
+      const maxSegmentX = Math.max(previousX, projectile.position.x) + searchRadius
+      const minSegmentY = Math.min(previousY, projectile.position.y) - searchRadius
+      const maxSegmentY = Math.max(previousY, projectile.position.y) + searchRadius
+      const proximityFuseTriggered = forEachNearbyProjectileUnit(
+        world,
+        broadphase,
+        minSegmentX,
+        minSegmentY,
+        maxSegmentX,
+        maxSegmentY,
+        (unit) => {
+          if (unit.id === projectile.ownerId || unit.team === projectile.ownerTeam) {
+            return false
+          }
 
-            const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS
-            return distToSegmentSquared(
-              unit.position.x,
-              unit.position.y,
-              previousX,
-              previousY,
-              projectile.position.x,
-              projectile.position.y,
-            ) <=
-              fuseRadius * fuseRadius
-          },
-        )
+          const fuseRadius = unit.radius + projectile.radius + GRENADE_PROXIMITY_RADIUS + proximityBonus
+          return distToSegmentSquared(
+            unit.position.x,
+            unit.position.y,
+            previousX,
+            previousY,
+            projectile.position.x,
+            projectile.position.y,
+          ) <=
+            fuseRadius * fuseRadius
+        },
+      )
 
-        if (proximityFuseTriggered) {
-          deactivateProjectile(projectileIndex, true, true)
-          continue
-        }
+      if (proximityFuseTriggered) {
+        deactivateProjectile(projectileIndex, true, true)
+        continue
       }
 
       const grenadeHitObstacle = deps.hitObstacle(projectileIndex)

@@ -214,7 +214,7 @@ msgstr "강함"
 #: src/game/adapters/hud-sync.ts:113
 #: src/game/game.ts:488
 msgid "Heavy Pellets"
-msgstr "고중량 산탄"
+msgstr "고중량 탄환"
 
 #: src/game/game.ts:780
 msgid "Hit Rate"

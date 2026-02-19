@@ -136,7 +136,7 @@ const localizePerkDetail = (perkId: PerkId, stacks: number) => {
     return t`Reload speed +25%`
   }
   if (perkId === "heavy_pellets") {
-    return t`Pellet size +50%, fire rate -25%`
+    return t`Pellet size +50%, fire rate -25%, damage +1`
   }
   if (perkId === "extra_heart") {
     return t`Max HP +${stacks * 3}`

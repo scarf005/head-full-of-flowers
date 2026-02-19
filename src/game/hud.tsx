@@ -1,6 +1,7 @@
 import {
   coverageSlicesSignal,
   crosshairSignal,
+  debugEquipAllRocketLauncherSignal,
   debugGameSpeedSignal,
   debugImpactFeelLevelSignal,
   debugInfiniteHpSignal,
@@ -171,6 +172,17 @@ export const GameHud = () => {
                 }}
               />
               <span>{t`Infinite Reload`}</span>
+            </label>
+            <label class="debug-row">
+              <input
+                checked={debugEquipAllRocketLauncherSignal.value}
+                type="checkbox"
+                onChange={(event) => {
+                  debugEquipAllRocketLauncherSignal.value = event.currentTarget.checked
+                  persistDebugOptions()
+                }}
+              />
+              <span>{t`Equip all with rocket launcher`}</span>
             </label>
             <label class="debug-speed">
               <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>

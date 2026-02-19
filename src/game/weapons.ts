@@ -13,6 +13,7 @@ export interface PrimaryWeaponConfig {
   pellets: number
   bulletRadius: number
   projectileKind?: "ballistic" | "flame" | "grenade" | "rocket"
+  projectileAcceleration?: number
   burstShots?: number
   burstSpread?: number
   burstInterval?: number
@@ -153,16 +154,17 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     color: "#ffab73",
     cooldown: 0.66,
     damage: 20,
-    speed: 19,
+    speed: 20,
     range: 24,
     spread: 0.012,
     pellets: 1,
     bulletRadius: 0.38,
     projectileKind: "rocket",
+    projectileAcceleration: 150,
     firingKnockback: 60,
     pickupMagazineBundle: 3,
     magazineSize: 1,
-    reload: 2,
+    reload: 1.5,
   },
 }
 

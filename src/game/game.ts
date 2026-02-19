@@ -12,6 +12,7 @@ import {
 } from "./adapters/hud-sync.ts"
 import {
   crosshairSignal,
+  debugEquipAllRocketLauncherSignal,
   debugGameSpeedSignal,
   debugImpactFeelLevelSignal,
   debugInfiniteHpSignal,
@@ -94,7 +95,7 @@ import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacl
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
-import { HIGH_TIER_PRIMARY_IDS, PRIMARY_WEAPONS } from "./weapons.ts"
+import { HIGH_TIER_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "./weapons.ts"
 import { applyPerkToUnit, perkStacks, randomPerkId } from "./perks.ts"
 import {
   botPalette,
@@ -432,6 +433,7 @@ export class FlowerArenaGame {
       grid.hp[index] = WHITE_LOOT_BOX_HP
       grid.highTierLoot[index] = 1
       grid.flash[index] = 0
+      grid.flashKind[index] = 0
       return
     }
   }
@@ -599,6 +601,9 @@ export class FlowerArenaGame {
     player.damageTakenMultiplier = 1
     player.damageReductionFlat = 0
     player.explosiveRadiusMultiplier = 1
+    player.projectileRangeMultiplier = 1
+    player.projectileDamageBonus = 0
+    player.projectileProximityBonus = 0
     player.aimAssistRadians = 0
     player.shotgunRicochet = false
     player.proximityGrenades = false
@@ -623,6 +628,9 @@ export class FlowerArenaGame {
       bot.damageTakenMultiplier = 1
       bot.damageReductionFlat = 0
       bot.explosiveRadiusMultiplier = 1
+      bot.projectileRangeMultiplier = 1
+      bot.projectileDamageBonus = 0
+      bot.projectileProximityBonus = 0
       bot.aimAssistRadians = 0
       bot.shotgunRicochet = false
       bot.proximityGrenades = false
@@ -645,6 +653,8 @@ export class FlowerArenaGame {
       projectile.ballisticRicochetRemaining = 0
       projectile.contactFuse = false
       projectile.explosiveRadiusMultiplier = 1
+      projectile.proximityRadiusBonus = 0
+      projectile.acceleration = 0
     }
     for (const throwable of this.world.throwables) {
       throwable.active = false
@@ -877,6 +887,27 @@ export class FlowerArenaGame {
       slot.angularVelocity = randomRange(-7.2, 7.2)
       slot.size = randomRange(0.08, 0.2)
       slot.maxLife = randomRange(0.24, 0.52)
+      slot.life = slot.maxLife
+      slot.color = palette[Math.floor(Math.random() * palette.length)]
+    }
+  }
+
+  private spawnObstacleChipFx(x: number, y: number, material: number, damage: number) {
+    const palette = this.obstacleDebrisPalette(material)
+    const basePieces = material === OBSTACLE_MATERIAL_BOX ? 4 : 3
+    const pieces = Math.max(2, Math.min(8, Math.round(basePieces + damage * 1.5)))
+
+    for (let index = 0; index < pieces; index += 1) {
+      const slot = this.world.obstacleDebris.find((debris) => !debris.active) ?? this.world.obstacleDebris[0]
+      const angle = Math.random() * Math.PI * 2
+      const speed = randomRange(1.8, 5.4)
+      slot.active = true
+      slot.position.set(x + randomRange(-0.16, 0.16), y + randomRange(-0.16, 0.16))
+      slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.1, 1.1))
+      slot.rotation = Math.random() * Math.PI * 2
+      slot.angularVelocity = randomRange(-8.6, 8.6)
+      slot.size = randomRange(0.05, 0.12)
+      slot.maxLife = randomRange(0.14, 0.3)
       slot.life = slot.maxLife
       slot.color = palette[Math.floor(Math.random() * palette.length)]
     }
@@ -1153,28 +1184,28 @@ export class FlowerArenaGame {
           0.11 + speedFactor * 0.05,
         )
       } else if (projectile.kind === "rocket") {
-        this.emitFlightTrailSegment(
-          sampleX,
-          sampleY,
-          smoothDirX,
-          smoothDirY,
-          0.42 + speedFactor * 0.3,
-          (0.08 + speedFactor * 0.03) * BULLET_TRAIL_WIDTH_SCALE,
-          "#f5f8ff",
-          0.78,
-          0.18 + speedFactor * 0.08,
-        )
-        this.emitFlightTrailSegment(
-          sampleX - smoothDirX * 0.15,
-          sampleY - smoothDirY * 0.15,
-          smoothDirX,
-          smoothDirY,
-          0.3 + speedFactor * 0.22,
-          (0.06 + speedFactor * 0.02) * BULLET_TRAIL_WIDTH_SCALE,
-          "#ffba8f",
-          0.62,
-          0.14 + speedFactor * 0.07,
-        )
+        const normalX = -smoothDirY
+        const normalY = smoothDirX
+        for (let puffIndex = 0; puffIndex < 4; puffIndex += 1) {
+          const puffT = puffIndex / 3
+          const lateral = (puffIndex - 1.5) * (0.06 + speedFactor * 0.018)
+          const back = 0.12 + puffT * 0.26
+          const smokeX = sampleX - smoothDirX * back + normalX * lateral
+          const smokeY = sampleY - smoothDirY * back + normalY * lateral
+          const core = puffIndex % 2 === 0
+
+          this.emitFlightTrailSegment(
+            smokeX,
+            smokeY,
+            smoothDirX * 0.72 + normalX * lateral * 0.45,
+            smoothDirY * 0.72 + normalY * lateral * 0.45,
+            0.14 + speedFactor * (core ? 0.08 : 0.06),
+            (0.13 + speedFactor * (core ? 0.05 : 0.04)) * BULLET_TRAIL_WIDTH_SCALE,
+            core ? "#5f6670" : "#3f454d",
+            core ? 0.42 : 0.34,
+            0.26 + speedFactor * 0.11,
+          )
+        }
       } else {
         this.emitFlightTrailSegment(
           sampleX,
@@ -1338,11 +1369,11 @@ export class FlowerArenaGame {
           y - directionY * back,
           directionX,
           directionY,
-          0.62 - index * 0.1,
-          0.068 * BULLET_TRAIL_WIDTH_SCALE,
-          "#f4f7ff",
-          0.68 - index * 0.14,
-          0.14 + index * 0.04,
+          0.22 + index * 0.04,
+          0.11 * BULLET_TRAIL_WIDTH_SCALE,
+          index === 0 ? "#59606a" : "#3f454d",
+          0.34 - index * 0.06,
+          0.24 + index * 0.06,
         )
         continue
       }
@@ -1501,6 +1532,7 @@ export class FlowerArenaGame {
     damageObstaclesByExplosion(this.world, x, y, radius, {
       onSfxHit: () => this.sfx.hit(),
       onSfxBreak: () => this.sfx.obstacleBreak(),
+      onObstacleDamaged: (chipX, chipY, material, damage) => this.spawnObstacleChipFx(chipX, chipY, material, damage),
       onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
       onBoxDestroyed: (dropX, dropY, highTier) => this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
     })
@@ -1549,6 +1581,24 @@ export class FlowerArenaGame {
       this.damageObstaclesAtExplosion(explosionX, explosionY, explosionRadius)
     }
 
+    for (let miniExplosionIndex = 0; miniExplosionIndex < 3; miniExplosionIndex += 1) {
+      const angle = randomRange(0, Math.PI * 2)
+      const offset = randomRange(0.35, 0.85)
+      const miniExplosionX = projectile.position.x + Math.cos(angle) * offset
+      const miniExplosionY = projectile.position.y + Math.sin(angle) * offset
+      const miniExplosionRadius = 1.5 * explosionScale
+      this.spawnExplosion(miniExplosionX, miniExplosionY, miniExplosionRadius)
+      this.applyRadialExplosionDamage(
+        miniExplosionX,
+        miniExplosionY,
+        miniExplosionRadius,
+        10,
+        projectile.ownerId,
+        projectile.ownerTeam,
+      )
+      this.damageObstaclesAtExplosion(miniExplosionX, miniExplosionY, miniExplosionRadius)
+    }
+
     this.world.cameraShake = Math.min(2.4, this.world.cameraShake + 0.42)
     this.world.hitStop = Math.max(this.world.hitStop, 0.016)
     this.sfx.explosion()
@@ -1556,6 +1606,16 @@ export class FlowerArenaGame {
 
   private applyDebugOverrides() {
     this.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
+
+    if (debugEquipAllRocketLauncherSignal.value) {
+      for (const unit of this.world.units) {
+        if (unit.primaryWeapon === "rocket-launcher") {
+          continue
+        }
+
+        this.equipPrimary(unit.id, "rocket-launcher", pickupAmmoForWeapon("rocket-launcher"))
+      }
+    }
 
     if (debugInfiniteReloadSignal.value) {
       const player = this.world.player
@@ -1605,6 +1665,8 @@ export class FlowerArenaGame {
     slot.ballisticRicochetRemaining = 0
     slot.contactFuse = false
     slot.explosiveRadiusMultiplier = 1
+    slot.proximityRadiusBonus = 0
+    slot.acceleration = 0
     return slot
   }
 
@@ -1928,6 +1990,7 @@ export class FlowerArenaGame {
         return hitObstacle(this.world, projectile, {
           onSfxHit: () => this.sfx.hit(),
           onSfxBreak: () => this.sfx.obstacleBreak(),
+          onObstacleDamaged: (x, y, material, damage) => this.spawnObstacleChipFx(x, y, material, damage),
           onObstacleDestroyed: (x, y, material) => this.spawnObstacleDebris(x, y, material),
           onBoxDestroyed: (x, y, highTier) => this.spawnLootPickupAt(x, y, true, highTier, highTier),
         })
@@ -1959,6 +2022,8 @@ export class FlowerArenaGame {
             damageObstaclesByExplosion(this.world, x, y, radius, {
               onSfxHit: () => this.sfx.hit(),
               onSfxBreak: () => this.sfx.obstacleBreak(),
+              onObstacleDamaged: (chipX, chipY, material, damage) =>
+                this.spawnObstacleChipFx(chipX, chipY, material, damage),
               onObstacleDestroyed: (dropX, dropY, material) => this.spawnObstacleDebris(dropX, dropY, material),
               onBoxDestroyed: (dropX, dropY, highTier) =>
                 this.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
@@ -1978,6 +2043,7 @@ export class FlowerArenaGame {
         this.emitThrowableTrailEnd(x, y, velocityX, velocityY, mode)
       },
       onExplosion: () => this.sfx.explosion(),
+      onObstacleDamaged: (x, y, material, damage) => this.spawnObstacleChipFx(x, y, material, damage),
     })
 
     updateMolotovZones(this.world, simDt, {

@@ -103,6 +103,9 @@ export class Unit {
   damageTakenMultiplier = 1
   damageReductionFlat = 0
   explosiveRadiusMultiplier = 1
+  projectileRangeMultiplier = 1
+  projectileDamageBonus = 0
+  projectileProximityBonus = 0
   aimAssistRadians = 0
   shotgunRicochet = false
   proximityGrenades = false
@@ -170,6 +173,8 @@ export class Projectile {
   ballisticRicochetRemaining = 0
   contactFuse = false
   explosiveRadiusMultiplier = 1
+  proximityRadiusBonus = 0
+  acceleration = 0
 }
 
 export class Throwable {

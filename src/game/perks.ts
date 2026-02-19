@@ -9,6 +9,9 @@ export interface PerkConfig {
 
 const AIM_ASSIST_RADIANS = 0.22
 const VITAL_BLOOM_HP = 3
+const LASER_SIGHT_RANGE_MULTIPLIER = 1.2
+const PROXIMITY_PERK_RADIUS_BONUS = 0.45
+const HEAVY_PELLETS_DAMAGE_BONUS = 1
 
 export const PERK_CONFIGS: Record<PerkId, PerkConfig> = {
   laser_sight: {
@@ -88,13 +91,16 @@ export const applyPerkToUnit = (unit: Unit, perkId: PerkId) => {
   } else if (perkId === "laser_sight") {
     unit.laserSight = true
     unit.aimAssistRadians = Math.max(unit.aimAssistRadians, AIM_ASSIST_RADIANS)
+    unit.projectileRangeMultiplier = Math.max(unit.projectileRangeMultiplier, LASER_SIGHT_RANGE_MULTIPLIER)
   } else if (perkId === "proximity_grenades") {
     unit.proximityGrenades = true
+    unit.projectileProximityBonus += PROXIMITY_PERK_RADIUS_BONUS
   } else if (perkId === "rapid_reload") {
     unit.reloadSpeedMultiplier *= 1.25
   } else if (perkId === "heavy_pellets") {
     unit.bulletSizeMultiplier *= 1.5
     unit.fireRateMultiplier *= 0.75
+    unit.projectileDamageBonus += HEAVY_PELLETS_DAMAGE_BONUS
   } else if (perkId === "extra_heart") {
     unit.maxHp += VITAL_BLOOM_HP
     unit.hp = Math.min(unit.maxHp, unit.hp + VITAL_BLOOM_HP)

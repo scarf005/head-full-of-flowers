@@ -6,6 +6,7 @@ import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import { rebuildUnitLookup, type WorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
@@ -237,26 +238,48 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
 
 export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUpdate: () => void) => {
   const unit = world.units.find((candidate) => candidate.id === unitId)
-  if (!unit || unit.reloadCooldown > 0 || unit.reloadCooldownMax <= 0) {
+  if (!unit) {
     return
+  }
+
+  if (!completeReload(unit, false)) {
+    return
+  }
+
+  if (unit.isPlayer) {
+    onPlayerWeaponUpdate()
+  }
+}
+
+const completeReload = (unit: Unit, allowInProgress: boolean) => {
+  if (unit.reloadCooldownMax <= 0) {
+    return false
+  }
+
+  if (!allowInProgress && unit.reloadCooldown > 0) {
+    return false
   }
 
   pruneDepletedPrimarySlots(unit)
 
   const slot = activePrimarySlot(unit)
   if (!Number.isFinite(slot.primaryAmmo)) {
-    return
+    unit.reloadCooldown = 0
+    unit.reloadCooldownMax = 0
+    return false
   }
 
   const room = Math.max(0, slot.magazineSize - slot.primaryAmmo)
   if (room <= 0) {
+    unit.reloadCooldown = 0
     unit.reloadCooldownMax = 0
-    return
+    return false
   }
 
   if (Number.isFinite(slot.reserveAmmo) && slot.reserveAmmo <= 0) {
+    unit.reloadCooldown = 0
     unit.reloadCooldownMax = 0
-    return
+    return false
   }
 
   const moved = Number.isFinite(slot.reserveAmmo) ? Math.min(room, slot.reserveAmmo) : room
@@ -267,9 +290,7 @@ export const finishReload = (unitId: string, world: WorldState, onPlayerWeaponUp
   unit.reloadCooldown = 0
   unit.reloadCooldownMax = 0
   syncUnitPrimaryFromSlot(unit)
-  if (unit.isPlayer) {
-    onPlayerWeaponUpdate()
-  }
+  return true
 }
 
 export const equipPrimary = (
@@ -482,8 +503,8 @@ const emitPrimaryShot = (
     projectile.velocity.x = dirX * weapon.speed * randomRange(1.02, 1.14)
     projectile.velocity.y = dirY * weapon.speed * randomRange(1.02, 1.14)
     projectile.radius = weapon.bulletRadius * shooter.bulletSizeMultiplier
-    projectile.damage = weapon.damage * shooter.damageMultiplier
-    projectile.maxRange = weapon.range
+    projectile.damage = Math.max(1, weapon.damage * shooter.damageMultiplier + shooter.projectileDamageBonus)
+    projectile.maxRange = weapon.range * Math.max(0.1, shooter.projectileRangeMultiplier)
     projectile.traveled = 0
     projectile.ttl = Math.max(0.3, weapon.range / Math.max(1, weapon.speed) * 1.6)
     projectile.glow = projectileKind === "flame"
@@ -500,6 +521,8 @@ const emitPrimaryShot = (
       shooter.shotgunRicochet && (weapon.id === "shotgun" || weapon.id === "auto-shotgun") ? 5 : 0
     projectile.contactFuse = shooter.proximityGrenades && projectileKind === "grenade"
     projectile.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
+    projectile.proximityRadiusBonus = Math.max(0, shooter.projectileProximityBonus)
+    projectile.acceleration = Math.max(0, weapon.projectileAcceleration ?? 0)
   }
 
   if (shooter.isPlayer) {
@@ -741,6 +764,8 @@ export const applyDamage = (
   const sourceUnit = world.unitById.get(sourceId)
   const isSelfHarm = !!sourceUnit && sourceUnit.id === target.id
   const isBoundarySource = sourceId === "arena"
+  const isSelfInflictedExplosive = isSelfHarm &&
+    (damageSource === "projectile" || damageSource === "throwable" || damageSource === "molotov")
   const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
 
   if (!isBoundarySource && !isSelfHarm && resolvedSourceTeam === target.team) {
@@ -784,8 +809,12 @@ export const applyDamage = (
     }
   }
 
-  const flowerSourceId = isBoundarySource ? target.id : normalizedSourceId
-  const isBurntFlowers = false
+  const flowerSourceId = isSelfInflictedExplosive
+    ? BURNED_FACTION_ID
+    : isBoundarySource
+    ? target.id
+    : normalizedSourceId
+  const isBurntFlowers = isSelfInflictedExplosive
   const isKilled = target.hp <= 0
   const staggeredBloom = isPlayerSource && target.id !== world.player.id && damageSource === "projectile"
 
@@ -914,6 +943,7 @@ export const applyDamage = (
   }
 
   if (isKilled) {
+    completeReload(target, true)
     deps.onUnitKilled?.(target, isSelfHarm, killer)
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()

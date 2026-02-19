@@ -68,6 +68,7 @@ const LOCAL_STORAGE_WRITE_DEBOUNCE_MS = 150
 interface DebugOptions {
   infiniteHp: boolean
   infiniteReload: boolean
+  equipAllRocketLauncher: boolean
   gameSpeed: number
   impactFeelLevel: number
 }
@@ -113,6 +114,7 @@ const readStoredDebugOptions = (): DebugOptions => {
   const fallback: DebugOptions = {
     infiniteHp: false,
     infiniteReload: false,
+    equipAllRocketLauncher: false,
     gameSpeed: GAME_SPEED,
     impactFeelLevel: 1,
   }
@@ -131,6 +133,9 @@ const readStoredDebugOptions = (): DebugOptions => {
     return {
       infiniteHp: typeof parsed.infiniteHp === "boolean" ? parsed.infiniteHp : fallback.infiniteHp,
       infiniteReload: typeof parsed.infiniteReload === "boolean" ? parsed.infiniteReload : fallback.infiniteReload,
+      equipAllRocketLauncher: typeof parsed.equipAllRocketLauncher === "boolean"
+        ? parsed.equipAllRocketLauncher
+        : fallback.equipAllRocketLauncher,
       gameSpeed: typeof parsed.gameSpeed === "number" ? clampGameSpeed(parsed.gameSpeed) : fallback.gameSpeed,
       impactFeelLevel: typeof parsed.impactFeelLevel === "number"
         ? clampImpactFeelLevel(parsed.impactFeelLevel)
@@ -241,6 +246,7 @@ const writeStoredDebugOptions = () => {
   const payload: DebugOptions = {
     infiniteHp: debugInfiniteHpSignal.value,
     infiniteReload: debugInfiniteReloadSignal.value,
+    equipAllRocketLauncher: debugEquipAllRocketLauncherSignal.value,
     gameSpeed: clampGameSpeed(debugGameSpeedSignal.value),
     impactFeelLevel: clampImpactFeelLevel(debugImpactFeelLevelSignal.value),
   }
@@ -271,6 +277,7 @@ const writeStoredGameModeOptions = () => {
 
 export const debugInfiniteHpSignal = signal(storedDebugOptions.infiniteHp)
 export const debugInfiniteReloadSignal = signal(storedDebugOptions.infiniteReload)
+export const debugEquipAllRocketLauncherSignal = signal(storedDebugOptions.equipAllRocketLauncher)
 export const debugGameSpeedSignal = signal(storedDebugOptions.gameSpeed)
 export const debugImpactFeelLevelSignal = signal(storedDebugOptions.impactFeelLevel)
 export const debugSkipToMatchEndSignal = signal(false)

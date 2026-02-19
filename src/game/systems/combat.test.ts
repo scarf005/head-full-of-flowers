@@ -2,8 +2,12 @@
 
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
-import { applyDamage } from "./combat.ts"
+import { applyDamage, equipPrimary, firePrimary } from "./combat.ts"
+import { updateProjectiles } from "./projectiles.ts"
 import { createWorldState } from "../world/state.ts"
+import { BURNED_FACTION_ID } from "../factions.ts"
+import { applyPerkToUnit } from "../perks.ts"
+import { PRIMARY_WEAPONS } from "../weapons.ts"
 
 Deno.test("applyDamage keeps vectors finite for zero impact direction", () => {
   const world = createWorldState()
@@ -282,4 +286,187 @@ Deno.test("applyDamage skips dead-team fallback attribution for non-unit sources
   assertEquals(killerId, "")
   assertEquals(deadFallback.hp, 0)
   assertEquals(respawnedId, target.id)
+})
+
+Deno.test("applyDamage completes in-progress reload before respawn on lethal hit", () => {
+  const world = createWorldState()
+  const attacker = world.player
+  const target = world.bots[0]
+
+  world.units = [attacker, target]
+  world.bots = [target]
+  target.hp = 1
+  target.position.set(1, 0)
+  attacker.position.set(0, 0)
+
+  equipPrimary(target.id, world, "assault", 40, () => {})
+  const slot = target.primarySlots[target.primarySlotIndex]
+  slot.primaryAmmo = 5
+  slot.reserveAmmo = 10
+  target.primaryAmmo = 5
+  target.reserveAmmo = 10
+  target.magazineSize = slot.magazineSize
+  target.reloadCooldown = 0.4
+  target.reloadCooldownMax = 1.2
+
+  applyDamage(
+    world,
+    target.id,
+    2,
+    attacker.id,
+    attacker.team,
+    target.position.x,
+    target.position.y,
+    1,
+    0,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: () => {},
+      respawnUnit: () => {},
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+  )
+
+  const activeSlot = target.primarySlots[target.primarySlotIndex]
+  assertEquals(activeSlot.primaryAmmo, 15)
+  assertEquals(activeSlot.reserveAmmo, 0)
+  assertEquals(target.primaryAmmo, 15)
+  assertEquals(target.reserveAmmo, 0)
+  assertEquals(target.reloadCooldown, 0)
+  assertEquals(target.reloadCooldownMax, 0)
+})
+
+Deno.test("applyDamage marks self-inflicted explosive damage flowers as burnt", () => {
+  const world = createWorldState()
+  const player = world.player
+
+  player.position.set(0, 0)
+  world.units = [player]
+  world.bots = []
+
+  let flowerOwnerId = ""
+  let burntFlag = false
+
+  applyDamage(
+    world,
+    player.id,
+    1,
+    player.id,
+    player.team,
+    player.position.x,
+    player.position.y,
+    1,
+    0,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: (ownerId, _x, _y, _dirX, _dirY, _amount, _sizeScale, isBurnt) => {
+        flowerOwnerId = ownerId
+        burntFlag = isBurnt === true
+      },
+      respawnUnit: () => {},
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+    "projectile",
+  )
+
+  assertEquals(flowerOwnerId, BURNED_FACTION_ID)
+  assertEquals(burntFlag, true)
+})
+
+Deno.test("firePrimary applies laser range bonus and additive proximity stats to rocket-launcher projectile", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+
+  applyPerkToUnit(shooter, "laser_sight")
+  applyPerkToUnit(shooter, "proximity_grenades")
+  equipPrimary(shooter.id, world, "rocket-launcher", 1, () => {})
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {},
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+  })
+
+  const projectile = world.projectiles[0]
+  assertEquals(projectile.active, true)
+  assertEquals(projectile.kind, "rocket")
+  assertAlmostEquals(projectile.maxRange, PRIMARY_WEAPONS["rocket-launcher"].range * 1.2, 0.000001)
+  assertAlmostEquals(projectile.proximityRadiusBonus, 0.45, 0.000001)
+  assertEquals(projectile.acceleration, PRIMARY_WEAPONS["rocket-launcher"].projectileAcceleration ?? 0)
+})
+
+Deno.test("firePrimary adds +1 projectile damage when heavy pellets perk is active", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+
+  applyPerkToUnit(shooter, "heavy_pellets")
+  equipPrimary(shooter.id, world, "assault", 1, () => {})
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {},
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+  })
+
+  const projectile = world.projectiles[0]
+  assertEquals(projectile.active, true)
+  assertAlmostEquals(projectile.damage, PRIMARY_WEAPONS.assault.damage + 1, 0.000001)
+  assertAlmostEquals(projectile.radius, PRIMARY_WEAPONS.assault.bulletRadius * 1.5, 0.000001)
+})
+
+Deno.test("firePrimary uses rocket weapon config acceleration in runtime projectile updates", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  world.arenaRadius = 10000
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+
+  equipPrimary(shooter.id, world, "rocket-launcher", 1, () => {})
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {},
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+  })
+
+  const projectile = world.projectiles[0]
+  const startSpeed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+  const dt = 0.25
+
+  updateProjectiles(world, dt, {
+    hitObstacle: () => false,
+    spawnFlamePatch: () => {},
+    explodeProjectile: () => {},
+    applyDamage: () => {},
+  })
+
+  const nextSpeed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
+  const expectedDelta = (PRIMARY_WEAPONS["rocket-launcher"].projectileAcceleration ?? 0) * dt
+
+  assertAlmostEquals(nextSpeed - startSpeed, expectedDelta, 0.000001)
+  assertEquals(projectile.active, true)
 })
