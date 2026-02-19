@@ -777,6 +777,7 @@ export const applyDamage = (
   const isBoundarySource = sourceId === "arena"
   const isSelfInflictedExplosive = isSelfHarm &&
     (damageSource === "projectile" || damageSource === "throwable" || damageSource === "molotov")
+  const isSelfInflictedBlast = isSelfHarm && (damageSource === "projectile" || damageSource === "throwable")
   const resolvedSourceTeam = sourceUnit?.team ?? sourceTeam
 
   if (!isBoundarySource && !isSelfHarm && resolvedSourceTeam === target.team) {
@@ -784,7 +785,8 @@ export const applyDamage = (
   }
 
   const reducedAmount = Math.max(0, amount - target.damageReductionFlat)
-  const damage = Math.max(1, reducedAmount * Math.max(0.1, target.damageTakenMultiplier))
+  const baseDamage = Math.max(1, reducedAmount * Math.max(0.1, target.damageTakenMultiplier))
+  const damage = isSelfInflictedBlast ? Math.max(target.hp, baseDamage) : baseDamage
   target.hp = Math.max(0, target.hp - damage)
   target.hitFlash = 1
   target.recoil = Math.min(1, target.recoil + 0.45)

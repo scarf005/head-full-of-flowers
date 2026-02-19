@@ -83,6 +83,42 @@ Deno.test("applyDamage honors injected infinite hp toggle for player targets", (
   assertEquals(player.hp, player.maxHp)
 })
 
+Deno.test("applyDamage makes self-inflicted explosive hits lethal", () => {
+  const world = createWorldState()
+  const player = world.player
+
+  player.position.set(0, 0)
+  player.damageReductionFlat = 9
+  player.damageTakenMultiplier = 0.1
+  world.units = [player]
+  world.bots = []
+
+  applyDamage(
+    world,
+    player.id,
+    5,
+    player.id,
+    player.team,
+    player.position.x,
+    player.position.y,
+    1,
+    0,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: () => {},
+      respawnUnit: () => {},
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+    "projectile",
+  )
+
+  assertEquals(player.hp, 0)
+})
+
 Deno.test("applyDamage ignores friendly fire from non-self sources", () => {
   const world = createWorldState()
   const attacker = world.bots[0]
