@@ -693,6 +693,7 @@ export class FlowerArenaGame {
       flower.renderDirty = false
       flower.team = "white"
       flower.ownerId = ""
+      flower.sourceOwnerId = ""
       flower.bloomCell = -1
       flower.bloomWeight = 1
       flower.prevInCell = -1
@@ -785,7 +786,23 @@ export class FlowerArenaGame {
       }))
 
     if (winner) {
-      const message = winner.id === this.playerCoverageId()
+      const playerCoverageId = this.playerCoverageId()
+      const isTeamBasedMode = this.currentMode !== "ffa"
+      const playerTeamFlowers = this.world.factionFlowerCounts[playerCoverageId] ?? 0
+      const playerFlowersOnTeam = isTeamBasedMode
+        ? this.world.flowers.reduce((count, flower) => {
+          if (!flower.active || flower.scorched || flower.ownerId !== playerCoverageId) {
+            return count
+          }
+
+          return count + (flower.sourceOwnerId === this.world.player.id ? 1 : 0)
+        }, 0)
+        : 0
+      const playerFlowerContributionPercent = playerTeamFlowers > 0
+        ? (playerFlowersOnTeam / playerTeamFlowers) * 100
+        : 0
+
+      const message = winner.id === playerCoverageId
         ? t`Time up. Your trail dominates the arena`
         : t`Time up. ${winner.label} overwhelms the field`
       statusMessageSignal.value = message
@@ -794,7 +811,7 @@ export class FlowerArenaGame {
       const runnerUpFlowers = factionStandings[1]?.flowers ?? 0
       const playerRank = Math.max(
         1,
-        factionStandings.findIndex((faction) => faction.id === this.playerCoverageId()) + 1,
+        factionStandings.findIndex((faction) => faction.id === playerCoverageId) + 1,
       )
       const factionCount = factionStandings.length
       const shotsFired = this.world.playerBulletsFired
@@ -804,6 +821,9 @@ export class FlowerArenaGame {
         { label: t`Total Flowers`, value: total.toLocaleString() },
         { label: t`Winner Share`, value: `${winnerPercent.toFixed(1)}%` },
         { label: t`Your Place`, value: `${playerRank}/${factionCount}` },
+        ...(isTeamBasedMode
+          ? [{ label: t`Team Contribution`, value: `${playerFlowerContributionPercent.toFixed(1)}%` }]
+          : []),
         {
           label: t`Lead Margin`,
           value: t`${Math.max(0, winner.flowers - runnerUpFlowers)} flowers`,
@@ -818,11 +838,18 @@ export class FlowerArenaGame {
       setMatchResultSignal(
         { label: winner.label, color: winner.color },
         standingsWithPercent.map((entry) => ({
+          id: entry.id,
           color: entry.color,
           percent: entry.percent,
         })),
         stats,
         standingsWithPercent,
+        isTeamBasedMode
+          ? {
+            teamId: playerCoverageId,
+            percentOfTeam: playerFlowerContributionPercent,
+          }
+          : undefined,
       )
     }
 

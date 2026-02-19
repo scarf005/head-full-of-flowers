@@ -359,6 +359,7 @@ export const spawnFlowers = (
     }
     flower.team = palette.team
     flower.ownerId = scoreOwnerId
+    flower.sourceOwnerId = ownerId
     const colorVariantIndex = Math.floor(seeded01(flowerSeed + 6.43) * FLOWER_COLOR_VARIANTS.length) %
       FLOWER_COLOR_VARIANTS.length
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]

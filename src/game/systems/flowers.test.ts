@@ -41,6 +41,7 @@ Deno.test("spawnFlowers updates coverage and dirty queue for player-owned flower
   assertEquals(world.playerFlowerTotal, 3)
   assertEquals(world.flowerDirtyIndices.size, 3)
   assertEquals(world.flowerDirtyCount, 3)
+  assertEquals(world.flowers[0].sourceOwnerId, world.player.id)
   assertEquals(coverageUpdates, 1)
 })
 
@@ -77,4 +78,36 @@ Deno.test("spawnFlowers does not increment playerFlowerTotal for non-player owne
 
   assertEquals(world.playerFlowerTotal, beforePlayerTotal)
   assertEquals(world.factionFlowerCounts[ownerScoreId], beforeScore + 2)
+})
+
+Deno.test("spawnFlowers keeps source owner distinct from score owner", () => {
+  const world = createWorldState()
+  let flowerCursor = 0
+  const scoreOwnerId = world.bots[0].id
+
+  spawnFlowers(
+    world,
+    world.player.id,
+    scoreOwnerId,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    {
+      allocFlower: () => {
+        const flower = world.flowers[flowerCursor]
+        flowerCursor = (flowerCursor + 1) % world.flowers.length
+        return flower
+      },
+      playerId: world.player.id,
+      botPalette: () => ({ tone: "#7ba7ff", edge: "#3f5ca9" }),
+      factionColor: () => "#4a7dbd",
+      onCoverageUpdated: () => {},
+    },
+  )
+
+  assertEquals(world.flowers[0].ownerId, scoreOwnerId)
+  assertEquals(world.flowers[0].sourceOwnerId, world.player.id)
 })

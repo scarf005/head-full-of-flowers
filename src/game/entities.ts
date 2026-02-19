@@ -219,6 +219,7 @@ export class Flower {
   renderDirty = false
   team: Team = "white"
   ownerId = ""
+  sourceOwnerId = ""
   bloomCell = -1
   bloomWeight = 1
   prevInCell = -1

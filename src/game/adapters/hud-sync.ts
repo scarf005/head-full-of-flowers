@@ -189,13 +189,52 @@ const buildCoverageSlices = (world: WorldState) => {
   }))
 }
 
-const buildPieGradient = (slices: { color: string; percent: number }[]) => {
+const darkenHexColor = (hex: string, amount = 0.24) => {
+  const cleaned = hex.replace("#", "")
+  if (cleaned.length !== 6) {
+    return hex
+  }
+
+  const red = Number.parseInt(cleaned.slice(0, 2), 16)
+  const green = Number.parseInt(cleaned.slice(2, 4), 16)
+  const blue = Number.parseInt(cleaned.slice(4, 6), 16)
+  if (!Number.isFinite(red) || !Number.isFinite(green) || !Number.isFinite(blue)) {
+    return hex
+  }
+
+  const factor = Math.max(0, Math.min(1, 1 - amount))
+  const toHex = (value: number) => Math.round(Math.max(0, Math.min(255, value))).toString(16).padStart(2, "0")
+  return `#${toHex(red * factor)}${toHex(green * factor)}${toHex(blue * factor)}`
+}
+
+const buildPieGradient = (
+  slices: { id: string; color: string; percent: number }[],
+  playerContributionSlice?: { teamId: string; percentOfTeam: number },
+) => {
   let angle = 0
-  const stops = slices.map((slice) => {
+  const stops: string[] = []
+
+  for (const slice of slices) {
     const start = angle
-    angle += (slice.percent / 100) * 360
-    return `${slice.color} ${start.toFixed(2)}deg ${angle.toFixed(2)}deg`
-  })
+    const sliceAngle = (slice.percent / 100) * 360
+    const end = start + sliceAngle
+    const shouldSplit = !!playerContributionSlice && playerContributionSlice.teamId === slice.id
+    const contributionRatio = shouldSplit
+      ? Math.max(0, Math.min(1, playerContributionSlice.percentOfTeam / 100))
+      : 0
+    const contributionEnd = start + sliceAngle * contributionRatio
+
+    if (shouldSplit && contributionEnd - start > 0.001) {
+      stops.push(`${darkenHexColor(slice.color)} ${start.toFixed(2)}deg ${contributionEnd.toFixed(2)}deg`)
+      if (end - contributionEnd > 0.001) {
+        stops.push(`${slice.color} ${contributionEnd.toFixed(2)}deg ${end.toFixed(2)}deg`)
+      }
+    } else {
+      stops.push(`${slice.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`)
+    }
+
+    angle = end
+  }
 
   return `conic-gradient(${stops.join(", ")})`
 }
@@ -400,15 +439,16 @@ export const updatePlayerHpSignal = (world: WorldState) => {
 
 export const setMatchResultSignal = (
   winner: { label: string; color: string },
-  slices: { color: string; percent: number }[],
+  slices: { id: string; color: string; percent: number }[],
   stats: { label: string; value: string }[],
   standings: { id: string; label: string; color: string; flowers: number; percent: number }[],
+  playerContributionSlice?: { teamId: string; percentOfTeam: number },
 ) => {
   matchResultSignal.value = {
     visible: true,
     winnerLabel: winner.label,
     winnerColor: winner.color,
-    pieGradient: buildPieGradient(slices),
+    pieGradient: buildPieGradient(slices, playerContributionSlice),
     stats,
     standings,
   }
