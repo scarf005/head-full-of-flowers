@@ -24,15 +24,16 @@ Deno.test("findSafeSpawn chooses far side from occupied cluster near arena edge"
     new Vec2(13, 1),
     new Vec2(11, -1),
   ]
+  const expectedRadius = Math.max(1, world.arenaRadius - world.player.radius - 2)
 
   const originalRandom = Math.random
   Math.random = () => 0
 
   try {
     const spawn = findSafeSpawn(world, occupied, world.player.radius)
-    assert(spawn.x < -40)
-    assert(Math.abs(spawn.y) < 6)
-    assert(spawn.length() > world.arenaRadius - 3)
+    assert(spawn.x < -expectedRadius * 0.9)
+    assert(Math.abs(spawn.y) < expectedRadius * 0.2)
+    assert(spawn.length() > expectedRadius - 1)
   } finally {
     Math.random = originalRandom
   }
@@ -90,6 +91,7 @@ Deno.test("respawnUnit places target far from other units near arena edge", () =
   world.player.position.set(12, 0)
   target.position.set(0, 0)
   teammate.position.set(11, 2)
+  const expectedRadius = Math.max(1, world.arenaRadius - target.radius - 2)
 
   world.bots = [target, teammate]
   world.units = [world.player, target, teammate]
@@ -106,14 +108,14 @@ Deno.test("respawnUnit places target far from other units near arena edge", () =
     Math.random = originalRandom
   }
 
-  assert(target.position.x < -40)
-  assert(target.position.length() > world.arenaRadius - 3)
+  assert(target.position.x < -expectedRadius * 0.9)
+  assert(target.position.length() > expectedRadius - 1)
 
   const nearestDistanceSquared = Math.min(
     distanceSquared(target.position.x, target.position.y, world.player.position.x, world.player.position.y),
     distanceSquared(target.position.x, target.position.y, teammate.position.x, teammate.position.y),
   )
-  assert(nearestDistanceSquared > 2200)
+  assert(nearestDistanceSquared > (expectedRadius + 8) ** 2)
 })
 
 Deno.test("respawnUnit clears held fire input for player respawn", () => {
