@@ -1,3 +1,5 @@
+import { msg } from "@lingui/core/macro"
+
 export interface FactionDescriptor {
   id: string
   label: string
@@ -7,7 +9,7 @@ export interface FactionDescriptor {
 export const BURNED_FLOWER_COLOR = "#4a453d"
 export const BURNED_FLOWER_ACCENT = "#29261f"
 export const BURNED_FACTION_ID = "burnt"
-export const BURNED_FACTION_LABEL = "Burnt"
+export const BURNED_FACTION_LABEL = msg`Burnt`
 export const BURNED_FACTION_COLOR = BURNED_FLOWER_COLOR
 
 const BOT_PALETTES = [
