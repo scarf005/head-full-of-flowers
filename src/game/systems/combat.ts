@@ -6,6 +6,7 @@ import { randomInt, randomRange } from "../utils.ts"
 import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import { rebuildUnitLookup, type WorldState } from "../world/state.ts"
+import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import { BURNED_FACTION_ID } from "../factions.ts"
 import { randomFlowerBurst } from "./flowers.ts"
 
@@ -21,9 +22,19 @@ const KILL_CIRCLE_RADIUS_MIN = 0.2
 const KILL_CIRCLE_RADIUS_MAX = 0.95
 const KILL_HP_BONUS = 3
 const PLAYER_KILL_SCREEN_SHAKE_MULTIPLIER = 5
+const OFFSCREEN_NON_PLAYER_SCREEN_SHAKE_MULTIPLIER = 0.5
 const PRIMARY_WEAPON_CAP = 2
 const PRIMARY_RESERVE_PICKUP_CAP = 3
 const AIM_ASSIST_MAX_DISTANCE = 24
+
+const isWorldPointInView = (world: WorldState, x: number, y: number) => {
+  const halfWidth = VIEW_WIDTH * 0.5 / WORLD_SCALE
+  const halfHeight = VIEW_HEIGHT * 0.5 / WORLD_SCALE
+  return x >= world.camera.x - halfWidth &&
+    x <= world.camera.x + halfWidth &&
+    y >= world.camera.y - halfHeight &&
+    y <= world.camera.y + halfHeight
+}
 
 const resetBurstState = (unit: Unit) => {
   unit.burstShotsRemaining = 0
@@ -939,7 +950,15 @@ export const applyDamage = (
   }
 
   if (!isPlayerSource || target.id === world.player.id || !isKilled) {
-    world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.09 * shakeScale)
+    const nonPlayerOffscreenShakeScale = !isPlayerSource &&
+        target.id !== world.player.id &&
+        !isWorldPointInView(world, hitX, hitY)
+      ? OFFSCREEN_NON_PLAYER_SCREEN_SHAKE_MULTIPLIER
+      : 1
+    world.cameraShake = Math.min(
+      1.15 + shakeCapBoost,
+      world.cameraShake + 0.09 * shakeScale * nonPlayerOffscreenShakeScale,
+    )
   }
 
   if (isKilled) {

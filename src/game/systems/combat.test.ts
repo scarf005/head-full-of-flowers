@@ -165,6 +165,43 @@ Deno.test("applyDamage grants killer hp bonus on lethal hit and triggers respawn
   assertAlmostEquals(world.cameraShake, 0.48 * 5, 0.00001)
 })
 
+Deno.test("applyDamage halves off-screen shake for non-player source hits", () => {
+  const world = createWorldState()
+  const attacker = world.bots[0]
+  const target = world.bots[1]
+
+  attacker.team = "blue"
+  target.team = "red"
+  attacker.position.set(100, 100)
+  target.position.set(100, 100)
+  world.units = [world.player, attacker, target]
+  world.bots = [attacker, target]
+
+  applyDamage(
+    world,
+    target.id,
+    2,
+    attacker.id,
+    attacker.team,
+    target.position.x,
+    target.position.y,
+    1,
+    0,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: () => {},
+      respawnUnit: () => {},
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+  )
+
+  assertAlmostEquals(world.cameraShake, 0.045, 0.00001)
+})
+
 Deno.test("applyDamage resolves non-unit source fallback to nearest teammate for attribution", () => {
   const world = createWorldState()
   const attacker = world.player
