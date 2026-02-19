@@ -1,8 +1,10 @@
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
 import pistolSprite from "../../assets/items/pistol.png"
 import assaultSprite from "../../assets/items/assault.png"
+import battleRifleSprite from "../../assets/items/battle-rifle.png"
 import shotgunSprite from "../../assets/items/shotgun.png"
 import autoShotgunSprite from "../../assets/items/auto-shotgun.png"
+import grenadeLauncherSprite from "../../assets/items/grenade-launcher.png"
 import flamethrowerSprite from "../../assets/items/flamethrower.png"
 import rocketLauncherSprite from "../../assets/items/rocket-launcher.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
@@ -14,7 +16,7 @@ import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
 import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
 import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
-import ironBarkSprite from "../../assets/perks/iron-bark.png"
+import kevlarVestSprite from "../../assets/perks/iron-bark.png"
 
 type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
@@ -27,8 +29,8 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   shotgun: shotgunSprite,
   flamethrower: flamethrowerSprite,
   "auto-shotgun": autoShotgunSprite,
-  "battle-rifle": assaultSprite,
-  "grenade-launcher": assaultSprite,
+  "battle-rifle": battleRifleSprite,
+  "grenade-launcher": grenadeLauncherSprite,
   "rocket-launcher": rocketLauncherSprite,
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
@@ -39,7 +41,7 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   heavy_pellets: heavyPelletsSprite,
   extra_heart: vitalBloomSprite,
   extra_stamina: quickstepSprite,
-  kevlar_vest: ironBarkSprite,
+  kevlar_vest: kevlarVestSprite,
 }
 
 const legacyPerkSpriteAlias: Record<string, PerkId> = {
