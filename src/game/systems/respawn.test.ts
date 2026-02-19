@@ -1,6 +1,6 @@
 /// <reference lib="deno.ns" />
 
-import { assert } from "jsr:@std/assert"
+import { assert, assertEquals } from "jsr:@std/assert"
 
 import { Vec2 } from "../entities.ts"
 import { BOT_RADIUS, PLAYER_RADIUS } from "../world/constants.ts"
@@ -114,4 +114,26 @@ Deno.test("respawnUnit places target far from other units near arena edge", () =
     distanceSquared(target.position.x, target.position.y, teammate.position.x, teammate.position.y),
   )
   assert(nearestDistanceSquared > 2200)
+})
+
+Deno.test("respawnUnit clears held fire input for player respawn", () => {
+  const world = createWorldState()
+  world.obstacleGrid.solid.fill(0)
+  world.input.leftDown = true
+  world.input.rightDown = true
+
+  const originalRandom = Math.random
+  Math.random = () => 0
+
+  try {
+    respawnUnit(world, world.player.id, {
+      equipPrimary: () => {},
+      randomLootablePrimary: () => "assault",
+    })
+  } finally {
+    Math.random = originalRandom
+  }
+
+  assertEquals(world.input.leftDown, false)
+  assertEquals(world.input.rightDown, false)
 })

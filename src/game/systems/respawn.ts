@@ -220,6 +220,11 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
   const occupied = world.units.filter((current) => current.id !== unit.id).map((current) => current.position)
   unit.respawn(findSafeSpawn(world, occupied, unit.radius))
 
+  if (unit.isPlayer) {
+    world.input.leftDown = false
+    world.input.rightDown = false
+  }
+
   if (!unit.isPlayer) {
     const maybeLoot = Math.random() > 0.54
     if (maybeLoot) {
