@@ -219,9 +219,7 @@ const buildPieGradient = (
     const sliceAngle = (slice.percent / 100) * 360
     const end = start + sliceAngle
     const shouldSplit = !!playerContributionSlice && playerContributionSlice.teamId === slice.id
-    const contributionRatio = shouldSplit
-      ? Math.max(0, Math.min(1, playerContributionSlice.percentOfTeam / 100))
-      : 0
+    const contributionRatio = shouldSplit ? Math.max(0, Math.min(1, playerContributionSlice.percentOfTeam / 100)) : 0
     const contributionEnd = start + sliceAngle * contributionRatio
 
     if (shouldSplit && contributionEnd - start > 0.001) {
