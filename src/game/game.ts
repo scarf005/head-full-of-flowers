@@ -145,9 +145,8 @@ const TEAM_COLOR_RAMP = [
 const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
 const MUZZLE_FLASH_LIFE_SECONDS = 0.07
-const MUZZLE_FLASH_CORE_ALPHA = 0.9
-const MUZZLE_FLASH_SPARKS_MIN = 2
-const MUZZLE_FLASH_SPARKS_MAX = 5
+const MUZZLE_FLASH_RADIUS_MIN = 0.14
+const MUZZLE_FLASH_RADIUS_MAX = 0.34
 
 type FogCullBounds = CullBounds
 
@@ -1064,78 +1063,29 @@ export class FlowerArenaGame {
     const drawY = unit.position.y - aimY * unit.recoil * 0.32
     const weaponKickback = computeWeaponKickbackDistance(unit.recoil, weapon.firingKnockback, unit.radius)
     const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
-    const muzzleX = drawX + dirX * (gunLength + unit.radius * 0.18)
-    const muzzleY = drawY + dirY * (gunLength + unit.radius * 0.18)
+    const muzzleOffset = gunLength + unit.radius * 0.2
+    const muzzleX = drawX + dirX * muzzleOffset
+    const muzzleY = drawY + dirY * muzzleOffset
 
     const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
     const knockbackScale = clamp(weapon.firingKnockback / 60, 0.3, 1.35)
-    const coreLength = (0.24 + unit.radius * 0.14) * (0.85 + knockbackScale * 0.44)
-    const coreWidth = (0.028 + weapon.bulletRadius * 0.05) * BULLET_TRAIL_WIDTH_SCALE
-
-    let coneSpread = 0.24
-    let coreColor = "#fff1d6"
-    let sparkColor = "#ffbb66"
-    let glowColor = "#ff7f3b"
+    let radius = (0.11 + weapon.bulletRadius * 0.42) * (0.82 + knockbackScale * 0.42)
     if (projectileKind === "flame") {
-      coneSpread = 0.36
-      coreColor = "#ffd39f"
-      sparkColor = "#ff9d59"
-      glowColor = "#ff6b3b"
+      radius *= 1.28
     } else if (projectileKind === "rocket" || projectileKind === "grenade") {
-      coneSpread = 0.2
-      coreColor = "#ffe8bd"
-      sparkColor = "#ffad4f"
-      glowColor = "#ff6a38"
+      radius *= 1.18
+    } else if (weapon.id === "shotgun" || weapon.id === "auto-shotgun") {
+      radius *= 1.16
     }
 
-    this.emitFlightTrailSegment(
-      muzzleX,
-      muzzleY,
-      dirX,
-      dirY,
-      coreLength,
-      coreWidth,
-      coreColor,
-      MUZZLE_FLASH_CORE_ALPHA,
-      MUZZLE_FLASH_LIFE_SECONDS,
+    const slot = this.world.explosions.find((explosion) => !explosion.active) ?? this.world.explosions[0]
+    slot.active = true
+    slot.position.set(
+      muzzleX + dirX * randomRange(0.01, 0.06),
+      muzzleY + dirY * randomRange(0.01, 0.06),
     )
-
-    this.emitFlightTrailSegment(
-      muzzleX - dirX * 0.02,
-      muzzleY - dirY * 0.02,
-      dirX,
-      dirY,
-      coreLength * 0.55,
-      coreWidth * 1.35,
-      glowColor,
-      0.44,
-      MUZZLE_FLASH_LIFE_SECONDS * 0.78,
-    )
-
-    const sparkCount = Math.max(
-      MUZZLE_FLASH_SPARKS_MIN,
-      Math.min(MUZZLE_FLASH_SPARKS_MAX, Math.round(2 + knockbackScale * 1.5 + weapon.pellets * 0.3)),
-    )
-
-    for (let index = 0; index < sparkCount; index += 1) {
-      const spreadAngle = randomRange(-coneSpread, coneSpread)
-      const spreadCos = Math.cos(spreadAngle)
-      const spreadSin = Math.sin(spreadAngle)
-      const sparkDirX = dirX * spreadCos - dirY * spreadSin
-      const sparkDirY = dirX * spreadSin + dirY * spreadCos
-      const sparkOffset = randomRange(0.02, 0.09)
-      this.emitFlightTrailSegment(
-        muzzleX + sparkDirX * sparkOffset,
-        muzzleY + sparkDirY * sparkOffset,
-        sparkDirX,
-        sparkDirY,
-        coreLength * randomRange(0.34, 0.72),
-        coreWidth * randomRange(0.34, 0.68),
-        sparkColor,
-        randomRange(0.4, 0.66),
-        MUZZLE_FLASH_LIFE_SECONDS * randomRange(0.52, 0.86),
-      )
-    }
+    slot.radius = clamp(radius, MUZZLE_FLASH_RADIUS_MIN, MUZZLE_FLASH_RADIUS_MAX)
+    slot.life = MUZZLE_FLASH_LIFE_SECONDS * randomRange(0.86, 1.18)
   }
 
   private updateShellCasings(dt: number, fogCullBounds?: FogCullBounds) {
