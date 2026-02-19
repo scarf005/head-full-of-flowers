@@ -150,7 +150,7 @@ const drawItemSpritePng = (
   const halfWidth = drawWidth * 0.5
   const halfHeight = drawHeight * 0.5
   const smoothBefore = context.imageSmoothingEnabled
-  context.imageSmoothingEnabled = true
+  context.imageSmoothingEnabled = false
   context.drawImage(image, x - halfWidth, y - halfHeight, drawWidth, drawHeight)
   context.imageSmoothingEnabled = smoothBefore
   return true
