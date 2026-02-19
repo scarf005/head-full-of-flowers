@@ -38,6 +38,7 @@ import type { GameModeId } from "./types.ts"
 import { getItemSpritePath } from "./render/pixel-art.ts"
 import { MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { activateLocale } from "../i18n.ts"
+import { copyDebugWorldStateToClipboard } from "./debug-state-copy.ts"
 import { t } from "@lingui/core/macro"
 
 type WeaponIconSprite = WeaponHudIcon
@@ -220,6 +221,17 @@ export const GameHud = () => {
               }}
             >
               {t`Skip to Match End`}
+            </button>
+            <button
+              class="debug-skip"
+              type="button"
+              onClick={() => {
+                void copyDebugWorldStateToClipboard().then((copied) => {
+                  statusMessageSignal.value = copied ? t`Copied state to clipboard` : t`Failed to copy state`
+                })
+              }}
+            >
+              {t`Copy state to clipboard`}
             </button>
             <div class="debug-speed">
               <span>{t`Render Profile ${renderPathProfile.frames} frames`}</span>

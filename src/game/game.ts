@@ -35,9 +35,12 @@ import {
 } from "./signals.ts"
 import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
+import { computeWeaponKickbackDistance } from "./render/unit-motion-transform.ts"
+import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
 import {
   ARENA_END_RADIUS,
   ARENA_START_RADIUS,
+  arenaRadiiForPlayerCount,
   clamp,
   distSquared,
   lerp,
@@ -141,6 +144,10 @@ const TEAM_COLOR_RAMP = [
 ]
 const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
+const MUZZLE_FLASH_LIFE_SECONDS = 0.07
+const MUZZLE_FLASH_CORE_ALPHA = 0.9
+const MUZZLE_FLASH_SPARKS_MIN = 2
+const MUZZLE_FLASH_SPARKS_MAX = 5
 
 type FogCullBounds = CullBounds
 
@@ -158,6 +165,8 @@ export class FlowerArenaGame {
   private sfx = new SfxSynth()
   private currentMode: GameModeId = "ffa"
   private botPool: Unit[]
+  private matchArenaStartRadius = ARENA_START_RADIUS
+  private matchArenaEndRadius = ARENA_END_RADIUS
   private lastMusicVolume = -1
   private lastEffectsVolume = -1
   private lastLocale = languageSignal.value
@@ -173,6 +182,7 @@ export class FlowerArenaGame {
     this.canvas.width = VIEW_WIDTH
     this.canvas.height = VIEW_HEIGHT
     this.world = createWorldState()
+    registerDebugWorldStateProvider(() => this.world)
     this.botPool = [...this.world.bots]
     this.applyMatchMode()
     this.syncPlayerOptions()
@@ -257,6 +267,7 @@ export class FlowerArenaGame {
     cancelAnimationFrame(this.raf)
     this.inputAdapter?.destroy()
     this.audioDirector.stopAll()
+    registerDebugWorldStateProvider(null)
   }
 
   private setupWorld() {
@@ -300,8 +311,11 @@ export class FlowerArenaGame {
     const botCount = clamp(requestedPlayers - 1, 1, this.botPool.length)
     const totalPlayers = botCount + 1
     const activeBots = this.botPool.slice(0, botCount)
+    const arenaRadii = arenaRadiiForPlayerCount(totalPlayers)
 
     this.currentMode = mode
+    this.matchArenaStartRadius = arenaRadii.start
+    this.matchArenaEndRadius = arenaRadii.end
     if (mode === "ffa") {
       ffaPlayerCountSignal.value = totalPlayers
     }
@@ -577,7 +591,7 @@ export class FlowerArenaGame {
     this.world.aiDifficulty = difficulty
     menuStartDifficultySignal.value = null
     this.world.timeRemaining = MATCH_DURATION_SECONDS
-    this.world.arenaRadius = ARENA_START_RADIUS
+    this.world.arenaRadius = this.matchArenaStartRadius
     this.world.pickupTimer = LOOT_PICKUP_INTERVAL_SECONDS
     this.world.lootBoxTimer = this.whiteLootBoxSpawnIntervalSeconds()
     this.world.pickupSpawnSequence = 1
@@ -1033,6 +1047,95 @@ export class FlowerArenaGame {
     slot.maxLife = randomRange(0.55, 1.1)
     slot.life = slot.maxLife
     slot.bounceCount = 0
+  }
+
+  private spawnMuzzleFlash(unit: Unit, shotAngle: number, weaponId: PrimaryWeaponId) {
+    const weapon = PRIMARY_WEAPONS[weaponId]
+    const aimLength = Math.hypot(unit.aim.x, unit.aim.y)
+    if (aimLength <= 0.0001) {
+      return
+    }
+
+    const aimX = unit.aim.x / aimLength
+    const aimY = unit.aim.y / aimLength
+    const dirX = Math.cos(shotAngle)
+    const dirY = Math.sin(shotAngle)
+    const drawX = unit.position.x - aimX * unit.recoil * 0.32
+    const drawY = unit.position.y - aimY * unit.recoil * 0.32
+    const weaponKickback = computeWeaponKickbackDistance(unit.recoil, weapon.firingKnockback, unit.radius)
+    const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
+    const muzzleX = drawX + dirX * (gunLength + unit.radius * 0.18)
+    const muzzleY = drawY + dirY * (gunLength + unit.radius * 0.18)
+
+    const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
+    const knockbackScale = clamp(weapon.firingKnockback / 60, 0.3, 1.35)
+    const coreLength = (0.24 + unit.radius * 0.14) * (0.85 + knockbackScale * 0.44)
+    const coreWidth = (0.028 + weapon.bulletRadius * 0.05) * BULLET_TRAIL_WIDTH_SCALE
+
+    let coneSpread = 0.24
+    let coreColor = "#fff1d6"
+    let sparkColor = "#ffbb66"
+    let glowColor = "#ff7f3b"
+    if (projectileKind === "flame") {
+      coneSpread = 0.36
+      coreColor = "#ffd39f"
+      sparkColor = "#ff9d59"
+      glowColor = "#ff6b3b"
+    } else if (projectileKind === "rocket" || projectileKind === "grenade") {
+      coneSpread = 0.2
+      coreColor = "#ffe8bd"
+      sparkColor = "#ffad4f"
+      glowColor = "#ff6a38"
+    }
+
+    this.emitFlightTrailSegment(
+      muzzleX,
+      muzzleY,
+      dirX,
+      dirY,
+      coreLength,
+      coreWidth,
+      coreColor,
+      MUZZLE_FLASH_CORE_ALPHA,
+      MUZZLE_FLASH_LIFE_SECONDS,
+    )
+
+    this.emitFlightTrailSegment(
+      muzzleX - dirX * 0.02,
+      muzzleY - dirY * 0.02,
+      dirX,
+      dirY,
+      coreLength * 0.55,
+      coreWidth * 1.35,
+      glowColor,
+      0.44,
+      MUZZLE_FLASH_LIFE_SECONDS * 0.78,
+    )
+
+    const sparkCount = Math.max(
+      MUZZLE_FLASH_SPARKS_MIN,
+      Math.min(MUZZLE_FLASH_SPARKS_MAX, Math.round(2 + knockbackScale * 1.5 + weapon.pellets * 0.3)),
+    )
+
+    for (let index = 0; index < sparkCount; index += 1) {
+      const spreadAngle = randomRange(-coneSpread, coneSpread)
+      const spreadCos = Math.cos(spreadAngle)
+      const spreadSin = Math.sin(spreadAngle)
+      const sparkDirX = dirX * spreadCos - dirY * spreadSin
+      const sparkDirY = dirX * spreadSin + dirY * spreadCos
+      const sparkOffset = randomRange(0.02, 0.09)
+      this.emitFlightTrailSegment(
+        muzzleX + sparkDirX * sparkOffset,
+        muzzleY + sparkDirY * sparkOffset,
+        sparkDirX,
+        sparkDirY,
+        coreLength * randomRange(0.34, 0.72),
+        coreWidth * randomRange(0.34, 0.68),
+        sparkColor,
+        randomRange(0.4, 0.66),
+        MUZZLE_FLASH_LIFE_SECONDS * randomRange(0.52, 0.86),
+      )
+    }
   }
 
   private updateShellCasings(dt: number, fogCullBounds?: FogCullBounds) {
@@ -1798,6 +1901,7 @@ export class FlowerArenaGame {
       allocProjectile: () => this.allocProjectile(),
       startReload: (id) => this.startReload(id),
       onShellEjected: (shooter) => this.spawnShellCasing(shooter),
+      onMuzzleFlash: (shooter, shotAngle, weaponId) => this.spawnMuzzleFlash(shooter, shotAngle, weaponId),
       onPlayerShoot: () => {
         this.sfx.shoot()
         updatePlayerWeaponSignals(this.world)
@@ -1967,7 +2071,7 @@ export class FlowerArenaGame {
     }
 
     const shrinkProgress = 1 - this.world.timeRemaining / MATCH_DURATION_SECONDS
-    this.world.arenaRadius = lerp(ARENA_START_RADIUS, ARENA_END_RADIUS, clamp(shrinkProgress, 0, 1))
+    this.world.arenaRadius = lerp(this.matchArenaStartRadius, this.matchArenaEndRadius, clamp(shrinkProgress, 0, 1))
 
     updatePlayer(this.world, gameplayDt, {
       firePrimary: () => this.firePrimary(this.world.player.id),
