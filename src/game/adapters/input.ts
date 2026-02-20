@@ -344,7 +344,7 @@ export const setupInputAdapter = (
     world.input.keys.delete(event.key.toLowerCase())
   }
 
-  const onPointerMove = (event: PointerEvent) => {
+  const onTouchPointerMove = (event: PointerEvent) => {
     if (event.pointerId === moveStickState.pointerId) {
       updateMoveStick(event.clientX, event.clientY)
       event.preventDefault()
@@ -356,17 +356,25 @@ export const setupInputAdapter = (
       event.preventDefault()
       return
     }
+  }
 
-    if (isMobileControlTarget(event)) {
+  let touchPointerMoveListening = false
+  const syncTouchPointerMoveListener = () => {
+    const shouldListen = moveStickState.pointerId >= 0 || aimStickState.pointerId >= 0
+    if (shouldListen === touchPointerMoveListening) {
       return
     }
 
+    touchPointerMoveListening = shouldListen
+    if (shouldListen) {
+      globalThis.addEventListener("pointermove", onTouchPointerMove)
+    } else {
+      globalThis.removeEventListener("pointermove", onTouchPointerMove)
+    }
+  }
+
+  const onMouseMove = (event: MouseEvent) => {
     if (!world.running || world.paused || !world.started || world.finished) {
-      return
-    }
-
-    const target = event.target
-    if (!(target instanceof Node) || !frame || !frame.contains(target)) {
       return
     }
 
@@ -395,6 +403,7 @@ export const setupInputAdapter = (
 
     if (moveStickState.pointerId < 0 && target.closest(".mobile-move-zone")) {
       moveStickState.pointerId = event.pointerId
+      syncTouchPointerMoveListener()
       const bounds = (target.closest(".mobile-move-zone") as Element).getBoundingClientRect()
       moveStickState.centerX = bounds.left + bounds.width * 0.5
       moveStickState.centerY = bounds.top + bounds.height * 0.5
@@ -405,6 +414,7 @@ export const setupInputAdapter = (
 
     if (aimStickState.pointerId < 0 && target.closest(".mobile-aim-zone")) {
       aimStickState.pointerId = event.pointerId
+      syncTouchPointerMoveListener()
       const bounds = (target.closest(".mobile-aim-zone") as Element).getBoundingClientRect()
       aimStickState.centerX = bounds.left + bounds.width * 0.5
       aimStickState.centerY = bounds.top + bounds.height * 0.5
@@ -468,6 +478,7 @@ export const setupInputAdapter = (
   const onPointerUp = (event: PointerEvent) => {
     if (event.pointerId === moveStickState.pointerId) {
       moveStickState.pointerId = -1
+      syncTouchPointerMoveListener()
       clearMoveInput()
       moveThumbTo(0, 0)
       return
@@ -475,6 +486,7 @@ export const setupInputAdapter = (
 
     if (event.pointerId === aimStickState.pointerId) {
       aimStickState.pointerId = -1
+      syncTouchPointerMoveListener()
       resetAimStick()
       return
     }
@@ -519,12 +531,12 @@ export const setupInputAdapter = (
   globalThis.addEventListener("keydown", onKeyDown)
   globalThis.addEventListener("keyup", onKeyUp)
   globalThis.addEventListener("pointerdown", onMobileControlsPointerDown)
-  globalThis.addEventListener("pointermove", onPointerMove)
   globalThis.addEventListener("pointerdown", onPointerDown)
   globalThis.addEventListener("pointerup", onPointerUp)
   globalThis.addEventListener("pointercancel", onPointerUp)
   globalThis.addEventListener("wheel", onWheel, { passive: false })
   globalThis.addEventListener("contextmenu", onContextMenu)
+  canvas.addEventListener("mousemove", onMouseMove)
   canvas.addEventListener("pointerleave", onPointerLeave)
   canvas.addEventListener("contextmenu", onContextMenu)
 
@@ -543,12 +555,13 @@ export const setupInputAdapter = (
       globalThis.removeEventListener("keydown", onKeyDown)
       globalThis.removeEventListener("keyup", onKeyUp)
       globalThis.removeEventListener("pointerdown", onMobileControlsPointerDown)
-      globalThis.removeEventListener("pointermove", onPointerMove)
+      globalThis.removeEventListener("pointermove", onTouchPointerMove)
       globalThis.removeEventListener("pointerdown", onPointerDown)
       globalThis.removeEventListener("pointerup", onPointerUp)
       globalThis.removeEventListener("pointercancel", onPointerUp)
       globalThis.removeEventListener("wheel", onWheel)
       globalThis.removeEventListener("contextmenu", onContextMenu)
+      canvas.removeEventListener("mousemove", onMouseMove)
       canvas.removeEventListener("pointerleave", onPointerLeave)
       canvas.removeEventListener("contextmenu", onContextMenu)
     },
