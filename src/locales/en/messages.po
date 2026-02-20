@@ -34,12 +34,8 @@ msgstr "4 players per team"
 msgid "Adrenal Reload"
 msgstr "Adrenal Reload"
 
-#: src/game/hud.tsx:542
-msgid "Aim and fire joystick"
-msgstr "Aim and fire joystick"
-
 #. placeholder {0}: slot.ammo
-#: src/game/hud.tsx:447
+#: src/game/hud.tsx:537
 msgid "Ammo {0}"
 msgstr "Ammo {0}"
 
@@ -111,9 +107,9 @@ msgstr "Copied state to clipboard"
 msgid "Copy state to clipboard"
 msgstr "Copy state to clipboard"
 
-#: src/game/hud.tsx:125
-msgid "Coverage score"
-msgstr "Coverage score"
+#: src/game/hud.tsx:365
+msgid "Credits"
+msgstr "Credits"
 
 #: src/game/game.ts:782
 msgid "Damage"
@@ -146,12 +142,12 @@ msgid "Easy Mode"
 msgstr "Easy Mode"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud.tsx:387
+#: src/game/hud.tsx:477
 msgid "Effects Volume {0}%"
 msgstr "Effects Volume {0}%"
 
 #: src/game/hud.tsx:327
-#: src/game/hud.tsx:409
+#: src/game/hud.tsx:499
 msgid "English"
 msgstr "English"
 
@@ -174,10 +170,6 @@ msgstr "Extra Stamina"
 #: src/game/hud.tsx:223
 msgid "Failed to copy state"
 msgstr "Failed to copy state"
-
-#: src/game/hud.tsx:502
-msgid "Final standings"
-msgstr "Final standings"
 
 #: src/game/i18n/localize.ts:28
 msgid "Flamethrower"
@@ -204,6 +196,14 @@ msgstr "Game Speed {0}x"
 #: src/game/game.ts:537
 msgid "Generating arena..."
 msgstr "Generating arena..."
+
+#: src/game/hud.tsx:450
+msgid "GitHub"
+msgstr "GitHub"
+
+#: src/game/hud.tsx:443
+msgid "GitHub repository"
+msgstr "GitHub repository"
 
 #: src/game/hud.tsx:98
 msgid "Grenade"
@@ -237,7 +237,7 @@ msgstr "Heavy Pellets"
 msgid "Hit Rate"
 msgstr "Hit Rate"
 
-#: src/game/hud.tsx:465
+#: src/game/hud.tsx:555
 msgid "HP"
 msgstr "HP"
 
@@ -267,12 +267,12 @@ msgid "Kill an enemy: next reload time -50%"
 msgstr "Kill an enemy: next reload time -50%"
 
 #: src/game/hud.tsx:336
-#: src/game/hud.tsx:418
+#: src/game/hud.tsx:508
 msgid "Korean"
 msgstr "Korean"
 
 #: src/game/hud.tsx:318
-#: src/game/hud.tsx:400
+#: src/game/hud.tsx:490
 msgid "Language"
 msgstr "Language"
 
@@ -284,22 +284,18 @@ msgstr "Laser Sight"
 msgid "Lead Margin"
 msgstr "Lead Margin"
 
-#: src/game/hud.tsx:424
-#: src/game/hud.tsx:527
+#: src/game/hud.tsx:514
+#: src/game/hud.tsx:617
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: src/game/hud.tsx:372
+#: src/game/hud.tsx:462
 msgid "Match is frozen. Adjust options or resume."
 msgstr "Match is frozen. Adjust options or resume."
 
-#: src/game/hud.tsx:498
+#: src/game/hud.tsx:588
 msgid "Match Results"
 msgstr "Match Results"
-
-#: src/game/hud.tsx:518
-msgid "Match statistics"
-msgstr "Match statistics"
 
 #. placeholder {0}: stacks * 3
 #: src/game/i18n/localize.ts:80
@@ -310,29 +306,25 @@ msgstr "Max HP +{0}"
 msgid "Medium"
 msgstr "Medium"
 
-#: src/game/hud.tsx:535
-msgid "Mobile controls"
-msgstr "Mobile controls"
-
 #: src/game/hud.tsx:98
 msgid "Molotov"
 msgstr "Molotov"
-
-#: src/game/hud.tsx:536
-msgid "Move joystick"
-msgstr "Move joystick"
 
 #: src/game/i18n/localize.ts:83
 msgid "Move speed +12%"
 msgstr "Move speed +12%"
 
+#: src/game/hud.tsx:367
+msgid "Music"
+msgstr "Music"
+
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud.tsx:374
+#: src/game/hud.tsx:464
 msgid "Music Volume {0}%"
 msgstr "Music Volume {0}%"
 
 #: src/game/hud.tsx:124
-#: src/game/hud.tsx:371
+#: src/game/hud.tsx:461
 msgid "Paused"
 msgstr "Paused"
 
@@ -348,7 +340,7 @@ msgstr "Perk acquired {localizedPerk}"
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "Perk acquired {localizedPerk} x{stacks}"
 
-#: src/game/hud.tsx:474
+#: src/game/hud.tsx:564
 msgid "Perks"
 msgstr "Perks"
 
@@ -379,7 +371,7 @@ msgstr "Players {players}"
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 
-#: src/game/hud.tsx:437
+#: src/game/hud.tsx:527
 msgid "Primary"
 msgstr "Primary"
 
@@ -409,7 +401,7 @@ msgstr "Reloading..."
 msgid "Render Profile {0} frames"
 msgstr "Render Profile {0} frames"
 
-#: src/game/hud.tsx:423
+#: src/game/hud.tsx:513
 msgid "Resume"
 msgstr "Resume"
 
@@ -426,9 +418,13 @@ msgstr "RMB to throw"
 msgid "Rocket Launcher"
 msgstr "Rocket Launcher"
 
-#: src/game/hud.tsx:455
+#: src/game/hud.tsx:545
 msgid "Secondary"
 msgstr "Secondary"
+
+#: src/game/hud.tsx:388
+msgid "SFX"
+msgstr "SFX"
 
 #: src/game/i18n/localize.ts:13
 msgid "Shotgun"
@@ -483,10 +479,6 @@ msgstr "Teams {squadTeams} ({players} total)"
 #: src/game/hud.tsx:266
 msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 msgstr "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
-
-#: src/game/hud.tsx:539
-msgid "Throw {secondaryLabel}"
-msgstr "Throw {secondaryLabel}"
 
 #. placeholder {0}: formatTime(timeRemainingSignal.value)
 #: src/game/hud.tsx:123

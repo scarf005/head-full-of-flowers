@@ -122,7 +122,7 @@ export const GameHud = () => {
           <div class="hud hud-top">
             <div class="hud-pill">{t`Time ${formatTime(timeRemainingSignal.value)}`}</div>
             {isPaused ? <div class="hud-pill hud-pill-warn">{t`Paused`}</div> : null}
-            <div class="score-panel" aria-label={t`Coverage score`}>
+            <div class="score-panel">
               <div class="score-track score-track-ffa">
                 {slices.map((slice) => (
                   <div
@@ -360,6 +360,94 @@ export const GameHud = () => {
                 </button>
               </div>
             </div>
+            <div class="menu-viewport-links">
+              <details class="menu-credits-panel">
+                <summary class="menu-credits-summary">{t`Credits`}</summary>
+                <div class="menu-credits-content">
+                  <div class="menu-credits-section-title">{t`Music`}</div>
+                  <ul class="menu-credits-list">
+                    <li>
+                      <a
+                        href="https://hellstarplus.bandcamp.com/track/my-divine-perversions"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        MY DIVINE PERVERSIONS - hellstar.plus (CC BY 4.0)
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://hellstarplus.bandcamp.com/track/linear-gestalt"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        linear & gestalt - hellstar.plus (CC BY 4.0)
+                      </a>
+                    </li>
+                  </ul>
+                  <div class="menu-credits-section-title">{t`SFX`}</div>
+                  <ul class="menu-credits-list">
+                    <li>
+                      <a
+                        href="https://freesound.org/people/damnsatinist/sounds/493913/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Kill confirm - damnsatinist #493913 (CC BY 4.0)
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://freesound.org/people/DeltaCode/sounds/678385/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Item acquire - DeltaCode #678385 (CC0)
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://freesound.org/people/Guinamun/sounds/690623/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Character damage - Guinamun #690623 (CC0)
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://freesound.org/people/Angrycrazii/sounds/277322/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Player death - Angrycrazii #277322 (CC0)
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="https://freesound.org/people/GFL7/sounds/276963/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        Reload - GFL7 #276963 (CC0)
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+              </details>
+              <a
+                class="menu-github-fab"
+                href="https://github.com/scarf005/head-full-of-flowers"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={t`GitHub repository`}
+              >
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" class="menu-github-icon">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.292 6.536 5.47 7.592.4.074.547-.174.547-.386 0-.19-.007-.693-.01-1.36-2.226.484-2.695-1.073-2.695-1.073-.364-.924-.89-1.17-.89-1.17-.725-.496.055-.486.055-.486.802.056 1.225.824 1.225.824.713 1.223 1.872.87 2.329.665.072-.517.28-.87.508-1.07-1.777-.2-3.644-.888-3.644-3.955 0-.873.312-1.587.824-2.147-.083-.202-.357-1.017.078-2.12 0 0 .672-.215 2.2.82a7.64 7.64 0 0 1 4.004 0c1.526-1.035 2.198-.82 2.198-.82.436 1.103.162 1.918.08 2.12.513.56.823 1.274.823 2.147 0 3.075-1.87 3.752-3.652 3.95.288.247.543.735.543 1.482 0 1.07-.01 1.932-.01 2.195 0 .214.144.464.55.385C13.71 14.534 16 11.54 16 8c0-4.42-3.58-8-8-8" />
+                </svg>
+                <span class="sr-only">{t`GitHub`}</span>
+              </a>
+            </div>
           </div>
         )
         : null}
@@ -494,12 +582,12 @@ export const GameHud = () => {
 
       {result.visible
         ? (
-          <div class="hud match-result" role="status" aria-live="polite">
+          <div class="hud match-result" aria-live="polite">
             <div class="match-result-title">{t`Match Results`}</div>
             <div class="match-result-name" style={{ color: result.winnerColor }}>{result.winnerLabel}</div>
             <div class="match-result-content">
               <div class="match-result-pie" style={{ background: result.pieGradient }} />
-              <div class="match-result-standings" aria-label={t`Final standings`}>
+              <div class="match-result-standings">
                 {result.standings.map((standing, index) => (
                   <div class="match-result-standing" key={standing.id}>
                     <div class="match-result-standing-main">
@@ -515,7 +603,7 @@ export const GameHud = () => {
                 ))}
               </div>
             </div>
-            <div class="match-result-stats" aria-label={t`Match statistics`}>
+            <div class="match-result-stats">
               {result.stats.map((stat) => (
                 <div class="match-result-stat" key={stat.label}>
                   <div class="match-result-stat-label">{stat.label}</div>
@@ -532,14 +620,14 @@ export const GameHud = () => {
 
       {!showMenu && !result.visible
         ? (
-          <div class="hud mobile-controls" aria-label={t`Mobile controls`}>
-            <div class="mobile-stick-zone mobile-move-zone" aria-label={t`Move joystick`}>
+          <div class="hud mobile-controls">
+            <div class="mobile-stick-zone mobile-move-zone">
               <div class="mobile-stick-thumb mobile-move-thumb" />
             </div>
-            <button type="button" class="mobile-secondary-button" aria-label={t`Throw ${secondaryLabel}`}>
+            <button type="button" class="mobile-secondary-button">
               {secondaryLabel}
             </button>
-            <div class="mobile-stick-zone mobile-aim-zone" aria-label={t`Aim and fire joystick`}>
+            <div class="mobile-stick-zone mobile-aim-zone">
               <div class="mobile-stick-thumb mobile-aim-thumb" />
             </div>
           </div>

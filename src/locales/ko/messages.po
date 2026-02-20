@@ -34,12 +34,8 @@ msgstr "팀당 4명"
 msgid "Adrenal Reload"
 msgstr "아드레날린 재장전"
 
-#: src/game/hud.tsx:542
-msgid "Aim and fire joystick"
-msgstr "조준 및 사격 조이스틱"
-
 #. placeholder {0}: slot.ammo
-#: src/game/hud.tsx:447
+#: src/game/hud.tsx:537
 msgid "Ammo {0}"
 msgstr "탄약 {0}"
 
@@ -111,9 +107,9 @@ msgstr "상태를 클립보드에 복사했습니다"
 msgid "Copy state to clipboard"
 msgstr "클립보드에 상태 복사"
 
-#: src/game/hud.tsx:125
-msgid "Coverage score"
-msgstr "점유율 점수"
+#: src/game/hud.tsx:365
+msgid "Credits"
+msgstr "크레딧"
 
 #: src/game/game.ts:782
 msgid "Damage"
@@ -146,12 +142,12 @@ msgid "Easy Mode"
 msgstr "쉬움 모드"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud.tsx:387
+#: src/game/hud.tsx:477
 msgid "Effects Volume {0}%"
 msgstr "효과음 볼륨 {0}%"
 
 #: src/game/hud.tsx:327
-#: src/game/hud.tsx:409
+#: src/game/hud.tsx:499
 msgid "English"
 msgstr "영어"
 
@@ -174,10 +170,6 @@ msgstr "추가 스태미나"
 #: src/game/hud.tsx:223
 msgid "Failed to copy state"
 msgstr "상태 복사 실패"
-
-#: src/game/hud.tsx:502
-msgid "Final standings"
-msgstr "최종 순위"
 
 #: src/game/i18n/localize.ts:28
 msgid "Flamethrower"
@@ -204,6 +196,14 @@ msgstr "게임 속도 {0}x"
 #: src/game/game.ts:537
 msgid "Generating arena..."
 msgstr "전장을 생성하는 중..."
+
+#: src/game/hud.tsx:450
+msgid "GitHub"
+msgstr "깃허브"
+
+#: src/game/hud.tsx:443
+msgid "GitHub repository"
+msgstr "깃허브 저장소"
 
 #: src/game/hud.tsx:98
 msgid "Grenade"
@@ -237,7 +237,7 @@ msgstr "고중량 탄환"
 msgid "Hit Rate"
 msgstr "명중률"
 
-#: src/game/hud.tsx:465
+#: src/game/hud.tsx:555
 msgid "HP"
 msgstr "체력"
 
@@ -267,12 +267,12 @@ msgid "Kill an enemy: next reload time -50%"
 msgstr "적 처치 시: 다음 재장전 시간 -50%"
 
 #: src/game/hud.tsx:336
-#: src/game/hud.tsx:418
+#: src/game/hud.tsx:508
 msgid "Korean"
 msgstr "한국어"
 
 #: src/game/hud.tsx:318
-#: src/game/hud.tsx:400
+#: src/game/hud.tsx:490
 msgid "Language"
 msgstr "언어"
 
@@ -284,22 +284,18 @@ msgstr "레이저 조준기"
 msgid "Lead Margin"
 msgstr "선두 격차"
 
-#: src/game/hud.tsx:424
-#: src/game/hud.tsx:527
+#: src/game/hud.tsx:514
+#: src/game/hud.tsx:617
 msgid "Main Menu"
 msgstr "메인 메뉴"
 
-#: src/game/hud.tsx:372
+#: src/game/hud.tsx:462
 msgid "Match is frozen. Adjust options or resume."
 msgstr "경기가 멈춰 있습니다. 옵션을 조정하거나 계속하세요."
 
-#: src/game/hud.tsx:498
+#: src/game/hud.tsx:588
 msgid "Match Results"
 msgstr "경기 결과"
-
-#: src/game/hud.tsx:518
-msgid "Match statistics"
-msgstr "경기 통계"
 
 #. placeholder {0}: stacks * 3
 #: src/game/i18n/localize.ts:80
@@ -310,29 +306,25 @@ msgstr "최대 체력 +{0}"
 msgid "Medium"
 msgstr "보통"
 
-#: src/game/hud.tsx:535
-msgid "Mobile controls"
-msgstr "모바일 컨트롤"
-
 #: src/game/hud.tsx:98
 msgid "Molotov"
 msgstr "화염병"
-
-#: src/game/hud.tsx:536
-msgid "Move joystick"
-msgstr "이동 조이스틱"
 
 #: src/game/i18n/localize.ts:83
 msgid "Move speed +12%"
 msgstr "이동 속도 +12%"
 
+#: src/game/hud.tsx:367
+msgid "Music"
+msgstr "음악"
+
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud.tsx:374
+#: src/game/hud.tsx:464
 msgid "Music Volume {0}%"
 msgstr "음악 볼륨 {0}%"
 
 #: src/game/hud.tsx:124
-#: src/game/hud.tsx:371
+#: src/game/hud.tsx:461
 msgid "Paused"
 msgstr "일시정지"
 
@@ -348,7 +340,7 @@ msgstr "{localizedPerk} 특성 획득"
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "{localizedPerk} 특성 획득 x{stacks}"
 
-#: src/game/hud.tsx:474
+#: src/game/hud.tsx:564
 msgid "Perks"
 msgstr "특성"
 
@@ -379,7 +371,7 @@ msgstr "플레이어 {players}명"
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "플레이어 {players}명 ({tdmTeamSize}대{tdmTeamSize})"
 
-#: src/game/hud.tsx:437
+#: src/game/hud.tsx:527
 msgid "Primary"
 msgstr "주무기"
 
@@ -409,7 +401,7 @@ msgstr "재장전 중..."
 msgid "Render Profile {0} frames"
 msgstr "렌더 프로필 {0} 프레임"
 
-#: src/game/hud.tsx:423
+#: src/game/hud.tsx:513
 msgid "Resume"
 msgstr "계속하기"
 
@@ -426,9 +418,13 @@ msgstr "우클릭으로 투척"
 msgid "Rocket Launcher"
 msgstr "로켓 발사기"
 
-#: src/game/hud.tsx:455
+#: src/game/hud.tsx:545
 msgid "Secondary"
 msgstr "보조무기"
+
+#: src/game/hud.tsx:388
+msgid "SFX"
+msgstr "효과음"
 
 #: src/game/i18n/localize.ts:13
 msgid "Shotgun"
@@ -483,10 +479,6 @@ msgstr "팀 {squadTeams}개 (총 {players}명)"
 #: src/game/hud.tsx:266
 msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 msgstr "{MATCH_DURATION_SECONDS}초 동안 가장 넓은 꽃밭을 만든 플레이어가 승리합니다"
-
-#: src/game/hud.tsx:539
-msgid "Throw {secondaryLabel}"
-msgstr "{secondaryLabel} 투척"
 
 #. placeholder {0}: formatTime(timeRemainingSignal.value)
 #: src/game/hud.tsx:123
