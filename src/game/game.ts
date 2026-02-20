@@ -150,10 +150,7 @@ const TEAM_COLOR_RAMP = [
 const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
 const RAGDOLL_MAX_LIFE_SECONDS = 1
-const RAGDOLL_BASE_MOMENTUM = 1.8
-const RAGDOLL_MAX_SPEED = 16
-const RAGDOLL_DRAG_PER_SECOND = 7.4
-const RAGDOLL_SPIN_DRAG_PER_SECOND = 9
+const RAGDOLL_MAX_ANGULAR_SPEED = 14
 const MUZZLE_FLASH_BASE_RADIUS = 0.18
 const MUZZLE_FLASH_REFERENCE_SPEED = 40
 const MUZZLE_FLASH_MIN_RADIUS = 0.08
@@ -960,19 +957,6 @@ export class FlowerArenaGame {
     return this.world.ragdolls.find((ragdoll) => !ragdoll.active) ?? this.world.ragdolls[0]
   }
 
-  private ragdollMomentumScale(damageSource: DamageSource, impactLength: number) {
-    if (damageSource === "throwable") {
-      return Math.max(2.8, impactLength * 1.3)
-    }
-    if (damageSource === "projectile") {
-      return Math.max(2.2, impactLength * 0.16)
-    }
-    if (damageSource === "molotov") {
-      return Math.max(1.2, impactLength * 0.45)
-    }
-    return Math.max(1.4, impactLength * 0.22)
-  }
-
   private spawnUnitRagdoll(
     target: Unit,
     killImpulse: {
@@ -995,50 +979,42 @@ export class FlowerArenaGame {
       dirY /= impactLength
     }
 
-    const momentum = clamp(
-      RAGDOLL_BASE_MOMENTUM +
-        this.ragdollMomentumScale(killImpulse.damageSource, impactLength) +
-        killImpulse.damage * 0.35,
-      1.6,
-      RAGDOLL_MAX_SPEED,
-    )
+    const travelDistance = Math.max(0, killImpulse.damage)
+    const travelSpeed = travelDistance / Math.max(0.000001, RAGDOLL_MAX_LIFE_SECONDS)
 
     ragdoll.active = true
     ragdoll.unitId = target.id
     ragdoll.isPlayer = target.isPlayer
     ragdoll.team = target.team
     ragdoll.position.copy(target.position)
-    ragdoll.velocity.set(
-      target.velocity.x * 0.45 + dirX * momentum,
-      target.velocity.y * 0.45 + dirY * momentum,
-    )
+    ragdoll.velocity.set(dirX * travelSpeed, dirY * travelSpeed)
     ragdoll.rotation = Math.atan2(dirY, dirX) + randomRange(-0.36, 0.36)
-    ragdoll.angularVelocity = randomRange(-14, 14) * clamp(momentum / RAGDOLL_MAX_SPEED, 0.25, 1)
+    ragdoll.angularVelocity = randomRange(-RAGDOLL_MAX_ANGULAR_SPEED, RAGDOLL_MAX_ANGULAR_SPEED) *
+      clamp(travelDistance / 20, 0.25, 1.4)
     ragdoll.radius = target.radius
     ragdoll.maxLife = RAGDOLL_MAX_LIFE_SECONDS
     ragdoll.life = ragdoll.maxLife
   }
 
   private updateRagdolls(dt: number) {
-    const drag = clamp(1 - dt * RAGDOLL_DRAG_PER_SECOND, 0, 1)
-    const spinDrag = clamp(1 - dt * RAGDOLL_SPIN_DRAG_PER_SECOND, 0, 1)
     for (const ragdoll of this.world.ragdolls) {
       if (!ragdoll.active) {
         continue
       }
 
-      ragdoll.life -= dt
-      if (ragdoll.life <= 0) {
+      const step = Math.min(dt, ragdoll.life)
+      if (step <= 0) {
         ragdoll.active = false
         continue
       }
 
-      ragdoll.velocity.x *= drag
-      ragdoll.velocity.y *= drag
-      ragdoll.position.x += ragdoll.velocity.x * dt
-      ragdoll.position.y += ragdoll.velocity.y * dt
-      ragdoll.rotation += ragdoll.angularVelocity * dt
-      ragdoll.angularVelocity *= spinDrag
+      ragdoll.position.x += ragdoll.velocity.x * step
+      ragdoll.position.y += ragdoll.velocity.y * step
+      ragdoll.rotation += ragdoll.angularVelocity * step
+      ragdoll.life -= step
+      if (ragdoll.life <= 0) {
+        ragdoll.active = false
+      }
     }
   }
 
