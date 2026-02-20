@@ -85,7 +85,6 @@ const DAMAGE_VIGNETTE_MAX_ALPHA = 0.76
 const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
 const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
-const RAGDOLL_FADE_OUT_WINDOW_SECONDS = 0.2
 const MINIMAP_SIZE_PX = 164 * 0.8
 const MINIMAP_PADDING_PX = 12
 const MINIMAP_UNIT_RADIUS_PX = 2.1
@@ -2031,15 +2030,11 @@ const renderRagdolls = (context: CanvasRenderingContext2D, world: WorldState, fo
       continue
     }
 
-    const lifeRatio = clamp(ragdoll.life / ragdoll.maxLife, 0, 1)
-    const fadeWindowRatio = clamp(RAGDOLL_FADE_OUT_WINDOW_SECONDS / ragdoll.maxLife, 0.000001, 1)
-    const alpha = lifeRatio <= fadeWindowRatio ? lifeRatio / fadeWindowRatio : 1
-    if (lifeRatio <= 0) {
+    if (ragdoll.life <= 0) {
       continue
     }
 
     const body = ragdoll.radius * 1.2
-    const ear = ragdoll.radius * 0.42
     const palette = paletteForRagdoll(world, ragdoll)
     const tone = palette.tone
     const edge = palette.edge
@@ -2058,7 +2053,6 @@ const renderRagdolls = (context: CanvasRenderingContext2D, world: WorldState, fo
     context.fill()
 
     context.save()
-    context.globalAlpha = alpha
     context.translate(ragdoll.position.x, ragdoll.position.y)
     context.rotate(ragdoll.rotation)
 
@@ -2066,14 +2060,6 @@ const renderRagdolls = (context: CanvasRenderingContext2D, world: WorldState, fo
     context.fillRect(-body * 0.85, -body, body * 1.7, body * 2)
     context.fillStyle = tone
     context.fillRect(-body * 0.68, -body * 0.82, body * 1.36, body * 1.64)
-
-    const earY = -body * 0.95
-    context.fillStyle = edge
-    context.fillRect(-body * 0.88, earY - ear, ear, ear * 1.2)
-    context.fillRect(body * 0.08, earY - ear, ear, ear * 1.2)
-    context.fillStyle = tone
-    context.fillRect(-body * 0.76, earY - ear * 0.55, ear * 0.5, ear * 0.55)
-    context.fillRect(body * 0.2, earY - ear * 0.55, ear * 0.5, ear * 0.55)
     context.restore()
   }
 }
