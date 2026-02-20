@@ -377,11 +377,11 @@ export const GameHud = () => {
                   min={0}
                   max={100}
                   step={1}
-                value={Math.round(musicVolumeSignal.value * 100)}
-                onInput={(event) => {
-                  musicVolumeSignal.value = Number(event.currentTarget.value) / 100
-                }}
-              />
+                  value={Math.round(musicVolumeSignal.value * 100)}
+                  onInput={(event) => {
+                    musicVolumeSignal.value = Number(event.currentTarget.value) / 100
+                  }}
+                />
               </label>
               <label class="mode-row mode-row-slider">
                 <span>{t`Effects Volume ${Math.round(effectsVolumeSignal.value * 100)}%`}</span>
@@ -390,11 +390,11 @@ export const GameHud = () => {
                   min={0}
                   max={100}
                   step={1}
-                value={Math.round(effectsVolumeSignal.value * 100)}
-                onInput={(event) => {
-                  effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
-                }}
-              />
+                  value={Math.round(effectsVolumeSignal.value * 100)}
+                  onInput={(event) => {
+                    effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
+                  }}
+                />
               </label>
               <div class="mode-row">
                 <span>{t`Language`}</span>
