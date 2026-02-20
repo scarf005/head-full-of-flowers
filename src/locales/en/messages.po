@@ -14,7 +14,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
-#: src/game/game.ts:776
+#: src/game/game.ts:788
 msgid "{0} flowers"
 msgstr "{0} flowers"
 
@@ -35,7 +35,7 @@ msgid "Adrenal Reload"
 msgstr "Adrenal Reload"
 
 #. placeholder {0}: slot.ammo
-#: src/game/hud.tsx:537
+#: src/game/hud.tsx:535
 msgid "Ammo {0}"
 msgstr "Ammo {0}"
 
@@ -59,13 +59,13 @@ msgstr "BadaBada arena"
 msgid "Battle Rifle"
 msgstr "Battle Rifle"
 
-#: src/game/game.ts:342
+#: src/game/game.ts:348
 #: src/game/i18n/faction-label.ts:22
 msgid "Blue"
 msgstr "Blue"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:328
+#: src/game/game.ts:334
 msgid "Bot {0}"
 msgstr "Bot {0}"
 
@@ -73,21 +73,21 @@ msgstr "Bot {0}"
 msgid "Bot {botIndex}"
 msgstr "Bot {botIndex}"
 
-#: src/game/game.ts:778
+#: src/game/game.ts:790
 msgid "Bullets Fired"
 msgstr "Bullets Fired"
 
-#: src/game/game.ts:779
+#: src/game/game.ts:791
 msgid "Bullets Hit"
 msgstr "Bullets Hit"
 
 #: src/game/adapters/hud-sync.ts:85
-#: src/game/game.ts:722
+#: src/game/game.ts:734
 msgid "Burnt"
 msgstr "Burnt"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game.ts:818
+#: src/game/game.ts:830
 msgid "Click once to wake audio, then begin fighting"
 msgstr "Click once to wake audio, then begin fighting"
 
@@ -111,7 +111,7 @@ msgstr "Copy state to clipboard"
 msgid "Credits"
 msgstr "Credits"
 
-#: src/game/game.ts:782
+#: src/game/game.ts:794
 msgid "Damage"
 msgstr "Damage"
 
@@ -124,7 +124,7 @@ msgid "Duo"
 msgstr "Duo"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:358
+#: src/game/game.ts:364
 msgid "Duo {0}"
 msgstr "Duo {0}"
 
@@ -132,7 +132,7 @@ msgstr "Duo {0}"
 msgid "Duo {teamIndex}"
 msgstr "Duo {teamIndex}"
 
-#: src/game/game.ts:358
+#: src/game/game.ts:364
 #: src/game/i18n/faction-label.ts:33
 msgid "Duo 1 (You)"
 msgstr "Duo 1 (You)"
@@ -142,12 +142,12 @@ msgid "Easy Mode"
 msgstr "Easy Mode"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud.tsx:477
+#: src/game/hud.tsx:475
 msgid "Effects Volume {0}%"
 msgstr "Effects Volume {0}%"
 
 #: src/game/hud.tsx:327
-#: src/game/hud.tsx:499
+#: src/game/hud.tsx:497
 msgid "English"
 msgstr "English"
 
@@ -193,11 +193,11 @@ msgstr "Game mode"
 msgid "Game Speed {0}x"
 msgstr "Game Speed {0}x"
 
-#: src/game/game.ts:537
+#: src/game/game.ts:543
 msgid "Generating arena..."
 msgstr "Generating arena..."
 
-#: src/game/hud.tsx:450
+#: src/game/hud.tsx:448
 msgid "GitHub"
 msgstr "GitHub"
 
@@ -233,11 +233,11 @@ msgstr "Heavy"
 msgid "Heavy Pellets"
 msgstr "Heavy Pellets"
 
-#: src/game/game.ts:780
+#: src/game/game.ts:792
 msgid "Hit Rate"
 msgstr "Hit Rate"
 
-#: src/game/hud.tsx:555
+#: src/game/hud.tsx:553
 msgid "HP"
 msgstr "HP"
 
@@ -267,12 +267,12 @@ msgid "Kill an enemy: next reload time -50%"
 msgstr "Kill an enemy: next reload time -50%"
 
 #: src/game/hud.tsx:336
-#: src/game/hud.tsx:508
+#: src/game/hud.tsx:506
 msgid "Korean"
 msgstr "Korean"
 
 #: src/game/hud.tsx:318
-#: src/game/hud.tsx:490
+#: src/game/hud.tsx:488
 msgid "Language"
 msgstr "Language"
 
@@ -280,20 +280,20 @@ msgstr "Language"
 msgid "Laser Sight"
 msgstr "Laser Sight"
 
-#: src/game/game.ts:775
+#: src/game/game.ts:787
 msgid "Lead Margin"
 msgstr "Lead Margin"
 
-#: src/game/hud.tsx:514
-#: src/game/hud.tsx:617
+#: src/game/hud.tsx:512
+#: src/game/hud.tsx:615
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: src/game/hud.tsx:462
+#: src/game/hud.tsx:460
 msgid "Match is frozen. Adjust options or resume."
 msgstr "Match is frozen. Adjust options or resume."
 
-#: src/game/hud.tsx:588
+#: src/game/hud.tsx:586
 msgid "Match Results"
 msgstr "Match Results"
 
@@ -319,12 +319,12 @@ msgid "Music"
 msgstr "Music"
 
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud.tsx:464
+#: src/game/hud.tsx:462
 msgid "Music Volume {0}%"
 msgstr "Music Volume {0}%"
 
 #: src/game/hud.tsx:124
-#: src/game/hud.tsx:461
+#: src/game/hud.tsx:459
 msgid "Paused"
 msgstr "Paused"
 
@@ -332,19 +332,19 @@ msgstr "Paused"
 msgid "Pellet size +50%, fire rate -25%, damage +1"
 msgstr "Pellet size +50%, fire rate -25%, damage +1"
 
-#: src/game/game.ts:2228
+#: src/game/game.ts:2334
 msgid "Perk acquired {localizedPerk}"
 msgstr "Perk acquired {localizedPerk}"
 
-#: src/game/game.ts:2227
+#: src/game/game.ts:2333
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "Perk acquired {localizedPerk} x{stacks}"
 
-#: src/game/hud.tsx:564
+#: src/game/hud.tsx:562
 msgid "Perks"
 msgstr "Perks"
 
-#: src/game/game.ts:2221
+#: src/game/game.ts:2327
 msgid "Picked up {localizedWeapon}"
 msgstr "Picked up {localizedWeapon}"
 
@@ -359,7 +359,7 @@ msgstr "Pickups {0} visible / {1} hidden"
 msgid "Pistol"
 msgstr "Pistol"
 
-#: src/game/game.ts:781
+#: src/game/game.ts:793
 msgid "Player Kills"
 msgstr "Player Kills"
 
@@ -371,7 +371,7 @@ msgstr "Players {players}"
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 
-#: src/game/hud.tsx:527
+#: src/game/hud.tsx:525
 msgid "Primary"
 msgstr "Primary"
 
@@ -383,7 +383,7 @@ msgstr "Proximity Grenades"
 msgid "Rapid Reload"
 msgstr "Rapid Reload"
 
-#: src/game/game.ts:341
+#: src/game/game.ts:347
 #: src/game/i18n/faction-label.ts:19
 msgid "Red (You)"
 msgstr "Red (You)"
@@ -401,7 +401,7 @@ msgstr "Reloading..."
 msgid "Render Profile {0} frames"
 msgstr "Render Profile {0} frames"
 
-#: src/game/hud.tsx:513
+#: src/game/hud.tsx:511
 msgid "Resume"
 msgstr "Resume"
 
@@ -418,7 +418,7 @@ msgstr "RMB to throw"
 msgid "Rocket Launcher"
 msgstr "Rocket Launcher"
 
-#: src/game/hud.tsx:545
+#: src/game/hud.tsx:543
 msgid "Secondary"
 msgstr "Secondary"
 
@@ -447,7 +447,7 @@ msgid "Squad"
 msgstr "Squad"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:361
+#: src/game/game.ts:367
 msgid "Squad {0}"
 msgstr "Squad {0}"
 
@@ -455,12 +455,12 @@ msgstr "Squad {0}"
 msgid "Squad {teamIndex}"
 msgstr "Squad {teamIndex}"
 
-#: src/game/game.ts:360
+#: src/game/game.ts:366
 #: src/game/i18n/faction-label.ts:36
 msgid "Squad 1 (You)"
 msgstr "Squad 1 (You)"
 
-#: src/game/game.ts:772
+#: src/game/game.ts:784
 msgid "Team Contribution"
 msgstr "Team Contribution"
 
@@ -486,15 +486,15 @@ msgid "Time {0}"
 msgstr "Time {0}"
 
 #. placeholder {0}: winner.label
-#: src/game/game.ts:754
+#: src/game/game.ts:766
 msgid "Time up. {0} overwhelms the field"
 msgstr "Time up. {0} overwhelms the field"
 
-#: src/game/game.ts:753
+#: src/game/game.ts:765
 msgid "Time up. Your trail dominates the arena"
 msgstr "Time up. Your trail dominates the arena"
 
-#: src/game/game.ts:768
+#: src/game/game.ts:780
 msgid "Total Flowers"
 msgstr "Total Flowers"
 
@@ -521,15 +521,15 @@ msgstr "Window {0} f: merged {1}% / split {2}%"
 msgid "Window pickups {0}% visible / {1}% hidden"
 msgstr "Window pickups {0}% visible / {1}% hidden"
 
-#: src/game/game.ts:769
+#: src/game/game.ts:781
 msgid "Winner Share"
 msgstr "Winner Share"
 
-#: src/game/game.ts:322
+#: src/game/game.ts:328
 #: src/game/i18n/faction-label.ts:8
 msgid "You"
 msgstr "You"
 
-#: src/game/game.ts:770
+#: src/game/game.ts:782
 msgid "Your Place"
 msgstr "Your Place"
