@@ -83,6 +83,12 @@ export const setupInputAdapter = (
     dirty: false,
   }
   let crosshairRaf = 0
+  const pendingDesktopPointer = {
+    clientX: 0,
+    clientY: 0,
+    dirty: false,
+  }
+  let desktopPointerRaf = 0
 
   const flushCrosshair = () => {
     crosshairRaf = 0
@@ -102,6 +108,38 @@ export const setupInputAdapter = (
       return
     }
     crosshairRaf = requestAnimationFrame(flushCrosshair)
+  }
+
+  const flushDesktopPointerMove = () => {
+    desktopPointerRaf = 0
+    if (!pendingDesktopPointer.dirty) {
+      return
+    }
+
+    pendingDesktopPointer.dirty = false
+    const bounds = samplePointerBounds()
+    const screenX = clamp(pendingDesktopPointer.clientX - bounds.left, 0, bounds.width)
+    const screenY = clamp(pendingDesktopPointer.clientY - bounds.top, 0, bounds.height)
+    const normalizedX = screenX / bounds.width
+    const normalizedY = screenY / bounds.height
+
+    world.input.screenX = pendingDesktopPointer.clientX - bounds.frameLeft
+    world.input.screenY = pendingDesktopPointer.clientY - bounds.frameTop
+    world.input.canvasX = normalizedX * VIEW_WIDTH
+    world.input.canvasY = normalizedY * VIEW_HEIGHT
+    syncAimFromCanvas()
+    scheduleCrosshair(world.input.screenX, world.input.screenY, true)
+  }
+
+  const scheduleDesktopPointerMove = (clientX: number, clientY: number) => {
+    pendingDesktopPointer.clientX = clientX
+    pendingDesktopPointer.clientY = clientY
+    pendingDesktopPointer.dirty = true
+    if (desktopPointerRaf !== 0) {
+      return
+    }
+
+    desktopPointerRaf = requestAnimationFrame(flushDesktopPointerMove)
   }
 
   const getFrameOffset = () => {
@@ -328,19 +366,7 @@ export const setupInputAdapter = (
       return
     }
 
-    const bounds = samplePointerBounds()
-    const screenX = clamp(event.clientX - bounds.left, 0, bounds.width)
-    const screenY = clamp(event.clientY - bounds.top, 0, bounds.height)
-    const normalizedX = screenX / bounds.width
-    const normalizedY = screenY / bounds.height
-
-    world.input.screenX = event.clientX - bounds.frameLeft
-    world.input.screenY = event.clientY - bounds.frameTop
-    world.input.canvasX = normalizedX * VIEW_WIDTH
-    world.input.canvasY = normalizedY * VIEW_HEIGHT
-    syncAimFromCanvas()
-
-    scheduleCrosshair(world.input.screenX, world.input.screenY, true)
+    scheduleDesktopPointerMove(event.clientX, event.clientY)
   }
 
   const onMobileControlsPointerDown = (event: PointerEvent) => {
@@ -464,6 +490,11 @@ export const setupInputAdapter = (
   }
 
   const onPointerLeave = () => {
+    pendingDesktopPointer.dirty = false
+    if (desktopPointerRaf !== 0) {
+      cancelAnimationFrame(desktopPointerRaf)
+      desktopPointerRaf = 0
+    }
     scheduleCrosshair(world.input.screenX, world.input.screenY, false)
   }
 
@@ -500,6 +531,10 @@ export const setupInputAdapter = (
       if (crosshairRaf !== 0) {
         cancelAnimationFrame(crosshairRaf)
         crosshairRaf = 0
+      }
+      if (desktopPointerRaf !== 0) {
+        cancelAnimationFrame(desktopPointerRaf)
+        desktopPointerRaf = 0
       }
       globalThis.removeEventListener("keydown", onKeyDown)
       globalThis.removeEventListener("keyup", onKeyUp)
