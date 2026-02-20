@@ -100,6 +100,7 @@ export class Unit {
   aiMove = new Vec2(1, 0)
   grenadeTimer = 2
   reloadSpeedMultiplier = 1
+  nextReloadTimeMultiplier = 1
   damageTakenMultiplier = 1
   damageReductionFlat = 0
   explosiveRadiusMultiplier = 1
@@ -211,6 +212,11 @@ export class FlightTrailSegment {
   life = 0
   maxLife = 0
   color = "#ffffff"
+  style = 0
+  driftSpeed = 0
+  driftDrag = 0
+  growth = 0
+  turbulence = 0
 }
 
 export class Flower {

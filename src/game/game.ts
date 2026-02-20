@@ -125,6 +125,8 @@ import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSI
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
 const BULLET_TRAIL_COLOR = "#ff9e3a"
+const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
+const ROCKET_SMOKE_SIZE_SCALE = 0.75
 const HIGH_TIER_BOX_DROP_CHANCE_START = 0.07
 const HIGH_TIER_BOX_DROP_CHANCE_END = 0.5
 const WHITE_LOOT_BOX_SPAWN_INTERVAL_START_SECONDS = 14
@@ -551,6 +553,7 @@ export class FlowerArenaGame {
     player.speed = PLAYER_BASE_SPEED
     player.grenadeTimer = 1
     player.reloadSpeedMultiplier = 1
+    player.nextReloadTimeMultiplier = 1
     player.damageTakenMultiplier = 1
     player.damageReductionFlat = 0
     player.explosiveRadiusMultiplier = 1
@@ -578,6 +581,7 @@ export class FlowerArenaGame {
       bot.speed = BOT_BASE_SPEED
       bot.grenadeTimer = 1
       bot.reloadSpeedMultiplier = 1
+      bot.nextReloadTimeMultiplier = 1
       bot.damageTakenMultiplier = 1
       bot.damageReductionFlat = 0
       bot.explosiveRadiusMultiplier = 1
@@ -815,17 +819,9 @@ export class FlowerArenaGame {
     pausedSignal.value = this.world.paused
   }
 
-  private updateExplosions(dt: number, fogCullBounds?: FogCullBounds) {
+  private updateExplosions(dt: number) {
     for (const explosion of this.world.explosions) {
       if (!explosion.active) {
-        continue
-      }
-
-      if (
-        fogCullBounds &&
-        !this.isInsideFogCullBounds(explosion.position.x, explosion.position.y, fogCullBounds, explosion.radius + 0.9)
-      ) {
-        explosion.active = false
         continue
       }
 
@@ -1094,6 +1090,11 @@ export class FlowerArenaGame {
     color: string,
     alpha: number,
     life: number,
+    style = 0,
+    driftSpeed = 0,
+    driftDrag = 0,
+    growth = 0,
+    turbulence = 0,
   ) {
     const magnitude = Math.hypot(directionX, directionY)
     if (magnitude <= 0.00001 || life <= 0.001 || alpha <= 0.001) {
@@ -1111,6 +1112,11 @@ export class FlowerArenaGame {
     slot.alpha = clamp(alpha, 0, 1)
     slot.maxLife = life
     slot.life = life
+    slot.style = style
+    slot.driftSpeed = driftSpeed
+    slot.driftDrag = driftDrag
+    slot.growth = growth
+    slot.turbulence = turbulence
   }
 
   private emitProjectileTrail(projectile: WorldState["projectiles"][number], fogCullBounds: FogCullBounds) {
@@ -1196,26 +1202,38 @@ export class FlowerArenaGame {
           0.11 + speedFactor * 0.05,
         )
       } else if (projectile.kind === "rocket") {
-        const normalX = -smoothDirY
-        const normalY = smoothDirX
-        for (let puffIndex = 0; puffIndex < 4; puffIndex += 1) {
-          const puffT = puffIndex / 3
-          const lateral = (puffIndex - 1.5) * (0.06 + speedFactor * 0.018)
-          const back = 0.12 + puffT * 0.26
-          const smokeX = sampleX - smoothDirX * back + normalX * lateral
-          const smokeY = sampleY - smoothDirY * back + normalY * lateral
-          const core = puffIndex % 2 === 0
+        const reverseBaseX = speed > 0.0001 ? -projectile.velocity.x / speed : -smoothDirX
+        const reverseBaseY = speed > 0.0001 ? -projectile.velocity.y / speed : -smoothDirY
+        const reverseNormalX = -reverseBaseY
+        const reverseNormalY = reverseBaseX
+        const puffs = 4
+        for (let puffIndex = 0; puffIndex < puffs; puffIndex += 1) {
+          const lateral = randomRange(-1, 1) * (0.08 + speedFactor * 0.03)
+          const back = randomRange(0.1, 0.44) * ROCKET_TRAIL_LENGTH_MULTIPLIER
+          const smokeX = sampleX + reverseBaseX * back + reverseNormalX * lateral
+          const smokeY = sampleY + reverseBaseY * back + reverseNormalY * lateral
+          const spread = 0.24 + speedFactor * 0.08
+          const flyDirX = reverseBaseX + reverseNormalX * randomRange(-spread, spread)
+          const flyDirY = reverseBaseY + reverseNormalY * randomRange(-spread, spread)
+          const flyLen = Math.hypot(flyDirX, flyDirY) || 1
+          const driftSpeed = randomRange(0.62, 2.1) + speedFactor * 0.95
+          const core = Math.random() > 0.45
 
           this.emitFlightTrailSegment(
             smokeX,
             smokeY,
-            smoothDirX * 0.72 + normalX * lateral * 0.45,
-            smoothDirY * 0.72 + normalY * lateral * 0.45,
-            0.14 + speedFactor * (core ? 0.08 : 0.06),
-            (0.13 + speedFactor * (core ? 0.05 : 0.04)) * BULLET_TRAIL_WIDTH_SCALE,
-            core ? "#5f6670" : "#3f454d",
-            core ? 0.42 : 0.34,
-            0.26 + speedFactor * 0.11,
+            flyDirX / flyLen,
+            flyDirY / flyLen,
+            (0.12 + speedFactor * (core ? 0.05 : 0.04)) * ROCKET_TRAIL_LENGTH_MULTIPLIER,
+            (0.12 + speedFactor * (core ? 0.04 : 0.03)) * BULLET_TRAIL_WIDTH_SCALE * ROCKET_SMOKE_SIZE_SCALE,
+            core ? "#30363d" : "#1f252b",
+            core ? 0.78 : 0.66,
+            0.24 + speedFactor * randomRange(0.08, 0.16),
+            1,
+            driftSpeed,
+            randomRange(0.55, 1.15),
+            randomRange(0.65, 1.35),
+            randomRange(1.8, 4.4),
           )
         }
       } else {
@@ -1359,7 +1377,8 @@ export class FlowerArenaGame {
     const directionY = velocityY / speed
     const count = kind === "flame" ? 1 : kind === "rocket" ? 3 : 2
     for (let index = 0; index < count; index += 1) {
-      const back = index * (kind === "flame" ? 0.14 : kind === "rocket" ? 0.18 : 0.22)
+      const back = index *
+        (kind === "flame" ? 0.14 : kind === "rocket" ? 0.18 * ROCKET_TRAIL_LENGTH_MULTIPLIER : 0.22)
       if (kind === "flame") {
         this.emitFlightTrailSegment(
           x - directionX * back,
@@ -1376,16 +1395,29 @@ export class FlowerArenaGame {
       }
 
       if (kind === "rocket") {
+        const reverseX = -directionX
+        const reverseY = -directionY
+        const reverseNormalX = -reverseY
+        const reverseNormalY = reverseX
+        const lateral = randomRange(-1, 1) * (0.1 + index * 0.05)
+        const flyDirX = reverseX + reverseNormalX * randomRange(-0.32, 0.32)
+        const flyDirY = reverseY + reverseNormalY * randomRange(-0.32, 0.32)
+        const flyLen = Math.hypot(flyDirX, flyDirY) || 1
         this.emitFlightTrailSegment(
-          x - directionX * back,
-          y - directionY * back,
-          directionX,
-          directionY,
-          0.22 + index * 0.04,
-          0.11 * BULLET_TRAIL_WIDTH_SCALE,
-          index === 0 ? "#59606a" : "#3f454d",
-          0.34 - index * 0.06,
-          0.24 + index * 0.06,
+          x + reverseX * back + reverseNormalX * lateral,
+          y + reverseY * back + reverseNormalY * lateral,
+          flyDirX / flyLen,
+          flyDirY / flyLen,
+          (0.18 + index * 0.03) * ROCKET_TRAIL_LENGTH_MULTIPLIER,
+          0.12 * BULLET_TRAIL_WIDTH_SCALE * ROCKET_SMOKE_SIZE_SCALE,
+          index === 0 ? "#2b3238" : "#1c2228",
+          0.72 - index * 0.06,
+          0.22 + index * 0.07,
+          1,
+          randomRange(0.5, 1.35),
+          randomRange(0.52, 1.08),
+          randomRange(0.62, 1.24),
+          randomRange(2.2, 4.8),
         )
         continue
       }
@@ -1478,6 +1510,30 @@ export class FlowerArenaGame {
       trail.life -= dt
       if (trail.life <= 0) {
         trail.active = false
+        continue
+      }
+
+      if (trail.style > 0.5) {
+        const lifeRatio = Math.max(0, Math.min(1, trail.life / Math.max(0.00001, trail.maxLife)))
+        const age = 1 - lifeRatio
+        const swirl = Math.sin((trail.position.x + trail.position.y) * 2.2 + age * (9 + trail.turbulence * 2.6))
+        const turn = swirl * trail.turbulence * dt * 0.72
+        const cosTurn = Math.cos(turn)
+        const sinTurn = Math.sin(turn)
+        const nextDirX = trail.direction.x * cosTurn - trail.direction.y * sinTurn
+        const nextDirY = trail.direction.x * sinTurn + trail.direction.y * cosTurn
+        const dirLength = Math.hypot(nextDirX, nextDirY) || 1
+        trail.direction.x = nextDirX / dirLength
+        trail.direction.y = nextDirY / dirLength
+
+        const drift = Math.max(0, trail.driftSpeed)
+        trail.position.x += trail.direction.x * drift * dt
+        trail.position.y += trail.direction.y * drift * dt
+        trail.driftSpeed = Math.max(0, drift - trail.driftDrag * dt)
+
+        const growthStep = trail.growth * dt
+        trail.width = Math.max(0.01, trail.width + growthStep * 0.8)
+        trail.length = Math.max(0.02, trail.length + growthStep)
       }
     }
   }
@@ -1960,7 +2016,7 @@ export class FlowerArenaGame {
       this.updateShellCasings(effectDt, fxCullBounds)
       this.updateFlightTrails(effectDt, fxCullBounds)
       this.cullHiddenDamagePopups(fxCullBounds)
-      this.updateExplosions(effectDt, fxCullBounds)
+      this.updateExplosions(effectDt)
       updateCrosshairWorld(this.world)
       return
     }
@@ -2131,7 +2187,7 @@ export class FlowerArenaGame {
       this.world.lootBoxTimer = this.whiteLootBoxSpawnIntervalSeconds()
     }
 
-    this.updateExplosions(effectDt, fxCullBounds)
+    this.updateExplosions(effectDt)
     this.syncHudSignalsThrottled(frameDt)
   }
 

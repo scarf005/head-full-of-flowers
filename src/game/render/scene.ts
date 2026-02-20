@@ -89,6 +89,65 @@ const MINIMAP_SIZE_PX = 164 * 0.8
 const MINIMAP_PADDING_PX = 12
 const MINIMAP_UNIT_RADIUS_PX = 2.1
 const MINIMAP_PLAYER_RADIUS_PX = 2.8
+const MINIMAP_PROJECTILE_RADIUS_PX = 1.2
+const MINIMAP_EXPLOSIVE_PROJECTILE_RADIUS_PX = 1.9
+const MINIMAP_FRIENDLY_PROJECTILE_COLOR = "rgba(255, 227, 144, 0.92)"
+const MINIMAP_HOSTILE_PROJECTILE_COLOR = "rgba(255, 121, 106, 0.9)"
+const MINIMAP_FRIENDLY_PROJECTILE_TRAIL_COLOR = "rgba(255, 224, 148, 0.58)"
+const MINIMAP_HOSTILE_PROJECTILE_TRAIL_COLOR = "rgba(255, 126, 112, 0.56)"
+const MINIMAP_PROJECTILE_TRAIL_PIXELS_PER_SPEED = 0.06
+const MINIMAP_PROJECTILE_TRAIL_MIN_LENGTH_PX = 0.75
+const MINIMAP_PROJECTILE_TRAIL_MAX_LENGTH_PX = 3.4
+const MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_MAX_LENGTH_PX = 4.2
+const MINIMAP_PROJECTILE_TRAIL_LINE_WIDTH_PX = 1
+const MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_LINE_WIDTH_PX = 1.45
+const MINIMAP_EXPLOSION_COLOR = "rgba(255, 136, 56, 0.92)"
+const MINIMAP_EXPLOSION_MIN_RADIUS_PX = 1.1
+const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
+const VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS = 180
+const MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS = 180
+
+const EMPTY_VIEWPORT_OVERFLOW: CanvasViewportOverflowPx = { left: 0, top: 0, right: 0, bottom: 0 }
+
+let viewportOverflowCache: {
+  canvas: HTMLCanvasElement | null
+  nextSampleAt: number
+  value: CanvasViewportOverflowPx
+} = {
+  canvas: null,
+  nextSampleAt: 0,
+  value: EMPTY_VIEWPORT_OVERFLOW,
+}
+
+let minimapObstacleLayerCache: {
+  canvas: HTMLCanvasElement | null
+  context: CanvasRenderingContext2D | null
+  gridRef: WorldState["obstacleGrid"] | null
+  gridSize: number
+  pixelSize: number
+  arenaRadius: number
+  nextRefreshAt: number
+} = {
+  canvas: null,
+  context: null,
+  gridRef: null,
+  gridSize: 0,
+  pixelSize: 0,
+  arenaRadius: 0,
+  nextRefreshAt: 0,
+}
+
+let renderFrameToken = 0
+let flowerLayerLastFlushToken = -1
+
+const minimapFriendlyProjectileMarkers: number[] = []
+const minimapFriendlyExplosiveProjectileMarkers: number[] = []
+const minimapHostileProjectileMarkers: number[] = []
+const minimapHostileExplosiveProjectileMarkers: number[] = []
+const minimapFriendlyProjectileTrailSegments: number[] = []
+const minimapFriendlyExplosiveProjectileTrailSegments: number[] = []
+const minimapHostileProjectileTrailSegments: number[] = []
+const minimapHostileExplosiveProjectileTrailSegments: number[] = []
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
   return buildCullBounds(cameraX, cameraY, padding)
@@ -100,12 +159,25 @@ const measureCanvasViewportOverflowPx = (context: CanvasRenderingContext2D): Can
     typeof globalThis.innerWidth !== "number" ||
     typeof globalThis.innerHeight !== "number"
   ) {
-    return { left: 0, top: 0, right: 0, bottom: 0 }
+    return EMPTY_VIEWPORT_OVERFLOW
+  }
+
+  const now = typeof performance !== "undefined" ? performance.now() : 0
+  if (
+    viewportOverflowCache.canvas === context.canvas &&
+    now < viewportOverflowCache.nextSampleAt
+  ) {
+    return viewportOverflowCache.value
   }
 
   const rect = context.canvas.getBoundingClientRect()
   if (rect.width <= 0 || rect.height <= 0) {
-    return { left: 0, top: 0, right: 0, bottom: 0 }
+    viewportOverflowCache = {
+      canvas: context.canvas,
+      nextSampleAt: now + VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS,
+      value: EMPTY_VIEWPORT_OVERFLOW,
+    }
+    return EMPTY_VIEWPORT_OVERFLOW
   }
 
   const canvasWidth = context.canvas.width
@@ -113,12 +185,19 @@ const measureCanvasViewportOverflowPx = (context: CanvasRenderingContext2D): Can
   const scaleX = canvasWidth / rect.width
   const scaleY = canvasHeight / rect.height
 
-  return {
+  const measured = {
     left: Math.max(0, -rect.left) * scaleX,
     top: Math.max(0, -rect.top) * scaleY,
     right: Math.max(0, rect.right - globalThis.innerWidth) * scaleX,
     bottom: Math.max(0, rect.bottom - globalThis.innerHeight) * scaleY,
   }
+
+  viewportOverflowCache = {
+    canvas: context.canvas,
+    nextSampleAt: now + VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS,
+    value: measured,
+  }
+  return measured
 }
 
 const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padding = 0) => {
@@ -668,8 +747,15 @@ const drawFlowerToLayer = (
   return true
 }
 
-const flushFlowerLayer = (world: WorldState) => {
+const flushFlowerLayer = (world: WorldState, frameToken?: number) => {
+  if (typeof frameToken === "number" && flowerLayerLastFlushToken === frameToken) {
+    return
+  }
+
   if (world.flowerDirtyIndices.size <= 0) {
+    if (typeof frameToken === "number") {
+      flowerLayerLastFlushToken = frameToken
+    }
     return
   }
 
@@ -700,9 +786,315 @@ const flushFlowerLayer = (world: WorldState) => {
   }
 
   world.flowerDirtyCount = world.flowerDirtyIndices.size
+  if (typeof frameToken === "number") {
+    flowerLayerLastFlushToken = frameToken
+  }
+}
+
+const minimapObstacleColor = (material: number, highTierLoot: boolean) => {
+  if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
+    return "#8b9188"
+  }
+  if (material === OBSTACLE_MATERIAL_WALL) {
+    return "#b06f57"
+  }
+  if (material === OBSTACLE_MATERIAL_BOX) {
+    return highTierLoot ? "#eef4ff" : "#de7d4f"
+  }
+  if (material === OBSTACLE_MATERIAL_ROCK) {
+    return "#979b94"
+  }
+  if (material === OBSTACLE_MATERIAL_HEDGE) {
+    return "#98bb8b"
+  }
+  return "#838883"
+}
+
+const ensureMinimapObstacleLayer = (world: WorldState, sizePx: number, arenaRadiusWorld: number) => {
+  const obstacleGrid = world.obstacleGrid
+  if (obstacleGrid.size <= 0 || sizePx <= 0 || arenaRadiusWorld <= 0) {
+    return null
+  }
+
+  const now = typeof performance !== "undefined" ? performance.now() : 0
+  const pixelSize = Math.max(1, Math.round(sizePx))
+  const shouldRefresh = !minimapObstacleLayerCache.canvas ||
+    !minimapObstacleLayerCache.context ||
+    minimapObstacleLayerCache.gridRef !== obstacleGrid ||
+    minimapObstacleLayerCache.gridSize !== obstacleGrid.size ||
+    minimapObstacleLayerCache.pixelSize !== pixelSize ||
+    Math.abs(minimapObstacleLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08 ||
+    now >= minimapObstacleLayerCache.nextRefreshAt
+
+  if (!shouldRefresh && minimapObstacleLayerCache.canvas) {
+    return minimapObstacleLayerCache.canvas
+  }
+
+  let canvas = minimapObstacleLayerCache.canvas
+  let layerContext = minimapObstacleLayerCache.context
+  if (!canvas || !layerContext) {
+    canvas = document.createElement("canvas")
+    layerContext = canvas.getContext("2d")
+  }
+  if (!canvas || !layerContext) {
+    return null
+  }
+
+  if (canvas.width !== pixelSize || canvas.height !== pixelSize) {
+    canvas.width = pixelSize
+    canvas.height = pixelSize
+  }
+
+  layerContext.clearRect(0, 0, pixelSize, pixelSize)
+
+  const minimapRadiusPx = pixelSize * 0.5
+  const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
+  const cellSizePx = Math.max(1, worldToMinimapScale)
+  for (let gy = 0; gy < obstacleGrid.size; gy += 1) {
+    for (let gx = 0; gx < obstacleGrid.size; gx += 1) {
+      const index = gy * obstacleGrid.size + gx
+      if (obstacleGrid.solid[index] <= 0) {
+        continue
+      }
+
+      const center = obstacleGridToWorldCenter(obstacleGrid.size, gx, gy)
+      const markerX = pixelSize * 0.5 + center.x * worldToMinimapScale
+      const markerY = pixelSize * 0.5 + center.y * worldToMinimapScale
+      layerContext.fillStyle = minimapObstacleColor(obstacleGrid.material[index], obstacleGrid.highTierLoot[index] > 0)
+      layerContext.fillRect(markerX - cellSizePx * 0.5, markerY - cellSizePx * 0.5, cellSizePx, cellSizePx)
+    }
+  }
+
+  minimapObstacleLayerCache = {
+    canvas,
+    context: layerContext,
+    gridRef: obstacleGrid,
+    gridSize: obstacleGrid.size,
+    pixelSize,
+    arenaRadius: arenaRadiusWorld,
+    nextRefreshAt: now + MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS,
+  }
+
+  return canvas
+}
+
+const drawMinimapMarkerBatch = (
+  context: CanvasRenderingContext2D,
+  markers: number[],
+  radiusPx: number,
+  fillStyle: string,
+) => {
+  if (markers.length <= 0) {
+    return
+  }
+
+  const size = radiusPx * 2
+  context.fillStyle = fillStyle
+  for (let index = 0; index < markers.length; index += 2) {
+    context.fillRect(markers[index] - radiusPx, markers[index + 1] - radiusPx, size, size)
+  }
+}
+
+const drawMinimapTrailBatch = (
+  context: CanvasRenderingContext2D,
+  segments: number[],
+  lineWidthPx: number,
+  strokeStyle: string,
+) => {
+  if (segments.length <= 0) {
+    return
+  }
+
+  context.strokeStyle = strokeStyle
+  context.lineWidth = lineWidthPx
+  context.lineCap = "round"
+  context.beginPath()
+  for (let index = 0; index < segments.length; index += 4) {
+    context.moveTo(segments[index], segments[index + 1])
+    context.lineTo(segments[index + 2], segments[index + 3])
+  }
+  context.stroke()
+}
+
+const renderMinimapProjectileMarkers = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  centerX: number,
+  centerY: number,
+  minimapRadiusPx: number,
+  arenaRadiusWorld: number,
+) => {
+  minimapFriendlyProjectileMarkers.length = 0
+  minimapFriendlyExplosiveProjectileMarkers.length = 0
+  minimapHostileProjectileMarkers.length = 0
+  minimapHostileExplosiveProjectileMarkers.length = 0
+  minimapFriendlyProjectileTrailSegments.length = 0
+  minimapFriendlyExplosiveProjectileTrailSegments.length = 0
+  minimapHostileProjectileTrailSegments.length = 0
+  minimapHostileExplosiveProjectileTrailSegments.length = 0
+
+  const playerId = world.player.id
+  const playerTeam = world.player.team
+  const isFfa = playerTeam === playerId
+  const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
+  const minimapRadiusSquared = minimapRadiusPx * minimapRadiusPx
+  const minX = centerX - minimapRadiusPx
+  const maxX = centerX + minimapRadiusPx
+  const minY = centerY - minimapRadiusPx
+  const maxY = centerY + minimapRadiusPx
+
+  for (const projectile of world.projectiles) {
+    if (!projectile.active) {
+      continue
+    }
+
+    const markerX = centerX + projectile.position.x * worldToMinimapScale
+    const markerY = centerY + projectile.position.y * worldToMinimapScale
+    if (markerX < minX || markerX > maxX || markerY < minY || markerY > maxY) {
+      continue
+    }
+
+    const deltaX = markerX - centerX
+    const deltaY = markerY - centerY
+    if (deltaX * deltaX + deltaY * deltaY > minimapRadiusSquared) {
+      continue
+    }
+
+    const isFriendlyProjectile = projectile.ownerId === playerId ||
+      (!isFfa && projectile.ownerTeam === playerTeam)
+    const isExplosiveProjectile = projectile.kind === "grenade" || projectile.kind === "rocket"
+    const isRocketProjectile = projectile.kind === "rocket"
+    const speedSquared = projectile.velocity.x * projectile.velocity.x + projectile.velocity.y * projectile.velocity.y
+    if (speedSquared > 0.00001) {
+      const speed = Math.sqrt(speedSquared)
+      const trailMaxLengthPx = isRocketProjectile
+        ? MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_MAX_LENGTH_PX * ROCKET_TRAIL_LENGTH_MULTIPLIER
+        : isExplosiveProjectile
+        ? MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_MAX_LENGTH_PX
+        : MINIMAP_PROJECTILE_TRAIL_MAX_LENGTH_PX
+      const trailLengthPx = clamp(
+        speed * worldToMinimapScale * MINIMAP_PROJECTILE_TRAIL_PIXELS_PER_SPEED,
+        MINIMAP_PROJECTILE_TRAIL_MIN_LENGTH_PX,
+        trailMaxLengthPx,
+      )
+      const inverseSpeed = 1 / speed
+      const trailStartX = markerX - projectile.velocity.x * inverseSpeed * trailLengthPx
+      const trailStartY = markerY - projectile.velocity.y * inverseSpeed * trailLengthPx
+
+      if (isFriendlyProjectile) {
+        if (isExplosiveProjectile) {
+          minimapFriendlyExplosiveProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+        } else {
+          minimapFriendlyProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+        }
+      } else if (isExplosiveProjectile) {
+        minimapHostileExplosiveProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+      } else {
+        minimapHostileProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+      }
+    }
+
+    if (isFriendlyProjectile) {
+      if (isExplosiveProjectile) {
+        minimapFriendlyExplosiveProjectileMarkers.push(markerX, markerY)
+      } else {
+        minimapFriendlyProjectileMarkers.push(markerX, markerY)
+      }
+      continue
+    }
+
+    if (isExplosiveProjectile) {
+      minimapHostileExplosiveProjectileMarkers.push(markerX, markerY)
+    } else {
+      minimapHostileProjectileMarkers.push(markerX, markerY)
+    }
+  }
+
+  drawMinimapTrailBatch(
+    context,
+    minimapFriendlyProjectileTrailSegments,
+    MINIMAP_PROJECTILE_TRAIL_LINE_WIDTH_PX,
+    MINIMAP_FRIENDLY_PROJECTILE_TRAIL_COLOR,
+  )
+  drawMinimapTrailBatch(
+    context,
+    minimapFriendlyExplosiveProjectileTrailSegments,
+    MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_LINE_WIDTH_PX,
+    MINIMAP_FRIENDLY_PROJECTILE_TRAIL_COLOR,
+  )
+  drawMinimapTrailBatch(
+    context,
+    minimapHostileProjectileTrailSegments,
+    MINIMAP_PROJECTILE_TRAIL_LINE_WIDTH_PX,
+    MINIMAP_HOSTILE_PROJECTILE_TRAIL_COLOR,
+  )
+  drawMinimapTrailBatch(
+    context,
+    minimapHostileExplosiveProjectileTrailSegments,
+    MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_LINE_WIDTH_PX,
+    MINIMAP_HOSTILE_PROJECTILE_TRAIL_COLOR,
+  )
+
+  drawMinimapMarkerBatch(
+    context,
+    minimapFriendlyProjectileMarkers,
+    MINIMAP_PROJECTILE_RADIUS_PX,
+    MINIMAP_FRIENDLY_PROJECTILE_COLOR,
+  )
+  drawMinimapMarkerBatch(
+    context,
+    minimapFriendlyExplosiveProjectileMarkers,
+    MINIMAP_EXPLOSIVE_PROJECTILE_RADIUS_PX,
+    MINIMAP_FRIENDLY_PROJECTILE_COLOR,
+  )
+  drawMinimapMarkerBatch(
+    context,
+    minimapHostileProjectileMarkers,
+    MINIMAP_PROJECTILE_RADIUS_PX,
+    MINIMAP_HOSTILE_PROJECTILE_COLOR,
+  )
+  drawMinimapMarkerBatch(
+    context,
+    minimapHostileExplosiveProjectileMarkers,
+    MINIMAP_EXPLOSIVE_PROJECTILE_RADIUS_PX,
+    MINIMAP_HOSTILE_PROJECTILE_COLOR,
+  )
+}
+
+const renderMinimapExplosions = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  centerX: number,
+  centerY: number,
+  minimapRadiusPx: number,
+  arenaRadiusWorld: number,
+) => {
+  const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
+
+  for (const explosion of world.explosions) {
+    if (!explosion.active || explosion.radius <= 0.01) {
+      continue
+    }
+
+    const deltaX = explosion.position.x * worldToMinimapScale
+    const deltaY = explosion.position.y * worldToMinimapScale
+    const drawRadiusPx = Math.max(MINIMAP_EXPLOSION_MIN_RADIUS_PX, explosion.radius * worldToMinimapScale)
+    const visibilityRadiusPx = minimapRadiusPx + drawRadiusPx
+    if (deltaX * deltaX + deltaY * deltaY > visibilityRadiusPx * visibilityRadiusPx) {
+      continue
+    }
+
+    const markerX = centerX + deltaX
+    const markerY = centerY + deltaY
+    context.fillStyle = MINIMAP_EXPLOSION_COLOR
+    context.beginPath()
+    context.arc(markerX, markerY, drawRadiusPx, 0, Math.PI * 2)
+    context.fill()
+  }
 }
 
 export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
+  renderFrameToken += 1
   grassWaveTime += dt * 0.18
 
   context.save()
@@ -728,7 +1120,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.clip()
 
   renderMolotovZones(context, world, fogCullBounds)
-  renderFlowers(context, world, renderCameraX, renderCameraY)
+  renderFlowers(context, world, renderCameraX, renderCameraY, renderFrameToken)
   renderObstacles(context, world)
   const hasVisiblePickupLayer = hasVisiblePickupsInCullBounds(world.pickups, fogCullBounds)
   const compositionPlan = decideRenderFxCompositionPlan(hasVisiblePickupLayer, true)
@@ -797,7 +1189,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   renderAtmosphere(context)
   renderDamageVignette(context, world)
-  renderMinimap(context, world, renderCameraX, renderCameraY, viewportOverflow)
+  renderMinimap(context, world, renderCameraX, renderCameraY, viewportOverflow, renderFrameToken)
   renderOffscreenEnemyIndicators(context, world, renderCameraX, renderCameraY, viewportOverflow)
 }
 
@@ -807,6 +1199,7 @@ const renderMinimap = (
   renderCameraX: number,
   renderCameraY: number,
   viewportOverflow: CanvasViewportOverflowPx,
+  frameToken: number,
 ) => {
   const mapSize = world.terrainMap.size
   if (mapSize <= 0) {
@@ -843,7 +1236,7 @@ const renderMinimap = (
     return { srcX, srcY, srcW, srcH }
   }
 
-  flushFlowerLayer(world)
+  flushFlowerLayer(world, frameToken)
   const groundLayer = ensureGroundLayerCache(world)
   const flowerLayer = ensureFlowerLayerCache(world)
 
@@ -875,37 +1268,9 @@ const renderMinimap = (
     context.drawImage(flowerLayer.canvas, slice.srcX, slice.srcY, slice.srcW, slice.srcH, left, top, sizePx, sizePx)
   }
 
-  const obstacleGrid = world.obstacleGrid
-  if (obstacleGrid.size > 0) {
-    const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
-    const cellSizePx = Math.max(1, worldToMinimapScale)
-    for (let gy = 0; gy < obstacleGrid.size; gy += 1) {
-      for (let gx = 0; gx < obstacleGrid.size; gx += 1) {
-        const index = gy * obstacleGrid.size + gx
-        if (obstacleGrid.solid[index] <= 0) {
-          continue
-        }
-
-        const material = obstacleGrid.material[index]
-        let color = "#838883"
-        if (material === OBSTACLE_MATERIAL_WAREHOUSE) {
-          color = "#8b9188"
-        } else if (material === OBSTACLE_MATERIAL_WALL) {
-          color = "#b06f57"
-        } else if (material === OBSTACLE_MATERIAL_BOX) {
-          color = obstacleGrid.highTierLoot[index] > 0 ? "#eef4ff" : "#de7d4f"
-        } else if (material === OBSTACLE_MATERIAL_ROCK) {
-          color = "#979b94"
-        } else if (material === OBSTACLE_MATERIAL_HEDGE) {
-          color = "#98bb8b"
-        }
-
-        context.fillStyle = color
-        const center = obstacleGridToWorldCenter(obstacleGrid.size, gx, gy)
-        const marker = toMinimap(center.x, center.y)
-        context.fillRect(marker.x - cellSizePx * 0.5, marker.y - cellSizePx * 0.5, cellSizePx, cellSizePx)
-      }
-    }
+  const obstacleLayer = ensureMinimapObstacleLayer(world, sizePx, arenaRadiusWorld)
+  if (obstacleLayer) {
+    context.drawImage(obstacleLayer, left, top, sizePx, sizePx)
   }
 
   const viewBounds = buildCullBounds(renderCameraX, renderCameraY, 0)
@@ -916,6 +1281,9 @@ const renderMinimap = (
   context.strokeStyle = "rgba(255, 246, 188, 0.72)"
   context.lineWidth = 1
   context.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
+
+  renderMinimapProjectileMarkers(context, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+  renderMinimapExplosions(context, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
 
   for (const unit of world.units) {
     const marker = toMinimap(unit.position.x, unit.position.y)
@@ -1016,6 +1384,7 @@ const renderFlowers = (
   world: WorldState,
   renderCameraX: number,
   renderCameraY: number,
+  frameToken: number,
 ) => {
   const renderedWithWebGl = renderFlowerInstances({
     context,
@@ -1027,7 +1396,7 @@ const renderFlowers = (
     return
   }
 
-  flushFlowerLayer(world)
+  flushFlowerLayer(world, frameToken)
 
   const layer = ensureFlowerLayerCache(world)
   if (!layer.canvas) {
@@ -1472,12 +1841,12 @@ const renderProjectiles = (
       context.rotate(angle)
 
       if (projectile.kind === "rocket") {
-        const trailLength = length * 1.45
+        const trailLength = length * 1.45 * ROCKET_TRAIL_LENGTH_MULTIPLIER
         for (let index = 0; index < 7; index += 1) {
           const t = index / 6
-          const alpha = (1 - t) * 0.28
+          const alpha = (1 - t) * 0.5
           const spread = (index - 3) * width * (0.12 + t * 0.12)
-          context.fillStyle = `rgba(86, 94, 104, ${alpha})`
+          context.fillStyle = `rgba(60, 66, 74, ${alpha})`
           context.beginPath()
           context.ellipse(
             -trailLength * (0.24 + t * 0.62),

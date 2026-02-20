@@ -6,7 +6,7 @@ import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 
 const FLOWER_INSTANCE_STRIDE = 9
 const QUAD_INSTANCE_STRIDE = 9
-const TRAIL_INSTANCE_STRIDE = 10
+const TRAIL_INSTANCE_STRIDE = 14
 const MAX_GPU_EXPLOSIONS = 24
 const GPU_EXPLOSION_PARTICLES = 28
 const GPU_EXPLOSION_INSTANCES = GPU_EXPLOSION_PARTICLES + 1
@@ -372,6 +372,9 @@ layout(location = 3) in float iLength;
 layout(location = 4) in float iWidth;
 layout(location = 5) in vec3 iColor;
 layout(location = 6) in float iAlpha;
+layout(location = 7) in float iStyle;
+layout(location = 8) in float iGrowth;
+layout(location = 9) in float iTurbulence;
 
 uniform vec2 uCamera;
 uniform vec2 uView;
@@ -380,20 +383,33 @@ uniform float uScale;
 out vec2 vUv;
 out vec3 vColor;
 out float vAlpha;
+out float vStyle;
+out float vGrowth;
+out float vTurbulence;
 
 void main() {
   vec2 dir = normalize(iDirection);
   vec2 normal = vec2(-dir.y, dir.x);
   float t = aCorner.x * 0.5 + 0.5;
-  vec2 along = dir * ((t - 1.0) * iLength);
-  vec2 across = normal * (aCorner.y * iWidth * 0.5);
-  vec2 world = iPosition + along + across;
+  vec2 world;
+  if (iStyle > 0.5) {
+    float puffSize = max(0.02, iWidth * 0.6 + iGrowth * 0.12);
+    world = iPosition + aCorner * puffSize;
+    vUv = aCorner * 0.5 + 0.5;
+  } else {
+    vec2 along = dir * ((t - 1.0) * iLength);
+    vec2 across = normal * (aCorner.y * iWidth * 0.5);
+    world = iPosition + along + across;
+    vUv = vec2(t, aCorner.y * 0.5 + 0.5);
+  }
   vec2 screen = (world - uCamera) * uScale + uView * 0.5;
   vec2 clip = screen / uView * 2.0 - 1.0;
   gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-  vUv = vec2(t, aCorner.y * 0.5 + 0.5);
   vColor = iColor;
   vAlpha = iAlpha;
+  vStyle = iStyle;
+  vGrowth = iGrowth;
+  vTurbulence = iTurbulence;
 }
 `
 
@@ -403,10 +419,24 @@ precision mediump float;
 in vec2 vUv;
 in vec3 vColor;
 in float vAlpha;
+in float vStyle;
+in float vGrowth;
+in float vTurbulence;
 
 out vec4 outColor;
 
 void main() {
+  if (vStyle > 0.5) {
+    vec2 centered = vUv * 2.0 - 1.0;
+    float dist = length(centered);
+    if (dist > 1.0) {
+      discard;
+    }
+
+    outColor = vec4(vColor, vAlpha);
+    return;
+  }
+
   float centered = abs(vUv.y * 2.0 - 1.0);
   float tailTaper = smoothstep(0.0, 0.55, vUv.x);
   float halfWidth = mix(0.18, 1.0, tailTaper);
@@ -793,6 +823,18 @@ void main() {
   gl.vertexAttribPointer(6, 1, gl.FLOAT, false, trailStride, 9 * 4)
   gl.vertexAttribDivisor(6, 1)
 
+  gl.enableVertexAttribArray(7)
+  gl.vertexAttribPointer(7, 1, gl.FLOAT, false, trailStride, 10 * 4)
+  gl.vertexAttribDivisor(7, 1)
+
+  gl.enableVertexAttribArray(8)
+  gl.vertexAttribPointer(8, 1, gl.FLOAT, false, trailStride, 11 * 4)
+  gl.vertexAttribDivisor(8, 1)
+
+  gl.enableVertexAttribArray(9)
+  gl.vertexAttribPointer(9, 1, gl.FLOAT, false, trailStride, 12 * 4)
+  gl.vertexAttribDivisor(9, 1)
+
   gl.bindVertexArray(null)
 
   gl.useProgram(program)
@@ -1159,7 +1201,9 @@ export const renderFlightTrailInstances = (
     }
 
     const lifeRatio = Math.max(0, Math.min(1, trail.life / trail.maxLife))
-    const alpha = trail.alpha * lifeRatio * lifeRatio
+    const alpha = trail.style > 0.5
+      ? trail.alpha * (lifeRatio * lifeRatio * (3 - 2 * lifeRatio))
+      : trail.alpha * lifeRatio * lifeRatio
     if (alpha <= 0.01) {
       continue
     }
@@ -1177,6 +1221,10 @@ export const renderFlightTrailInstances = (
     state.trailInstanceData[writeIndex + 7] = green
     state.trailInstanceData[writeIndex + 8] = blue
     state.trailInstanceData[writeIndex + 9] = alpha
+    state.trailInstanceData[writeIndex + 10] = trail.style
+    state.trailInstanceData[writeIndex + 11] = trail.growth
+    state.trailInstanceData[writeIndex + 12] = trail.turbulence
+    state.trailInstanceData[writeIndex + 13] = trail.driftSpeed
     instanceCount += 1
   }
 
