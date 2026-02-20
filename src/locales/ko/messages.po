@@ -14,7 +14,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
-#: src/game/game.ts:771
+#: src/game/game.ts:777
 msgid "{0} flowers"
 msgstr "{0}송이"
 
@@ -63,13 +63,13 @@ msgstr "바다바다 아레나"
 msgid "Battle Rifle"
 msgstr "전투소총"
 
-#: src/game/game.ts:337
+#: src/game/game.ts:343
 #: src/game/i18n/faction-label.ts:22
 msgid "Blue"
 msgstr "블루"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:323
+#: src/game/game.ts:329
 msgid "Bot {0}"
 msgstr "봇 {0}"
 
@@ -77,21 +77,21 @@ msgstr "봇 {0}"
 msgid "Bot {botIndex}"
 msgstr "봇 {botIndex}"
 
-#: src/game/game.ts:773
+#: src/game/game.ts:779
 msgid "Bullets Fired"
 msgstr "발사 탄 수"
 
-#: src/game/game.ts:774
+#: src/game/game.ts:780
 msgid "Bullets Hit"
 msgstr "명중 탄 수"
 
 #: src/game/adapters/hud-sync.ts:85
-#: src/game/game.ts:717
+#: src/game/game.ts:723
 msgid "Burnt"
 msgstr "그을림"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game.ts:813
+#: src/game/game.ts:819
 msgid "Click once to wake audio, then begin fighting"
 msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작하세요"
 
@@ -115,7 +115,7 @@ msgstr "클립보드에 상태 복사"
 msgid "Coverage score"
 msgstr "점유율 점수"
 
-#: src/game/game.ts:777
+#: src/game/game.ts:783
 msgid "Damage"
 msgstr "가한 피해"
 
@@ -128,7 +128,7 @@ msgid "Duo"
 msgstr "듀오"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:353
+#: src/game/game.ts:359
 msgid "Duo {0}"
 msgstr "듀오 {0}"
 
@@ -136,7 +136,7 @@ msgstr "듀오 {0}"
 msgid "Duo {teamIndex}"
 msgstr "듀오 {teamIndex}"
 
-#: src/game/game.ts:353
+#: src/game/game.ts:359
 #: src/game/i18n/faction-label.ts:33
 msgid "Duo 1 (You)"
 msgstr "듀오 1 (당신)"
@@ -201,7 +201,7 @@ msgstr "게임 모드"
 msgid "Game Speed {0}x"
 msgstr "게임 속도 {0}x"
 
-#: src/game/game.ts:532
+#: src/game/game.ts:538
 msgid "Generating arena..."
 msgstr "전장을 생성하는 중..."
 
@@ -233,7 +233,7 @@ msgstr "강함"
 msgid "Heavy Pellets"
 msgstr "고중량 탄환"
 
-#: src/game/game.ts:775
+#: src/game/game.ts:781
 msgid "Hit Rate"
 msgstr "명중률"
 
@@ -280,7 +280,7 @@ msgstr "언어"
 msgid "Laser Sight"
 msgstr "레이저 조준기"
 
-#: src/game/game.ts:770
+#: src/game/game.ts:776
 msgid "Lead Margin"
 msgstr "선두 격차"
 
@@ -340,11 +340,11 @@ msgstr "일시정지"
 msgid "Pellet size +50%, fire rate -25%, damage +1"
 msgstr "탄환 크기 +50%, 연사력 -25%, 피해 +1"
 
-#: src/game/game.ts:2125
+#: src/game/game.ts:2210
 msgid "Perk acquired {localizedPerk}"
 msgstr "{localizedPerk} 특성 획득"
 
-#: src/game/game.ts:2124
+#: src/game/game.ts:2209
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "{localizedPerk} 특성 획득 x{stacks}"
 
@@ -352,7 +352,7 @@ msgstr "{localizedPerk} 특성 획득 x{stacks}"
 msgid "Perks"
 msgstr "특성"
 
-#: src/game/game.ts:2118
+#: src/game/game.ts:2203
 msgid "Picked up {localizedWeapon}"
 msgstr "{localizedWeapon} 획득"
 
@@ -367,7 +367,7 @@ msgstr "픽업 {0} 보임 / {1} 숨김"
 msgid "Pistol"
 msgstr "권총"
 
-#: src/game/game.ts:776
+#: src/game/game.ts:782
 msgid "Player Kills"
 msgstr "처치 수"
 
@@ -391,7 +391,7 @@ msgstr "접근 탐지 수류탄"
 msgid "Rapid Reload"
 msgstr "빠른 재장전"
 
-#: src/game/game.ts:336
+#: src/game/game.ts:342
 #: src/game/i18n/faction-label.ts:19
 msgid "Red (You)"
 msgstr "레드 (당신)"
@@ -451,7 +451,7 @@ msgid "Squad"
 msgstr "스쿼드"
 
 #. placeholder {0}: index + 1
-#: src/game/game.ts:356
+#: src/game/game.ts:362
 msgid "Squad {0}"
 msgstr "스쿼드 {0}"
 
@@ -459,12 +459,12 @@ msgstr "스쿼드 {0}"
 msgid "Squad {teamIndex}"
 msgstr "스쿼드 {teamIndex}"
 
-#: src/game/game.ts:355
+#: src/game/game.ts:361
 #: src/game/i18n/faction-label.ts:36
 msgid "Squad 1 (You)"
 msgstr "스쿼드 1 (당신)"
 
-#: src/game/game.ts:767
+#: src/game/game.ts:773
 msgid "Team Contribution"
 msgstr "팀 기여도"
 
@@ -494,15 +494,15 @@ msgid "Time {0}"
 msgstr "시간 {0}"
 
 #. placeholder {0}: winner.label
-#: src/game/game.ts:749
+#: src/game/game.ts:755
 msgid "Time up. {0} overwhelms the field"
 msgstr "시간 종료. {0}이(가) 전장을 압도했습니다"
 
-#: src/game/game.ts:748
+#: src/game/game.ts:754
 msgid "Time up. Your trail dominates the arena"
 msgstr "시간 종료. 당신의 꽃길이 전장을 지배했습니다"
 
-#: src/game/game.ts:763
+#: src/game/game.ts:769
 msgid "Total Flowers"
 msgstr "총 꽃 수"
 
@@ -529,15 +529,15 @@ msgstr "슬라이딩 창 {0} f: 병합 {1}% / 분할 {2}%"
 msgid "Window pickups {0}% visible / {1}% hidden"
 msgstr "창 픽업 {0}% 보임 / {1}% 숨김"
 
-#: src/game/game.ts:764
+#: src/game/game.ts:770
 msgid "Winner Share"
 msgstr "승자 점유율"
 
-#: src/game/game.ts:317
+#: src/game/game.ts:323
 #: src/game/i18n/faction-label.ts:8
 msgid "You"
 msgstr "당신"
 
-#: src/game/game.ts:765
+#: src/game/game.ts:771
 msgid "Your Place"
 msgstr "내 순위"

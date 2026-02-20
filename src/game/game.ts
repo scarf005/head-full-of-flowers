@@ -85,12 +85,14 @@ import {
   updateObstacleFlash,
 } from "./systems/collisions.ts"
 import {
+  isObstacleCellSolid,
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_HEDGE,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
   obstacleGridIndex,
+  obstacleGridToWorldCenter,
   worldToObstacleGrid,
 } from "./world/obstacle-grid.ts"
 import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
@@ -106,6 +108,7 @@ import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
 import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
+import { applyObstacleRicochet } from "./systems/obstacle-ricochet.ts"
 import { updateAI } from "./systems/ai.ts"
 import { Flower, type Unit } from "./entities.ts"
 import { HIGH_TIER_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "./weapons.ts"
@@ -149,8 +152,11 @@ const TEAM_COLOR_RAMP = [
 ]
 const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
-const RAGDOLL_MAX_LIFE_SECONDS = 1
+const RAGDOLL_FLIGHT_TIME_SECONDS = 0.35
 const RAGDOLL_MAX_ANGULAR_SPEED = 14
+const RAGDOLL_RICOCHET_RESTITUTION = 0.72
+const RAGDOLL_RICOCHET_TANGENT_FRICTION = 0.9
+const RAGDOLL_RICOCHET_JITTER_RADIANS = 0.16
 const MUZZLE_FLASH_BASE_RADIUS = 0.18
 const MUZZLE_FLASH_REFERENCE_SPEED = 40
 const MUZZLE_FLASH_MIN_RADIUS = 0.08
@@ -980,7 +986,7 @@ export class FlowerArenaGame {
     }
 
     const travelDistance = Math.max(0, killImpulse.damage)
-    const travelSpeed = travelDistance / Math.max(0.000001, RAGDOLL_MAX_LIFE_SECONDS)
+    const travelSpeed = travelDistance / Math.max(0.000001, RAGDOLL_FLIGHT_TIME_SECONDS)
 
     ragdoll.active = true
     ragdoll.unitId = target.id
@@ -992,26 +998,105 @@ export class FlowerArenaGame {
     ragdoll.angularVelocity = randomRange(-RAGDOLL_MAX_ANGULAR_SPEED, RAGDOLL_MAX_ANGULAR_SPEED) *
       clamp(travelDistance / 20, 0.25, 1.4)
     ragdoll.radius = target.radius
-    ragdoll.maxLife = RAGDOLL_MAX_LIFE_SECONDS
-    ragdoll.life = ragdoll.maxLife
+    ragdoll.maxLife = travelDistance
+    ragdoll.life = travelDistance
   }
 
   private updateRagdolls(dt: number) {
+    const ragdollCollidesObstacle = (x: number, y: number, radius: number) => {
+      const grid = this.world.obstacleGrid
+      const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
+      const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
+      const minX = Math.max(0, min.x)
+      const maxX = Math.min(grid.size - 1, max.x)
+      const minY = Math.max(0, min.y)
+      const maxY = Math.min(grid.size - 1, max.y)
+
+      for (let gy = minY; gy <= maxY; gy += 1) {
+        for (let gx = minX; gx <= maxX; gx += 1) {
+          if (!isObstacleCellSolid(grid, gx, gy)) {
+            continue
+          }
+
+          const center = obstacleGridToWorldCenter(grid.size, gx, gy)
+          const nearestX = clamp(x, center.x - 0.5, center.x + 0.5)
+          const nearestY = clamp(y, center.y - 0.5, center.y + 0.5)
+          if (distSquared(x, y, nearestX, nearestY) <= radius * radius) {
+            return true
+          }
+        }
+      }
+
+      return false
+    }
+
     for (const ragdoll of this.world.ragdolls) {
       if (!ragdoll.active) {
         continue
       }
 
-      const step = Math.min(dt, ragdoll.life)
-      if (step <= 0) {
+      if (ragdoll.life <= 0) {
         ragdoll.active = false
         continue
       }
 
-      ragdoll.position.x += ragdoll.velocity.x * step
-      ragdoll.position.y += ragdoll.velocity.y * step
-      ragdoll.rotation += ragdoll.angularVelocity * step
-      ragdoll.life -= step
+      const speed = Math.hypot(ragdoll.velocity.x, ragdoll.velocity.y)
+      if (speed <= 0.000001) {
+        ragdoll.active = false
+        continue
+      }
+
+      const stepDistance = Math.min(speed * dt, ragdoll.life)
+      const startX = ragdoll.position.x
+      const startY = ragdoll.position.y
+      const stepTime = stepDistance / speed
+      const moveX = ragdoll.velocity.x * stepTime
+      const moveY = ragdoll.velocity.y * stepTime
+      const moveLength = Math.hypot(moveX, moveY)
+      const sampleSpacing = Math.max(0.08, ragdoll.radius * 0.35)
+      const sampleCount = Math.max(1, Math.ceil(moveLength / sampleSpacing))
+      let nextX = startX
+      let nextY = startY
+      let hitObstacle = false
+      let collisionX = startX
+      let collisionY = startY
+
+      for (let sample = 1; sample <= sampleCount; sample += 1) {
+        const t = sample / sampleCount
+        const sampleX = startX + moveX * t
+        const sampleY = startY + moveY * t
+        if (ragdollCollidesObstacle(sampleX, sampleY, ragdoll.radius)) {
+          hitObstacle = true
+          collisionX = sampleX
+          collisionY = sampleY
+          break
+        }
+
+        nextX = sampleX
+        nextY = sampleY
+      }
+
+      if (hitObstacle) {
+        ragdoll.position.x = collisionX
+        ragdoll.position.y = collisionY
+        applyObstacleRicochet({
+          obstacleGrid: this.world.obstacleGrid,
+          previousX: startX,
+          previousY: startY,
+          position: ragdoll.position,
+          velocity: ragdoll.velocity,
+          restitution: RAGDOLL_RICOCHET_RESTITUTION,
+          tangentFriction: RAGDOLL_RICOCHET_TANGENT_FRICTION,
+          jitterRadians: RAGDOLL_RICOCHET_JITTER_RADIANS,
+          separation: 0.02,
+        })
+      } else {
+        ragdoll.position.x = nextX
+        ragdoll.position.y = nextY
+      }
+
+      ragdoll.rotation += ragdoll.angularVelocity * stepTime
+      ragdoll.life -= stepDistance
       if (ragdoll.life <= 0) {
         ragdoll.active = false
       }
