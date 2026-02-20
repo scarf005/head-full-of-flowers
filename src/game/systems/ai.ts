@@ -14,6 +14,8 @@ const parseBotIndex = (botId: string) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+const AI_SHOT_BLOCKER_CHECK_DISTANCE = 16
+
 const updateBotAim = (
   bot: WorldState["bots"][number],
   botIndex: number,
@@ -343,7 +345,9 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const distanceToTarget = nearestTarget.distance
     const toTargetX = nearestTarget.deltaX
     const toTargetY = nearestTarget.deltaY
-    const shotBlocker = !easyMode && hasTarget
+    const shouldCheckShotBlocker = !easyMode && hasTarget &&
+      (distanceToTarget <= AI_SHOT_BLOCKER_CHECK_DISTANCE || bot.hp <= bot.maxHp * 0.42)
+    const shotBlocker = shouldCheckShotBlocker
       ? assessShotBlocker(world, bot, toTargetX, toTargetY, distanceToTarget)
       : null
     const blockedByIndestructibleCover = shotBlocker !== null && !shotBlocker.canDamageWithPrimary
@@ -447,16 +451,20 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const desiredSpeed = Math.hypot(desiredVelocityX, desiredVelocityY)
     const desiredDirX = desiredSpeed > 0 ? desiredVelocityX / desiredSpeed : 0
     const desiredDirY = desiredSpeed > 0 ? desiredVelocityY / desiredSpeed : 0
-    const desiredClearance = desiredSpeed > 0 ? clearanceAlongDirection(world, bot, desiredDirX, desiredDirY, 1.1) : 0
+    const shouldCheckDesiredClearance = !easyMode && hasTarget && nearArenaEdge
+    const desiredClearance = shouldCheckDesiredClearance && desiredSpeed > 0
+      ? clearanceAlongDirection(world, bot, desiredDirX, desiredDirY, 1.1)
+      : Number.POSITIVE_INFINITY
     const trappedByGeometry = hasTarget && nearArenaEdge && desiredClearance < 0.25
     if (!easyMode && (blockedByIndestructibleCover || trappedByGeometry)) {
-      const escape = findEscapeDirection(world, bot, toTargetX, toTargetY, nearArenaEdge, shotBlocker)
+      const escapeRoute = findEscapeDirection(world, bot, toTargetX, toTargetY, nearArenaEdge, shotBlocker)
       const escapeSpeed = bot.speed * (nearArenaEdge ? 1 : 0.9)
-      desiredVelocityX = escape.dirX * escapeSpeed
-      desiredVelocityY = escape.dirY * escapeSpeed
+      desiredVelocityX = escapeRoute.dirX * escapeSpeed
+      desiredVelocityY = escapeRoute.dirY * escapeSpeed
 
       if (
-        escape.blocked && blockedByIndestructibleCover && bot.secondaryMode === "grenade" && bot.secondaryCooldown <= 0
+        escapeRoute.blocked && blockedByIndestructibleCover && bot.secondaryMode === "grenade" &&
+        bot.secondaryCooldown <= 0
       ) {
         const nearbyObstacle = findNearestSolidCellAround(world, bot.position.x, bot.position.y, 1.8)
         const aimX = nearbyObstacle ? nearbyObstacle.x - bot.position.x : bot.position.x

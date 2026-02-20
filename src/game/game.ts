@@ -183,6 +183,12 @@ export class FlowerArenaGame {
   private lastEffectsVolume = -1
   private lastLocale = languageSignal.value
   private beginMatchGenerationToken = 0
+  private obstacleDebrisCursor = 0
+  private killPetalCursor = 0
+  private ragdollCursor = 0
+  private shellCasingCursor = 0
+  private muzzleFlashCursor = 0
+  private explosionCursor = 0
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -670,6 +676,12 @@ export class FlowerArenaGame {
     for (const casing of this.world.shellCasings) casing.active = false
     for (const trail of this.world.flightTrails) trail.active = false
     this.world.flightTrailCursor = 0
+    this.obstacleDebrisCursor = 0
+    this.killPetalCursor = 0
+    this.ragdollCursor = 0
+    this.shellCasingCursor = 0
+    this.muzzleFlashCursor = 0
+    this.explosionCursor = 0
     for (const explosion of this.world.explosions) explosion.active = false
 
     spawnObstacles(this.world)
@@ -865,7 +877,7 @@ export class FlowerArenaGame {
     const pieces = material === OBSTACLE_MATERIAL_BOX ? 12 : 8
 
     for (let index = 0; index < pieces; index += 1) {
-      const slot = this.world.obstacleDebris.find((debris) => !debris.active) ?? this.world.obstacleDebris[0]
+      const slot = this.allocObstacleDebris()
       const angle = Math.random() * Math.PI * 2
       const speed = randomRange(2.5, 7.8)
       slot.active = true
@@ -886,7 +898,7 @@ export class FlowerArenaGame {
     const pieces = Math.max(2, Math.min(8, Math.round(basePieces + damage * 1.5)))
 
     for (let index = 0; index < pieces; index += 1) {
-      const slot = this.world.obstacleDebris.find((debris) => !debris.active) ?? this.world.obstacleDebris[0]
+      const slot = this.allocObstacleDebris()
       const angle = Math.random() * Math.PI * 2
       const speed = randomRange(1.8, 5.4)
       slot.active = true
@@ -899,6 +911,23 @@ export class FlowerArenaGame {
       slot.life = slot.maxLife
       slot.color = palette[Math.floor(Math.random() * palette.length)]
     }
+  }
+
+  private allocObstacleDebris() {
+    const pool = this.world.obstacleDebris
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.obstacleDebrisCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.obstacleDebrisCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.obstacleDebrisCursor]
+    this.obstacleDebrisCursor = (this.obstacleDebrisCursor + 1) % length
+    return slot
   }
 
   private updateObstacleDebris(dt: number, fogCullBounds?: FogCullBounds) {
@@ -931,7 +960,20 @@ export class FlowerArenaGame {
   }
 
   private allocKillPetal() {
-    return this.world.killPetals.find((petal) => !petal.active) ?? this.world.killPetals[0]
+    const pool = this.world.killPetals
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.killPetalCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.killPetalCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.killPetalCursor]
+    this.killPetalCursor = (this.killPetalCursor + 1) % length
+    return slot
   }
 
   private spawnKillPetalBurst(x: number, y: number) {
@@ -959,7 +1001,20 @@ export class FlowerArenaGame {
   }
 
   private allocRagdoll() {
-    return this.world.ragdolls.find((ragdoll) => !ragdoll.active) ?? this.world.ragdolls[0]
+    const pool = this.world.ragdolls
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.ragdollCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.ragdollCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.ragdollCursor]
+    this.ragdollCursor = (this.ragdollCursor + 1) % length
+    return slot
   }
 
   private spawnUnitRagdoll(
@@ -1159,7 +1214,7 @@ export class FlowerArenaGame {
       return
     }
 
-    const slot = this.world.shellCasings.find((casing) => !casing.active) ?? this.world.shellCasings[0]
+    const slot = this.allocShellCasing()
     const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
     const side = Math.random() > 0.5 ? 1 : -1
     const angle = aimAngle + side * Math.PI * 0.5 + randomRange(-0.4, 0.4)
@@ -1176,6 +1231,23 @@ export class FlowerArenaGame {
     slot.maxLife = randomRange(0.55, 1.1)
     slot.life = slot.maxLife
     slot.bounceCount = 0
+  }
+
+  private allocShellCasing() {
+    const pool = this.world.shellCasings
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.shellCasingCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.shellCasingCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.shellCasingCursor]
+    this.shellCasingCursor = (this.shellCasingCursor + 1) % length
+    return slot
   }
 
   private spawnMuzzleFlash(unit: Unit, shotAngle: number, weaponId: PrimaryWeaponId) {
@@ -1198,13 +1270,30 @@ export class FlowerArenaGame {
     const muzzleX = drawX + dirX * muzzleOffset
     const muzzleY = drawY + dirY * muzzleOffset
 
-    const slot = this.world.muzzleFlashes.find((flash) => !flash.active) ?? this.world.muzzleFlashes[0]
+    const slot = this.allocMuzzleFlash()
     const speedScale = Number.isFinite(weapon.speed) && weapon.speed > 0
       ? weapon.speed / MUZZLE_FLASH_REFERENCE_SPEED
       : 1
     slot.active = true
     slot.position.set(muzzleX, muzzleY)
     slot.radius = Math.max(MUZZLE_FLASH_MIN_RADIUS, MUZZLE_FLASH_BASE_RADIUS * speedScale)
+  }
+
+  private allocMuzzleFlash() {
+    const pool = this.world.muzzleFlashes
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.muzzleFlashCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.muzzleFlashCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.muzzleFlashCursor]
+    this.muzzleFlashCursor = (this.muzzleFlashCursor + 1) % length
+    return slot
   }
 
   private updateShellCasings(dt: number, fogCullBounds?: FogCullBounds) {
@@ -1723,11 +1812,28 @@ export class FlowerArenaGame {
   }
 
   private spawnExplosion(x: number, y: number, radius: number) {
-    const slot = this.world.explosions.find((explosion) => !explosion.active) ?? this.world.explosions[0]
+    const slot = this.allocExplosion()
     slot.active = true
     slot.position.set(x, y)
     slot.radius = radius
     slot.life = 0.24
+  }
+
+  private allocExplosion() {
+    const pool = this.world.explosions
+    const length = pool.length
+    for (let index = 0; index < length; index += 1) {
+      const candidateIndex = (this.explosionCursor + index) % length
+      const candidate = pool[candidateIndex]
+      if (!candidate.active) {
+        this.explosionCursor = (candidateIndex + 1) % length
+        return candidate
+      }
+    }
+
+    const slot = pool[this.explosionCursor]
+    this.explosionCursor = (this.explosionCursor + 1) % length
+    return slot
   }
 
   private applyExplosionImpulse(

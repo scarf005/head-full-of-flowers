@@ -29,6 +29,7 @@ export const setupInputAdapter = (
   const MOVE_DEADZONE = 0.18
   const STICK_MAX_DISTANCE = 58
   const AIM_CANVAS_RADIUS = 170
+  const INPUT_BOUNDS_SAMPLE_INTERVAL_MS = 120
 
   const moveStickState = {
     pointerId: -1,
@@ -47,11 +48,105 @@ export const setupInputAdapter = (
     world.input.worldY = world.camera.y + (world.input.canvasY - VIEW_HEIGHT * 0.5) / WORLD_SCALE
   }
 
+  const pointerBoundsCache = {
+    left: 0,
+    top: 0,
+    width: VIEW_WIDTH,
+    height: VIEW_HEIGHT,
+    frameLeft: 0,
+    frameTop: 0,
+    nextSampleAtMs: 0,
+  }
+
+  const samplePointerBounds = (force = false) => {
+    const now = performance.now()
+    if (!force && now < pointerBoundsCache.nextSampleAtMs) {
+      return pointerBoundsCache
+    }
+
+    const rect = canvas.getBoundingClientRect()
+    const frameRect = frame?.getBoundingClientRect()
+    pointerBoundsCache.left = rect.left
+    pointerBoundsCache.top = rect.top
+    pointerBoundsCache.width = Math.max(1, rect.width)
+    pointerBoundsCache.height = Math.max(1, rect.height)
+    pointerBoundsCache.frameLeft = frameRect?.left ?? 0
+    pointerBoundsCache.frameTop = frameRect?.top ?? 0
+    pointerBoundsCache.nextSampleAtMs = now + INPUT_BOUNDS_SAMPLE_INTERVAL_MS
+    return pointerBoundsCache
+  }
+
+  const pendingCrosshair = {
+    x: VIEW_WIDTH * 0.5,
+    y: VIEW_HEIGHT * 0.5,
+    visible: false,
+    dirty: false,
+  }
+  let crosshairRaf = 0
+  const pendingDesktopPointer = {
+    clientX: 0,
+    clientY: 0,
+    dirty: false,
+  }
+  let desktopPointerRaf = 0
+
+  const flushCrosshair = () => {
+    crosshairRaf = 0
+    if (!pendingCrosshair.dirty) {
+      return
+    }
+    pendingCrosshair.dirty = false
+    handlers.onCrosshair(pendingCrosshair.x, pendingCrosshair.y, pendingCrosshair.visible)
+  }
+
+  const scheduleCrosshair = (x: number, y: number, visible: boolean) => {
+    pendingCrosshair.x = x
+    pendingCrosshair.y = y
+    pendingCrosshair.visible = visible
+    pendingCrosshair.dirty = true
+    if (crosshairRaf !== 0) {
+      return
+    }
+    crosshairRaf = requestAnimationFrame(flushCrosshair)
+  }
+
+  const flushDesktopPointerMove = () => {
+    desktopPointerRaf = 0
+    if (!pendingDesktopPointer.dirty) {
+      return
+    }
+
+    pendingDesktopPointer.dirty = false
+    const bounds = samplePointerBounds()
+    const screenX = clamp(pendingDesktopPointer.clientX - bounds.left, 0, bounds.width)
+    const screenY = clamp(pendingDesktopPointer.clientY - bounds.top, 0, bounds.height)
+    const normalizedX = screenX / bounds.width
+    const normalizedY = screenY / bounds.height
+
+    world.input.screenX = pendingDesktopPointer.clientX - bounds.frameLeft
+    world.input.screenY = pendingDesktopPointer.clientY - bounds.frameTop
+    world.input.canvasX = normalizedX * VIEW_WIDTH
+    world.input.canvasY = normalizedY * VIEW_HEIGHT
+    syncAimFromCanvas()
+    scheduleCrosshair(world.input.screenX, world.input.screenY, true)
+  }
+
+  const scheduleDesktopPointerMove = (clientX: number, clientY: number) => {
+    pendingDesktopPointer.clientX = clientX
+    pendingDesktopPointer.clientY = clientY
+    pendingDesktopPointer.dirty = true
+    if (desktopPointerRaf !== 0) {
+      return
+    }
+
+    desktopPointerRaf = requestAnimationFrame(flushDesktopPointerMove)
+  }
+
   const getFrameOffset = () => {
-    const bounds = frame?.getBoundingClientRect()
+    const bounds = samplePointerBounds()
     return {
-      left: bounds?.left ?? 0,
-      top: bounds?.top ?? 0,
+      left: bounds.frameLeft,
+      top: bounds.frameTop,
     }
   }
 
@@ -106,17 +201,16 @@ export const setupInputAdapter = (
     const scaledY = dirY * clampedDistance
     const normalized = STICK_MAX_DISTANCE > 0 ? clampedDistance / STICK_MAX_DISTANCE : 0
     const active = normalized > 0.12
-    const frameOffset = getFrameOffset()
-    const canvasBounds = canvas.getBoundingClientRect()
-    const centerX = canvasBounds.left - frameOffset.left + canvasBounds.width * 0.5
-    const centerY = canvasBounds.top - frameOffset.top + canvasBounds.height * 0.5
+    const bounds = samplePointerBounds()
+    const centerX = bounds.left - bounds.frameLeft + bounds.width * 0.5
+    const centerY = bounds.top - bounds.frameTop + bounds.height * 0.5
     const aimScreenX = centerX + dirX * 48
     const aimScreenY = centerY + dirY * 48
 
     world.input.canvasX = VIEW_WIDTH * 0.5 + dirX * AIM_CANVAS_RADIUS
     world.input.canvasY = VIEW_HEIGHT * 0.5 + dirY * AIM_CANVAS_RADIUS
     syncAimFromCanvas()
-    handlers.onCrosshair(aimScreenX, aimScreenY, active)
+    scheduleCrosshair(aimScreenX, aimScreenY, active)
     world.input.leftDown = active
     aimThumbTo(scaledX, scaledY)
   }
@@ -126,7 +220,7 @@ export const setupInputAdapter = (
     world.input.canvasX = VIEW_WIDTH * 0.5
     world.input.canvasY = VIEW_HEIGHT * 0.5
     syncAimFromCanvas()
-    handlers.onCrosshair(world.input.screenX, world.input.screenY, false)
+    scheduleCrosshair(world.input.screenX, world.input.screenY, false)
     aimThumbTo(0, 0)
   }
 
@@ -267,20 +361,16 @@ export const setupInputAdapter = (
       return
     }
 
-    const rect = canvas.getBoundingClientRect()
-    const frameOffset = getFrameOffset()
-    const screenX = clamp(event.clientX - rect.left, 0, rect.width)
-    const screenY = clamp(event.clientY - rect.top, 0, rect.height)
-    const normalizedX = rect.width > 0 ? screenX / rect.width : 0.5
-    const normalizedY = rect.height > 0 ? screenY / rect.height : 0.5
+    if (!world.running || world.paused || !world.started || world.finished) {
+      return
+    }
 
-    world.input.screenX = event.clientX - frameOffset.left
-    world.input.screenY = event.clientY - frameOffset.top
-    world.input.canvasX = normalizedX * VIEW_WIDTH
-    world.input.canvasY = normalizedY * VIEW_HEIGHT
-    syncAimFromCanvas()
+    const target = event.target
+    if (!(target instanceof Node) || !frame || !frame.contains(target)) {
+      return
+    }
 
-    handlers.onCrosshair(world.input.screenX, world.input.screenY, true)
+    scheduleDesktopPointerMove(event.clientX, event.clientY)
   }
 
   const onMobileControlsPointerDown = (event: PointerEvent) => {
@@ -404,7 +494,12 @@ export const setupInputAdapter = (
   }
 
   const onPointerLeave = () => {
-    handlers.onCrosshair(world.input.screenX, world.input.screenY, false)
+    pendingDesktopPointer.dirty = false
+    if (desktopPointerRaf !== 0) {
+      cancelAnimationFrame(desktopPointerRaf)
+      desktopPointerRaf = 0
+    }
+    scheduleCrosshair(world.input.screenX, world.input.screenY, false)
   }
 
   const onWheel = (event: WheelEvent) => {
@@ -433,8 +528,18 @@ export const setupInputAdapter = (
   canvas.addEventListener("pointerleave", onPointerLeave)
   canvas.addEventListener("contextmenu", onContextMenu)
 
+  samplePointerBounds(true)
+
   return {
     destroy: () => {
+      if (crosshairRaf !== 0) {
+        cancelAnimationFrame(crosshairRaf)
+        crosshairRaf = 0
+      }
+      if (desktopPointerRaf !== 0) {
+        cancelAnimationFrame(desktopPointerRaf)
+        desktopPointerRaf = 0
+      }
       globalThis.removeEventListener("keydown", onKeyDown)
       globalThis.removeEventListener("keyup", onKeyUp)
       globalThis.removeEventListener("pointerdown", onMobileControlsPointerDown)
