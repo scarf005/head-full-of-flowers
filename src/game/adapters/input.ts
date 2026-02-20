@@ -361,8 +361,12 @@ export const setupInputAdapter = (
       return
     }
 
+    if (!world.running || world.paused || !world.started || world.finished) {
+      return
+    }
+
     const target = event.target
-    if (!(target instanceof Element) || !target.closest(".game-frame")) {
+    if (!(target instanceof Node) || !frame || !frame.contains(target)) {
       return
     }
 
