@@ -26,7 +26,6 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
-  persistGameModeOptions,
   secondaryModeSignal,
   selectedGameModeSignal,
   squadTeamCountSignal,
@@ -154,6 +153,7 @@ const EXPLOSION_UNIT_FLING_BASE = 6.5
 const EXPLOSION_UNIT_FLING_RADIUS_MULTIPLIER = 2.4
 const RAGDOLL_FLIGHT_TIME_SECONDS = 0.35
 const RAGDOLL_MAX_ANGULAR_SPEED = 14
+const RAGDOLL_MAX_TRAVEL_DISTANCE = 28
 const RAGDOLL_RICOCHET_RESTITUTION = 0.72
 const RAGDOLL_RICOCHET_TANGENT_FRICTION = 0.9
 const RAGDOLL_RICOCHET_JITTER_RADIANS = 0.16
@@ -311,7 +311,6 @@ export class FlowerArenaGame {
     if (mode === "squad") {
       squadTeamCountSignal.value = Math.max(2, Math.floor(totalPlayers / 4))
     }
-    persistGameModeOptions()
 
     this.world.bots = activeBots
     this.world.units = [this.world.player, ...activeBots]
@@ -973,9 +972,11 @@ export class FlowerArenaGame {
     },
   ) {
     const ragdoll = this.allocRagdoll()
-    const impactLength = Math.hypot(killImpulse.impactX, killImpulse.impactY)
-    let dirX = killImpulse.impactX
-    let dirY = killImpulse.impactY
+    const impactX = Number.isFinite(killImpulse.impactX) ? killImpulse.impactX : 0
+    const impactY = Number.isFinite(killImpulse.impactY) ? killImpulse.impactY : 0
+    const impactLength = Math.hypot(impactX, impactY)
+    let dirX = impactX
+    let dirY = impactY
     if (impactLength <= 0.000001) {
       const angle = Math.random() * Math.PI * 2
       dirX = Math.cos(angle)
@@ -985,7 +986,11 @@ export class FlowerArenaGame {
       dirY /= impactLength
     }
 
-    const travelDistance = Math.max(0, killImpulse.damage)
+    const travelDistance = clamp(
+      Number.isFinite(killImpulse.damage) ? killImpulse.damage : 0,
+      0,
+      RAGDOLL_MAX_TRAVEL_DISTANCE,
+    )
     const travelSpeed = travelDistance / Math.max(0.000001, RAGDOLL_FLIGHT_TIME_SECONDS)
 
     ragdoll.active = true
@@ -1035,13 +1040,26 @@ export class FlowerArenaGame {
         continue
       }
 
+      if (
+        !Number.isFinite(ragdoll.position.x) ||
+        !Number.isFinite(ragdoll.position.y) ||
+        !Number.isFinite(ragdoll.velocity.x) ||
+        !Number.isFinite(ragdoll.velocity.y) ||
+        !Number.isFinite(ragdoll.rotation) ||
+        !Number.isFinite(ragdoll.angularVelocity) ||
+        !Number.isFinite(ragdoll.life)
+      ) {
+        ragdoll.active = false
+        continue
+      }
+
       if (ragdoll.life <= 0) {
         ragdoll.active = false
         continue
       }
 
       const speed = Math.hypot(ragdoll.velocity.x, ragdoll.velocity.y)
-      if (speed <= 0.000001) {
+      if (!Number.isFinite(speed) || speed <= 0.000001) {
         ragdoll.active = false
         continue
       }

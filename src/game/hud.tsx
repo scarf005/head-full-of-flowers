@@ -18,9 +18,6 @@ import {
   menuVisibleSignal,
   musicVolumeSignal,
   pausedSignal,
-  persistAudioOptions,
-  persistDebugOptions,
-  persistGameModeOptions,
   playerPerksSignal,
   primaryWeaponSlotsSignal,
   renderPathProfileSignal,
@@ -159,7 +156,6 @@ export const GameHud = () => {
                 type="checkbox"
                 onChange={(event) => {
                   debugInfiniteHpSignal.value = event.currentTarget.checked
-                  persistDebugOptions()
                 }}
               />
               <span>{t`Infinite HP`}</span>
@@ -170,7 +166,6 @@ export const GameHud = () => {
                 type="checkbox"
                 onChange={(event) => {
                   debugInfiniteReloadSignal.value = event.currentTarget.checked
-                  persistDebugOptions()
                 }}
               />
               <span>{t`Infinite Reload`}</span>
@@ -181,7 +176,6 @@ export const GameHud = () => {
                 type="checkbox"
                 onChange={(event) => {
                   debugEquipAllRocketLauncherSignal.value = event.currentTarget.checked
-                  persistDebugOptions()
                 }}
               />
               <span>{t`Equip all with rocket launcher`}</span>
@@ -196,7 +190,6 @@ export const GameHud = () => {
                 value={Math.round(debugGameSpeedSignal.value * 100)}
                 onInput={(event) => {
                   debugGameSpeedSignal.value = Number(event.currentTarget.value) / 100
-                  persistDebugOptions()
                 }}
               />
             </label>
@@ -210,7 +203,6 @@ export const GameHud = () => {
                 value={impactFeelLevel}
                 onInput={(event) => {
                   debugImpactFeelLevelSignal.value = Number(event.currentTarget.value)
-                  persistDebugOptions()
                 }}
               />
             </label>
@@ -285,7 +277,6 @@ export const GameHud = () => {
                     aria-pressed={selectedMode === mode.id}
                     onClick={() => {
                       selectedGameModeSignal.value = mode.id
-                      persistGameModeOptions()
                     }}
                   >
                     <span class="mode-card-title">{mode.label}</span>
@@ -306,24 +297,20 @@ export const GameHud = () => {
                     const mode = selectedGameModeSignal.value
                     if (mode === "ffa") {
                       ffaPlayerCountSignal.value = next
-                      persistGameModeOptions()
                       return
                     }
 
                     if (mode === "tdm") {
                       tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
-                      persistGameModeOptions()
                       return
                     }
 
                     if (mode === "duo") {
                       duoTeamCountSignal.value = next
-                      persistGameModeOptions()
                       return
                     }
 
                     squadTeamCountSignal.value = next
-                    persistGameModeOptions()
                   }}
                 />
               </label>
@@ -390,12 +377,11 @@ export const GameHud = () => {
                   min={0}
                   max={100}
                   step={1}
-                  value={Math.round(musicVolumeSignal.value * 100)}
-                  onInput={(event) => {
-                    musicVolumeSignal.value = Number(event.currentTarget.value) / 100
-                    persistAudioOptions()
-                  }}
-                />
+                value={Math.round(musicVolumeSignal.value * 100)}
+                onInput={(event) => {
+                  musicVolumeSignal.value = Number(event.currentTarget.value) / 100
+                }}
+              />
               </label>
               <label class="mode-row mode-row-slider">
                 <span>{t`Effects Volume ${Math.round(effectsVolumeSignal.value * 100)}%`}</span>
@@ -404,12 +390,11 @@ export const GameHud = () => {
                   min={0}
                   max={100}
                   step={1}
-                  value={Math.round(effectsVolumeSignal.value * 100)}
-                  onInput={(event) => {
-                    effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
-                    persistAudioOptions()
-                  }}
-                />
+                value={Math.round(effectsVolumeSignal.value * 100)}
+                onInput={(event) => {
+                  effectsVolumeSignal.value = Number(event.currentTarget.value) / 100
+                }}
+              />
               </label>
               <div class="mode-row">
                 <span>{t`Language`}</span>

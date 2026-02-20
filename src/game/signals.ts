@@ -1,4 +1,4 @@
-import { signal } from "@preact/signals"
+import { effect, signal } from "@preact/signals"
 import { debounce } from "@std/async/debounce"
 import { GAME_SPEED, MATCH_DURATION_SECONDS, UNIT_BASE_HP } from "./world/constants.ts"
 import type { GameModeId, MatchDifficulty, PerkId, PrimaryWeaponId, SecondaryMode } from "./types.ts"
@@ -281,9 +281,6 @@ export const debugEquipAllRocketLauncherSignal = signal(storedDebugOptions.equip
 export const debugGameSpeedSignal = signal(storedDebugOptions.gameSpeed)
 export const debugImpactFeelLevelSignal = signal(storedDebugOptions.impactFeelLevel)
 export const debugSkipToMatchEndSignal = signal(false)
-export const persistDebugOptions = () => writeStoredDebugOptions()
-export const persistAudioOptions = () => writeStoredAudioOptions()
-export const persistGameModeOptions = () => writeStoredGameModeOptions()
 
 export const selectedGameModeSignal = signal<GameModeId>(storedGameModeOptions.mode)
 export const ffaPlayerCountSignal = signal(storedGameModeOptions.ffaPlayerCount)
@@ -295,6 +292,18 @@ export const menuStartDifficultySignal = signal<MatchDifficulty | null>(null)
 export const languageSignal = signal<LocaleId>(preferredLocale)
 export const musicVolumeSignal = signal(storedAudioOptions.musicVolume)
 export const effectsVolumeSignal = signal(storedAudioOptions.effectsVolume)
+
+effect(() => {
+  writeStoredDebugOptions()
+})
+
+effect(() => {
+  writeStoredAudioOptions()
+})
+
+effect(() => {
+  writeStoredGameModeOptions()
+})
 
 export const timeRemainingSignal = signal(MATCH_DURATION_SECONDS)
 export const fpsSignal = signal(0)
