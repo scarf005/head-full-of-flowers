@@ -73,7 +73,10 @@ const TERRAIN_TINTS: Record<TerrainTile, string> = {
 const FLOWER_SPRITE_PIXEL_SIZE = 16
 const GROUND_LAYER_PIXELS_PER_TILE = GRASS_TILE_PIXEL_SIZE
 const FLOWER_LAYER_PIXELS_PER_TILE = 12
-const FLOWER_LAYER_FLUSH_LIMIT = 1200
+const FLOWER_LAYER_FLUSH_MIN_ITEMS_PER_FRAME = 64
+const FLOWER_LAYER_FLUSH_MAX_ITEMS_PER_FRAME = 360
+const FLOWER_LAYER_FLUSH_TARGET_BUDGET_MS = 1.1
+const FLOWER_LAYER_FLUSH_TIME_CHECK_INTERVAL = 24
 const PRIMARY_RELOAD_RING_THICKNESS_WORLD = 3 / WORLD_SCALE
 const PRIMARY_RELOAD_RING_OFFSET_WORLD = 0.22
 const PRIMARY_RELOAD_RING_COLOR = "#ffffff"
@@ -104,9 +107,17 @@ const MINIMAP_EXPLOSIVE_PROJECTILE_TRAIL_LINE_WIDTH_PX = 1.45
 const MINIMAP_EXPLOSION_COLOR = "rgba(255, 136, 56, 0.92)"
 const MINIMAP_EXPLOSION_MIN_RADIUS_PX = 1.1
 const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
+const MINIMAP_PROJECTILE_SAMPLE_LIMIT = 180
+const MINIMAP_THROWABLE_SAMPLE_LIMIT = 72
+const MINIMAP_EXPLOSION_SAMPLE_LIMIT = 36
+const MINIMAP_MAX_DRAWN_MARKERS_PER_BATCH = 170
+const MINIMAP_MAX_DRAWN_TRAIL_SEGMENTS_PER_BATCH = 140
+const MINIMAP_MAX_DRAWN_EXPLOSIONS = 28
 const VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS = 180
 const MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS = 180
-const MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS = 33
+const MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS = 66
+const MINIMAP_DYNAMIC_LAYER_HIGH_LOAD_FLOWER_DIRTY_THRESHOLD = 240
+const MINIMAP_DYNAMIC_LAYER_HIGH_LOAD_REFRESH_INTERVAL_MS = 120
 
 const EMPTY_VIEWPORT_OVERFLOW: CanvasViewportOverflowPx = { left: 0, top: 0, right: 0, bottom: 0 }
 
@@ -150,6 +161,12 @@ const minimapFriendlyExplosiveProjectileTrailSegments: number[] = []
 const minimapHostileProjectileTrailSegments: number[] = []
 const minimapHostileExplosiveProjectileTrailSegments: number[] = []
 const minimapExplosionMarkers: number[] = []
+let minimapProjectileSampleOffset = 0
+let minimapThrowableSampleOffset = 0
+let minimapExplosionSampleOffset = 0
+let minimapMarkerDrawOffset = 0
+let minimapTrailDrawOffset = 0
+let minimapExplosionDrawOffset = 0
 
 let minimapDynamicLayerCache: {
   nextRefreshAt: number
@@ -793,8 +810,18 @@ const flushFlowerLayer = (world: WorldState, frameToken?: number) => {
     return
   }
 
-  let budget = FLOWER_LAYER_FLUSH_LIMIT
+  const dirtyCount = world.flowerDirtyIndices.size
+  const budget = clamp(
+    Math.ceil(dirtyCount * 0.1),
+    FLOWER_LAYER_FLUSH_MIN_ITEMS_PER_FRAME,
+    FLOWER_LAYER_FLUSH_MAX_ITEMS_PER_FRAME,
+  )
+  const hasPerf = typeof performance !== "undefined"
+  const startMs = hasPerf ? performance.now() : 0
+  let remainingBudget = budget
+  let visited = 0
   for (const flowerIndex of world.flowerDirtyIndices) {
+    visited += 1
     const flower = world.flowers[flowerIndex]
     if (!flower || !flower.active || !flower.renderDirty) {
       world.flowerDirtyIndices.delete(flowerIndex)
@@ -808,9 +835,15 @@ const flushFlowerLayer = (world: WorldState, frameToken?: number) => {
 
     flower.renderDirty = false
     world.flowerDirtyIndices.delete(flowerIndex)
-    budget -= 1
-    if (budget <= 0) {
+    remainingBudget -= 1
+    if (remainingBudget <= 0) {
       break
+    }
+
+    if (hasPerf && visited % FLOWER_LAYER_FLUSH_TIME_CHECK_INTERVAL === 0) {
+      if (performance.now() - startMs >= FLOWER_LAYER_FLUSH_TARGET_BUDGET_MS) {
+        break
+      }
     }
   }
 
@@ -918,8 +951,14 @@ const drawMinimapMarkerBatch = (
   }
 
   const size = radiusPx * 2
+  const markerCount = markers.length / 2
+  const markerStep = Math.max(1, Math.ceil(markerCount / MINIMAP_MAX_DRAWN_MARKERS_PER_BATCH))
+  const markerStart = markerStep <= 1 ? 0 : minimapMarkerDrawOffset % markerStep
+  if (markerStep > 1) {
+    minimapMarkerDrawOffset = (minimapMarkerDrawOffset + 1) % markerStep
+  }
   context.fillStyle = fillStyle
-  for (let index = 0; index < markers.length; index += 2) {
+  for (let index = markerStart * 2; index < markers.length; index += markerStep * 2) {
     context.fillRect(markers[index] - radiusPx, markers[index + 1] - radiusPx, size, size)
   }
 }
@@ -934,11 +973,18 @@ const drawMinimapTrailBatch = (
     return
   }
 
+  const segmentCount = segments.length / 4
+  const segmentStep = Math.max(1, Math.ceil(segmentCount / MINIMAP_MAX_DRAWN_TRAIL_SEGMENTS_PER_BATCH))
+  const segmentStart = segmentStep <= 1 ? 0 : minimapTrailDrawOffset % segmentStep
+  if (segmentStep > 1) {
+    minimapTrailDrawOffset = (minimapTrailDrawOffset + 1) % segmentStep
+  }
+
   context.strokeStyle = strokeStyle
   context.lineWidth = lineWidthPx
   context.lineCap = "round"
   context.beginPath()
-  for (let index = 0; index < segments.length; index += 4) {
+  for (let index = segmentStart * 4; index < segments.length; index += segmentStep * 4) {
     context.moveTo(segments[index], segments[index + 1])
     context.lineTo(segments[index + 2], segments[index + 3])
   }
@@ -970,8 +1016,18 @@ const collectMinimapProjectileMarkers = (
   const maxX = centerX + minimapRadiusPx
   const minY = centerY - minimapRadiusPx
   const maxY = centerY + minimapRadiusPx
+  const projectileStep = Math.max(1, Math.ceil(world.projectiles.length / MINIMAP_PROJECTILE_SAMPLE_LIMIT))
+  const projectileStart = projectileStep <= 1 ? 0 : minimapProjectileSampleOffset % projectileStep
+  if (projectileStep > 1) {
+    minimapProjectileSampleOffset = (minimapProjectileSampleOffset + 1) % projectileStep
+  }
 
-  for (const projectile of world.projectiles) {
+  for (
+    let projectileIndex = projectileStart;
+    projectileIndex < world.projectiles.length;
+    projectileIndex += projectileStep
+  ) {
+    const projectile = world.projectiles[projectileIndex]
     if (!projectile.active) {
       continue
     }
@@ -1038,7 +1094,14 @@ const collectMinimapProjectileMarkers = (
     }
   }
 
-  for (const throwable of world.throwables) {
+  const throwableStep = Math.max(1, Math.ceil(world.throwables.length / MINIMAP_THROWABLE_SAMPLE_LIMIT))
+  const throwableStart = throwableStep <= 1 ? 0 : minimapThrowableSampleOffset % throwableStep
+  if (throwableStep > 1) {
+    minimapThrowableSampleOffset = (minimapThrowableSampleOffset + 1) % throwableStep
+  }
+
+  for (let throwableIndex = throwableStart; throwableIndex < world.throwables.length; throwableIndex += throwableStep) {
+    const throwable = world.throwables[throwableIndex]
     if (!throwable.active) {
       continue
     }
@@ -1145,8 +1208,14 @@ const collectMinimapExplosionMarkers = (
 ) => {
   minimapExplosionMarkers.length = 0
   const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
+  const explosionStep = Math.max(1, Math.ceil(world.explosions.length / MINIMAP_EXPLOSION_SAMPLE_LIMIT))
+  const explosionStart = explosionStep <= 1 ? 0 : minimapExplosionSampleOffset % explosionStep
+  if (explosionStep > 1) {
+    minimapExplosionSampleOffset = (minimapExplosionSampleOffset + 1) % explosionStep
+  }
 
-  for (const explosion of world.explosions) {
+  for (let explosionIndex = explosionStart; explosionIndex < world.explosions.length; explosionIndex += explosionStep) {
+    const explosion = world.explosions[explosionIndex]
     if (!explosion.active || explosion.radius <= 0.01) {
       continue
     }
@@ -1170,8 +1239,15 @@ const drawMinimapExplosions = (context: CanvasRenderingContext2D) => {
     return
   }
 
+  const explosionCount = minimapExplosionMarkers.length / 3
+  const explosionStep = Math.max(1, Math.ceil(explosionCount / MINIMAP_MAX_DRAWN_EXPLOSIONS))
+  const explosionStart = explosionStep <= 1 ? 0 : minimapExplosionDrawOffset % explosionStep
+  if (explosionStep > 1) {
+    minimapExplosionDrawOffset = (minimapExplosionDrawOffset + 1) % explosionStep
+  }
+
   context.fillStyle = MINIMAP_EXPLOSION_COLOR
-  for (let index = 0; index < minimapExplosionMarkers.length; index += 3) {
+  for (let index = explosionStart * 3; index < minimapExplosionMarkers.length; index += explosionStep * 3) {
     context.beginPath()
     context.arc(
       minimapExplosionMarkers[index],
@@ -1394,8 +1470,11 @@ const renderMinimap = (
 
   if (shouldRefreshDynamicLayer) {
     refreshMinimapDynamicLayer(world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+    const dynamicRefreshInterval = world.flowerDirtyCount >= MINIMAP_DYNAMIC_LAYER_HIGH_LOAD_FLOWER_DIRTY_THRESHOLD
+      ? MINIMAP_DYNAMIC_LAYER_HIGH_LOAD_REFRESH_INTERVAL_MS
+      : MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS
     minimapDynamicLayerCache = {
-      nextRefreshAt: now + MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS,
+      nextRefreshAt: now + dynamicRefreshInterval,
       centerX,
       centerY,
       radiusPx: minimapRadiusPx,
