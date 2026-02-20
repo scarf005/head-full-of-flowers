@@ -19,16 +19,21 @@ const BALLISTIC_RICOCHET_TANGENT_FRICTION = 0.9
 const BALLISTIC_RICOCHET_MIN_SPEED = 4
 const BALLISTIC_RICOCHET_DAMAGE_SCALE = 0.8
 const PROJECTILE_BROADPHASE_BUCKET_SIZE = 3
+const PROJECTILE_BROADPHASE_KEY_OFFSET = 2048
+const PROJECTILE_BROADPHASE_KEY_STRIDE = 4096
 
-const bucketKey = (x: number, y: number) => `${x}:${y}`
+const bucketKey = (x: number, y: number) => {
+  return (x + PROJECTILE_BROADPHASE_KEY_OFFSET) * PROJECTILE_BROADPHASE_KEY_STRIDE +
+    (y + PROJECTILE_BROADPHASE_KEY_OFFSET)
+}
 
 interface ProjectileBroadphase {
-  unitBucketIndices: Map<string, number[]>
+  unitBucketIndices: Map<number, number[]>
   maxUnitRadius: number
 }
 
 const buildProjectileBroadphase = (world: WorldState): ProjectileBroadphase => {
-  const unitBucketIndices = new Map<string, number[]>()
+  const unitBucketIndices = new Map<number, number[]>()
   let maxUnitRadius = 0
 
   for (let unitIndex = 0; unitIndex < world.units.length; unitIndex += 1) {
