@@ -244,8 +244,10 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
 
   resetBurstState(unit)
   const reloadSpeed = Math.max(0.05, unit.reloadSpeedMultiplier)
-  unit.reloadCooldown = weapon.reload / reloadSpeed
+  const reloadTimeMultiplier = Math.max(0.1, unit.nextReloadTimeMultiplier)
+  unit.reloadCooldown = weapon.reload * reloadTimeMultiplier / reloadSpeed
   unit.reloadCooldownMax = unit.reloadCooldown
+  unit.nextReloadTimeMultiplier = 1
   if (unit.isPlayer) {
     onPlayerReloading()
   }
@@ -707,7 +709,19 @@ export interface DamageDeps {
   ) => void
   respawnUnit: (unitId: string) => void
   onKillPetalBurst?: (x: number, y: number) => void
-  onUnitKilled?: (target: Unit, isSuicide: boolean, killer: Unit | null) => void
+  onUnitKilled?: (
+    target: Unit,
+    isSuicide: boolean,
+    killer: Unit | null,
+    killImpulse: {
+      hitX: number
+      hitY: number
+      impactX: number
+      impactY: number
+      damage: number
+      damageSource: DamageSource
+    },
+  ) => void
   onSfxHit: (isPlayerInvolved: boolean) => void
   onSfxDeath: () => void
   onSfxPlayerDeath: () => void
@@ -717,6 +731,8 @@ export interface DamageDeps {
   onPlayerHpChanged: () => void
   isInfiniteHpEnabled?: () => boolean
 }
+
+export type DamageSource = "projectile" | "throwable" | "molotov" | "arena" | "other"
 
 const nearestUnitIdByTeam = (
   world: WorldState,
@@ -756,7 +772,7 @@ export const applyDamage = (
   impactX: number,
   impactY: number,
   deps: DamageDeps,
-  damageSource: "projectile" | "throwable" | "molotov" | "arena" | "other" = "other",
+  damageSource: DamageSource = "other",
 ) => {
   if (world.unitById.size !== world.units.length) {
     rebuildUnitLookup(world)
@@ -840,6 +856,9 @@ export const applyDamage = (
   if (isKilled) {
     if (killer) {
       killer.hp = Math.min(killer.maxHp, killer.hp + KILL_HP_BONUS)
+      if ((killer.perkStacks.kill_reload ?? 0) > 0) {
+        killer.nextReloadTimeMultiplier = Math.min(killer.nextReloadTimeMultiplier, 0.5)
+      }
 
       const bonusPopup = deps.allocPopup()
       bonusPopup.active = true
@@ -967,7 +986,14 @@ export const applyDamage = (
 
   if (isKilled) {
     completeReload(target, true)
-    deps.onUnitKilled?.(target, isSelfHarm, killer)
+    deps.onUnitKilled?.(target, isSelfHarm, killer, {
+      hitX,
+      hitY,
+      impactX,
+      impactY,
+      damage,
+      damageSource,
+    })
     if (target.isPlayer) {
       deps.onSfxPlayerDeath()
     } else if (isPlayerSource && target.id !== world.player.id) {

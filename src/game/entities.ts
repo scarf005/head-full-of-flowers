@@ -252,6 +252,20 @@ export class KillPetal {
   color = "#8ef29a"
 }
 
+export class UnitRagdoll {
+  active = false
+  unitId = ""
+  isPlayer = false
+  team: Team = "white"
+  position = new Vec2()
+  velocity = new Vec2()
+  rotation = 0
+  angularVelocity = 0
+  radius = 0.3
+  life = 0
+  maxLife = 0
+}
+
 export class DamagePopup {
   active = false
   position = new Vec2()

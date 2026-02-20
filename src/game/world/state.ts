@@ -11,6 +11,7 @@ import {
   ShellCasing,
   Throwable,
   Unit,
+  UnitRagdoll,
   Vec2,
 } from "../entities.ts"
 import { buildFactions, createFactionFlowerCounts, type FactionDescriptor } from "../factions.ts"
@@ -25,6 +26,7 @@ import {
   OBSTACLE_POOL_SIZE,
   PICKUP_POOL_SIZE,
   PROJECTILE_POOL_SIZE,
+  RAGDOLL_POOL_SIZE,
   THROWABLE_POOL_SIZE,
   VIEW_HEIGHT,
   VIEW_WIDTH,
@@ -84,6 +86,7 @@ export interface WorldState {
   molotovZones: MolotovZone[]
   obstacles: Obstacle[]
   obstacleDebris: ObstacleDebris[]
+  ragdolls: UnitRagdoll[]
   killPetals: KillPetal[]
   shellCasings: ShellCasing[]
   flightTrails: FlightTrailSegment[]
@@ -171,6 +174,7 @@ export const createWorldState = (): WorldState => {
       return obstacle
     }),
     obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
+    ragdolls: Array.from({ length: RAGDOLL_POOL_SIZE }, () => new UnitRagdoll()),
     killPetals: Array.from({ length: 240 }, () => new KillPetal()),
     shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
     flightTrails: Array.from({ length: 2400 }, () => new FlightTrailSegment()),

@@ -13,6 +13,7 @@ import laserSightSprite from "../../assets/perks/laser-sight.png"
 import ricochetShellsSprite from "../../assets/perks/ricochet-shells.png"
 import contactGrenadesSprite from "../../assets/perks/contact-grenades.png"
 import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
+import blastWeaveSprite from "../../assets/perks/blast-weave.png"
 import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
 import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
@@ -39,6 +40,7 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   ricochet_shells: ricochetShellsSprite,
   proximity_grenades: contactGrenadesSprite,
   rapid_reload: rapidReloadSprite,
+  kill_reload: blastWeaveSprite,
   heavy_pellets: heavyPelletsSprite,
   extra_heart: vitalBloomSprite,
   extra_stamina: quickstepSprite,

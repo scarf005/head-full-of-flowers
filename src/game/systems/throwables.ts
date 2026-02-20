@@ -13,6 +13,7 @@ import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
 const MOLOTOV_THROW_SPEED = 15
 const GRENADE_BULLET_DAMAGE = 20
 const GRENADE_BULLET_SPEED = 20
+const GRENADE_PROXIMITY_PERK_SPEED_MULTIPLIER = 1.5
 const GRENADE_BULLET_RANGE = 30
 const GRENADE_BULLET_TTL = GRENADE_BULLET_RANGE / GRENADE_BULLET_SPEED
 const GRENADE_THROW_INACCURACY_RADIANS = 0.11
@@ -73,7 +74,10 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   const throwAngle = aimAngle + throwSpread
   const throwDirX = Math.cos(throwAngle)
   const throwDirY = Math.sin(throwAngle)
-  const speed = mode === "grenade" ? GRENADE_BULLET_SPEED : MOLOTOV_THROW_SPEED
+  const grenadeSpeed = shooter.proximityGrenades
+    ? GRENADE_BULLET_SPEED * GRENADE_PROXIMITY_PERK_SPEED_MULTIPLIER
+    : GRENADE_BULLET_SPEED
+  const speed = mode === "grenade" ? grenadeSpeed : MOLOTOV_THROW_SPEED
   const throwableRadius = mode === "grenade" ? 0.36 : 0.3
   const throwOffset = shooter.radius + throwableRadius + 0.06
 

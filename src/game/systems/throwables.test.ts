@@ -2,8 +2,47 @@
 
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
-import { explodeGrenade } from "./throwables.ts"
+import { explodeGrenade, throwSecondary } from "./throwables.ts"
 import { createWorldState } from "../world/state.ts"
+import { applyPerkToUnit } from "../perks.ts"
+
+Deno.test("throwSecondary uses base grenade speed without proximity_grenades perk", () => {
+  const world = createWorldState()
+  const shooter = world.player
+  shooter.secondaryMode = "grenade"
+  shooter.aim.set(1, 0)
+
+  throwSecondary(world, shooter.id, {
+    allocThrowable: () => world.throwables[0],
+    onPlayerThrow: () => {},
+    onOtherThrow: () => {},
+  })
+
+  const throwable = world.throwables[0]
+  assertEquals(throwable.active, true)
+  assertEquals(throwable.mode, "grenade")
+  assertAlmostEquals(Math.hypot(throwable.velocity.x, throwable.velocity.y), 20, 0.000001)
+})
+
+Deno.test("throwSecondary boosts grenade speed by 50% with proximity_grenades perk", () => {
+  const world = createWorldState()
+  const shooter = world.player
+  shooter.secondaryMode = "grenade"
+  shooter.aim.set(1, 0)
+  applyPerkToUnit(shooter, "proximity_grenades")
+
+  throwSecondary(world, shooter.id, {
+    allocThrowable: () => world.throwables[0],
+    onPlayerThrow: () => {},
+    onOtherThrow: () => {},
+  })
+
+  const throwable = world.throwables[0]
+  assertEquals(throwable.active, true)
+  assertEquals(throwable.mode, "grenade")
+  assertEquals(throwable.contactFuse, true)
+  assertAlmostEquals(Math.hypot(throwable.velocity.x, throwable.velocity.y), 30, 0.000001)
+})
 
 Deno.test("explodeGrenade forwards explosive power for impulse fling", () => {
   const world = createWorldState()

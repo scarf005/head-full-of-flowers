@@ -41,6 +41,9 @@ export const localizePerk = (perkId: PerkId) => {
   if (perkId === "rapid_reload") {
     return t`Rapid Reload`
   }
+  if (perkId === "kill_reload") {
+    return t`Adrenal Reload`
+  }
   if (perkId === "heavy_pellets") {
     return t`Heavy Pellets`
   }
@@ -62,10 +65,13 @@ export const localizePerkDetail = (perkId: PerkId, stacks: number) => {
     return t`Shotgun bounces x5`
   }
   if (perkId === "proximity_grenades") {
-    return t`Grenades explode near enemies`
+    return t`Grenades fly +50% faster and explode near enemies`
   }
   if (perkId === "rapid_reload") {
     return t`Reload speed +25%`
+  }
+  if (perkId === "kill_reload") {
+    return t`Kill an enemy: next reload time -50%`
   }
   if (perkId === "heavy_pellets") {
     return t`Pellet size +50%, fire rate -25%, damage +1`

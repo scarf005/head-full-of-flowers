@@ -85,6 +85,7 @@ const DAMAGE_VIGNETTE_MAX_ALPHA = 0.76
 const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
 const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
+const RAGDOLL_FADE_OUT_WINDOW_SECONDS = 0.2
 const MINIMAP_SIZE_PX = 164 * 0.8
 const MINIMAP_PADDING_PX = 12
 const MINIMAP_UNIT_RADIUS_PX = 2.1
@@ -387,6 +388,19 @@ const paletteForUnit = (world: WorldState, unit: WorldState["units"][number]) =>
   }
 
   const teamColor = world.factions.find((faction) => faction.id === unit.team)?.color ?? "#d8e8cb"
+  return {
+    tone: tintHex(teamColor, 0.82, 22),
+    edge: tintHex(teamColor, 0.55, 4),
+  }
+}
+
+const paletteForRagdoll = (world: WorldState, ragdoll: WorldState["ragdolls"][number]) => {
+  const isFfa = world.player.team === world.player.id
+  if (isFfa) {
+    return ragdoll.isPlayer ? { tone: "#f6f2df", edge: "#b8b49a" } : botPalette(ragdoll.unitId || ragdoll.team)
+  }
+
+  const teamColor = world.factions.find((faction) => faction.id === ragdoll.team)?.color ?? "#d8e8cb"
   return {
     tone: tintHex(teamColor, 0.82, 22),
     edge: tintHex(teamColor, 0.55, 4),
@@ -1010,6 +1024,51 @@ const renderMinimapProjectileMarkers = (
     }
   }
 
+  for (const throwable of world.throwables) {
+    if (!throwable.active) {
+      continue
+    }
+
+    const markerX = centerX + throwable.position.x * worldToMinimapScale
+    const markerY = centerY + throwable.position.y * worldToMinimapScale
+    if (markerX < minX || markerX > maxX || markerY < minY || markerY > maxY) {
+      continue
+    }
+
+    const deltaX = markerX - centerX
+    const deltaY = markerY - centerY
+    if (deltaX * deltaX + deltaY * deltaY > minimapRadiusSquared) {
+      continue
+    }
+
+    const isFriendlyThrowable = throwable.ownerId === playerId ||
+      (!isFfa && throwable.ownerTeam === playerTeam)
+    const speedSquared = throwable.velocity.x * throwable.velocity.x + throwable.velocity.y * throwable.velocity.y
+    if (speedSquared > 0.00001) {
+      const speed = Math.sqrt(speedSquared)
+      const trailLengthPx = clamp(
+        speed * worldToMinimapScale * MINIMAP_PROJECTILE_TRAIL_PIXELS_PER_SPEED,
+        MINIMAP_PROJECTILE_TRAIL_MIN_LENGTH_PX,
+        MINIMAP_PROJECTILE_TRAIL_MAX_LENGTH_PX,
+      )
+      const inverseSpeed = 1 / speed
+      const trailStartX = markerX - throwable.velocity.x * inverseSpeed * trailLengthPx
+      const trailStartY = markerY - throwable.velocity.y * inverseSpeed * trailLengthPx
+
+      if (isFriendlyThrowable) {
+        minimapFriendlyProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+      } else {
+        minimapHostileProjectileTrailSegments.push(trailStartX, trailStartY, markerX, markerY)
+      }
+    }
+
+    if (isFriendlyThrowable) {
+      minimapFriendlyProjectileMarkers.push(markerX, markerY)
+    } else {
+      minimapHostileProjectileMarkers.push(markerX, markerY)
+    }
+  }
+
   drawMinimapTrailBatch(
     context,
     minimapFriendlyProjectileTrailSegments,
@@ -1169,6 +1228,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   )
   renderThrowables(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
   renderProjectiles(context, world, !renderedFlightTrailsWithWebGl, fogCullBounds)
+  renderRagdolls(context, world, fogCullBounds)
   renderAimLasers(context, world, fogCullBounds)
   renderUnits(context, world, fogCullBounds)
   const renderedExplosionsWithWebGl = renderExplosionInstances({
@@ -1959,6 +2019,63 @@ const renderAimLasers = (context: CanvasRenderingContext2D, world: WorldState, f
   }
 
   context.restore()
+}
+
+const renderRagdolls = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
+  for (const ragdoll of world.ragdolls) {
+    if (!ragdoll.active || ragdoll.maxLife <= 0) {
+      continue
+    }
+
+    if (!isInsideFogCullBounds(ragdoll.position.x, ragdoll.position.y, fogCullBounds, ragdoll.radius * 2.8 + 0.75)) {
+      continue
+    }
+
+    const lifeRatio = clamp(ragdoll.life / ragdoll.maxLife, 0, 1)
+    const fadeWindowRatio = clamp(RAGDOLL_FADE_OUT_WINDOW_SECONDS / ragdoll.maxLife, 0.000001, 1)
+    const alpha = lifeRatio <= fadeWindowRatio ? lifeRatio / fadeWindowRatio : 1
+    if (lifeRatio <= 0) {
+      continue
+    }
+
+    const body = ragdoll.radius * 1.2
+    const ear = ragdoll.radius * 0.42
+    const palette = paletteForRagdoll(world, ragdoll)
+    const tone = palette.tone
+    const edge = palette.edge
+
+    context.fillStyle = "rgba(0, 0, 0, 0.2)"
+    context.beginPath()
+    context.ellipse(
+      ragdoll.position.x,
+      ragdoll.position.y + body * 1.24,
+      body * 0.58,
+      body * 0.31,
+      0,
+      0,
+      Math.PI * 2,
+    )
+    context.fill()
+
+    context.save()
+    context.globalAlpha = alpha
+    context.translate(ragdoll.position.x, ragdoll.position.y)
+    context.rotate(ragdoll.rotation)
+
+    context.fillStyle = edge
+    context.fillRect(-body * 0.85, -body, body * 1.7, body * 2)
+    context.fillStyle = tone
+    context.fillRect(-body * 0.68, -body * 0.82, body * 1.36, body * 1.64)
+
+    const earY = -body * 0.95
+    context.fillStyle = edge
+    context.fillRect(-body * 0.88, earY - ear, ear, ear * 1.2)
+    context.fillRect(body * 0.08, earY - ear, ear, ear * 1.2)
+    context.fillStyle = tone
+    context.fillRect(-body * 0.76, earY - ear * 0.55, ear * 0.5, ear * 0.55)
+    context.fillRect(body * 0.2, earY - ear * 0.55, ear * 0.5, ear * 0.55)
+    context.restore()
+  }
 }
 
 const renderUnitStatusRings = (

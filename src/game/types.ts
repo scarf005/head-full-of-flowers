@@ -19,6 +19,7 @@ export type PerkId =
   | "ricochet_shells"
   | "proximity_grenades"
   | "rapid_reload"
+  | "kill_reload"
   | "heavy_pellets"
   | "extra_heart"
   | "extra_stamina"

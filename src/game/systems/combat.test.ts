@@ -2,7 +2,7 @@
 
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
-import { applyDamage, equipPrimary, firePrimary } from "./combat.ts"
+import { applyDamage, equipPrimary, firePrimary, startReload } from "./combat.ts"
 import { updateProjectiles } from "./projectiles.ts"
 import { createWorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID } from "../factions.ts"
@@ -199,6 +199,64 @@ Deno.test("applyDamage grants killer hp bonus on lethal hit and triggers respawn
   assertEquals(attacker.hp, 7)
   assertEquals(respawnedId, target.id)
   assertAlmostEquals(world.cameraShake, 0.48 * 5, 0.00001)
+})
+
+Deno.test("applyDamage forwards lethal impact context for ragdoll momentum", () => {
+  const world = createWorldState()
+  const attacker = world.player
+  const target = world.bots[0]
+
+  target.hp = 1
+  attacker.position.set(0, 0)
+  target.position.set(1, 0)
+  world.units = [attacker, target]
+  world.bots = [target]
+
+  let killCaptured = false
+  let killImpulse: {
+    impactX: number
+    impactY: number
+    damage: number
+    damageSource: string
+  } = {
+    impactX: 0,
+    impactY: 0,
+    damage: 0,
+    damageSource: "other",
+  }
+
+  applyDamage(
+    world,
+    target.id,
+    4,
+    attacker.id,
+    attacker.team,
+    target.position.x,
+    target.position.y,
+    3,
+    4,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: () => {},
+      respawnUnit: () => {},
+      onUnitKilled: (_target, _isSuicide, _killer, impulse) => {
+        killCaptured = true
+        killImpulse = impulse
+      },
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+    "throwable",
+  )
+
+  assertEquals(killCaptured, true)
+  assertEquals(killImpulse.impactX, 3)
+  assertEquals(killImpulse.impactY, 4)
+  assertEquals(killImpulse.damageSource, "throwable")
+  assertEquals(killImpulse.damage > 0, true)
 })
 
 Deno.test("applyDamage halves off-screen shake for non-player source hits", () => {
@@ -411,6 +469,62 @@ Deno.test("applyDamage completes in-progress reload before respawn on lethal hit
   assertEquals(target.reserveAmmo, 0)
   assertEquals(target.reloadCooldown, 0)
   assertEquals(target.reloadCooldownMax, 0)
+})
+
+Deno.test("applyDamage grants kill_reload perk bonus to next reload only", () => {
+  const world = createWorldState()
+  const attacker = world.player
+  const target = world.bots[0]
+
+  world.units = [attacker, target]
+  world.bots = [target]
+
+  applyPerkToUnit(attacker, "kill_reload")
+  equipPrimary(attacker.id, world, "assault", 40, () => {})
+  const attackerSlot = attacker.primarySlots[attacker.primarySlotIndex]
+  attackerSlot.primaryAmmo = 2
+  attackerSlot.reserveAmmo = 20
+  attacker.primaryAmmo = 2
+  attacker.reserveAmmo = 20
+  attacker.magazineSize = attackerSlot.magazineSize
+
+  attacker.position.set(0, 0)
+  target.position.set(1, 0)
+  target.hp = 1
+
+  applyDamage(
+    world,
+    target.id,
+    2,
+    attacker.id,
+    attacker.team,
+    target.position.x,
+    target.position.y,
+    1,
+    0,
+    {
+      allocPopup: () => world.damagePopups[0],
+      spawnFlowers: () => {},
+      respawnUnit: () => {},
+      onSfxHit: () => {},
+      onSfxDeath: () => {},
+      onSfxPlayerDeath: () => {},
+      onSfxPlayerKill: () => {},
+      onPlayerHpChanged: () => {},
+    },
+  )
+
+  assertAlmostEquals(attacker.nextReloadTimeMultiplier, 0.5, 0.000001)
+
+  startReload(attacker.id, world, () => {})
+  assertAlmostEquals(attacker.reloadCooldown, PRIMARY_WEAPONS.assault.reload * 0.5, 0.000001)
+  assertAlmostEquals(attacker.reloadCooldownMax, PRIMARY_WEAPONS.assault.reload * 0.5, 0.000001)
+  assertEquals(attacker.nextReloadTimeMultiplier, 1)
+
+  attacker.reloadCooldown = 0
+  attacker.reloadCooldownMax = 0
+  startReload(attacker.id, world, () => {})
+  assertAlmostEquals(attacker.reloadCooldown, PRIMARY_WEAPONS.assault.reload, 0.000001)
 })
 
 Deno.test("applyDamage marks self-inflicted explosive damage flowers as burnt", () => {

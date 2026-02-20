@@ -34,6 +34,11 @@ export const PERK_CONFIGS: Record<PerkId, PerkConfig> = {
     label: "Rapid Reload",
     maxStacks: 1,
   },
+  kill_reload: {
+    id: "kill_reload",
+    label: "Adrenal Reload",
+    maxStacks: 1,
+  },
   heavy_pellets: {
     id: "heavy_pellets",
     label: "Heavy Pellets",
@@ -61,6 +66,7 @@ export const PERK_POOL: PerkId[] = [
   "ricochet_shells",
   "proximity_grenades",
   "rapid_reload",
+  "kill_reload",
   "heavy_pellets",
   "extra_heart",
   "extra_stamina",
