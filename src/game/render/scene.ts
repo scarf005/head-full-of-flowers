@@ -106,6 +106,7 @@ const MINIMAP_EXPLOSION_MIN_RADIUS_PX = 1.1
 const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
 const VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS = 180
 const MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS = 180
+const MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS = 33
 
 const EMPTY_VIEWPORT_OVERFLOW: CanvasViewportOverflowPx = { left: 0, top: 0, right: 0, bottom: 0 }
 
@@ -148,6 +149,21 @@ const minimapFriendlyProjectileTrailSegments: number[] = []
 const minimapFriendlyExplosiveProjectileTrailSegments: number[] = []
 const minimapHostileProjectileTrailSegments: number[] = []
 const minimapHostileExplosiveProjectileTrailSegments: number[] = []
+const minimapExplosionMarkers: number[] = []
+
+let minimapDynamicLayerCache: {
+  nextRefreshAt: number
+  centerX: number
+  centerY: number
+  radiusPx: number
+  arenaRadiusWorld: number
+} = {
+  nextRefreshAt: 0,
+  centerX: 0,
+  centerY: 0,
+  radiusPx: 0,
+  arenaRadiusWorld: 0,
+}
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
   return buildCullBounds(cameraX, cameraY, padding)
@@ -929,8 +945,7 @@ const drawMinimapTrailBatch = (
   context.stroke()
 }
 
-const renderMinimapProjectileMarkers = (
-  context: CanvasRenderingContext2D,
+const collectMinimapProjectileMarkers = (
   world: WorldState,
   centerX: number,
   centerY: number,
@@ -1068,6 +1083,9 @@ const renderMinimapProjectileMarkers = (
     }
   }
 
+}
+
+const drawMinimapProjectileMarkers = (context: CanvasRenderingContext2D) => {
   drawMinimapTrailBatch(
     context,
     minimapFriendlyProjectileTrailSegments,
@@ -1119,14 +1137,14 @@ const renderMinimapProjectileMarkers = (
   )
 }
 
-const renderMinimapExplosions = (
-  context: CanvasRenderingContext2D,
+const collectMinimapExplosionMarkers = (
   world: WorldState,
   centerX: number,
   centerY: number,
   minimapRadiusPx: number,
   arenaRadiusWorld: number,
 ) => {
+  minimapExplosionMarkers.length = 0
   const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
 
   for (const explosion of world.explosions) {
@@ -1144,11 +1162,32 @@ const renderMinimapExplosions = (
 
     const markerX = centerX + deltaX
     const markerY = centerY + deltaY
-    context.fillStyle = MINIMAP_EXPLOSION_COLOR
+    minimapExplosionMarkers.push(markerX, markerY, drawRadiusPx)
+  }
+}
+
+const drawMinimapExplosions = (context: CanvasRenderingContext2D) => {
+  if (minimapExplosionMarkers.length <= 0) {
+    return
+  }
+
+  context.fillStyle = MINIMAP_EXPLOSION_COLOR
+  for (let index = 0; index < minimapExplosionMarkers.length; index += 3) {
     context.beginPath()
-    context.arc(markerX, markerY, drawRadiusPx, 0, Math.PI * 2)
+    context.arc(minimapExplosionMarkers[index], minimapExplosionMarkers[index + 1], minimapExplosionMarkers[index + 2], 0, Math.PI * 2)
     context.fill()
   }
+}
+
+const refreshMinimapDynamicLayer = (
+  world: WorldState,
+  centerX: number,
+  centerY: number,
+  minimapRadiusPx: number,
+  arenaRadiusWorld: number,
+) => {
+  collectMinimapProjectileMarkers(world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+  collectMinimapExplosionMarkers(world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
 }
 
 export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
@@ -1341,8 +1380,27 @@ const renderMinimap = (
   context.lineWidth = 1
   context.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
 
-  renderMinimapProjectileMarkers(context, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
-  renderMinimapExplosions(context, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+  const now = typeof performance !== "undefined" ? performance.now() : 0
+  const shouldRefreshDynamicLayer =
+    now >= minimapDynamicLayerCache.nextRefreshAt ||
+    Math.abs(minimapDynamicLayerCache.centerX - centerX) >= 0.5 ||
+    Math.abs(minimapDynamicLayerCache.centerY - centerY) >= 0.5 ||
+    Math.abs(minimapDynamicLayerCache.radiusPx - minimapRadiusPx) >= 0.5 ||
+    Math.abs(minimapDynamicLayerCache.arenaRadiusWorld - arenaRadiusWorld) >= 0.001
+
+  if (shouldRefreshDynamicLayer) {
+    refreshMinimapDynamicLayer(world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+    minimapDynamicLayerCache = {
+      nextRefreshAt: now + MINIMAP_DYNAMIC_LAYER_REFRESH_INTERVAL_MS,
+      centerX,
+      centerY,
+      radiusPx: minimapRadiusPx,
+      arenaRadiusWorld,
+    }
+  }
+
+  drawMinimapProjectileMarkers(context)
+  drawMinimapExplosions(context)
 
   for (const unit of world.units) {
     const marker = toMinimap(unit.position.x, unit.position.y)
