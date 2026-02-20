@@ -1082,7 +1082,6 @@ const collectMinimapProjectileMarkers = (
       minimapHostileProjectileMarkers.push(markerX, markerY)
     }
   }
-
 }
 
 const drawMinimapProjectileMarkers = (context: CanvasRenderingContext2D) => {
@@ -1174,7 +1173,13 @@ const drawMinimapExplosions = (context: CanvasRenderingContext2D) => {
   context.fillStyle = MINIMAP_EXPLOSION_COLOR
   for (let index = 0; index < minimapExplosionMarkers.length; index += 3) {
     context.beginPath()
-    context.arc(minimapExplosionMarkers[index], minimapExplosionMarkers[index + 1], minimapExplosionMarkers[index + 2], 0, Math.PI * 2)
+    context.arc(
+      minimapExplosionMarkers[index],
+      minimapExplosionMarkers[index + 1],
+      minimapExplosionMarkers[index + 2],
+      0,
+      Math.PI * 2,
+    )
     context.fill()
   }
 }
@@ -1381,8 +1386,7 @@ const renderMinimap = (
   context.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
 
   const now = typeof performance !== "undefined" ? performance.now() : 0
-  const shouldRefreshDynamicLayer =
-    now >= minimapDynamicLayerCache.nextRefreshAt ||
+  const shouldRefreshDynamicLayer = now >= minimapDynamicLayerCache.nextRefreshAt ||
     Math.abs(minimapDynamicLayerCache.centerX - centerX) >= 0.5 ||
     Math.abs(minimapDynamicLayerCache.centerY - centerY) >= 0.5 ||
     Math.abs(minimapDynamicLayerCache.radiusPx - minimapRadiusPx) >= 0.5 ||
