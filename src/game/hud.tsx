@@ -638,7 +638,10 @@ export const GameHud = () => {
         ? (
           <div
             class={`crosshair ${crosshairSignal.value.visible ? "visible" : ""}`}
-            style={{ left: `${crosshairSignal.value.x}px`, top: `${crosshairSignal.value.y}px` }}
+            style={{
+              transform:
+                `translate3d(${crosshairSignal.value.x}px, ${crosshairSignal.value.y}px, 0) translate(-50%, -50%)`,
+            }}
           />
         )
         : null}
