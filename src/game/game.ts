@@ -1990,7 +1990,7 @@ export class FlowerArenaGame {
         projectile.damage,
         projectile.ownerId,
         projectile.ownerTeam,
-        true,
+        false,
         explosionScale,
       )
       this.damageObstaclesAtExplosion(projectile.position.x, projectile.position.y, explosionRadius)
