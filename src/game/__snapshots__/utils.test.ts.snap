@@ -1,0 +1,26 @@
+export const snapshot = {};
+
+snapshot[`arenaRadiiForPlayerCount snapshot 1`] = `
+[
+  {
+    end: 15,
+    playerCount: 2,
+    start: 30,
+  },
+  {
+    end: 17.5,
+    playerCount: 5,
+    start: 35,
+  },
+  {
+    end: 20,
+    playerCount: 8,
+    start: 40,
+  },
+  {
+    end: 20,
+    playerCount: 12,
+    start: 40,
+  },
+]
+`;

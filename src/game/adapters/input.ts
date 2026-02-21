@@ -2,6 +2,13 @@ import { clamp } from "../utils.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { MatchDifficulty } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
+import {
+  isMobileControlTarget,
+  isPauseMainMenuTarget,
+  isPausePanelTarget,
+  isPauseResumeTarget,
+  isRematchButtonTarget,
+} from "./input-event-targets.ts"
 
 export interface InputAdapterHandlers {
   onPrimeAudio: () => void
@@ -222,90 +229,6 @@ export const setupInputAdapter = (
     syncAimFromCanvas()
     scheduleCrosshair(world.input.screenX, world.input.screenY, false)
     aimThumbTo(0, 0)
-  }
-
-  const isMobileControlTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".mobile-controls"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".mobile-controls"))) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  const isRematchButtonTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".match-result-rematch"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".match-result-rematch"))) {
-        return true
-      }
-    }
-
-    const button = document.querySelector<HTMLButtonElement>(".match-result-rematch")
-    if (!button) {
-      return false
-    }
-
-    const bounds = button.getBoundingClientRect()
-    return event.clientX >= bounds.left &&
-      event.clientX <= bounds.right &&
-      event.clientY >= bounds.top &&
-      event.clientY <= bounds.bottom
-  }
-
-  const isPausePanelTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".pause-panel"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".pause-panel"))) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  const isPauseResumeTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".pause-resume-button"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".pause-resume-button"))) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  const isPauseMainMenuTarget = (event: PointerEvent) => {
-    if (event.target instanceof Element && Boolean(event.target.closest(".pause-main-menu-button"))) {
-      return true
-    }
-
-    const path = typeof event.composedPath === "function" ? event.composedPath() : []
-    for (const node of path) {
-      if (node instanceof Element && Boolean(node.closest(".pause-main-menu-button"))) {
-        return true
-      }
-    }
-
-    return false
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
