@@ -219,7 +219,12 @@ const swapToUsablePrimaryIfNeeded = (shooter: Unit, onPrimaryWeaponChanged?: (un
   }
 }
 
-export const startReload = (unitId: string, world: WorldState, onPlayerReloading: () => void) => {
+export const startReload = (
+  unitId: string,
+  world: WorldState,
+  onPlayerReloading: () => void,
+  onReloadStarted?: (unit: Unit) => void,
+) => {
   const unit = getUnitById(world, unitId)
   if (!unit || unit.reloadCooldown > 0) {
     return
@@ -248,6 +253,7 @@ export const startReload = (unitId: string, world: WorldState, onPlayerReloading
   unit.reloadCooldown = weapon.reload * reloadTimeMultiplier / reloadSpeed
   unit.reloadCooldownMax = unit.reloadCooldown
   unit.nextReloadTimeMultiplier = 1
+  onReloadStarted?.(unit)
   if (unit.isPlayer) {
     onPlayerReloading()
   }
@@ -424,6 +430,7 @@ export interface FirePrimaryDeps {
   onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
   onShellEjected?: (shooter: Unit) => void
+  onMagazineDiscarded?: (shooter: Unit, weaponId: PrimaryWeaponId) => void
 }
 
 const normalizeAngleDelta = (delta: number) => {
@@ -560,6 +567,14 @@ const canShootFromSlot = (slot: PrimaryWeaponSlot) => {
 
 const postShotAmmoHandling = (shooter: Unit, deps: FirePrimaryDeps) => {
   const weaponSlot = activePrimarySlot(shooter)
+  const shouldDiscardMagazine = Number.isFinite(weaponSlot.primaryAmmo) &&
+    weaponSlot.primaryAmmo <= 0 &&
+    weaponSlot.weaponId !== "pistol"
+
+  if (shouldDiscardMagazine) {
+    deps.onMagazineDiscarded?.(shooter, weaponSlot.weaponId)
+  }
+
   if (Number.isFinite(weaponSlot.primaryAmmo) && weaponSlot.primaryAmmo <= 0) {
     swapToUsablePrimaryIfNeeded(shooter, deps.onPrimaryWeaponChanged)
     const activeSlot = activePrimarySlot(shooter)

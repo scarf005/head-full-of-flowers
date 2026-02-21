@@ -1327,7 +1327,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   if (!renderedObstacleFxWithWebGl) {
     renderObstacleDebris(context, world, fogCullBounds)
-    renderShellCasings(context, world, fogCullBounds)
+    renderShellCasings(context, world, fogCullBounds, "only-plain")
   }
   renderPickups(context, world, dt, fogCullBounds)
   if (resolvedPlan.runPostPickupTrailPass) {
@@ -1361,6 +1361,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   }
   renderDamagePopups(context, world, fogCullBounds)
   renderMuzzleFlashes(context, world, fogCullBounds)
+  renderShellCasings(context, world, fogCullBounds, "only-sprite")
 
   context.restore()
   renderArenaBoundary(context, world)
@@ -1884,9 +1885,20 @@ const renderObstacleDebris = (context: CanvasRenderingContext2D, world: WorldSta
   }
 }
 
-const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState, fogCullBounds: FogCullBounds) => {
+const renderShellCasings = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  fogCullBounds: FogCullBounds,
+  spriteMode: "all" | "only-sprite" | "only-plain" = "all",
+) => {
   for (const casing of world.shellCasings) {
     if (!casing.active || casing.maxLife <= 0) {
+      continue
+    }
+    if (spriteMode === "only-sprite" && !casing.spriteId) {
+      continue
+    }
+    if (spriteMode === "only-plain" && casing.spriteId) {
       continue
     }
 
@@ -1899,10 +1911,14 @@ const renderShellCasings = (context: CanvasRenderingContext2D, world: WorldState
     context.globalAlpha = lifeRatio * 0.9
     context.translate(casing.position.x, casing.position.y)
     context.rotate(casing.rotation)
-    context.fillStyle = "#e7c66a"
-    context.fillRect(-casing.size * 0.5, -casing.size * 0.28, casing.size, casing.size * 0.56)
-    context.fillStyle = "#b18b34"
-    context.fillRect(-casing.size * 0.5, casing.size * 0.03, casing.size, casing.size * 0.16)
+    if (casing.spriteId) {
+      drawItemPickupSprite(context, casing.spriteId, 0, 0, casing.spriteSize > 0 ? casing.spriteSize : casing.size)
+    } else {
+      context.fillStyle = "#e7c66a"
+      context.fillRect(-casing.size * 0.5, -casing.size * 0.28, casing.size, casing.size * 0.56)
+      context.fillStyle = "#b18b34"
+      context.fillRect(-casing.size * 0.5, casing.size * 0.03, casing.size, casing.size * 0.16)
+    }
     context.restore()
   }
 }
@@ -2309,7 +2325,15 @@ const renderUnits = (context: CanvasRenderingContext2D, world: WorldState, fogCu
       context.scale(1, -1)
     }
     context.rotate(flipWeapon ? -weaponAngle : weaponAngle)
-    drawWeaponPickupSprite(context, unit.primaryWeapon, gunLength, 0, weaponScale)
+    drawWeaponPickupSprite(
+      context,
+      unit.primaryWeapon,
+      gunLength,
+      0,
+      weaponScale,
+      0.5,
+      unit.reloadCooldown > 0 && unit.reloadCooldownMax > 0 ? "unloaded" : "default",
+    )
     context.restore()
 
     if (unit.hitFlash > 0) {

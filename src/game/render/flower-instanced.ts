@@ -1059,6 +1059,9 @@ export const renderObstacleFxInstances = (
     if (!casing.active || casing.maxLife <= 0) {
       continue
     }
+    if (casing.spriteId) {
+      continue
+    }
     if (
       casing.position.x < cullBounds.minX ||
       casing.position.x > cullBounds.maxX ||

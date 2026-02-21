@@ -34,7 +34,11 @@ import {
 } from "./signals.ts"
 import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
-import { getWeaponSpriteHalfLength } from "./render/pixel-art.ts"
+import {
+  getWeaponSpriteHalfLength,
+  getWeaponSpriteVariantId,
+  scaleWeaponVariantToWeaponSize,
+} from "./render/pixel-art.ts"
 import { computeWeaponKickbackDistance } from "./render/unit-motion-transform.ts"
 import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
 import {
@@ -1231,6 +1235,40 @@ export class FlowerArenaGame {
     slot.maxLife = randomRange(0.55, 1.1)
     slot.life = slot.maxLife
     slot.bounceCount = 0
+    slot.spriteId = null
+    slot.spriteSize = 0
+  }
+
+  private spawnDroppedMagazine(unit: Unit, weaponId: PrimaryWeaponId = unit.primaryWeapon) {
+    const magazineSpriteId = getWeaponSpriteVariantId(weaponId, "magazine")
+    if (!magazineSpriteId) {
+      return
+    }
+
+    const weaponZoom = Math.max(0.1, unit.radius * 0.36) * 1.5
+    const magazineZoom = scaleWeaponVariantToWeaponSize(weaponId, "magazine", weaponZoom)
+    if (magazineZoom === null) {
+      return
+    }
+
+    const slot = this.allocShellCasing()
+    const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
+    const side = Math.random() > 0.5 ? 1 : -1
+    const angle = aimAngle + Math.PI + side * randomRange(0.16, 0.34) + randomRange(-0.14, 0.14)
+    slot.active = true
+    slot.position.set(
+      unit.position.x - unit.aim.x * 0.14 + randomRange(-0.08, 0.08),
+      unit.position.y - unit.aim.y * 0.14 + randomRange(-0.08, 0.08),
+    )
+    slot.velocity.set(Math.cos(angle) * randomRange(3.8, 5.6), Math.sin(angle) * randomRange(3.8, 5.6))
+    slot.rotation = randomRange(0, Math.PI * 2)
+    slot.angularVelocity = randomRange(-9, 9)
+    slot.size = randomRange(0.17, 0.24)
+    slot.maxLife = randomRange(0.72, 1.35)
+    slot.life = slot.maxLife
+    slot.bounceCount = 0
+    slot.spriteId = magazineSpriteId
+    slot.spriteSize = magazineZoom
   }
 
   private allocShellCasing() {
@@ -2136,6 +2174,7 @@ export class FlowerArenaGame {
       allocProjectile: () => this.allocProjectile(),
       startReload: (id) => this.startReload(id),
       onShellEjected: (shooter) => this.spawnShellCasing(shooter),
+      onMagazineDiscarded: (shooter, weaponId) => this.spawnDroppedMagazine(shooter, weaponId),
       onMuzzleFlash: (shooter, shotAngle, weaponId) => this.spawnMuzzleFlash(shooter, shotAngle, weaponId),
       onPlayerShoot: () => {
         this.sfx.shoot()

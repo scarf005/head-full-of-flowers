@@ -339,4 +339,6 @@ export class ShellCasing {
   life = 0
   maxLife = 0
   bounceCount = 0
+  spriteId: string | null = null
+  spriteSize = 0
 }

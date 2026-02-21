@@ -2,11 +2,19 @@ import type { PerkId, PrimaryWeaponId } from "../types.ts"
 import pistolSprite from "../../assets/items/pistol.png"
 import assaultSprite from "../../assets/items/assault.png"
 import battleRifleSprite from "../../assets/items/battle-rifle.png"
+import battleRifleMagazineSprite from "../../assets/items/battle-rifle-magazine.png"
+import battleRifleUnloadedSprite from "../../assets/items/battle-rifle-unloaded.png"
 import shotgunSprite from "../../assets/items/shotgun.png"
 import autoShotgunSprite from "../../assets/items/auto-shotgun.png"
 import grenadeLauncherSprite from "../../assets/items/grenade-launcher.png"
 import flamethrowerSprite from "../../assets/items/flamethrower.png"
+import flamethrowerMagazineSprite from "../../assets/items/flamethrower-magazine.png"
+import flamethrowerUnloadedSprite from "../../assets/items/flamethrower-unloaded.png"
 import rocketLauncherSprite from "../../assets/items/rocket-launcher.png"
+import rocketLauncherMagazineSprite from "../../assets/items/rocket-launcher-magazine.png"
+import rocketLauncherUnloadedSprite from "../../assets/items/rocket-launcher-unloaded.png"
+import assaultMagazineSprite from "../../assets/items/assault-magazine.png"
+import assaultUnloadedSprite from "../../assets/items/assault-unloaded.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
 import laserSightSprite from "../../assets/perks/laser-sight.png"
@@ -21,6 +29,7 @@ import kevlarVestSprite from "../../assets/perks/iron-bark.png"
 
 type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
+export type WeaponSpriteMode = "default" | "unloaded" | "magazine"
 
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
@@ -47,6 +56,17 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   kevlar_vest: kevlarVestSprite,
 }
 
+const weaponVariantSpritePath: Record<string, string> = {
+  "assault-unloaded": assaultUnloadedSprite,
+  "assault-magazine": assaultMagazineSprite,
+  "battle-rifle-unloaded": battleRifleUnloadedSprite,
+  "battle-rifle-magazine": battleRifleMagazineSprite,
+  "flamethrower-unloaded": flamethrowerUnloadedSprite,
+  "flamethrower-magazine": flamethrowerMagazineSprite,
+  "rocket-launcher-unloaded": rocketLauncherUnloadedSprite,
+  "rocket-launcher-magazine": rocketLauncherMagazineSprite,
+}
+
 const legacyPerkSpriteAlias: Record<string, PerkId> = {
   "laser-sight": "laser_sight",
   "ricochet-shells": "ricochet_shells",
@@ -64,6 +84,11 @@ export const getItemSpritePath = (id: ItemSpriteId | string) => {
     return direct
   }
 
+  const variant = weaponVariantSpritePath[id]
+  if (variant) {
+    return variant
+  }
+
   const alias = legacyPerkSpriteAlias[id]
   if (alias) {
     return itemSpritePath[alias]
@@ -72,12 +97,12 @@ export const getItemSpritePath = (id: ItemSpriteId | string) => {
   return undefined
 }
 
-const itemSpriteCache = new Map<ItemSpriteId, HTMLImageElement | null>()
+const itemSpriteCache = new Map<string, HTMLImageElement | null>()
 let itemSpritePreloadPromise: Promise<void> | null = null
 
-const itemSpriteIds = Object.keys(itemSpritePath) as ItemSpriteId[]
+const itemSpriteIds = [...Object.keys(itemSpritePath), ...Object.keys(weaponVariantSpritePath)]
 
-const ensureItemSprite = (id: ItemSpriteId) => {
+const ensureItemSprite = (id: ItemSpriteId | string) => {
   const cached = itemSpriteCache.get(id)
   if (cached !== undefined) {
     return cached
@@ -138,7 +163,7 @@ export const preloadItemSprites = () => {
 
 const drawItemSpritePng = (
   context: CanvasRenderingContext2D,
-  spriteId: ItemSpriteId,
+  spriteId: ItemSpriteId | string,
   x: number,
   y: number,
   size: number,
@@ -175,6 +200,45 @@ const measureItemSpriteWorldWidth = (spriteId: ItemSpriteId, size: number) => {
 
 export const getWeaponSpriteHalfLength = (weaponId: PrimaryWeaponId, size: number) => {
   return measureItemSpriteWorldWidth(weaponId, size) * 0.5
+}
+
+export const getWeaponSpriteVariantId = (weaponId: PrimaryWeaponId, mode: Exclude<WeaponSpriteMode, "default">) => {
+  const spriteId = `${weaponId}-${mode}`
+  return weaponVariantSpritePath[spriteId] ? spriteId : null
+}
+
+export const scaleWeaponVariantToWeaponSize = (
+  weaponId: PrimaryWeaponId,
+  mode: Exclude<WeaponSpriteMode, "default">,
+  weaponSize: number,
+) => {
+  const variantId = getWeaponSpriteVariantId(weaponId, mode)
+  if (!variantId) {
+    return null
+  }
+
+  const weaponSprite = ensureItemSprite(weaponId)
+  const variantSprite = ensureItemSprite(variantId)
+  if (
+    !weaponSprite ||
+    !variantSprite ||
+    !weaponSprite.complete ||
+    !variantSprite.complete ||
+    weaponSprite.naturalHeight <= 0 ||
+    variantSprite.naturalHeight <= 0
+  ) {
+    return null
+  }
+
+  return weaponSize * (variantSprite.naturalHeight / weaponSprite.naturalHeight)
+}
+
+const resolveWeaponSpriteId = (weaponId: PrimaryWeaponId, mode: WeaponSpriteMode) => {
+  if (mode === "default") {
+    return weaponId
+  }
+
+  return getWeaponSpriteVariantId(weaponId, mode) ?? weaponId
 }
 
 const drawItemSpriteFallback = (
@@ -264,8 +328,9 @@ export const drawWeaponPickupSprite = (
   y: number,
   size = 0.1,
   anchorX = 0.5,
+  mode: WeaponSpriteMode = "default",
 ) => {
-  if (drawItemSpritePng(context, weaponId, x, y, size, anchorX)) {
+  if (drawItemSpritePng(context, resolveWeaponSpriteId(weaponId, mode), x, y, size, anchorX)) {
     return
   }
 
@@ -274,7 +339,7 @@ export const drawWeaponPickupSprite = (
 
 export const drawItemPickupSprite = (
   context: CanvasRenderingContext2D,
-  spriteId: ItemSpriteId,
+  spriteId: ItemSpriteId | string,
   x: number,
   y: number,
   size = LOOT_SPRITE_SIZE,
