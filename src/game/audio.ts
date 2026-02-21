@@ -9,6 +9,7 @@ export class AudioDirector {
   private gameplayTrack: HTMLAudioElement
   private unlocked = false
   private musicVolume = 0.75
+  private musicSuppressed = false
 
   private mode: "menu" | "gameplay" | "stopped" = "stopped"
 
@@ -66,14 +67,16 @@ export class AudioDirector {
       return
     }
 
+    this.mode = "menu"
     this.gameplayTrack.pause()
     this.gameplayTrack.currentTime = 0
     this.gameplayTrack.muted = true
     this.menuTrack.muted = false
+    if (this.musicSuppressed) {
+      return
+    }
+
     this.menuTrack.play()
-      .then(() => {
-        this.mode = "menu"
-      })
       .catch(() => {})
   }
 
@@ -82,14 +85,16 @@ export class AudioDirector {
       return
     }
 
+    this.mode = "gameplay"
     this.menuTrack.pause()
     this.menuTrack.currentTime = 0
     this.menuTrack.muted = true
     this.gameplayTrack.muted = false
+    if (this.musicSuppressed) {
+      return
+    }
+
     this.gameplayTrack.play()
-      .then(() => {
-        this.mode = "gameplay"
-      })
       .catch(() => {})
   }
 
@@ -100,7 +105,31 @@ export class AudioDirector {
     this.gameplayTrack.currentTime = 0
     this.menuTrack.muted = false
     this.gameplayTrack.muted = false
+    this.musicSuppressed = false
     this.mode = "stopped"
+  }
+
+  pauseCurrentMusic() {
+    this.musicSuppressed = true
+    this.menuTrack.pause()
+    this.gameplayTrack.pause()
+  }
+
+  resumeCurrentMusic() {
+    if (!this.unlocked) {
+      return
+    }
+
+    this.musicSuppressed = false
+
+    if (this.mode === "menu") {
+      this.menuTrack.play().catch(() => {})
+      return
+    }
+
+    if (this.mode === "gameplay") {
+      this.gameplayTrack.play().catch(() => {})
+    }
   }
 }
 

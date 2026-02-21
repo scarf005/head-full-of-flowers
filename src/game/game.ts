@@ -214,6 +214,8 @@ export class FlowerArenaGame {
   public shellCasingCursor = 0
   public muzzleFlashCursor = 0
   public explosionCursor = 0
+  private musicSuppressedByFocusLoss = false
+  private disposeFocusHandlers: (() => void) | null = null
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -233,6 +235,7 @@ export class FlowerArenaGame {
 
     this.setupWorld()
     this.setupInput()
+    this.setupFocusAudioHandling()
     resetHudSignals(this.world, this.canvas)
     renderScene({ context: this.context, world: this.world, dt: 0 })
   }
@@ -256,8 +259,52 @@ export class FlowerArenaGame {
     this.beginMatchGenerationToken += 1
     cancelAnimationFrame(this.raf)
     this.inputAdapter?.destroy()
+    this.disposeFocusHandlers?.()
+    this.disposeFocusHandlers = null
     this.audioDirector.stopAll()
     registerDebugWorldStateProvider(null)
+  }
+  private suppressMusicForFocusLoss() {
+    if (this.musicSuppressedByFocusLoss) {
+      return
+    }
+
+    this.musicSuppressedByFocusLoss = true
+    this.audioDirector.pauseCurrentMusic()
+  }
+  private restoreMusicAfterFocusGain() {
+    if (!this.musicSuppressedByFocusLoss || document.hidden) {
+      return
+    }
+
+    this.musicSuppressedByFocusLoss = false
+    this.audioDirector.resumeCurrentMusic()
+  }
+  private setupFocusAudioHandling() {
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        this.suppressMusicForFocusLoss()
+        return
+      }
+
+      this.restoreMusicAfterFocusGain()
+    }
+    const onWindowBlur = () => {
+      this.suppressMusicForFocusLoss()
+    }
+    const onWindowFocus = () => {
+      this.restoreMusicAfterFocusGain()
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    globalThis.addEventListener("blur", onWindowBlur)
+    globalThis.addEventListener("focus", onWindowFocus)
+
+    this.disposeFocusHandlers = () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+      globalThis.removeEventListener("blur", onWindowBlur)
+      globalThis.removeEventListener("focus", onWindowFocus)
+    }
   }
   public setupWorld() {
     setupWorldForGame(this)
