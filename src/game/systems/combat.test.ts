@@ -596,6 +596,46 @@ Deno.test("firePrimary applies laser range bonus and additive proximity stats to
   assertEquals(projectile.acceleration, PRIMARY_WEAPONS["rocket-launcher"].projectileAcceleration ?? 0)
 })
 
+Deno.test("firePrimary reduces weapon spread by 30% when laser sight is active", () => {
+  const originalRandom = Math.random
+  const fireShotAngle = (withLaserSight: boolean) => {
+    const world = createWorldState()
+    const shooter = world.player
+
+    world.units = [shooter]
+    world.bots = []
+    shooter.position.set(0, 0)
+    shooter.aim.set(1, 0)
+
+    if (withLaserSight) {
+      applyPerkToUnit(shooter, "laser_sight")
+    }
+
+    equipPrimary(shooter.id, world, "assault", 1, () => {})
+    firePrimary(world, shooter.id, {
+      allocProjectile: () => world.projectiles[0],
+      startReload: () => {},
+      onPlayerShoot: () => {},
+      onOtherShoot: () => {},
+    })
+
+    const projectile = world.projectiles[0]
+    return Math.atan2(projectile.velocity.y, projectile.velocity.x)
+  }
+
+  try {
+    Math.random = () => 1
+
+    const baselineSpreadAngle = fireShotAngle(false)
+    const laserSpreadAngle = fireShotAngle(true)
+
+    assertAlmostEquals(baselineSpreadAngle, PRIMARY_WEAPONS.assault.spread, 0.000001)
+    assertAlmostEquals(laserSpreadAngle, PRIMARY_WEAPONS.assault.spread * 0.7, 0.000001)
+  } finally {
+    Math.random = originalRandom
+  }
+})
+
 Deno.test("firePrimary adds +1 projectile damage when heavy pellets perk is active", () => {
   const world = createWorldState()
   const shooter = world.player
@@ -650,6 +690,73 @@ Deno.test("firePrimary emits muzzle flash callback with weapon and angle", () =>
   assertEquals(muzzleFlashCount, 1)
   assertEquals(muzzleWeapon, "assault")
   assertAlmostEquals(muzzleAngle, 0, 0.000001)
+})
+
+Deno.test("firePrimary emits magazine discard callback when final shot forces pistol fallback", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+  equipPrimary(shooter.id, world, "assault", 1, () => {})
+
+  let reloadStarts = 0
+  let discardedMagazineWeapon = ""
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {
+      reloadStarts += 1
+    },
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+    onMagazineDiscarded: (_unit, weaponId) => {
+      discardedMagazineWeapon = weaponId
+    },
+  })
+
+  assertEquals(reloadStarts, 0)
+  assertEquals(discardedMagazineWeapon, "assault")
+  assertEquals(shooter.primaryWeapon, "pistol")
+})
+
+Deno.test("firePrimary emits magazine discard callback when final round starts reload", () => {
+  const world = createWorldState()
+  const shooter = world.player
+
+  world.units = [shooter]
+  world.bots = []
+  shooter.position.set(0, 0)
+  shooter.aim.set(1, 0)
+  equipPrimary(shooter.id, world, "assault", 35, () => {})
+
+  const slot = shooter.primarySlots[shooter.primarySlotIndex]
+  slot.primaryAmmo = 1
+  slot.reserveAmmo = 5
+
+  let reloadStarts = 0
+  let magazineDiscards = 0
+  let discardedMagazineWeapon = ""
+
+  firePrimary(world, shooter.id, {
+    allocProjectile: () => world.projectiles[0],
+    startReload: () => {
+      reloadStarts += 1
+    },
+    onPlayerShoot: () => {},
+    onOtherShoot: () => {},
+    onMagazineDiscarded: (_unit, weaponId) => {
+      magazineDiscards += 1
+      discardedMagazineWeapon = weaponId
+    },
+  })
+
+  assertEquals(reloadStarts, 1)
+  assertEquals(magazineDiscards, 1)
+  assertEquals(discardedMagazineWeapon, "assault")
+  assertEquals(shooter.primaryWeapon, "assault")
 })
 
 Deno.test("firePrimary uses rocket weapon config acceleration in runtime projectile updates", () => {

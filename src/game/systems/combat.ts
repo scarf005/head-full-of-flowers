@@ -26,6 +26,7 @@ const OFFSCREEN_NON_PLAYER_SCREEN_SHAKE_MULTIPLIER = 0.5
 const PRIMARY_WEAPON_CAP = 2
 const PRIMARY_RESERVE_PICKUP_CAP = 3
 const AIM_ASSIST_MAX_DISTANCE = 24
+const LASER_SIGHT_SPREAD_MULTIPLIER = 0.7
 
 const isWorldPointInView = (world: WorldState, x: number, y: number) => {
   const halfWidth = VIEW_WIDTH * 0.5 / WORLD_SCALE
@@ -505,6 +506,9 @@ const emitPrimaryShot = (
   const baseAngle = resolveAssistedAimAngle(world, shooter, Math.atan2(shooter.aim.y, shooter.aim.x))
   const centeredBurstOffset = (shotIndex - (shotsTotal - 1) * 0.5) * burstSpread
   const shotAngle = baseAngle + centeredBurstOffset
+  const hasLaserSight = shooter.laserSight || (shooter.perkStacks.laser_sight ?? 0) > 0
+  const spreadMultiplier = hasLaserSight ? LASER_SIGHT_SPREAD_MULTIPLIER : 1
+  const spreadRange = weapon.spread * spreadMultiplier
 
   shooter.recoil = Math.min(1, shooter.recoil + 0.38 + pelletsPerShot * 0.05)
   deps.onShellEjected?.(shooter)
@@ -515,7 +519,7 @@ const emitPrimaryShot = (
 
   for (let pellet = 0; pellet < pelletsPerShot; pellet += 1) {
     const projectile = deps.allocProjectile()
-    const spread = randomRange(-weapon.spread, weapon.spread)
+    const spread = randomRange(-spreadRange, spreadRange)
     const angle = shotAngle + spread
     const dirX = Math.cos(angle)
     const dirY = Math.sin(angle)
