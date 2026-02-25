@@ -1,7 +1,13 @@
 import { sample } from "@std/random"
 
 import type { PrimaryWeaponId } from "../types.ts"
-import { LOOTABLE_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "../weapons.ts"
+import {
+  LOOTABLE_PRIMARY_IDS,
+  pickupAmmoForWeapon,
+  PRIMARY_WEAPONS,
+  primaryWeaponKind,
+  primaryWeaponTier,
+} from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
 
@@ -334,29 +340,53 @@ export const equipPrimary = (
       unit.primarySlotIndex = existingIndex
     }
   } else {
-    const newSlot = buildPrimarySlot(weaponId, ammo, ++unit.primarySlotSequence)
+    const sameKindIndex = unit.primarySlots.findIndex((slot) => {
+      return slot.weaponId !== weaponId && primaryWeaponKind(slot.weaponId) === primaryWeaponKind(weaponId)
+    })
 
-    if (unit.primarySlots.length < PRIMARY_WEAPON_CAP) {
-      unit.primarySlots.push(newSlot)
-      unit.primarySlotIndex = unit.primarySlots.length - 1
-    } else {
-      let oldestIndex = 0
-      for (let index = 1; index < unit.primarySlots.length; index += 1) {
-        if (unit.primarySlots[index].acquiredAt < unit.primarySlots[oldestIndex].acquiredAt) {
-          oldestIndex = index
+    if (sameKindIndex >= 0) {
+      const sameKindWeaponId = unit.primarySlots[sameKindIndex].weaponId
+      if (primaryWeaponTier(sameKindWeaponId) > primaryWeaponTier(weaponId)) {
+        syncUnitPrimaryFromSlot(unit)
+        if (unit.isPlayer) {
+          onPlayerWeaponUpdate()
         }
+        return null
       }
 
-      const replacedWeaponId = unit.primarySlots[oldestIndex].weaponId
-      if (replacedWeaponId !== "pistol") {
-        ejectedWeaponId = replacedWeaponId
+      const newSlot = buildPrimarySlot(weaponId, ammo, ++unit.primarySlotSequence)
+      if (sameKindWeaponId !== "pistol") {
+        ejectedWeaponId = sameKindWeaponId
       }
-      unit.primarySlots[oldestIndex] = newSlot
-      unit.primarySlotIndex = oldestIndex
+      unit.primarySlots[sameKindIndex] = newSlot
+      unit.primarySlotIndex = sameKindIndex
+      unit.reloadCooldown = 0
+      unit.reloadCooldownMax = 0
+    } else {
+      const newSlot = buildPrimarySlot(weaponId, ammo, ++unit.primarySlotSequence)
+
+      if (unit.primarySlots.length < PRIMARY_WEAPON_CAP) {
+        unit.primarySlots.push(newSlot)
+        unit.primarySlotIndex = unit.primarySlots.length - 1
+      } else {
+        let oldestIndex = 0
+        for (let index = 1; index < unit.primarySlots.length; index += 1) {
+          if (unit.primarySlots[index].acquiredAt < unit.primarySlots[oldestIndex].acquiredAt) {
+            oldestIndex = index
+          }
+        }
+
+        const replacedWeaponId = unit.primarySlots[oldestIndex].weaponId
+        if (replacedWeaponId !== "pistol") {
+          ejectedWeaponId = replacedWeaponId
+        }
+        unit.primarySlots[oldestIndex] = newSlot
+        unit.primarySlotIndex = oldestIndex
+      }
+
+      unit.reloadCooldown = 0
+      unit.reloadCooldownMax = 0
     }
-
-    unit.reloadCooldown = 0
-    unit.reloadCooldownMax = 0
   }
 
   syncUnitPrimaryFromSlot(unit)

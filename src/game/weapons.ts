@@ -23,6 +23,36 @@ export interface PrimaryWeaponConfig {
   reload: number
 }
 
+export type PrimaryWeaponKind =
+  | "sidearm"
+  | "rifle"
+  | "shotgun"
+  | "flame"
+  | "grenade-launcher"
+  | "rocket-launcher"
+
+const PRIMARY_WEAPON_KINDS: Record<PrimaryWeaponId, PrimaryWeaponKind> = {
+  pistol: "sidearm",
+  assault: "rifle",
+  shotgun: "shotgun",
+  flamethrower: "flame",
+  "auto-shotgun": "shotgun",
+  "battle-rifle": "rifle",
+  "grenade-launcher": "grenade-launcher",
+  "rocket-launcher": "rocket-launcher",
+}
+
+const PRIMARY_WEAPON_TIERS: Record<PrimaryWeaponId, number> = {
+  pistol: 0,
+  assault: 1,
+  shotgun: 1,
+  flamethrower: 1,
+  "auto-shotgun": 2,
+  "battle-rifle": 2,
+  "grenade-launcher": 1,
+  "rocket-launcher": 2,
+}
+
 export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
   pistol: {
     id: "pistol",
@@ -178,6 +208,14 @@ export const HIGH_TIER_PRIMARY_IDS: PrimaryWeaponId[] = [
 
 export const isHighTierPrimary = (weaponId: PrimaryWeaponId) => {
   return HIGH_TIER_PRIMARY_IDS.includes(weaponId)
+}
+
+export const primaryWeaponKind = (weaponId: PrimaryWeaponId) => {
+  return PRIMARY_WEAPON_KINDS[weaponId]
+}
+
+export const primaryWeaponTier = (weaponId: PrimaryWeaponId) => {
+  return PRIMARY_WEAPON_TIERS[weaponId]
 }
 
 export const pickupAmmoForWeapon = (weaponId: PrimaryWeaponId) => {
