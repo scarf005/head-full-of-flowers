@@ -38,6 +38,11 @@ export const DebugPanel = ({
   renderPathProfile,
   renderPathRates,
 }: DebugPanelProps) => {
+  const formatDebugNumber = (value: number) => {
+    const snapped = Math.round(value * 10) / 10
+    return Number.isInteger(snapped) ? `${snapped}` : `${snapped.toFixed(1)}`
+  }
+
   return (
     <div class="hud debug-panel">
       <label class="debug-row">
@@ -71,7 +76,7 @@ export const DebugPanel = ({
         <span>{t`Equip all with rocket launcher`}</span>
       </label>
       <label class="debug-speed">
-        <span>{t`Game Speed ${debugGameSpeedSignal.value.toFixed(2)}x`}</span>
+        <span>{t`Game Speed ${formatDebugNumber(debugGameSpeedSignal.value)}x`}</span>
         <input
           type="range"
           min={40}
@@ -84,7 +89,7 @@ export const DebugPanel = ({
         />
       </label>
       <label class="debug-speed">
-        <span>{t`Impact Feel ${impactFeelLabel} (${impactFeelLevel.toFixed(2)}x)`}</span>
+        <span>{t`Impact Feel ${impactFeelLabel} (${formatDebugNumber(impactFeelLevel)}x)`}</span>
         <input
           type="range"
           min={1}
@@ -126,18 +131,18 @@ export const DebugPanel = ({
         </span>
         <span>
           {t`Composite ${renderPathProfile.mergedCompositeFrames} merged (${
-            mergedPercent.toFixed(1)
-          }%) / ${renderPathProfile.splitCompositeFrames} split (${splitPercent.toFixed(1)}%)`}
+            formatDebugNumber(mergedPercent)
+          }%) / ${renderPathProfile.splitCompositeFrames} split (${formatDebugNumber(splitPercent)}%)`}
         </span>
         <span>
           {t`Window ${renderPathRates.sampleFrames} f: merged ${
-            renderPathRates.mergedPercent.toFixed(1)
-          }% / split ${renderPathRates.splitPercent}%`}
+            formatDebugNumber(renderPathRates.mergedPercent)
+          }% / split ${formatDebugNumber(renderPathRates.splitPercent)}%`}
         </span>
         <span>
-          {t`Window pickups ${
-            renderPathRates.pickupVisiblePercent.toFixed(1)
-          }% visible / ${renderPathRates.pickupHiddenPercent}% hidden`}
+          {t`Window pickups ${formatDebugNumber(renderPathRates.pickupVisiblePercent)}% visible / ${
+            formatDebugNumber(renderPathRates.pickupHiddenPercent)
+          }% hidden`}
         </span>
       </div>
     </div>
