@@ -20,7 +20,7 @@ import {
 } from "./systems/flight-trails.ts"
 import { updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
-import { collectNearbyPickup, updatePickups } from "./systems/pickups.ts"
+import { canCollectWeaponPickup, collectNearbyPickup, updatePickups } from "./systems/pickups.ts"
 import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { explodeGrenade, updateThrowables } from "./systems/throwables.ts"
@@ -102,6 +102,9 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
             ? t`Perk acquired ${localizedPerk} x${stacks}`
             : t`Perk acquired ${localizedPerk}`
         },
+        shouldCollectPickup: (unit, pickup) => {
+          return pickup.kind === "perk" || canCollectWeaponPickup(unit, pickup.weapon)
+        },
       })
     },
     updateCrosshairWorld: () => updateCrosshairWorld(game.world),
@@ -127,6 +130,9 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
         perkStacks: (unit, perkId) => perkStacks(unit, perkId),
         onPlayerPickup: () => {},
         onPlayerPerkPickup: () => {},
+        shouldCollectPickup: (unit, pickup) => {
+          return pickup.kind === "perk" || canCollectWeaponPickup(unit, pickup.weapon)
+        },
       })
     },
     nowMs: () => performance.now(),

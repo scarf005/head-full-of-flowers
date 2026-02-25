@@ -1,6 +1,6 @@
 import { type Unit } from "../entities.ts"
 import { clamp, distSquared, limitToArena, randomPointInArena, randomRange } from "../utils.ts"
-import { isHighTierPrimary, pickupAmmoForWeapon } from "../weapons.ts"
+import { isHighTierPrimary, pickupAmmoForWeapon, primaryWeaponKind, primaryWeaponTier } from "../weapons.ts"
 import type { PerkId, PrimaryWeaponId, Team } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 import { LOOT_PICKUP_INTERVAL_MAX_SECONDS, LOOT_PICKUP_INTERVAL_MIN_SECONDS } from "../world/constants.ts"
@@ -306,6 +306,29 @@ export interface CollectPickupDeps {
   onPlayerPickup: (weaponId: PrimaryWeaponId) => void
   onPlayerPerkPickup: (perkId: PerkId, stacks: number) => void
   shouldCollectPickup?: (unit: Unit, pickup: WorldState["pickups"][number]) => boolean
+}
+
+export const canCollectWeaponPickup = (unit: Unit, weaponId: PrimaryWeaponId) => {
+  const incomingKind = primaryWeaponKind(weaponId)
+  const incomingTier = primaryWeaponTier(weaponId)
+
+  for (const slot of unit.primarySlots) {
+    if (primaryWeaponKind(slot.weaponId) !== incomingKind) {
+      continue
+    }
+
+    if (slot.weaponId === weaponId) {
+      return true
+    }
+
+    if (primaryWeaponTier(slot.weaponId) > incomingTier) {
+      return false
+    }
+
+    return true
+  }
+
+  return true
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
