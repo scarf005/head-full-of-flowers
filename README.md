@@ -18,6 +18,17 @@ Build production assets:
 $ deno task build
 ```
 
+The repository also includes a GitHub Actions workflow at `.github/workflows/deploy-itch.yml`
+to publish the built HTML5 bundle to itch.io on pushes to `main` or manual dispatch.
+
+Configure the `deploy` environment with:
+
+- `BUTLER_API_KEY` as a GitHub Actions secret
+- `ITCH_USERNAME` as a GitHub Actions variable
+
+The itch.io game id is derived from the GitHub repository name, so this repository publishes
+to `head-full-of-flowers` on the configured itch.io account.
+
 ## Credits
 
 - [MY DIVINE PERVERSIONS / linear & gestalt](https://hellstarplus.bandcamp.com/album/my-divine-perversions-linear-gestalt) - by [hellstar.plus](https://hellstarplus.bandcamp.com) (CC BY 4.0)
