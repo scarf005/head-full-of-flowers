@@ -22,6 +22,12 @@ export interface FlowerGpuState {
   trailVao: WebGLVertexArrayObject
   trailStaticBuffer: WebGLBuffer
   trailInstanceBuffer: WebGLBuffer
+  postProcessProgram: WebGLProgram
+  postProcessVao: WebGLVertexArrayObject
+  postProcessStaticBuffer: WebGLBuffer
+  postProcessTexture: WebGLTexture
+  postProcessTextureWidth: number
+  postProcessTextureHeight: number
   explosionProgram: WebGLProgram
   explosionVao: WebGLVertexArrayObject
   explosionStaticBuffer: WebGLBuffer
@@ -41,6 +47,9 @@ export interface FlowerGpuState {
   trailUniformCamera: WebGLUniformLocation
   trailUniformView: WebGLUniformLocation
   trailUniformScale: WebGLUniformLocation
+  postProcessUniformResolution: WebGLUniformLocation
+  postProcessUniformShiftPx: WebGLUniformLocation
+  postProcessUniformIntensity: WebGLUniformLocation
   explosionUniformCamera: WebGLUniformLocation
   explosionUniformView: WebGLUniformLocation
   explosionUniformScale: WebGLUniformLocation

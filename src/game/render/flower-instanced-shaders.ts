@@ -208,6 +208,45 @@ void main() {
 }
 `
 
+export const POST_PROCESS_VERTEX_SHADER_SOURCE = `#version 300 es
+layout(location = 0) in vec2 aCorner;
+
+out vec2 vUv;
+
+void main() {
+  gl_Position = vec4(aCorner, 0.0, 1.0);
+  vUv = vec2(aCorner.x * 0.5 + 0.5, 1.0 - (aCorner.y * 0.5 + 0.5));
+}
+`
+
+export const CHROMATIC_ABERRATION_FRAGMENT_SHADER_SOURCE = `#version 300 es
+precision mediump float;
+
+in vec2 vUv;
+
+uniform sampler2D uScene;
+uniform vec2 uResolution;
+uniform float uShiftPx;
+uniform float uIntensity;
+
+out vec4 outColor;
+
+void main() {
+  vec2 texel = vec2(1.0) / max(uResolution, vec2(1.0));
+  vec2 redOffset = texel * vec2(uShiftPx * 1.45, uShiftPx * 0.28);
+  vec2 greenOffset = texel * vec2(0.0, -uShiftPx * 1.1);
+  vec2 blueOffset = texel * vec2(-uShiftPx * 1.45, uShiftPx * 0.28);
+
+  vec4 base = texture(uScene, vUv);
+  vec4 redSample = texture(uScene, clamp(vUv + redOffset, vec2(0.0), vec2(1.0)));
+  vec4 greenSample = texture(uScene, clamp(vUv + greenOffset, vec2(0.0), vec2(1.0)));
+  vec4 blueSample = texture(uScene, clamp(vUv + blueOffset, vec2(0.0), vec2(1.0)));
+
+  vec4 aberrated = vec4(redSample.r, greenSample.g, blueSample.b, base.a);
+  outColor = mix(base, aberrated, clamp(uIntensity, 0.0, 1.0));
+}
+`
+
 export const EXPLOSION_VERTEX_SHADER_SOURCE = `#version 300 es
 layout(location = 0) in vec2 aCorner;
 

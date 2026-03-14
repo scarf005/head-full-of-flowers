@@ -4,9 +4,11 @@ import {
   renderFlowerInstances,
   renderObstacleFxInstances,
 } from "./flower-instanced.ts"
+import { renderChromaticAberrationPass } from "./flower-instanced-render-chromatic-aberration.ts"
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { type CanvasViewportOverflowPx } from "./offscreen-indicators.ts"
 import { renderMinimap } from "./scene-minimap.ts"
+import { screenShakeChromaticAberrationPx, stepChromaticAberrationShake } from "./chromatic-aberration.ts"
 import {
   ensureGroundLayerCache,
   GRASS_BASE_COLOR,
@@ -61,6 +63,7 @@ let viewportOverflowCache: {
 }
 
 let renderFrameToken = 0
+let displayedChromaticAberrationShake = 0
 
 const buildFogCullBounds = (cameraX: number, cameraY: number, padding = 0): FogCullBounds => {
   return buildCullBounds(cameraX, cameraY, padding)
@@ -117,6 +120,13 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderFrameToken += 1
   grassWaveTime += dt * 0.18
 
+  displayedChromaticAberrationShake = stepChromaticAberrationShake(
+    displayedChromaticAberrationShake,
+    world.cameraShake,
+    dt,
+    world.impactFeelLevel || 1,
+  )
+  const chromaticAberrationPx = screenShakeChromaticAberrationPx(displayedChromaticAberrationShake)
   context.save()
   context.imageSmoothingEnabled = false
 
@@ -211,6 +221,11 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
 
   renderAtmosphere(context)
   renderDamageVignette(context, world)
+
+  if (chromaticAberrationPx > 0.0001) {
+    renderChromaticAberrationPass({ context, shiftPx: chromaticAberrationPx })
+  }
+
   renderMinimap({
     context,
     world,

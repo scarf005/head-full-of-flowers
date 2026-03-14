@@ -3,10 +3,12 @@ import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 import { createProgram, createTexture, loadTextureFromUrl } from "./flower-instanced-gl-utils.ts"
 import {
+  CHROMATIC_ABERRATION_FRAGMENT_SHADER_SOURCE,
   EXPLOSION_FRAGMENT_SHADER_SOURCE,
   EXPLOSION_VERTEX_SHADER_SOURCE,
   FLOWER_FRAGMENT_SHADER_SOURCE,
   FLOWER_VERTEX_SHADER_SOURCE,
+  POST_PROCESS_VERTEX_SHADER_SOURCE,
   QUAD_FRAGMENT_SHADER_SOURCE,
   QUAD_VERTEX_SHADER_SOURCE,
   TRAIL_FRAGMENT_SHADER_SOURCE,
@@ -113,6 +115,15 @@ export const initFlowerGpuState = () => {
     return null
   }
 
+  const postProcessProgram = createProgram(
+    gl,
+    POST_PROCESS_VERTEX_SHADER_SOURCE,
+    CHROMATIC_ABERRATION_FRAGMENT_SHADER_SOURCE,
+  )
+  if (!postProcessProgram) {
+    return null
+  }
+
   const explosionProgram = createProgram(gl, EXPLOSION_VERTEX_SHADER_SOURCE, EXPLOSION_FRAGMENT_SHADER_SOURCE)
   if (!explosionProgram) {
     return null
@@ -127,6 +138,9 @@ export const initFlowerGpuState = () => {
   const trailVao = gl.createVertexArray()
   const trailStaticBuffer = gl.createBuffer()
   const trailInstanceBuffer = gl.createBuffer()
+  const postProcessVao = gl.createVertexArray()
+  const postProcessStaticBuffer = gl.createBuffer()
+  const postProcessTexture = createTexture(gl)
   const explosionVao = gl.createVertexArray()
   const explosionStaticBuffer = gl.createBuffer()
   const petalTexture = createTexture(gl)
@@ -141,6 +155,9 @@ export const initFlowerGpuState = () => {
     !trailVao ||
     !trailStaticBuffer ||
     !trailInstanceBuffer ||
+    !postProcessVao ||
+    !postProcessStaticBuffer ||
+    !postProcessTexture ||
     !explosionVao ||
     !explosionStaticBuffer ||
     !petalTexture ||
@@ -158,6 +175,9 @@ export const initFlowerGpuState = () => {
   const trailUniformCamera = gl.getUniformLocation(trailProgram, "uCamera")
   const trailUniformView = gl.getUniformLocation(trailProgram, "uView")
   const trailUniformScale = gl.getUniformLocation(trailProgram, "uScale")
+  const postProcessUniformResolution = gl.getUniformLocation(postProcessProgram, "uResolution")
+  const postProcessUniformShiftPx = gl.getUniformLocation(postProcessProgram, "uShiftPx")
+  const postProcessUniformIntensity = gl.getUniformLocation(postProcessProgram, "uIntensity")
   const explosionUniformCamera = gl.getUniformLocation(explosionProgram, "uCamera")
   const explosionUniformView = gl.getUniformLocation(explosionProgram, "uView")
   const explosionUniformScale = gl.getUniformLocation(explosionProgram, "uScale")
@@ -173,6 +193,9 @@ export const initFlowerGpuState = () => {
     !trailUniformCamera ||
     !trailUniformView ||
     !trailUniformScale ||
+    !postProcessUniformResolution ||
+    !postProcessUniformShiftPx ||
+    !postProcessUniformIntensity ||
     !explosionUniformCamera ||
     !explosionUniformView ||
     !explosionUniformScale ||
@@ -358,6 +381,28 @@ export const initFlowerGpuState = () => {
 
   gl.bindVertexArray(null)
 
+  gl.bindVertexArray(postProcessVao)
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, postProcessStaticBuffer)
+  gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array([
+      -1,
+      -1,
+      1,
+      -1,
+      -1,
+      1,
+      1,
+      1,
+    ]),
+    gl.STATIC_DRAW,
+  )
+  gl.enableVertexAttribArray(0)
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 2 * 4, 0)
+
+  gl.bindVertexArray(null)
+
   gl.useProgram(program)
   gl.uniform2f(uniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(uniformScale, WORLD_SCALE)
@@ -374,6 +419,9 @@ export const initFlowerGpuState = () => {
   gl.useProgram(trailProgram)
   gl.uniform2f(trailUniformView, VIEW_WIDTH, VIEW_HEIGHT)
   gl.uniform1f(trailUniformScale, WORLD_SCALE)
+
+  gl.useProgram(postProcessProgram)
+  gl.uniform1i(gl.getUniformLocation(postProcessProgram, "uScene"), 0)
 
   gl.useProgram(explosionProgram)
   gl.uniform2f(explosionUniformView, VIEW_WIDTH, VIEW_HEIGHT)
@@ -397,6 +445,12 @@ export const initFlowerGpuState = () => {
     trailVao,
     trailStaticBuffer,
     trailInstanceBuffer,
+    postProcessProgram,
+    postProcessVao,
+    postProcessStaticBuffer,
+    postProcessTexture,
+    postProcessTextureWidth: 0,
+    postProcessTextureHeight: 0,
     explosionProgram,
     explosionVao,
     explosionStaticBuffer,
@@ -418,6 +472,9 @@ export const initFlowerGpuState = () => {
     trailUniformCamera,
     trailUniformView,
     trailUniformScale,
+    postProcessUniformResolution,
+    postProcessUniformShiftPx,
+    postProcessUniformIntensity,
     explosionUniformCamera,
     explosionUniformView,
     explosionUniformScale,
