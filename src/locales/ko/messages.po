@@ -18,15 +18,15 @@ msgstr ""
 msgid "{0} flowers"
 msgstr "{0}송이"
 
-#: src/game/hud.tsx:108
+#: src/game/hud.tsx:110
 msgid "2 players per team"
 msgstr "팀당 2명"
 
-#: src/game/hud.tsx:107
+#: src/game/hud.tsx:109
 msgid "2 teams, even sides"
 msgstr "2개 팀, 균등 인원"
 
-#: src/game/hud.tsx:109
+#: src/game/hud.tsx:111
 msgid "4 players per team"
 msgstr "팀당 4명"
 
@@ -35,7 +35,7 @@ msgid "Adrenal Reload"
 msgstr "아드레날린 재장전"
 
 #. placeholder {0}: slot.ammo
-#: src/game/hud.tsx:198
+#: src/game/hud.tsx:200
 msgid "Ammo {0}"
 msgstr "탄약 {0}"
 
@@ -119,7 +119,7 @@ msgstr "가한 피해"
 msgid "Damage taken -1 (min 1)"
 msgstr "받는 피해 -1 (최소 1)"
 
-#: src/game/hud.tsx:108
+#: src/game/hud.tsx:110
 msgid "Duo"
 msgstr "듀오"
 
@@ -155,7 +155,7 @@ msgstr "영어"
 msgid "Equip all with rocket launcher"
 msgstr "모두에게 로켓 발사기 장착"
 
-#: src/game/hud.tsx:106
+#: src/game/hud.tsx:108
 msgid "Every player for themselves"
 msgstr "모두가 서로의 적"
 
@@ -176,11 +176,11 @@ msgid "Flamethrower"
 msgstr "화염방사기"
 
 #. placeholder {0}: Math.round(fpsSignal.value)
-#: src/game/hud.tsx:144
+#: src/game/hud.tsx:146
 msgid "FPS {0}"
 msgstr "FPS {0}"
 
-#: src/game/hud.tsx:106
+#: src/game/hud.tsx:108
 msgid "Free For All"
 msgstr "개인전"
 
@@ -205,7 +205,7 @@ msgstr "깃허브"
 msgid "GitHub repository"
 msgstr "깃허브 저장소"
 
-#: src/game/hud.tsx:97
+#: src/game/hud.tsx:99
 msgid "Grenade"
 msgstr "수류탄"
 
@@ -225,7 +225,7 @@ msgstr "어려움 모드"
 msgid "Head Full of Flowers"
 msgstr "머릿속이 꽃밭"
 
-#: src/game/hud.tsx:95
+#: src/game/hud.tsx:97
 msgid "Heavy"
 msgstr "강함"
 
@@ -237,11 +237,11 @@ msgstr "고중량 탄환"
 msgid "Hit Rate"
 msgstr "명중률"
 
-#: src/game/hud.tsx:216
+#: src/game/hud.tsx:218
 msgid "HP"
 msgstr "체력"
 
-#: src/game/hud.tsx:95
+#: src/game/hud.tsx:97
 msgid "Hybrid"
 msgstr "혼합"
 
@@ -285,7 +285,7 @@ msgid "Lead Margin"
 msgstr "선두 격차"
 
 #: src/game/hud-panels.tsx:442
-#: src/game/hud.tsx:278
+#: src/game/hud.tsx:280
 msgid "Main Menu"
 msgstr "메인 메뉴"
 
@@ -293,7 +293,7 @@ msgstr "메인 메뉴"
 msgid "Match is frozen. Adjust options or resume."
 msgstr "경기가 멈춰 있습니다. 옵션을 조정하거나 계속하세요."
 
-#: src/game/hud.tsx:249
+#: src/game/hud.tsx:251
 msgid "Match Results"
 msgstr "경기 결과"
 
@@ -302,11 +302,11 @@ msgstr "경기 결과"
 msgid "Max HP +{0}"
 msgstr "최대 체력 +{0}"
 
-#: src/game/hud.tsx:95
+#: src/game/hud.tsx:97
 msgid "Medium"
 msgstr "보통"
 
-#: src/game/hud.tsx:97
+#: src/game/hud.tsx:99
 msgid "Molotov"
 msgstr "화염병"
 
@@ -324,7 +324,7 @@ msgid "Music Volume {0}%"
 msgstr "음악 볼륨 {0}%"
 
 #: src/game/hud-panels.tsx:389
-#: src/game/hud.tsx:123
+#: src/game/hud.tsx:125
 msgid "Paused"
 msgstr "일시정지"
 
@@ -340,7 +340,7 @@ msgstr "{localizedPerk} 특성 획득"
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "{localizedPerk} 특성 획득 x{stacks}"
 
-#: src/game/hud.tsx:225
+#: src/game/hud.tsx:227
 msgid "Perks"
 msgstr "특성"
 
@@ -363,15 +363,15 @@ msgstr "권총"
 msgid "Player Kills"
 msgstr "처치 수"
 
-#: src/game/hud.tsx:76
+#: src/game/hud.tsx:78
 msgid "Players {players}"
 msgstr "플레이어 {players}명"
 
-#: src/game/hud.tsx:78
+#: src/game/hud.tsx:80
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "플레이어 {players}명 ({tdmTeamSize}대{tdmTeamSize})"
 
-#: src/game/hud.tsx:188
+#: src/game/hud.tsx:190
 msgid "Primary"
 msgstr "주무기"
 
@@ -418,7 +418,7 @@ msgstr "우클릭으로 투척"
 msgid "Rocket Launcher"
 msgstr "로켓 발사기"
 
-#: src/game/hud.tsx:206
+#: src/game/hud.tsx:208
 msgid "Secondary"
 msgstr "보조무기"
 
@@ -442,7 +442,7 @@ msgstr "즉시 경기 종료"
 msgid "Soft aim assist cone"
 msgstr "소프트 에임 보조"
 
-#: src/game/hud.tsx:109
+#: src/game/hud.tsx:111
 msgid "Squad"
 msgstr "스쿼드"
 
@@ -464,15 +464,15 @@ msgstr "스쿼드 1 (당신)"
 msgid "Team Contribution"
 msgstr "팀 기여도"
 
-#: src/game/hud.tsx:107
+#: src/game/hud.tsx:109
 msgid "Team Deathmatch"
 msgstr "팀 데스매치"
 
-#: src/game/hud.tsx:80
+#: src/game/hud.tsx:82
 msgid "Teams {duoTeams} ({players} total)"
 msgstr "팀 {duoTeams}개 (총 {players}명)"
 
-#: src/game/hud.tsx:81
+#: src/game/hud.tsx:83
 msgid "Teams {squadTeams} ({players} total)"
 msgstr "팀 {squadTeams}개 (총 {players}명)"
 
@@ -481,7 +481,7 @@ msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} sec
 msgstr "{MATCH_DURATION_SECONDS}초 동안 가장 넓은 꽃밭을 만든 플레이어가 승리합니다"
 
 #. placeholder {0}: formatTime(timeRemainingSignal.value)
-#: src/game/hud.tsx:122
+#: src/game/hud.tsx:124
 msgid "Time {0}"
 msgstr "시간 {0}"
 

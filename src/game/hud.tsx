@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import {
   coverageSlicesSignal,
   crosshairSignal,
@@ -59,7 +61,7 @@ export const GameHud = () => {
   const hp = hpSignal.value
   const slices: CoverageSlice[] = coverageSlicesSignal.value
   const result = matchResultSignal.value
-  const showDebugPanel = true
+  const showDebugPanel = !import.meta.env.PROD
   const selectedMode = selectedGameModeSignal.value
   const ffaPlayers = ffaPlayerCountSignal.value
   const tdmTeamSize = tdmTeamSizeSignal.value
