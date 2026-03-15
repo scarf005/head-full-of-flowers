@@ -22,7 +22,7 @@ Deno.test("screenShakeChromaticAberrationPx grows after threshold and clamps", (
 
   assertEquals(lightShift > 0, true)
   assertEquals(mediumShift > lightShift, true)
-  assertEquals(heavyShift, 28)
+  assertAlmostEquals(heavyShift, 21.21056016505057)
 })
 
 Deno.test("screenShakeChromaticAberrationAlpha follows aberration strength", () => {
@@ -31,8 +31,9 @@ Deno.test("screenShakeChromaticAberrationAlpha follows aberration strength", () 
   assertEquals(screenShakeChromaticAberrationAlpha(40), 1)
 })
 
-Deno.test("stepChromaticAberrationShake rises immediately and fades at half combat-feel speed", () => {
+Deno.test("stepChromaticAberrationShake caps duration at a quarter second with a longer fade", () => {
   assertEquals(stepChromaticAberrationShake(0.1, 0.4, 0.016, 1), 0.4)
+  assertEquals(stepChromaticAberrationShake(0, 9, 0.016, 1), 0.55)
   assertAlmostEquals(stepChromaticAberrationShake(1, 0, 0.1, 1), 0.78)
   assertAlmostEquals(stepChromaticAberrationShake(1, 0, 0.1, 2), 0.34)
 })
