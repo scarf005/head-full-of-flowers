@@ -1,7 +1,10 @@
 {
   "tasks": {
     "dev": "deno run -A --node-modules-dir npm:vite",
-    "build": "deno run -A --node-modules-dir npm:vite build",
+    "build": {
+      "command": "deno run -A --node-modules-dir npm:vite build",
+      "dependencies": ["i18n:extract"]
+    },
     "preview": "deno run -A --node-modules-dir npm:vite preview",
     "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/",
     "i18n:extract": "deno cache --node-modules-dir ./lingui.config.ts && deno run -A --node-modules-dir ./node_modules/@lingui/cli/dist/lingui-extract.js --config ./lingui.config.ts --clean --workers 1"
