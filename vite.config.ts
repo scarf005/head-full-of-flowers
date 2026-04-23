@@ -7,6 +7,9 @@ import { lingui } from "@lingui/vite-plugin"
 // https://vite.dev/config/
 export default defineConfig({
   base: "./",
+  build: {
+    sourcemap: true,
+  },
   plugins: [
     deno(),
     lingui(),

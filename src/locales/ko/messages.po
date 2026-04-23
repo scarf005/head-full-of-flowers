@@ -87,7 +87,7 @@ msgid "Burnt"
 msgstr "그을림"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game-match-lifecycle.ts:121
+#: src/game/game-match-lifecycle.ts:122
 msgid "Click once to wake audio, then begin fighting"
 msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작하세요"
 

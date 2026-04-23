@@ -2,7 +2,7 @@
 
 import { assertEquals } from "jsr:@std/assert"
 
-import { spawnFlowers } from "./flowers.ts"
+import { spawnFlowers, updateFlowers } from "./flowers.ts"
 import { createWorldState } from "../world/state.ts"
 
 Deno.test("spawnFlowers updates coverage and dirty queue for player-owned flowers", () => {
@@ -38,6 +38,7 @@ Deno.test("spawnFlowers updates coverage and dirty queue for player-owned flower
   )
 
   assertEquals(world.factionFlowerCounts[playerScoreId], beforeScore + 3)
+  assertEquals(world.flowerBloomingIndices.size, 3)
   assertEquals(world.playerFlowerTotal, 3)
   assertEquals(world.flowerDirtyIndices.size, 3)
   assertEquals(world.flowerDirtyCount, 3)
@@ -78,6 +79,40 @@ Deno.test("spawnFlowers does not increment playerFlowerTotal for non-player owne
 
   assertEquals(world.playerFlowerTotal, beforePlayerTotal)
   assertEquals(world.factionFlowerCounts[ownerScoreId], beforeScore + 2)
+})
+
+Deno.test("updateFlowers only tracks blooming flowers until they finish", () => {
+  const world = createWorldState()
+  let flowerCursor = 0
+
+  spawnFlowers(
+    world,
+    world.player.id,
+    world.player.id,
+    0,
+    0,
+    1,
+    0,
+    2,
+    1,
+    {
+      allocFlower: () => {
+        const flower = world.flowers[flowerCursor]
+        flowerCursor = (flowerCursor + 1) % world.flowers.length
+        return flower
+      },
+      playerId: world.player.id,
+      botPalette: () => ({ tone: "#7ba7ff", edge: "#3f5ca9" }),
+      factionColor: () => null,
+      onCoverageUpdated: () => {},
+    },
+  )
+
+  assertEquals(world.flowerBloomingIndices.size, 2)
+  updateFlowers(world, 1)
+  assertEquals(world.flowerBloomingIndices.size, 0)
+  assertEquals(world.flowers[0].size, world.flowers[0].targetSize)
+  assertEquals(world.flowers[1].size, world.flowers[1].targetSize)
 })
 
 Deno.test("spawnFlowers keeps source owner distinct from score owner", () => {

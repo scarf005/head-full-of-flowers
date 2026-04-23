@@ -19,6 +19,7 @@ export interface ObstacleGridState {
   highTierLoot: Uint8Array
   flash: Float32Array
   flashKind: Uint8Array
+  flashActiveIndices: Set<number>
 }
 
 const hpForMaterial = (material: number) => {
@@ -86,6 +87,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     highTierLoot: new Uint8Array(cellCount),
     flash: new Float32Array(cellCount),
     flashKind: new Uint8Array(cellCount),
+    flashActiveIndices: new Set<number>(),
   }
 }
 
@@ -189,6 +191,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
   }
   grid.flash[index] = 1
   grid.flashKind[index] = damageDealt > 0 ? OBSTACLE_FLASH_DAMAGED : OBSTACLE_FLASH_BLOCKED
+  grid.flashActiveIndices.add(index)
   const destroyed = hpBefore > 0 && grid.hp[index] <= 0
   if (destroyed) {
     grid.hp[index] = 0
@@ -209,11 +212,21 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
 
 export const decayObstacleFlash = (grid: ObstacleGridState, dt: number) => {
   const decay = dt * 12
-  for (let index = 0; index < grid.flash.length; index += 1) {
-    const next = grid.flash[index] - decay
-    grid.flash[index] = next > 0 ? next : 0
-    if (grid.flash[index] <= 0) {
-      grid.flashKind[index] = OBSTACLE_FLASH_NONE
+  for (const index of grid.flashActiveIndices) {
+    if (grid.flashKind[index] === OBSTACLE_FLASH_NONE) {
+      grid.flash[index] = 0
+      grid.flashActiveIndices.delete(index)
+      continue
     }
+
+    const next = grid.flash[index] - decay
+    if (next <= 0) {
+      grid.flash[index] = 0
+      grid.flashKind[index] = OBSTACLE_FLASH_NONE
+      grid.flashActiveIndices.delete(index)
+      continue
+    }
+
+    grid.flash[index] = next
   }
 }

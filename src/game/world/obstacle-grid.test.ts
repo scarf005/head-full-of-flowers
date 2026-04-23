@@ -4,6 +4,7 @@ import { assertEquals } from "jsr:@std/assert"
 
 import {
   buildObstacleGridFromMap,
+  decayObstacleFlash,
   damageObstacleCell,
   OBSTACLE_FLASH_BLOCKED,
   OBSTACLE_FLASH_DAMAGED,
@@ -82,6 +83,20 @@ Deno.test("damageObstacleCell makes warehouse walls shotgun-proof", () => {
   damageObstacleCell(grid, cell.x, cell.y, 3)
   assertEquals(grid.hp[index], 3)
   assertEquals(grid.flashKind[index], OBSTACLE_FLASH_DAMAGED)
+})
+
+Deno.test("decayObstacleFlash only tracks active flash cells", () => {
+  const map = createWallMap()
+  const grid = buildObstacleGridFromMap(map)
+  const cell = worldToObstacleGrid(map.size, 0.5, 0.5)
+  const index = obstacleGridIndex(map.size, cell.x, cell.y)
+
+  damageObstacleCell(grid, cell.x, cell.y, 2)
+  assertEquals(grid.flashActiveIndices.has(index), true)
+
+  decayObstacleFlash(grid, 1)
+  assertEquals(grid.flash[index], 0)
+  assertEquals(grid.flashActiveIndices.has(index), false)
 })
 
 Deno.test("buildObstacleGridFromMap sets hedge hp to 2", () => {

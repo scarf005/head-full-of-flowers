@@ -118,6 +118,7 @@ export interface WorldState {
   playerDamageDealt: number
   flowerDensityGrid: Uint16Array
   flowerCellHead: Int32Array
+  flowerBloomingIndices: Set<number>
   flowerDirtyIndices: Set<number>
   flowerDirtyCount: number
   playerFlowerTotal: number
@@ -215,6 +216,7 @@ export const createWorldState = (): WorldState => {
     playerDamageDealt: 0,
     flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
     flowerCellHead,
+    flowerBloomingIndices: new Set<number>(),
     flowerDirtyIndices: new Set<number>(),
     flowerDirtyCount: 0,
     playerFlowerTotal: 0,

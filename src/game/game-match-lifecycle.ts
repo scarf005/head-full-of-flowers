@@ -62,6 +62,7 @@ export async function beginMatchForGame(game: FlowerArenaGame, difficulty: Match
   game.world.flowerDensityGrid = new Uint16Array(game.world.terrainMap.size * game.world.terrainMap.size)
   game.world.flowerCellHead = new Int32Array(game.world.terrainMap.size * game.world.terrainMap.size)
   game.world.flowerCellHead.fill(-1)
+  game.world.flowerBloomingIndices.clear()
   game.world.flowerDirtyIndices.clear()
   game.world.flowerDirtyCount = 0
 

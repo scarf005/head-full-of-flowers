@@ -87,7 +87,7 @@ msgid "Burnt"
 msgstr "Burnt"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game-match-lifecycle.ts:121
+#: src/game/game-match-lifecycle.ts:122
 msgid "Click once to wake audio, then begin fighting"
 msgstr "Click once to wake audio, then begin fighting"
 

@@ -348,6 +348,7 @@ export const spawnFlowers = (
       if (previousBucket in world.factionFlowerCounts) {
         world.factionFlowerCounts[previousBucket] = Math.max(0, world.factionFlowerCounts[previousBucket] - 1)
       }
+      world.flowerBloomingIndices.delete(flower.slotIndex)
       removeFlowerFromDensity(world, flower)
     }
 
@@ -357,6 +358,7 @@ export const spawnFlowers = (
       world.flowerDirtyIndices.add(flower.slotIndex)
       world.flowerDirtyCount = world.flowerDirtyIndices.size
     }
+    world.flowerBloomingIndices.add(flower.slotIndex)
     flower.team = palette.team
     flower.ownerId = scoreOwnerId
     flower.sourceOwnerId = ownerId
@@ -399,9 +401,15 @@ export const spawnFlowers = (
 }
 
 export const updateFlowers = (world: WorldState, dt: number) => {
+  if (world.flowerBloomingIndices.size <= 0) {
+    return
+  }
+
   const bloomStep = dt / FLOWER_BLOOM_DURATION_SECONDS
-  for (const flower of world.flowers) {
-    if (!flower.active) {
+  for (const flowerIndex of world.flowerBloomingIndices) {
+    const flower = world.flowers[flowerIndex]
+    if (!flower || !flower.active) {
+      world.flowerBloomingIndices.delete(flowerIndex)
       continue
     }
 
@@ -415,12 +423,17 @@ export const updateFlowers = (world: WorldState, dt: number) => {
 
     if (flower.pop >= 1) {
       flower.size = flower.targetSize
+      world.flowerBloomingIndices.delete(flowerIndex)
       continue
     }
 
     flower.pop = clamp(flower.pop + bloomStep, 0, 1)
     const easedBloom = Math.pow(flower.pop, 0.16)
     flower.size = flower.targetSize * easedBloom
+    if (flower.pop >= 1) {
+      flower.size = flower.targetSize
+      world.flowerBloomingIndices.delete(flowerIndex)
+    }
   }
 }
 
