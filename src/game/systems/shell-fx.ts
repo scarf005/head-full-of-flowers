@@ -68,7 +68,7 @@ const allocMuzzleFlash = (
 }
 
 export const spawnShellCasingFx = (
-  world: Pick<WorldState, "shellCasings">,
+  world: Pick<WorldState, "shellCasings" | "activeShellCasingIndices">,
   cursor: number,
   unit: Unit,
 ): number => {
@@ -86,6 +86,7 @@ export const spawnShellCasingFx = (
   const angle = aimAngle + side * Math.PI * 0.5 + randomRange(-0.4, 0.4)
   const baseSpeed = unit.primaryWeapon === "shotgun" ? 7.6 : unit.primaryWeapon === "assault" ? 6.4 : 5.2
   slot.active = true
+  world.activeShellCasingIndices.add(slot.slotIndex)
   slot.position.set(
     unit.position.x - unit.aim.x * 0.12 + randomRange(-0.07, 0.07),
     unit.position.y - unit.aim.y * 0.12 + randomRange(-0.07, 0.07),
@@ -104,7 +105,7 @@ export const spawnShellCasingFx = (
 }
 
 export const spawnDroppedMagazineFx = (
-  world: Pick<WorldState, "shellCasings">,
+  world: Pick<WorldState, "shellCasings" | "activeShellCasingIndices">,
   cursor: number,
   unit: Unit,
   weaponId: PrimaryWeaponId = unit.primaryWeapon,
@@ -125,6 +126,7 @@ export const spawnDroppedMagazineFx = (
   const side = Math.random() > 0.5 ? 1 : -1
   const angle = aimAngle + Math.PI + side * randomRange(0.16, 0.34) + randomRange(-0.14, 0.14)
   slot.active = true
+  world.activeShellCasingIndices.add(slot.slotIndex)
   slot.position.set(
     unit.position.x - unit.aim.x * 0.14 + randomRange(-0.08, 0.08),
     unit.position.y - unit.aim.y * 0.14 + randomRange(-0.08, 0.08),
@@ -178,13 +180,15 @@ export const spawnMuzzleFlashFx = (
 }
 
 export const updateShellCasingsFx = (
-  world: Pick<WorldState, "shellCasings" | "arenaRadius">,
+  world: Pick<WorldState, "shellCasings" | "activeShellCasingIndices" | "arenaRadius">,
   dt: number,
   fogCullBounds?: CullBounds,
 ) => {
   const drag = clamp(1 - dt * 4.8, 0, 1)
-  for (const casing of world.shellCasings) {
-    if (!casing.active) {
+  for (const casingIndex of world.activeShellCasingIndices) {
+    const casing = world.shellCasings[casingIndex]
+    if (!casing || !casing.active) {
+      world.activeShellCasingIndices.delete(casingIndex)
       continue
     }
 
@@ -193,12 +197,14 @@ export const updateShellCasingsFx = (
       !isInsideCullBounds(casing.position.x, casing.position.y, fogCullBounds, casing.size + 0.3)
     ) {
       casing.active = false
+      world.activeShellCasingIndices.delete(casingIndex)
       continue
     }
 
     casing.life -= dt
     if (casing.life <= 0) {
       casing.active = false
+      world.activeShellCasingIndices.delete(casingIndex)
       continue
     }
 

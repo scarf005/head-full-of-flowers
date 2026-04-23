@@ -31,8 +31,9 @@ export const renderObstacleFxInstances = (
   const cullBounds = buildCullBounds(cameraX, cameraY, 2)
 
   let instanceCount = 0
-  for (const debris of world.obstacleDebris) {
-    if (!debris.active || debris.maxLife <= 0) {
+  for (const debrisIndex of world.activeObstacleDebrisIndices) {
+    const debris = world.obstacleDebris[debrisIndex]
+    if (!debris || !debris.active || debris.maxLife <= 0) {
       continue
     }
     if (
@@ -63,8 +64,9 @@ export const renderObstacleFxInstances = (
     instanceCount += 1
   }
 
-  for (const casing of world.shellCasings) {
-    if (!casing.active || casing.maxLife <= 0) {
+  for (const casingIndex of world.activeShellCasingIndices) {
+    const casing = world.shellCasings[casingIndex]
+    if (!casing || !casing.active || casing.maxLife <= 0) {
       continue
     }
     if (casing.spriteId) {
@@ -97,8 +99,9 @@ export const renderObstacleFxInstances = (
     instanceCount += 1
   }
 
-  for (const petal of world.killPetals) {
-    if (!petal.active || petal.maxLife <= 0) {
+  for (const petalIndex of world.activeKillPetalIndices) {
+    const petal = world.killPetals[petalIndex]
+    if (!petal || !petal.active || petal.maxLife <= 0) {
       continue
     }
     if (

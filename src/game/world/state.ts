@@ -89,6 +89,9 @@ export interface WorldState {
   ragdolls: UnitRagdoll[]
   killPetals: KillPetal[]
   shellCasings: ShellCasing[]
+  activeObstacleDebrisIndices: Set<number>
+  activeKillPetalIndices: Set<number>
+  activeShellCasingIndices: Set<number>
   flightTrails: FlightTrailSegment[]
   activeFlightTrailIndices: Set<number>
   explosions: ExplosionFx[]
@@ -175,10 +178,25 @@ export const createWorldState = (): WorldState => {
       obstacle.id = `obstacle-${index + 1}`
       return obstacle
     }),
-    obstacleDebris: Array.from({ length: 320 }, () => new ObstacleDebris()),
+    obstacleDebris: Array.from({ length: 320 }, (_, index) => {
+      const debris = new ObstacleDebris()
+      debris.slotIndex = index
+      return debris
+    }),
     ragdolls: Array.from({ length: RAGDOLL_POOL_SIZE }, () => new UnitRagdoll()),
-    killPetals: Array.from({ length: 240 }, () => new KillPetal()),
-    shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
+    killPetals: Array.from({ length: 240 }, (_, index) => {
+      const petal = new KillPetal()
+      petal.slotIndex = index
+      return petal
+    }),
+    shellCasings: Array.from({ length: 220 }, (_, index) => {
+      const casing = new ShellCasing()
+      casing.slotIndex = index
+      return casing
+    }),
+    activeObstacleDebrisIndices: new Set<number>(),
+    activeKillPetalIndices: new Set<number>(),
+    activeShellCasingIndices: new Set<number>(),
     flightTrails: Array.from({ length: 2400 }, (_, index) => {
       const trail = new FlightTrailSegment()
       trail.slotIndex = index

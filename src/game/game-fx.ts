@@ -90,6 +90,7 @@ export function spawnObstacleDebris(
     const angle = Math.random() * Math.PI * 2
     const speed = randomRange(2.5, 7.8)
     slot.active = true
+    world.activeObstacleDebrisIndices.add(slot.slotIndex)
     slot.position.set(x + randomRange(-0.22, 0.22), y + randomRange(-0.22, 0.22))
     slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.2, 1.4))
     slot.rotation = Math.random() * Math.PI * 2
@@ -123,6 +124,7 @@ export function spawnObstacleChipFx(
     const angle = Math.random() * Math.PI * 2
     const speed = randomRange(1.8, 5.4)
     slot.active = true
+    world.activeObstacleDebrisIndices.add(slot.slotIndex)
     slot.position.set(x + randomRange(-0.16, 0.16), y + randomRange(-0.16, 0.16))
     slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.1, 1.1))
     slot.rotation = Math.random() * Math.PI * 2
@@ -143,8 +145,10 @@ export function updateObstacleDebris(
   padding = 0,
 ) {
   const drag = clamp(1 - dt * 5.6, 0, 1)
-  for (const debris of world.obstacleDebris) {
-    if (!debris.active) {
+  for (const debrisIndex of world.activeObstacleDebrisIndices) {
+    const debris = world.obstacleDebris[debrisIndex]
+    if (!debris || !debris.active) {
+      world.activeObstacleDebrisIndices.delete(debrisIndex)
       continue
     }
 
@@ -153,12 +157,14 @@ export function updateObstacleDebris(
       !isInsideCullBounds(debris.position.x, debris.position.y, fogCullBounds, debris.size + 0.35 + padding)
     ) {
       debris.active = false
+      world.activeObstacleDebrisIndices.delete(debrisIndex)
       continue
     }
 
     debris.life -= dt
     if (debris.life <= 0) {
       debris.active = false
+      world.activeObstacleDebrisIndices.delete(debrisIndex)
       continue
     }
 
@@ -195,6 +201,7 @@ export function spawnKillPetalBurst(world: WorldState, killPetalCursor: number, 
     const angle = Math.random() * Math.PI * 2
     const speed = randomRange(6.4, 21.6)
     petal.active = true
+    world.activeKillPetalIndices.add(petal.slotIndex)
     petal.position.set(
       x + randomRange(-0.18, 0.18),
       y + randomRange(-0.18, 0.18),
@@ -394,8 +401,10 @@ export function updateRagdolls(world: WorldState, dt: number) {
 
 export function updateKillPetals(world: WorldState, dt: number, fogCullBounds?: FogCullBounds, padding = 0) {
   const drag = clamp(1 - dt * 2.8, 0, 1)
-  for (const petal of world.killPetals) {
-    if (!petal.active) {
+  for (const petalIndex of world.activeKillPetalIndices) {
+    const petal = world.killPetals[petalIndex]
+    if (!petal || !petal.active) {
+      world.activeKillPetalIndices.delete(petalIndex)
       continue
     }
 
@@ -404,12 +413,14 @@ export function updateKillPetals(world: WorldState, dt: number, fogCullBounds?: 
       !isInsideCullBounds(petal.position.x, petal.position.y, fogCullBounds, petal.size + 0.65 + padding)
     ) {
       petal.active = false
+      world.activeKillPetalIndices.delete(petalIndex)
       continue
     }
 
     petal.life -= dt
     if (petal.life <= 0) {
       petal.active = false
+      world.activeKillPetalIndices.delete(petalIndex)
       continue
     }
 

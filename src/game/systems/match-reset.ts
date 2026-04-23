@@ -110,9 +110,12 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
   }
 
   for (const debris of world.obstacleDebris) debris.active = false
+  world.activeObstacleDebrisIndices.clear()
   for (const ragdoll of world.ragdolls) ragdoll.active = false
   for (const petal of world.killPetals) petal.active = false
+  world.activeKillPetalIndices.clear()
   for (const casing of world.shellCasings) casing.active = false
+  world.activeShellCasingIndices.clear()
   for (const trail of world.flightTrails) trail.active = false
   world.activeFlightTrailIndices.clear()
   for (const explosion of world.explosions) explosion.active = false

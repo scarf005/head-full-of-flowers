@@ -101,9 +101,12 @@ Deno.test("resetTransientEntitiesForMatch and resetCameraForMatchStart clear tra
   world.obstacles[0].active = true
   world.obstacles[0].lootDropped = true
   world.obstacleDebris[0].active = true
+  world.activeObstacleDebrisIndices.add(0)
   world.ragdolls[0].active = true
   world.killPetals[0].active = true
+  world.activeKillPetalIndices.add(0)
   world.shellCasings[0].active = true
+  world.activeShellCasingIndices.add(0)
   world.flightTrails[0].active = true
   world.activeFlightTrailIndices.add(0)
   world.explosions[0].active = true
@@ -156,9 +159,12 @@ Deno.test("resetTransientEntitiesForMatch and resetCameraForMatchStart clear tra
   assertEquals(world.obstacles[0].active, false)
   assertEquals(world.obstacles[0].lootDropped, false)
   assertEquals(world.obstacleDebris[0].active, false)
+  assertEquals(world.activeObstacleDebrisIndices.size, 0)
   assertEquals(world.ragdolls[0].active, false)
   assertEquals(world.killPetals[0].active, false)
+  assertEquals(world.activeKillPetalIndices.size, 0)
   assertEquals(world.shellCasings[0].active, false)
+  assertEquals(world.activeShellCasingIndices.size, 0)
   assertEquals(world.flightTrails[0].active, false)
   assertEquals(world.activeFlightTrailIndices.size, 0)
   assertEquals(world.explosions[0].active, false)

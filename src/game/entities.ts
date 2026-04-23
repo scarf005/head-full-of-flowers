@@ -243,6 +243,7 @@ export class Flower {
 
 export class KillPetal {
   active = false
+  slotIndex = -1
   position = new Vec2()
   velocity = new Vec2()
   rotation = 0
@@ -320,6 +321,7 @@ export class Obstacle {
 
 export class ObstacleDebris {
   active = false
+  slotIndex = -1
   position = new Vec2()
   velocity = new Vec2()
   rotation = 0
@@ -332,6 +334,7 @@ export class ObstacleDebris {
 
 export class ShellCasing {
   active = false
+  slotIndex = -1
   position = new Vec2()
   velocity = new Vec2()
   rotation = 0

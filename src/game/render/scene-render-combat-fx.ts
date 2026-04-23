@@ -16,8 +16,9 @@ export const renderObstacleDebris = (
   world: WorldState,
   fogCullBounds: FogCullBounds,
 ) => {
-  for (const debris of world.obstacleDebris) {
-    if (!debris.active || debris.maxLife <= 0) {
+  for (const debrisIndex of world.activeObstacleDebrisIndices) {
+    const debris = world.obstacleDebris[debrisIndex]
+    if (!debris || !debris.active || debris.maxLife <= 0) {
       continue
     }
 
@@ -47,8 +48,9 @@ export const renderShellCasings = (
   fogCullBounds: FogCullBounds,
   spriteMode: "all" | "only-sprite" | "only-plain" = "all",
 ) => {
-  for (const casing of world.shellCasings) {
-    if (!casing.active || casing.maxLife <= 0) {
+  for (const casingIndex of world.activeShellCasingIndices) {
+    const casing = world.shellCasings[casingIndex]
+    if (!casing || !casing.active || casing.maxLife <= 0) {
       continue
     }
     if (spriteMode === "only-sprite" && !casing.spriteId) {
