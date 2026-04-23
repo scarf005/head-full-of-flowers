@@ -137,8 +137,7 @@ export const renderOffscreenEnemyIndicators = ({
   }
 
   const now = typeof performance !== "undefined" ? performance.now() : 0
-  const shouldRefreshLayer =
-    now >= offscreenIndicatorLayerCache.nextRefreshAt ||
+  const shouldRefreshLayer = now >= offscreenIndicatorLayerCache.nextRefreshAt ||
     Math.abs(offscreenIndicatorLayerCache.viewportLeft - viewportOverflow.left) >= 0.5 ||
     Math.abs(offscreenIndicatorLayerCache.viewportTop - viewportOverflow.top) >= 0.5 ||
     Math.abs(offscreenIndicatorLayerCache.viewportRight - viewportOverflow.right) >= 0.5 ||
