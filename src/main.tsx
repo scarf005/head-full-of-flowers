@@ -1,4 +1,5 @@
 import "./index.css"
+import "./preact-signals-devtools.ts"
 import { render } from "preact"
 import { I18nProvider } from "@lingui/react"
 import { App } from "./app.tsx"

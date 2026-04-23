@@ -32,45 +32,63 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   const minGridY = Math.max(0, Math.floor(cullBounds.minY) + halfGrid - 1)
   const maxGridY = Math.min(gridSize - 1, Math.floor(cullBounds.maxY) + halfGrid + 1)
 
-  let instanceCount = 0
-  for (let gridY = minGridY; gridY <= maxGridY; gridY += 1) {
-    for (let gridX = minGridX; gridX <= maxGridX; gridX += 1) {
-      let flowerIndex = world.flowerCellHead[gridY * gridSize + gridX]
-      while (flowerIndex >= 0 && flowerIndex < world.flowers.length) {
-        const flower = world.flowers[flowerIndex]
-        const nextInCell = flower.nextInCell
-        if (
-          flower.active &&
-          flower.position.x >= cullBounds.minX &&
-          flower.position.x <= cullBounds.maxX &&
-          flower.position.y >= cullBounds.minY &&
-          flower.position.y <= cullBounds.maxY
-        ) {
-          const size = flower.size * 0.9
-          if (size > 0.001) {
-            const writeIndex = instanceCount * FLOWER_INSTANCE_STRIDE
-            ensureCapacity(state, instanceCount + 1)
+  const needsBufferUpload = state.flowerBufferDirty ||
+    state.flowerCacheMinGridX !== minGridX ||
+    state.flowerCacheMaxGridX !== maxGridX ||
+    state.flowerCacheMinGridY !== minGridY ||
+    state.flowerCacheMaxGridY !== maxGridY ||
+    world.flowerBloomingIndices.size > 0 ||
+    world.flowerDirtyIndices.size > 0
 
-            const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
-            const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
-            const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
+  let instanceCount = state.flowerInstanceCount
+  if (needsBufferUpload) {
+    instanceCount = 0
+    for (let gridY = minGridY; gridY <= maxGridY; gridY += 1) {
+      for (let gridX = minGridX; gridX <= maxGridX; gridX += 1) {
+        let flowerIndex = world.flowerCellHead[gridY * gridSize + gridX]
+        while (flowerIndex >= 0 && flowerIndex < world.flowers.length) {
+          const flower = world.flowers[flowerIndex]
+          const nextInCell = flower.nextInCell
+          if (
+            flower.active &&
+            flower.position.x >= cullBounds.minX &&
+            flower.position.x <= cullBounds.maxX &&
+            flower.position.y >= cullBounds.minY &&
+            flower.position.y <= cullBounds.maxY
+          ) {
+            const size = flower.size * 0.9
+            if (size > 0.001) {
+              const writeIndex = instanceCount * FLOWER_INSTANCE_STRIDE
+              ensureCapacity(state, instanceCount + 1)
 
-            state.instanceData[writeIndex] = flower.position.x
-            state.instanceData[writeIndex + 1] = flower.position.y
-            state.instanceData[writeIndex + 2] = size
-            state.instanceData[writeIndex + 3] = petalRed
-            state.instanceData[writeIndex + 4] = petalGreen
-            state.instanceData[writeIndex + 5] = petalBlue
-            state.instanceData[writeIndex + 6] = centerRed
-            state.instanceData[writeIndex + 7] = centerGreen
-            state.instanceData[writeIndex + 8] = centerBlue
+              const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
+              const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
+              const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
 
-            instanceCount += 1
+              state.instanceData[writeIndex] = flower.position.x
+              state.instanceData[writeIndex + 1] = flower.position.y
+              state.instanceData[writeIndex + 2] = size
+              state.instanceData[writeIndex + 3] = petalRed
+              state.instanceData[writeIndex + 4] = petalGreen
+              state.instanceData[writeIndex + 5] = petalBlue
+              state.instanceData[writeIndex + 6] = centerRed
+              state.instanceData[writeIndex + 7] = centerGreen
+              state.instanceData[writeIndex + 8] = centerBlue
+
+              instanceCount += 1
+            }
           }
+          flowerIndex = nextInCell
         }
-        flowerIndex = nextInCell
       }
     }
+
+    state.flowerInstanceCount = instanceCount
+    state.flowerCacheMinGridX = minGridX
+    state.flowerCacheMaxGridX = maxGridX
+    state.flowerCacheMinGridY = minGridY
+    state.flowerCacheMaxGridY = maxGridY
+    state.flowerBufferDirty = false
   }
 
   gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
@@ -91,8 +109,10 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   gl.bindTexture(gl.TEXTURE_2D, state.centerTexture)
 
   gl.bindVertexArray(state.vao)
-  gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)
-  gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.instanceData, 0, instanceCount * FLOWER_INSTANCE_STRIDE)
+  if (needsBufferUpload) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, state.instanceData, 0, instanceCount * FLOWER_INSTANCE_STRIDE)
+  }
   gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, instanceCount)
   gl.bindVertexArray(null)
 

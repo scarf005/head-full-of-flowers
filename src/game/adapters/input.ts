@@ -149,14 +149,6 @@ export const setupInputAdapter = (
     desktopPointerRaf = requestAnimationFrame(flushDesktopPointerMove)
   }
 
-  const getFrameOffset = () => {
-    const bounds = samplePointerBounds()
-    return {
-      left: bounds.frameLeft,
-      top: bounds.frameTop,
-    }
-  }
-
   const getThumb = (selector: string) => document.querySelector<HTMLElement>(selector)
 
   const moveThumbTo = (x: number, y: number) => {

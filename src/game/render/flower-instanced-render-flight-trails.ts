@@ -41,8 +41,9 @@ export const renderFlightTrailInstances = (
 
   let instanceCount = 0
 
-  for (const trail of world.flightTrails) {
-    if (!trail.active || trail.maxLife <= 0) {
+  for (const trailIndex of world.activeFlightTrailIndices) {
+    const trail = world.flightTrails[trailIndex]
+    if (!trail || !trail.active || trail.maxLife <= 0) {
       continue
     }
     if (

@@ -204,6 +204,7 @@ export class Throwable {
 
 export class FlightTrailSegment {
   active = false
+  slotIndex = -1
   position = new Vec2()
   direction = new Vec2(1, 0)
   length = 1

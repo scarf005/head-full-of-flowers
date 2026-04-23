@@ -90,6 +90,7 @@ export interface WorldState {
   killPetals: KillPetal[]
   shellCasings: ShellCasing[]
   flightTrails: FlightTrailSegment[]
+  activeFlightTrailIndices: Set<number>
   explosions: ExplosionFx[]
   muzzleFlashes: MuzzleFlashFx[]
   projectileCursor: number
@@ -178,7 +179,12 @@ export const createWorldState = (): WorldState => {
     ragdolls: Array.from({ length: RAGDOLL_POOL_SIZE }, () => new UnitRagdoll()),
     killPetals: Array.from({ length: 240 }, () => new KillPetal()),
     shellCasings: Array.from({ length: 220 }, () => new ShellCasing()),
-    flightTrails: Array.from({ length: 2400 }, () => new FlightTrailSegment()),
+    flightTrails: Array.from({ length: 2400 }, (_, index) => {
+      const trail = new FlightTrailSegment()
+      trail.slotIndex = index
+      return trail
+    }),
+    activeFlightTrailIndices: new Set<number>(),
     explosions: Array.from({ length: 24 }, () => ({
       active: false,
       position: new Vec2(),

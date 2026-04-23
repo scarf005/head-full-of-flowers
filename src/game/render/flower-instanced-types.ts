@@ -38,6 +38,12 @@ export interface FlowerGpuState {
   capacity: number
   quadCapacity: number
   trailCapacity: number
+  flowerInstanceCount: number
+  flowerCacheMinGridX: number
+  flowerCacheMaxGridX: number
+  flowerCacheMinGridY: number
+  flowerCacheMaxGridY: number
+  flowerBufferDirty: boolean
   uniformCamera: WebGLUniformLocation
   uniformView: WebGLUniformLocation
   uniformScale: WebGLUniformLocation

@@ -105,6 +105,7 @@ Deno.test("resetTransientEntitiesForMatch and resetCameraForMatchStart clear tra
   world.killPetals[0].active = true
   world.shellCasings[0].active = true
   world.flightTrails[0].active = true
+  world.activeFlightTrailIndices.add(0)
   world.explosions[0].active = true
   world.flightTrailCursor = 18
 
@@ -159,6 +160,7 @@ Deno.test("resetTransientEntitiesForMatch and resetCameraForMatchStart clear tra
   assertEquals(world.killPetals[0].active, false)
   assertEquals(world.shellCasings[0].active, false)
   assertEquals(world.flightTrails[0].active, false)
+  assertEquals(world.activeFlightTrailIndices.size, 0)
   assertEquals(world.explosions[0].active, false)
   assertEquals(world.flightTrailCursor, 0)
 

@@ -10,7 +10,7 @@ import {
 } from "./signals.ts"
 import { randomLootablePrimary } from "./systems/combat.ts"
 import { spawnPerkPickupAt, spawnPickupAt } from "./systems/pickups.ts"
-import type { GameModeId, PrimaryWeaponId } from "./types.ts"
+import type { PrimaryWeaponId } from "./types.ts"
 import { clamp, distSquared, lerp, randomPointInArena } from "./utils.ts"
 import { MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { arenaRadiiForPlayerCount } from "./utils.ts"

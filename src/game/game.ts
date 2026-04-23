@@ -1,98 +1,15 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
-import { buildCullBounds, type CullBounds, isInsideCullBounds } from "./cull.ts"
-import {
-  clearMatchResultSignal,
-  resetHudSignals,
-  setFpsSignal,
-  syncHudSignals,
-  updateCoverageSignals,
-  updatePlayerHpSignal,
-  updatePlayerWeaponSignals,
-} from "./adapters/hud-sync.ts"
-import {
-  crosshairSignal,
-  debugEquipAllRocketLauncherSignal,
-  debugGameSpeedSignal,
-  debugImpactFeelLevelSignal,
-  debugInfiniteHpSignal,
-  debugInfiniteReloadSignal,
-  debugSkipToMatchEndSignal,
-  duoTeamCountSignal,
-  effectsVolumeSignal,
-  ffaPlayerCountSignal,
-  languageSignal,
-  menuStartDifficultySignal,
-  menuVisibleSignal,
-  musicVolumeSignal,
-  pausedSignal,
-  secondaryModeSignal,
-  selectedGameModeSignal,
-  squadTeamCountSignal,
-  statusMessageSignal,
-  tdmTeamSizeSignal,
-} from "./signals.ts"
-import { type InputAdapter, setupInputAdapter } from "./adapters/input.ts"
+import type { CullBounds } from "./cull.ts"
+import { resetHudSignals, syncHudSignals } from "./adapters/hud-sync.ts"
+import { languageSignal } from "./signals.ts"
+import type { InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
-import {
-  ARENA_END_RADIUS,
-  ARENA_START_RADIUS,
-  arenaRadiiForPlayerCount,
-  clamp,
-  distSquared,
-  lerp,
-  randomPointInArena,
-  randomRange,
-} from "./utils.ts"
-import {
-  EFFECT_SPEED,
-  LOOT_PICKUP_INTERVAL_SECONDS,
-  MATCH_DURATION_SECONDS,
-  VIEW_HEIGHT,
-  VIEW_WIDTH,
-  WORLD_SCALE,
-} from "./world/constants.ts"
-import { createWorldState, rebuildUnitLookup, resetRenderPathProfile, type WorldState } from "./world/state.ts"
-import { createBarrenGardenMap } from "./world/terrain-map.ts"
-import { localizeFactionLabel } from "./i18n/faction-label.ts"
-import { localizePerk, localizePrimaryWeapon } from "./i18n/localize.ts"
-import {
-  applyDamage,
-  continueBurstFire,
-  cyclePrimaryWeapon,
-  equipPrimary,
-  finishReload,
-  firePrimary,
-  type FirePrimaryDeps,
-  randomLootablePrimary,
-  startReload,
-} from "./systems/combat.ts"
+import { ARENA_END_RADIUS, ARENA_START_RADIUS } from "./utils.ts"
+import { VIEW_HEIGHT, VIEW_WIDTH } from "./world/constants.ts"
+import { createWorldState, rebuildUnitLookup, type WorldState } from "./world/state.ts"
+import type { FirePrimaryDeps } from "./systems/combat.ts"
 import { type DamageSource } from "./systems/combat-damage.ts"
-import {
-  constrainUnitsToArena,
-  damageObstaclesByExplosion,
-  hitObstacle,
-  resolveUnitCollisions,
-  updateObstacleFlash,
-} from "./systems/collisions.ts"
-import {
-  isObstacleCellSolid,
-  OBSTACLE_MATERIAL_BOX,
-  OBSTACLE_MATERIAL_HEDGE,
-  OBSTACLE_MATERIAL_ROCK,
-  OBSTACLE_MATERIAL_WALL,
-  OBSTACLE_MATERIAL_WAREHOUSE,
-  obstacleGridIndex,
-  obstacleGridToWorldCenter,
-  worldToObstacleGrid,
-} from "./world/obstacle-grid.ts"
-import { spawnFlowers, updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
-import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
-import { collectNearbyPickup, spawnPerkPickupAt, spawnPickupAt, updatePickups } from "./systems/pickups.ts"
-import { updateCombatFeel, updateCrosshairWorld, updatePlayer } from "./systems/player.ts"
-import { updateProjectiles } from "./systems/projectiles.ts"
-import { respawnUnit, setupWorldUnits, spawnAllUnits, spawnMapLoot, spawnObstacles } from "./systems/respawn.ts"
-import { explodeGrenade, throwSecondary, updateThrowables } from "./systems/throwables.ts"
 import {
   spawnExplosion as spawnExplosionFx,
   spawnKillPetalBurst as spawnKillPetalBurstFx,
@@ -104,32 +21,8 @@ import {
   updateObstacleDebris as updateObstacleDebrisFx,
   updateRagdolls as updateRagdollsFx,
 } from "./game-fx.ts"
-import { updateAI } from "./systems/ai.ts"
-import { applyExplosionImpulse, explodeProjectilePayload } from "./systems/explosion-effects.ts"
-import {
-  cullHiddenDamagePopups,
-  emitProjectileTrailEnd,
-  emitThrowableTrailEnd,
-  updateFlightTrailEmitters,
-  updateFlightTrails,
-} from "./systems/flight-trails.ts"
-import {
-  spawnDroppedMagazineFx,
-  spawnMuzzleFlashFx,
-  spawnShellCasingFx,
-  updateShellCasingsFx,
-} from "./systems/shell-fx.ts"
-import {
-  randomBotSecondaryMode,
-  resetBotForMatch,
-  resetCameraForMatchStart,
-  resetPlayerForMatch,
-  resetTransientEntitiesForMatch,
-} from "./systems/match-reset.ts"
-import { Flower, type Unit } from "./entities.ts"
-import { HIGH_TIER_PRIMARY_IDS, pickupAmmoForWeapon, PRIMARY_WEAPONS } from "./weapons.ts"
-import { applyPerkToUnit, perkStacks, randomPerkId } from "./perks.ts"
-import { botPalette, BURNED_FACTION_ID, createFactionFlowerCounts, type FactionDescriptor } from "./factions.ts"
+import type { Unit } from "./entities.ts"
+import { HIGH_TIER_PRIMARY_IDS } from "./weapons.ts"
 import { finishMatchResult } from "./game-match-results.ts"
 import { updateGame } from "./game-update.ts"
 import {
@@ -178,7 +71,6 @@ import {
   setupWorldForGame,
 } from "./game-accessors.ts"
 import type { GameModeId, MatchDifficulty, PrimaryWeaponId, Team } from "./types.ts"
-import { t } from "@lingui/core/macro"
 
 import menuTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 02 linear & gestalt.ogg"
 import gameplayTrackUrl from "../assets/music/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt/hellstar.plus - MY DIVINE PERVERSIONS - linear & gestalt - 01 MY DIVINE PERVERSIONS.ogg"

@@ -3,7 +3,6 @@ import { clamp, randomRange } from "../utils.ts"
 import { type CullBounds, isInsideCullBounds } from "../cull.ts"
 import type { WorldState } from "../world/state.ts"
 
-const BULLET_TRAIL_WIDTH_SCALE = 4
 const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
 
 type FogCullBounds = CullBounds

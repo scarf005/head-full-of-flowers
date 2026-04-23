@@ -4,8 +4,8 @@ import { assertEquals } from "jsr:@std/assert"
 
 import {
   buildObstacleGridFromMap,
-  decayObstacleFlash,
   damageObstacleCell,
+  decayObstacleFlash,
   OBSTACLE_FLASH_BLOCKED,
   OBSTACLE_FLASH_DAMAGED,
   OBSTACLE_MATERIAL_HEDGE,

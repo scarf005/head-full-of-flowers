@@ -34,8 +34,12 @@ const emitFlightTrailSegment = (
   }
 
   const slot = world.flightTrails[world.flightTrailCursor]
+  if (slot.slotIndex !== world.flightTrailCursor) {
+    slot.slotIndex = world.flightTrailCursor
+  }
   world.flightTrailCursor = (world.flightTrailCursor + 1) % world.flightTrails.length
   slot.active = true
+  world.activeFlightTrailIndices.add(slot.slotIndex)
   slot.position.set(x, y)
   slot.direction.set(directionX / magnitude, directionY / magnitude)
   slot.length = Math.max(0.02, length)
@@ -438,8 +442,10 @@ export const updateFlightTrailEmitters = (world: WorldState, fogCullBounds: Cull
 }
 
 export const updateFlightTrails = (world: WorldState, dt: number, fogCullBounds?: CullBounds) => {
-  for (const trail of world.flightTrails) {
-    if (!trail.active) {
+  for (const trailIndex of world.activeFlightTrailIndices) {
+    const trail = world.flightTrails[trailIndex]
+    if (!trail || !trail.active) {
+      world.activeFlightTrailIndices.delete(trailIndex)
       continue
     }
 
@@ -453,12 +459,14 @@ export const updateFlightTrails = (world: WorldState, dt: number, fogCullBounds?
       )
     ) {
       trail.active = false
+      world.activeFlightTrailIndices.delete(trailIndex)
       continue
     }
 
     trail.life -= dt
     if (trail.life <= 0) {
       trail.active = false
+      world.activeFlightTrailIndices.delete(trailIndex)
       continue
     }
 

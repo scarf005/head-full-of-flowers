@@ -1,8 +1,6 @@
 import { botPalette } from "./factions.ts"
-import { Flower, type Unit } from "./entities.ts"
-import { localizePerk, localizePrimaryWeapon } from "./i18n/localize.ts"
-import { applyPerkToUnit, perkStacks } from "./perks.ts"
-import { debugInfiniteHpSignal, secondaryModeSignal, statusMessageSignal } from "./signals.ts"
+import { Flower } from "./entities.ts"
+import { debugInfiniteHpSignal, secondaryModeSignal } from "./signals.ts"
 import {
   applyDamage,
   cyclePrimaryWeapon,
@@ -19,7 +17,6 @@ import { spawnDroppedMagazineFx, spawnMuzzleFlashFx, spawnShellCasingFx } from "
 import { spawnFlowers } from "./systems/flowers.ts"
 import type { PrimaryWeaponId, Team } from "./types.ts"
 import { updateCoverageSignals, updatePlayerHpSignal, updatePlayerWeaponSignals } from "./adapters/hud-sync.ts"
-import { t } from "@lingui/core/macro"
 import type { FlowerArenaGame } from "./game.ts"
 
 export function allocProjectile(game: FlowerArenaGame) {

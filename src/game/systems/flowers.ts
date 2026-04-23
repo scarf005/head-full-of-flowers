@@ -83,7 +83,7 @@ const shiftHex = (hex: string, offset: number) => {
 }
 
 const flowerPalette = (
-  world: WorldState,
+  _world: WorldState,
   ownerId: string,
   scoreOwnerId: string,
   deps: FlowerSpawnDeps,
@@ -343,7 +343,6 @@ export const spawnFlowers = (
 
     const flower = deps.allocFlower()
     if (flower.active) {
-      const previousOwner = flower.ownerId
       const previousBucket = flowerScoreBucket(flower)
       if (previousBucket in world.factionFlowerCounts) {
         world.factionFlowerCounts[previousBucket] = Math.max(0, world.factionFlowerCounts[previousBucket] - 1)

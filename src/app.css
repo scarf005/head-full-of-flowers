@@ -28,9 +28,13 @@
 }
 
 .arena-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: max(100dvw, calc(100dvh * (16 / 9)));
   height: max(100dvh, calc(100dvw * (9 / 16)));
   display: block;
+  transform: translate(-50%, -50%);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   cursor: none;

@@ -1,5 +1,5 @@
 import type { Projectile, Unit } from "../entities.ts"
-import { clamp, distSquared, lerp, limitToArena } from "../utils.ts"
+import { clamp, lerp, limitToArena } from "../utils.ts"
 import {
   damageObstacleCell,
   decayObstacleFlash,

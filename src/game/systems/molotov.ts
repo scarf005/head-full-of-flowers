@@ -5,7 +5,7 @@ import type { WorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID, BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR } from "../factions.ts"
 
 export const igniteMolotov = (
-  world: WorldState,
+  _world: WorldState,
   throwable: Throwable,
   allocMolotovZone: () => WorldState["molotovZones"][number],
 ) => {
@@ -23,7 +23,7 @@ export const igniteMolotov = (
 }
 
 export const spawnFlamePatch = (
-  world: WorldState,
+  _world: WorldState,
   x: number,
   y: number,
   ownerId: string,
