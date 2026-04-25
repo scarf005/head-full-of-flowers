@@ -227,6 +227,7 @@ export function applyDamageForGame(
       game.world.playerKills += 1
     },
     onPlayerHpChanged: () => updatePlayerHpSignal(game.world),
-    isInfiniteHpEnabled: () => debugInfiniteHpSignal.value,
+    isInfiniteHpEnabled: () =>
+      game.world.replayPlaybackActive ? game.replayDebugOptions.infiniteHp : debugInfiniteHpSignal.value,
   }, damageSource)
 }

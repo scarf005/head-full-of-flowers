@@ -3,6 +3,11 @@ import type { CullBounds } from "./cull.ts"
 import { resetHudSignals, syncHudSignals } from "./adapters/hud-sync.ts"
 import {
   crosshairSignal,
+  debugEquipAllRocketLauncherSignal,
+  debugImpactFeelLevelSignal,
+  debugInfiniteHpSignal,
+  debugInfiniteReloadSignal,
+  debugSkipToMatchEndSignal,
   duoTeamCountSignal,
   ffaPlayerCountSignal,
   languageSignal,
@@ -101,6 +106,35 @@ const FPS_SIGNAL_UPDATE_INTERVAL_SECONDS = 0.2
 const HUD_SYNC_INTERVAL_SECONDS = 0.1
 type FogCullBounds = CullBounds
 
+export interface ReplayDebugOptions {
+  equipAllRocketLauncher: boolean
+  impactFeelLevel: number
+  infiniteHp: boolean
+  infiniteReload: boolean
+}
+
+const DEFAULT_REPLAY_DEBUG_OPTIONS: ReplayDebugOptions = {
+  equipAllRocketLauncher: false,
+  impactFeelLevel: 1,
+  infiniteHp: false,
+  infiniteReload: false,
+}
+
+const readReplayDebugOptions = (settings: Record<string, unknown>): ReplayDebugOptions => ({
+  equipAllRocketLauncher: typeof settings.debugEquipAllRocketLauncher === "boolean"
+    ? settings.debugEquipAllRocketLauncher
+    : DEFAULT_REPLAY_DEBUG_OPTIONS.equipAllRocketLauncher,
+  impactFeelLevel: typeof settings.impactFeelLevel === "number"
+    ? settings.impactFeelLevel
+    : DEFAULT_REPLAY_DEBUG_OPTIONS.impactFeelLevel,
+  infiniteHp: typeof settings.debugInfiniteHp === "boolean"
+    ? settings.debugInfiniteHp
+    : DEFAULT_REPLAY_DEBUG_OPTIONS.infiniteHp,
+  infiniteReload: typeof settings.debugInfiniteReload === "boolean"
+    ? settings.debugInfiniteReload
+    : DEFAULT_REPLAY_DEBUG_OPTIONS.infiniteReload,
+})
+
 export class FlowerArenaGame {
   public canvas: HTMLCanvasElement
   public context: CanvasRenderingContext2D
@@ -138,6 +172,7 @@ export class FlowerArenaGame {
   public replayPlaybackSourceJsonl: string | null = null
   public replayPlaybackFrame = 0
   public replayPlaybackWallClockSeconds = 0
+  public replayDebugOptions: ReplayDebugOptions = DEFAULT_REPLAY_DEBUG_OPTIONS
   private musicSuppressedByFocusLoss = false
   private disposeFocusHandlers: (() => void) | null = null
 
@@ -197,6 +232,13 @@ export class FlowerArenaGame {
     const settings = replay.meta?.settings ?? {}
     const mode = typeof settings.mode === "string" ? settings.mode : "ffa"
     const players = typeof settings.players === "number" ? Math.max(2, Math.round(settings.players)) : 4
+    const debugOptions = readReplayDebugOptions(settings)
+    this.replayDebugOptions = debugOptions
+    debugEquipAllRocketLauncherSignal.value = debugOptions.equipAllRocketLauncher
+    debugImpactFeelLevelSignal.value = debugOptions.impactFeelLevel
+    debugInfiniteHpSignal.value = debugOptions.infiniteHp
+    debugInfiniteReloadSignal.value = debugOptions.infiniteReload
+    debugSkipToMatchEndSignal.value = false
 
     if (mode === "tdm") {
       selectedGameModeSignal.value = "tdm"
@@ -256,6 +298,12 @@ export class FlowerArenaGame {
     this.replaySeed = this.replaySeedOverride?.trim() || this.replaySeedFromUrl?.trim() || createReplaySeed()
     this.replaySeedOverride = null
     this.replayRandom = createSeededRandom(this.replaySeed)
+    this.replayDebugOptions = this.pendingReplay ? this.replayDebugOptions : {
+      equipAllRocketLauncher: debugEquipAllRocketLauncherSignal.value,
+      impactFeelLevel: debugImpactFeelLevelSignal.value,
+      infiniteHp: debugInfiniteHpSignal.value,
+      infiniteReload: debugInfiniteReloadSignal.value,
+    }
     this.replayRecorder.reset({
       seed: this.replaySeed,
       difficulty,
@@ -265,6 +313,9 @@ export class FlowerArenaGame {
         matchArenaStartRadius: this.matchArenaStartRadius,
         matchArenaEndRadius: this.matchArenaEndRadius,
         impactFeelLevel: this.world.impactFeelLevel,
+        debugEquipAllRocketLauncher: this.replayDebugOptions.equipAllRocketLauncher,
+        debugInfiniteHp: this.replayDebugOptions.infiniteHp,
+        debugInfiniteReload: this.replayDebugOptions.infiniteReload,
       },
     })
   }
@@ -508,9 +559,9 @@ export class FlowerArenaGame {
   }
   public update(frameDt: number, gameplayDt: number) {
     if (this.replayPlayback && this.world.running && !this.world.paused) {
-      this.replayPlaybackWallClockSeconds += frameDt
+      this.replayPlaybackWallClockSeconds += gameplayDt
       let consumedFrames = 0
-      while (consumedFrames < 8 && this.world.running && !this.world.paused) {
+      while (consumedFrames < 24 && this.world.running && !this.world.paused) {
         const frame = this.replayPlayback.inputs[this.replayPlaybackFrame]
         if (!frame) {
           this.world.replayPlaybackActive = false

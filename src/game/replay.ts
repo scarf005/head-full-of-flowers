@@ -25,7 +25,7 @@ export interface ParsedReplay {
 
 export interface ReplayMeta {
   type: "meta"
-  version: 1
+  version: 2
   seed: string
   difficulty: MatchDifficulty
   settings: Record<string, unknown>
@@ -91,7 +91,7 @@ export class ReplayRecorder {
     this.frame = 0
     const meta: ReplayMeta = {
       type: "meta",
-      version: 1,
+      version: 2,
       seed: this.seed,
       difficulty: this.difficulty,
       settings: options.settings,

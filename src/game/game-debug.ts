@@ -9,9 +9,14 @@ import { pickupAmmoForWeapon } from "./weapons.ts"
 import type { FlowerArenaGame } from "./game.ts"
 
 export function applyDebugOverridesForGame(game: FlowerArenaGame) {
-  game.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
+  const debugOptions = game.world.replayPlaybackActive ? game.replayDebugOptions : {
+    equipAllRocketLauncher: debugEquipAllRocketLauncherSignal.value,
+    impactFeelLevel: debugImpactFeelLevelSignal.value,
+    infiniteReload: debugInfiniteReloadSignal.value,
+  }
+  game.world.impactFeelLevel = clamp(debugOptions.impactFeelLevel, 1, 2)
 
-  if (debugEquipAllRocketLauncherSignal.value) {
+  if (debugOptions.equipAllRocketLauncher) {
     for (const unit of game.world.units) {
       if (unit.primaryWeapon === "rocket-launcher") {
         continue
@@ -21,7 +26,7 @@ export function applyDebugOverridesForGame(game: FlowerArenaGame) {
     }
   }
 
-  if (debugInfiniteReloadSignal.value) {
+  if (debugOptions.infiniteReload) {
     const player = game.world.player
 
     player.reloadCooldown = 0
