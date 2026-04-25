@@ -70,6 +70,38 @@ const buildPrimarySlot = (weaponId: PrimaryWeaponId, ammo: number, acquiredAt: n
   }
 }
 
+const highestPrimaryWeaponTier = (unit: Unit) => {
+  let highestTier = 0
+
+  for (const slot of unit.primarySlots) {
+    highestTier = Math.max(highestTier, primaryWeaponTier(slot.weaponId))
+  }
+
+  return highestTier
+}
+
+const lowestPrimaryWeaponSlotIndex = (unit: Unit) => {
+  let lowestIndex = 0
+
+  for (let index = 1; index < unit.primarySlots.length; index += 1) {
+    const candidate = unit.primarySlots[index]
+    const current = unit.primarySlots[lowestIndex]
+    const candidateTier = primaryWeaponTier(candidate.weaponId)
+    const currentTier = primaryWeaponTier(current.weaponId)
+
+    if (candidateTier < currentTier) {
+      lowestIndex = index
+      continue
+    }
+
+    if (candidateTier === currentTier && candidate.acquiredAt < current.acquiredAt) {
+      lowestIndex = index
+    }
+  }
+
+  return lowestIndex
+}
+
 export const syncUnitPrimaryFromSlot = (unit: Unit) => {
   if (unit.primarySlots.length === 0) {
     const pistol = buildPrimarySlot("pistol", Number.POSITIVE_INFINITY, ++unit.primarySlotSequence)
@@ -368,19 +400,22 @@ export const equipPrimary = (
         unit.primarySlots.push(newSlot)
         unit.primarySlotIndex = unit.primarySlots.length - 1
       } else {
-        let oldestIndex = 0
-        for (let index = 1; index < unit.primarySlots.length; index += 1) {
-          if (unit.primarySlots[index].acquiredAt < unit.primarySlots[oldestIndex].acquiredAt) {
-            oldestIndex = index
+        const incomingTier = primaryWeaponTier(weaponId)
+        if (incomingTier < highestPrimaryWeaponTier(unit)) {
+          syncUnitPrimaryFromSlot(unit)
+          if (unit.isPlayer) {
+            onPlayerWeaponUpdate()
           }
+          return null
         }
 
-        const replacedWeaponId = unit.primarySlots[oldestIndex].weaponId
+        const replacementIndex = lowestPrimaryWeaponSlotIndex(unit)
+        const replacedWeaponId = unit.primarySlots[replacementIndex].weaponId
         if (replacedWeaponId !== "pistol") {
           ejectedWeaponId = replacedWeaponId
         }
-        unit.primarySlots[oldestIndex] = newSlot
-        unit.primarySlotIndex = oldestIndex
+        unit.primarySlots[replacementIndex] = newSlot
+        unit.primarySlotIndex = replacementIndex
       }
 
       unit.reloadCooldown = 0

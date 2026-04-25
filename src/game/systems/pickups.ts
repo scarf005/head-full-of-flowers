@@ -312,8 +312,12 @@ export interface CollectPickupDeps {
 export const canCollectWeaponPickup = (unit: Unit, weaponId: PrimaryWeaponId) => {
   const incomingKind = primaryWeaponKind(weaponId)
   const incomingTier = primaryWeaponTier(weaponId)
+  let highestHeldTier = 0
 
   for (const slot of unit.primarySlots) {
+    const slotTier = primaryWeaponTier(slot.weaponId)
+    highestHeldTier = Math.max(highestHeldTier, slotTier)
+
     if (primaryWeaponKind(slot.weaponId) !== incomingKind) {
       continue
     }
@@ -322,14 +326,14 @@ export const canCollectWeaponPickup = (unit: Unit, weaponId: PrimaryWeaponId) =>
       return true
     }
 
-    if (primaryWeaponTier(slot.weaponId) > incomingTier) {
+    if (slotTier > incomingTier) {
       return false
     }
 
     return true
   }
 
-  return true
+  return unit.primarySlots.length < 2 || incomingTier >= highestHeldTier
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
