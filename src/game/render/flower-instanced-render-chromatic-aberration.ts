@@ -2,7 +2,8 @@ import { VIEW_HEIGHT, VIEW_WIDTH } from "../world/constants.ts"
 import { ensureGpuViewport, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { screenShakeChromaticAberrationAlpha } from "./chromatic-aberration.ts"
 
-const CHROMATIC_ABERRATION_SOURCE_SCALE = 0.375
+const HIT_PIXELATION_GFX_ENABLED = false
+const CHROMATIC_ABERRATION_SOURCE_SCALE = HIT_PIXELATION_GFX_ENABLED ? 0.375 : 1
 
 type ChromaticAberrationSourceBuffer = {
   canvas: HTMLCanvasElement
