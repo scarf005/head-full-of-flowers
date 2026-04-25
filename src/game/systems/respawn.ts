@@ -1,4 +1,5 @@
 import { type Obstacle, Vec2 } from "../entities.ts"
+import { randomFloat } from "../replay.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import { distSquared, randomInt, randomPointInArena } from "../utils.ts"
 import { pickupAmmoForWeapon } from "../weapons.ts"
@@ -64,7 +65,7 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[], unitRadius = 
   let bestTotalDistanceScore = -1
 
   const angleStep = (Math.PI * 2) / RESPAWN_SAMPLE_ANGLE_COUNT
-  const ringStartAngle = Math.random() * Math.PI * 2
+  const ringStartAngle = randomFloat() * Math.PI * 2
   const outerRadius = Math.max(1, world.arenaRadius - Math.max(unitRadius, 0) - RESPAWN_BORDER_PADDING)
 
   for (let ringIndex = 0; ringIndex < RESPAWN_RING_COUNT; ringIndex += 1) {
@@ -148,7 +149,7 @@ export const findSafeSpawn = (world: WorldState, occupied: Vec2[], unitRadius = 
 export const spawnAllUnits = (world: WorldState) => {
   const spawnPointCount = Math.max(1, world.units.length)
   const stepAngle = (Math.PI * 2) / spawnPointCount
-  const startAngle = Math.random() * Math.PI * 2
+  const startAngle = randomFloat() * Math.PI * 2
 
   for (let index = 0; index < world.units.length; index += 1) {
     const unit = world.units[index]
@@ -168,7 +169,7 @@ export interface BreakObstacleDeps {
 export const breakObstacle = (obstacle: Obstacle, deps: BreakObstacleDeps) => {
   obstacle.active = false
 
-  if (!obstacle.lootDropped && Math.random() > 0.48) {
+  if (!obstacle.lootDropped && randomFloat() > 0.48) {
     obstacle.lootDropped = true
     deps.spawnPickupAt(obstacle.position)
   }
@@ -226,7 +227,7 @@ export const respawnUnit = (world: WorldState, unitId: string, deps: RespawnDeps
   }
 
   if (!unit.isPlayer) {
-    const maybeLoot = Math.random() > 0.54
+    const maybeLoot = randomFloat() > 0.54
     if (maybeLoot) {
       const weapon = deps.randomLootablePrimary()
       deps.equipPrimary(unit.id, weapon, pickupAmmoForWeapon(weapon))

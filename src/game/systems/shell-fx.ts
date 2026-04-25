@@ -7,6 +7,7 @@ import {
 } from "../render/pixel-art.ts"
 import { computeWeaponKickbackDistance } from "../render/unit-motion-transform.ts"
 import { clamp, randomRange } from "../utils.ts"
+import { randomFloat } from "../replay.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponId } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
@@ -82,7 +83,7 @@ export const spawnShellCasingFx = (
 
   const { slot, nextCursor } = allocShellCasing(world, cursor)
   const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
-  const side = Math.random() > 0.5 ? 1 : -1
+  const side = randomFloat() > 0.5 ? 1 : -1
   const angle = aimAngle + side * Math.PI * 0.5 + randomRange(-0.4, 0.4)
   const baseSpeed = unit.primaryWeapon === "shotgun" ? 7.6 : unit.primaryWeapon === "assault" ? 6.4 : 5.2
   slot.active = true
@@ -123,7 +124,7 @@ export const spawnDroppedMagazineFx = (
 
   const { slot, nextCursor } = allocShellCasing(world, cursor)
   const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
-  const side = Math.random() > 0.5 ? 1 : -1
+  const side = randomFloat() > 0.5 ? 1 : -1
   const angle = aimAngle + Math.PI + side * randomRange(0.16, 0.34) + randomRange(-0.14, 0.14)
   slot.active = true
   world.activeShellCasingIndices.add(slot.slotIndex)

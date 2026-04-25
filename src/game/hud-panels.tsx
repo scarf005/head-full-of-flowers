@@ -18,6 +18,7 @@ import {
 import type { RenderPathProfileHud, RenderPathRatesHud } from "./signals.ts"
 import type { GameModeId } from "./types.ts"
 import { copyDebugWorldStateToClipboard } from "./debug-state-copy.ts"
+import { loadReplayFromClipboard, loadReplayJsonlText } from "./replay.ts"
 import { MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { t } from "@lingui/core/macro"
 
@@ -180,6 +181,10 @@ export const MainMenuPanel = (
     onSelectLocale,
   }: MainMenuPanelProps,
 ) => {
+  const setReplayLoadStatus = (loaded: boolean) => {
+    statusMessageSignal.value = loaded ? t`Loaded replay` : t`Failed to load replay`
+  }
+
   return (
     <div class="hud menu-layer">
       <div class="menu-panel">
@@ -282,6 +287,29 @@ export const MainMenuPanel = (
             }}
           >
             {t`Hard Mode`}
+          </button>
+          <button
+            type="button"
+            class="menu-start-button menu-load-replay"
+            onDragOver={(event) => {
+              event.preventDefault()
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              const file = event.dataTransfer?.files?.[0]
+              if (!file) {
+                setReplayLoadStatus(false)
+                return
+              }
+
+              void file.text().then(loadReplayJsonlText).then(setReplayLoadStatus)
+                .catch(() => setReplayLoadStatus(false))
+            }}
+            onClick={() => {
+              void loadReplayFromClipboard().then(setReplayLoadStatus)
+            }}
+          >
+            {t`Load replay`}
           </button>
         </div>
       </div>

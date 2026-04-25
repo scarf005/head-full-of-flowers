@@ -1,4 +1,5 @@
 import { isObstacleCellSolid, type ObstacleGridState, worldToObstacleGrid } from "../world/obstacle-grid.ts"
+import { randomFloat } from "../replay.ts"
 
 interface VecLike {
   x: number
@@ -65,7 +66,7 @@ export const applyObstacleRicochet = ({
   velocity.x = -normalVelocityX * restitution + tangentVelocityX * tangentFriction
   velocity.y = -normalVelocityY * restitution + tangentVelocityY * tangentFriction
 
-  const ricochetJitter = (Math.random() * 2 - 1) * jitterRadians
+  const ricochetJitter = (randomFloat() * 2 - 1) * jitterRadians
   const jitterCos = Math.cos(ricochetJitter)
   const jitterSin = Math.sin(ricochetJitter)
   const jitteredVelocityX = velocity.x * jitterCos - velocity.y * jitterSin

@@ -14,6 +14,7 @@ import {
   createThreeRoomHouseLayout,
   createWarehouseVariantTiles,
 } from "./terrain-layouts.ts"
+import { randomFloat } from "../replay.ts"
 import type { TerrainMap, TerrainTile } from "./terrain-types.ts"
 
 export type { MapObstacleBlueprint, PickupSpawnPoint, TerrainMap, TerrainTile } from "./terrain-types.ts"
@@ -54,7 +55,7 @@ const pickWeighted = (choices: TerrainTile[]) => {
     total += WEIGHTS[tile]
   }
 
-  let roll = Math.random() * total
+  let roll = randomFloat() * total
   for (const tile of choices) {
     roll -= WEIGHTS[tile]
     if (roll <= 0) {

@@ -7,6 +7,7 @@ export interface UpdatePlayerDeps {
   continueBurst: () => void
   startReload: () => void
   throwSecondary: () => void
+  swapPrimary: (direction: number) => void
   collectNearbyPickup: () => void
   updateCrosshairWorld: () => void
 }
@@ -97,6 +98,11 @@ export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDe
 
   if (world.input.rightDown) {
     deps.throwSecondary()
+  }
+
+  if (world.input.primarySwapDirection !== 0) {
+    deps.swapPrimary(world.input.primarySwapDirection)
+    world.input.primarySwapDirection = 0
   }
 
   deps.collectNearbyPickup()

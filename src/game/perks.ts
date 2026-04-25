@@ -1,4 +1,5 @@
 import type { Unit } from "./entities.ts"
+import { randomFloat } from "./replay.ts"
 import type { PerkId } from "./types.ts"
 
 export interface PerkConfig {
@@ -74,7 +75,7 @@ export const PERK_POOL: PerkId[] = [
 ]
 
 export const randomPerkId = () => {
-  const index = Math.floor(Math.random() * PERK_POOL.length)
+  const index = Math.floor(randomFloat() * PERK_POOL.length)
   return PERK_POOL[index] ?? "extra_heart"
 }
 

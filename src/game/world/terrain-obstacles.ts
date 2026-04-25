@@ -3,6 +3,7 @@ import {
   createThreeRoomHouseTiles,
   createWarehouseVariantTiles,
 } from "./terrain-layouts.ts"
+import { randomFloat } from "../replay.ts"
 import type { MapObstacleBlueprint, PickupSpawnPoint, TerrainTile } from "./terrain-types.ts"
 import {
   circleFitsArena,
@@ -41,14 +42,14 @@ const connectPoints = (mask: boolean[][], fromX: number, fromY: number, toX: num
 
     const dx = toX - x
     const dy = toY - y
-    const preferHorizontal = Math.random() > 0.5
+    const preferHorizontal = randomFloat() > 0.5
     if (dx !== 0 && (preferHorizontal || dy === 0)) {
       x += Math.sign(dx)
     } else if (dy !== 0) {
       y += Math.sign(dy)
     }
 
-    carveBrush(mask, x, y, Math.random() > 0.88 ? 1 : 0)
+    carveBrush(mask, x, y, randomFloat() > 0.88 ? 1 : 0)
   }
 }
 
@@ -60,7 +61,7 @@ const buildRoadNetworkMask = (size: number) => {
 
   for (let index = 1; index < hubCount; index += 1) {
     const ring = size * randomInt(18, 40) * 0.01
-    const angle = (Math.PI * 2 * index) / hubCount + Math.random() * 0.9
+    const angle = (Math.PI * 2 * index) / hubCount + randomFloat() * 0.9
     const x = Math.round(center + Math.cos(angle) * ring)
     const y = Math.round(center + Math.sin(angle) * ring)
     hubs.push([Math.max(4, Math.min(size - 5, x)), Math.max(4, Math.min(size - 5, y))])
@@ -86,14 +87,14 @@ export const applyRoadNetwork = (tiles: TerrainTile[][]) => {
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
       if (roads[y][x]) {
-        tiles[y][x] = Math.random() > 0.18 ? "dirt-road" : "gravel"
+        tiles[y][x] = randomFloat() > 0.18 ? "dirt-road" : "gravel"
         continue
       }
 
       if (
         hasNeighbor(roads, x, y) &&
         (tiles[y][x] === "grass" || tiles[y][x] === "clover" || tiles[y][x] === "wild-grass") &&
-        Math.random() > 0.42
+        randomFloat() > 0.42
       ) {
         tiles[y][x] = "road-edge"
       }
@@ -258,12 +259,12 @@ export const createHouseLootBoxBlueprints = (size: number, houses: MapObstacleBl
     }
 
     shuffleCandidates(candidates)
-    const spawnCount = Math.min(candidates.length, 1 + (Math.random() > 0.58 ? 1 : 0))
+    const spawnCount = Math.min(candidates.length, 1 + (randomFloat() > 0.58 ? 1 : 0))
 
     for (let index = 0; index < spawnCount; index += 1) {
       const [gridX, gridY] = candidates[index]
       const whiteLootChance = 0.78
-      const kind: MapObstacleBlueprint["kind"] = Math.random() < whiteLootChance ? "high-tier-box" : "box"
+      const kind: MapObstacleBlueprint["kind"] = randomFloat() < whiteLootChance ? "high-tier-box" : "box"
       boxes.push({
         kind,
         x: gridToWorld(gridX, size),
@@ -328,7 +329,7 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
     const onRoad = paths[centerY][centerX]
     const nearRoad = onRoad || hasNeighbor(paths, centerX, centerY)
 
-    if (!nearRoad && Math.random() > 0.72) {
+    if (!nearRoad && randomFloat() > 0.72) {
       continue
     }
 
@@ -339,9 +340,9 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
     let width = 1
     let height = 1
     const setLinearWall = (minSpan: number, maxSpan: number, favorLongest = false) => {
-      const longestBias = favorLongest && maxSpan > minSpan && Math.random() > 0.42
+      const longestBias = favorLongest && maxSpan > minSpan && randomFloat() > 0.42
       const span = longestBias ? maxSpan : randomInt(minSpan, maxSpan)
-      if (Math.random() > 0.5) {
+      if (randomFloat() > 0.5) {
         width = span
         height = 1
         return
@@ -351,7 +352,7 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
       height = span
     }
 
-    const shapeRoll = Math.random()
+    const shapeRoll = randomFloat()
     if (onRoad) {
       if (shapeRoll > 0.2) {
         setLinearWall(2, 4, shapeRoll > 0.68)
@@ -373,7 +374,7 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
     }
 
     if (onRoad && width > 1 && height > 1) {
-      if (Math.random() > 0.5) {
+      if (randomFloat() > 0.5) {
         width = 1
       } else {
         height = 1
@@ -389,7 +390,7 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
       continue
     }
 
-    if (!nearRoad && Math.random() > 0.42 && !rectTouchesMask(paths, left, top, width, height, 2)) {
+    if (!nearRoad && randomFloat() > 0.42 && !rectTouchesMask(paths, left, top, width, height, 2)) {
       continue
     }
 
@@ -406,7 +407,7 @@ export const createWallBlueprints = (size: number, paths: boolean[][], blockedSt
       continue
     }
 
-    if (onRoad && Math.random() > 0.5) {
+    if (onRoad && randomFloat() > 0.5) {
       continue
     }
 
@@ -434,7 +435,7 @@ export const createRockBlueprints = (size: number, paths: boolean[][], blocked: 
       continue
     }
 
-    if (!paths[gridY][gridX] && Math.random() > 0.78) {
+    if (!paths[gridY][gridX] && randomFloat() > 0.78) {
       continue
     }
 
@@ -471,7 +472,7 @@ export const createPickupSpawnPoints = (size: number, paths: boolean[][], obstac
       if (!paths[y][x]) {
         continue
       }
-      if (Math.random() > 0.08) {
+      if (randomFloat() > 0.08) {
         continue
       }
 

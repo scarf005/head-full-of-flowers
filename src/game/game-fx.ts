@@ -13,6 +13,7 @@ import {
   worldToObstacleGrid,
 } from "./world/obstacle-grid.ts"
 import type { WorldState } from "./world/state.ts"
+import { randomFloat } from "./replay.ts"
 import { clamp, distSquared, randomRange } from "./utils.ts"
 
 const KILL_PETAL_COLORS = ["#8bff92", "#5cf47a", "#b4ffb8"]
@@ -103,18 +104,18 @@ export function spawnObstacleDebris(
     const allocated = allocObstacleDebris(world, cursor)
     const slot = allocated.slot
     cursor = allocated.obstacleDebrisCursor
-    const angle = Math.random() * Math.PI * 2
+    const angle = randomFloat() * Math.PI * 2
     const speed = randomRange(2.5, 7.8)
     slot.active = true
     world.activeObstacleDebrisIndices.add(slot.slotIndex)
     slot.position.set(x + randomRange(-0.22, 0.22), y + randomRange(-0.22, 0.22))
     slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.2, 1.4))
-    slot.rotation = Math.random() * Math.PI * 2
+    slot.rotation = randomFloat() * Math.PI * 2
     slot.angularVelocity = randomRange(-7.2, 7.2)
     slot.size = randomRange(0.08, 0.2)
     slot.maxLife = randomRange(0.24, 0.52)
     slot.life = slot.maxLife
-    slot.color = palette[Math.floor(Math.random() * palette.length)]
+    slot.color = palette[Math.floor(randomFloat() * palette.length)]
   }
 
   return cursor
@@ -137,18 +138,18 @@ export function spawnObstacleChipFx(
     const allocated = allocObstacleDebris(world, cursor)
     const slot = allocated.slot
     cursor = allocated.obstacleDebrisCursor
-    const angle = Math.random() * Math.PI * 2
+    const angle = randomFloat() * Math.PI * 2
     const speed = randomRange(1.8, 5.4)
     slot.active = true
     world.activeObstacleDebrisIndices.add(slot.slotIndex)
     slot.position.set(x + randomRange(-0.16, 0.16), y + randomRange(-0.16, 0.16))
     slot.velocity.set(Math.cos(angle) * speed, Math.sin(angle) * speed - randomRange(0.1, 1.1))
-    slot.rotation = Math.random() * Math.PI * 2
+    slot.rotation = randomFloat() * Math.PI * 2
     slot.angularVelocity = randomRange(-8.6, 8.6)
     slot.size = randomRange(0.05, 0.12)
     slot.maxLife = randomRange(0.14, 0.3)
     slot.life = slot.maxLife
-    slot.color = palette[Math.floor(Math.random() * palette.length)]
+    slot.color = palette[Math.floor(randomFloat() * palette.length)]
   }
 
   return cursor
@@ -214,7 +215,7 @@ export function spawnKillPetalBurst(world: WorldState, killPetalCursor: number, 
     const allocated = allocKillPetal(world, cursor)
     const petal = allocated.slot
     cursor = allocated.killPetalCursor
-    const angle = Math.random() * Math.PI * 2
+    const angle = randomFloat() * Math.PI * 2
     const speed = randomRange(6.4, 21.6)
     petal.active = true
     world.activeKillPetalIndices.add(petal.slotIndex)
@@ -231,7 +232,7 @@ export function spawnKillPetalBurst(world: WorldState, killPetalCursor: number, 
     petal.size = randomRange(0.06, 0.14)
     petal.maxLife = 0.25
     petal.life = petal.maxLife
-    petal.color = KILL_PETAL_COLORS[Math.floor(Math.random() * KILL_PETAL_COLORS.length)]
+    petal.color = KILL_PETAL_COLORS[Math.floor(randomFloat() * KILL_PETAL_COLORS.length)]
   }
 
   return cursor
@@ -271,7 +272,7 @@ export function spawnUnitRagdoll(
   let dirX = impactX
   let dirY = impactY
   if (impactLength <= 0.000001) {
-    const angle = Math.random() * Math.PI * 2
+    const angle = randomFloat() * Math.PI * 2
     dirX = Math.cos(angle)
     dirY = Math.sin(angle)
   } else {

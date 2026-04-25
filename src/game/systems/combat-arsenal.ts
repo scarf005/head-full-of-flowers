@@ -1,6 +1,5 @@
-import { sample } from "@std/random"
-
 import type { PrimaryWeaponId } from "../types.ts"
+import { randomInt } from "../utils.ts"
 import {
   LOOTABLE_PRIMARY_IDS,
   pickupAmmoForWeapon,
@@ -12,7 +11,7 @@ import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
 import type { WorldState } from "../world/state.ts"
 
 export const randomLootablePrimary = (): PrimaryWeaponId => {
-  return (sample(LOOTABLE_PRIMARY_IDS) as PrimaryWeaponId | undefined) ?? "assault"
+  return LOOTABLE_PRIMARY_IDS[randomInt(0, LOOTABLE_PRIMARY_IDS.length - 1)] ?? "assault"
 }
 
 const PRIMARY_WEAPON_CAP = 2

@@ -1,5 +1,6 @@
 import { type CullBounds, isInsideCullBounds } from "../cull.ts"
 import { clamp, randomRange } from "../utils.ts"
+import { randomFloat } from "../replay.ts"
 import type { WorldState } from "../world/state.ts"
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
@@ -158,7 +159,7 @@ export const emitProjectileTrail = (
         const flyDirY = reverseBaseY + reverseNormalY * randomRange(-spread, spread)
         const flyLen = Math.hypot(flyDirX, flyDirY) || 1
         const driftSpeed = randomRange(0.62, 2.1) + speedFactor * 0.95
-        const core = Math.random() > 0.45
+        const core = randomFloat() > 0.45
 
         emitFlightTrailSegment(
           world,

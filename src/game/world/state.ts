@@ -71,6 +71,7 @@ export interface InputState {
   screenY: number
   worldX: number
   worldY: number
+  primarySwapDirection: number
 }
 
 export interface WorldState {
@@ -114,6 +115,7 @@ export interface WorldState {
   finished: boolean
   aiDifficulty: MatchDifficulty
   audioPrimed: boolean
+  replayPlaybackActive: boolean
   timeRemaining: number
   pickupTimer: number
   lootBoxTimer: number
@@ -161,6 +163,7 @@ export const createWorldState = (): WorldState => {
       screenY: VIEW_HEIGHT * 0.5,
       worldX: 0,
       worldY: 0,
+      primarySwapDirection: 0,
     },
     player,
     bots,
@@ -239,6 +242,7 @@ export const createWorldState = (): WorldState => {
     finished: false,
     aiDifficulty: "hard",
     audioPrimed: false,
+    replayPlaybackActive: false,
     timeRemaining: MATCH_DURATION_SECONDS,
     pickupTimer: LOOT_PICKUP_INTERVAL_SECONDS,
     lootBoxTimer: 0,

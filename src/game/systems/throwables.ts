@@ -1,4 +1,5 @@
 import { clamp, distSquared, limitToArena, randomRange } from "../utils.ts"
+import { randomFloat } from "../replay.ts"
 import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
 import type { Team } from "../types.ts"
 import {
@@ -64,13 +65,13 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   }
 
   let mode = shooter.secondaryMode
-  if (!shooter.isPlayer && Math.random() > 0.62) {
+  if (!shooter.isPlayer && randomFloat() > 0.62) {
     mode = "molotov"
   }
 
   const throwable = deps.allocThrowable()
   const aimAngle = Math.atan2(shooter.aim.y, shooter.aim.x)
-  const throwSpread = mode === "grenade" ? (Math.random() * 2 - 1) * GRENADE_THROW_INACCURACY_RADIANS : 0
+  const throwSpread = mode === "grenade" ? (randomFloat() * 2 - 1) * GRENADE_THROW_INACCURACY_RADIANS : 0
   const throwAngle = aimAngle + throwSpread
   const throwDirX = Math.cos(throwAngle)
   const throwDirY = Math.sin(throwAngle)
@@ -89,7 +90,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.position.y = shooter.position.y + throwDirY * throwOffset
   throwable.velocity.x = throwDirX * speed
   throwable.velocity.y = throwDirY * speed
-  throwable.rotation = Math.random() * Math.PI * 2
+  throwable.rotation = randomFloat() * Math.PI * 2
   throwable.angularVelocity = randomRange(-1, 1) * randomRange(THROWABLE_SPIN_MIN, THROWABLE_SPIN_MAX)
   throwable.life = mode === "grenade" ? GRENADE_BULLET_TTL : 0.78
   throwable.maxLife = throwable.life
@@ -114,7 +115,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
     const shakeScale = 1 + (impactFeel - 1) * 1.4
     world.cameraShake = Math.min(1.2 + (impactFeel - 1) * 1, world.cameraShake + 0.15 * shakeScale)
     deps.onPlayerThrow(mode)
-  } else if (Math.random() > 0.88) {
+  } else if (randomFloat() > 0.88) {
     deps.onOtherThrow()
   }
 }

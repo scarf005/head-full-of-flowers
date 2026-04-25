@@ -1,5 +1,6 @@
 import type { Unit } from "../entities.ts"
 import type { SecondaryMode } from "../types.ts"
+import { randomFloat } from "../replay.ts"
 import { BOT_BASE_SPEED, BOT_RADIUS, PLAYER_BASE_SPEED, PLAYER_RADIUS, UNIT_BASE_HP } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 
@@ -31,7 +32,7 @@ const resetUnitCombatState = (unit: Unit, radius: number, speed: number) => {
   unit.primarySlotSequence = 0
 }
 
-export const randomBotSecondaryMode = (): SecondaryMode => Math.random() > 0.58 ? "molotov" : "grenade"
+export const randomBotSecondaryMode = (): SecondaryMode => randomFloat() > 0.58 ? "molotov" : "grenade"
 
 export const resetPlayerForMatch = (player: Unit) => {
   resetUnitCombatState(player, PLAYER_RADIUS, PLAYER_BASE_SPEED)

@@ -11,6 +11,7 @@ import {
 import { randomLootablePrimary } from "./systems/combat.ts"
 import { spawnPerkPickupAt, spawnPickupAt } from "./systems/pickups.ts"
 import type { PrimaryWeaponId } from "./types.ts"
+import { randomFloat } from "./replay.ts"
 import { clamp, distSquared, lerp, randomPointInArena } from "./utils.ts"
 import { MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { arenaRadiiForPlayerCount } from "./utils.ts"
@@ -132,7 +133,7 @@ export function randomHighTierPrimary(highTierWeaponIds: PrimaryWeaponId[]) {
     return "battle-rifle" as PrimaryWeaponId
   }
 
-  const index = Math.floor(Math.random() * highTierWeaponIds.length)
+  const index = Math.floor(randomFloat() * highTierWeaponIds.length)
   return highTierWeaponIds[index] ?? highTierWeaponIds[0]
 }
 
@@ -160,7 +161,7 @@ export function randomLootablePrimaryForMatch(timeRemaining: number) {
     return randomLootablePrimary()
   }
 
-  return Math.random() > 0.5 ? "assault" : "shotgun"
+  return randomFloat() > 0.5 ? "assault" : "shotgun"
 }
 
 export function spawnRandomWhiteLootBox(world: WorldState) {

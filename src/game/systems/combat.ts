@@ -1,4 +1,5 @@
 import type { PrimaryWeaponId, Team } from "../types.ts"
+import { randomFloat } from "../replay.ts"
 import { randomRange } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import type { PrimaryWeaponSlot, Unit } from "../entities.ts"
@@ -165,7 +166,7 @@ const emitPrimaryShot = (
     const shakeScale = 1 + (impactFeel - 1) * 1.2
     world.cameraShake = Math.min(1.3 + (impactFeel - 1) * 0.9, world.cameraShake + 0.1 * shakeScale)
     deps.onPlayerShoot()
-  } else if (Math.random() > 0.82) {
+  } else if (randomFloat() > 0.82) {
     deps.onOtherShoot()
   }
 }

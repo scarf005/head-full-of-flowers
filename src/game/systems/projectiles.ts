@@ -1,4 +1,5 @@
 import { clamp, distSquared } from "../utils.ts"
+import { randomFloat } from "../replay.ts"
 import type { WorldState } from "../world/state.ts"
 import type { Team } from "../types.ts"
 import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
@@ -156,7 +157,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         projectile.velocity.y = -normalVelocityY * GRENADE_PROJECTILE_RICOCHET_RESTITUTION +
           tangentVelocityY * GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION
 
-        const ricochetJitter = (Math.random() * 2 - 1) * GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS
+        const ricochetJitter = (randomFloat() * 2 - 1) * GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS
         const jitterCos = Math.cos(ricochetJitter)
         const jitterSin = Math.sin(ricochetJitter)
         const jitteredVelocityX = projectile.velocity.x * jitterCos - projectile.velocity.y * jitterSin

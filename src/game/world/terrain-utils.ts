@@ -1,4 +1,6 @@
-export const randomInt = (min: number, max: number) => Math.floor(min + Math.random() * (max - min + 1))
+import { randomFloat } from "../replay.ts"
+
+export const randomInt = (min: number, max: number) => Math.floor(min + randomFloat() * (max - min + 1))
 
 export const gridToWorld = (index: number, size: number) => index - Math.floor(size * 0.5) + 0.5
 export const gridToWorldOrigin = (index: number, size: number) => index - Math.floor(size * 0.5)

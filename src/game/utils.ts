@@ -1,4 +1,5 @@
 import { Vec2 } from "./entities.ts"
+import { randomFloat } from "./replay.ts"
 
 export const ARENA_START_RADIUS = 40
 export const ARENA_END_RADIUS = 20
@@ -20,13 +21,13 @@ export const arenaRadiiForPlayerCount = (playerCount: number) => {
   }
 }
 
-export const randomRange = (min: number, max: number) => min + Math.random() * (max - min)
+export const randomRange = (min: number, max: number) => min + randomFloat() * (max - min)
 
 export const randomInt = (min: number, max: number) => Math.floor(randomRange(min, max + 1))
 
 export const randomPointInArena = (radius: number, borderPadding = 2) => {
-  const angle = Math.random() * Math.PI * 2
-  const distance = Math.sqrt(Math.random()) * Math.max(1, radius - borderPadding)
+  const angle = randomFloat() * Math.PI * 2
+  const distance = Math.sqrt(randomFloat()) * Math.max(1, radius - borderPadding)
   return new Vec2(Math.cos(angle) * distance, Math.sin(angle) * distance)
 }
 

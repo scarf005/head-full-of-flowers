@@ -1,4 +1,5 @@
 import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
+import { randomFloat } from "../replay.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import {
   isObstacleCellSolid,
@@ -405,13 +406,13 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
           !blockedByIndestructibleCover &&
           distanceToTarget < fireDistance &&
           aimAlignment > requiredAlignment &&
-          Math.random() > hesitationChance
+          randomFloat() > hesitationChance
         ) {
           deps.firePrimary(bot.id)
         }
 
         const throwChance = easyMode ? 0.0006 : 0.014
-        if (!blockedByIndestructibleCover && distanceToTarget < 12 && Math.random() < throwChance) {
+        if (!blockedByIndestructibleCover && distanceToTarget < 12 && randomFloat() < throwChance) {
           deps.throwSecondary(bot.id)
         }
       }
@@ -442,7 +443,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
         !blockedByIndestructibleCover &&
         distanceToTarget < fleeFireDistance &&
         aimAlignment > requiredAlignment &&
-        Math.random() > hesitationChance
+        randomFloat() > hesitationChance
       ) {
         deps.firePrimary(bot.id)
       }

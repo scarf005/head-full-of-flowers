@@ -1,3 +1,4 @@
+import { randomFloat } from "../replay.ts"
 import { clampInt, randomInt } from "./terrain-utils.ts"
 
 const createPerimeterTiles = (width: number, height: number) => {
@@ -63,8 +64,8 @@ export interface ThreeRoomHouseLayout {
 
 const chooseThreeRoomHousePartition = (width: number, height: number): ThreeRoomHousePartition => {
   for (let attempt = 0; attempt < 36; attempt += 1) {
-    const primaryAxis = Math.random() > 0.5 ? "vertical" : "horizontal"
-    const splitOnPositiveSide = Math.random() > 0.5
+    const primaryAxis = randomFloat() > 0.5 ? "vertical" : "horizontal"
+    const splitOnPositiveSide = randomFloat() > 0.5
 
     if (primaryAxis === "vertical") {
       const primaryIndex = randomInt(2, width - 3)
@@ -192,7 +193,7 @@ export const createThreeRoomHouseLayout = (width: number, height: number): Three
   }
 
   const entranceSides = [0, 1, 2, 3]
-  const entranceCount = Math.random() > 0.62 ? 3 : 2
+  const entranceCount = randomFloat() > 0.62 ? 3 : 2
   for (let index = 0; index < entranceCount && entranceSides.length > 0; index += 1) {
     const sideIndex = randomInt(0, entranceSides.length - 1)
     const side = entranceSides.splice(sideIndex, 1)[0]

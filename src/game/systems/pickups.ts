@@ -1,4 +1,5 @@
 import { type Unit } from "../entities.ts"
+import { randomFloat } from "../replay.ts"
 import { clamp, distSquared, limitToArena, randomPointInArena, randomRange } from "../utils.ts"
 import { isHighTierPrimary, pickupAmmoForWeapon, primaryWeaponKind, primaryWeaponTier } from "../weapons.ts"
 import type { PerkId, PrimaryWeaponId, Team } from "../types.ts"
@@ -109,7 +110,7 @@ export const spawnPickupAt = (world: WorldState, position: { x: number; y: numbe
   slot.active = true
   slot.kind = "weapon"
   slot.position.set(position.x, position.y)
-  const highTierRoll = (deps.highTierChance ?? 0) > 0 && Math.random() < (deps.highTierChance ?? 0)
+  const highTierRoll = (deps.highTierChance ?? 0) > 0 && randomFloat() < (deps.highTierChance ?? 0)
   if (highTierRoll && deps.randomHighTierPrimary) {
     slot.weapon = deps.randomHighTierPrimary()
     slot.highTier = true

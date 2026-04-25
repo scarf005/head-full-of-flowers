@@ -85,6 +85,7 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
     continueBurst: () => continueBurstFire(game.world, game.world.player.id, game.primaryFireDeps()),
     startReload: () => game.startReload(game.world.player.id),
     throwSecondary: () => game.throwSecondary(game.world.player.id),
+    swapPrimary: (direction) => game.swapPrimary(game.world.player.id, direction),
     collectNearbyPickup: () => {
       collectNearbyPickup(game.world, game.world.player, {
         equipPrimary: (unit, weaponId, ammo) => game.equipPrimary(unit.id, weaponId, ammo),
@@ -135,7 +136,7 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
         },
       })
     },
-    nowMs: () => performance.now(),
+    nowMs: () => (MATCH_DURATION_SECONDS - game.world.timeRemaining) * 1000,
   })
 
   resolveUnitCollisions(game.world)

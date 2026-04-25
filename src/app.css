@@ -78,6 +78,12 @@
   text-align: right;
 }
 
+.hud-button {
+  pointer-events: auto;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .debug-panel {
   top: 4.05rem;
   right: 0.8rem;
@@ -396,6 +402,11 @@
 .menu-start-hard {
   background: linear-gradient(135deg, rgba(76, 47, 28, 0.94), rgba(58, 33, 20, 0.94));
   border-color: rgba(235, 205, 173, 0.92);
+}
+
+.menu-load-replay {
+  grid-column: 1 / -1;
+  background: rgba(35, 53, 64, 0.92);
 }
 
 .mode-row {

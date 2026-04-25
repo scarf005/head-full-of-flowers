@@ -3,6 +3,7 @@ import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { MatchDifficulty } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 import {
+  isHudButtonTarget,
   isMobileControlTarget,
   isPauseMainMenuTarget,
   isPausePanelTarget,
@@ -224,6 +225,11 @@ export const setupInputAdapter = (
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
+    if (world.replayPlaybackActive) {
+      event.preventDefault()
+      return
+    }
+
     const key = event.key.toLowerCase()
     const hadAudioPrimed = world.audioPrimed
 
@@ -256,6 +262,11 @@ export const setupInputAdapter = (
   }
 
   const onKeyUp = (event: KeyboardEvent) => {
+    if (world.replayPlaybackActive) {
+      event.preventDefault()
+      return
+    }
+
     world.input.keys.delete(event.key.toLowerCase())
   }
 
@@ -289,6 +300,10 @@ export const setupInputAdapter = (
   }
 
   const onMouseMove = (event: MouseEvent) => {
+    if (world.replayPlaybackActive) {
+      return
+    }
+
     if (!world.running || world.paused || !world.started || world.finished) {
       return
     }
@@ -297,6 +312,10 @@ export const setupInputAdapter = (
   }
 
   const onMobileControlsPointerDown = (event: PointerEvent) => {
+    if (world.replayPlaybackActive) {
+      return
+    }
+
     if (event.button !== 0 || !isMobileControlTarget(event)) {
       return
     }
@@ -339,7 +358,11 @@ export const setupInputAdapter = (
   }
 
   const onPointerDown = (event: PointerEvent) => {
-    if (isMobileControlTarget(event)) {
+    if (world.replayPlaybackActive) {
+      return
+    }
+
+    if (isMobileControlTarget(event) || isHudButtonTarget(event)) {
       return
     }
 
@@ -376,21 +399,19 @@ export const setupInputAdapter = (
 
     if (event.button === 0) {
       world.input.leftDown = true
-      if (world.running && !world.paused) {
-        handlers.onPrimaryDown()
-      }
     }
 
     if (event.button === 2) {
       event.preventDefault()
       world.input.rightDown = true
-      if (world.running && !world.paused) {
-        handlers.onSecondaryDown()
-      }
     }
   }
 
   const onPointerUp = (event: PointerEvent) => {
+    if (world.replayPlaybackActive) {
+      return
+    }
+
     if (event.pointerId === moveStickState.pointerId) {
       moveStickState.pointerId = -1
       syncTouchPointerMoveListener()
@@ -430,13 +451,18 @@ export const setupInputAdapter = (
   }
 
   const onWheel = (event: WheelEvent) => {
+    if (world.replayPlaybackActive) {
+      event.preventDefault()
+      return
+    }
+
     if (!world.running || world.paused || !world.started || world.finished) {
       return
     }
 
     const direction = event.deltaY > 0 ? 1 : -1
     event.preventDefault()
-    handlers.onPrimarySwap(direction)
+    world.input.primarySwapDirection += direction
   }
 
   const onContextMenu = (event: Event) => {

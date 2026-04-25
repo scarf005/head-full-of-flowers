@@ -45,6 +45,7 @@ export async function beginMatchForGame(game: FlowerArenaGame, difficulty: Match
   game.world.playerFlowerTotal = 0
   resetRenderPathProfile(game.world)
   game.world.impactFeelLevel = clamp(debugImpactFeelLevelSignal.value, 1, 2)
+  game.resetReplayForMatch(difficulty)
   menuVisibleSignal.value = true
   pausedSignal.value = true
   clearMatchResultSignal()
@@ -58,32 +59,34 @@ export async function beginMatchForGame(game: FlowerArenaGame, difficulty: Match
     return
   }
 
-  game.world.terrainMap = createBarrenGardenMap(112)
-  game.world.flowerDensityGrid = new Uint16Array(game.world.terrainMap.size * game.world.terrainMap.size)
-  game.world.flowerCellHead = new Int32Array(game.world.terrainMap.size * game.world.terrainMap.size)
-  game.world.flowerCellHead.fill(-1)
-  game.world.flowerBloomingIndices.clear()
-  game.world.flowerDirtyIndices.clear()
-  game.world.flowerDirtyCount = 0
+  game.withReplayRandom(() => {
+    game.world.terrainMap = createBarrenGardenMap(112)
+    game.world.flowerDensityGrid = new Uint16Array(game.world.terrainMap.size * game.world.terrainMap.size)
+    game.world.flowerCellHead = new Int32Array(game.world.terrainMap.size * game.world.terrainMap.size)
+    game.world.flowerCellHead.fill(-1)
+    game.world.flowerBloomingIndices.clear()
+    game.world.flowerDirtyIndices.clear()
+    game.world.flowerDirtyCount = 0
 
-  const player = game.world.player
-  resetPlayerForMatch(player)
-  game.equipPrimary(player.id, "pistol", Number.POSITIVE_INFINITY)
+    const player = game.world.player
+    resetPlayerForMatch(player)
+    game.equipPrimary(player.id, "pistol", Number.POSITIVE_INFINITY)
 
-  game.world.bots.forEach((bot) => {
-    resetBotForMatch(bot, randomBotSecondaryMode)
-    game.equipPrimary(bot.id, "pistol", Number.POSITIVE_INFINITY)
+    game.world.bots.forEach((bot) => {
+      resetBotForMatch(bot, randomBotSecondaryMode)
+      game.equipPrimary(bot.id, "pistol", Number.POSITIVE_INFINITY)
+    })
+
+    resetTransientEntitiesForMatch(game.world)
+    resetMatchFxCursorsForGame(game)
+
+    spawnObstacles(game.world)
+    spawnAllUnits(game.world)
+    spawnMapLoot(game.world, {
+      spawnPickupAt: (x, y) => game.spawnLootPickupAt(x, y),
+    })
+    game.spawnGuaranteedCenterHighTierLoot()
   })
-
-  resetTransientEntitiesForMatch(game.world)
-  resetMatchFxCursorsForGame(game)
-
-  spawnObstacles(game.world)
-  spawnAllUnits(game.world)
-  spawnMapLoot(game.world, {
-    spawnPickupAt: (x, y) => game.spawnLootPickupAt(x, y),
-  })
-  game.spawnGuaranteedCenterHighTierLoot()
 
   resetCameraForMatchStart(game.world)
   game.world.running = true

@@ -1,10 +1,30 @@
 import { AudioDirector, SfxSynth } from "./audio.ts"
 import type { CullBounds } from "./cull.ts"
 import { resetHudSignals, syncHudSignals } from "./adapters/hud-sync.ts"
-import { languageSignal } from "./signals.ts"
+import {
+  duoTeamCountSignal,
+  ffaPlayerCountSignal,
+  languageSignal,
+  selectedGameModeSignal,
+  squadTeamCountSignal,
+  statusMessageSignal,
+  tdmTeamSizeSignal,
+} from "./signals.ts"
 import type { InputAdapter } from "./adapters/input.ts"
 import { renderScene } from "./render/scene.ts"
 import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
+import {
+  applyReplayInputFrame,
+  createReplaySeed,
+  createSeededRandom,
+  type ParsedReplay,
+  parseReplayJsonl,
+  type RandomSource,
+  registerReplayExportProvider,
+  registerReplayLoadProvider,
+  ReplayRecorder,
+  withRandomSource,
+} from "./replay.ts"
 import { ARENA_END_RADIUS, ARENA_START_RADIUS } from "./utils.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH } from "./world/constants.ts"
 import { createWorldState, rebuildUnitLookup, type WorldState } from "./world/state.ts"
@@ -106,6 +126,16 @@ export class FlowerArenaGame {
   public shellCasingCursor = 0
   public muzzleFlashCursor = 0
   public explosionCursor = 0
+  public replaySeed = ""
+  public replaySeedFromUrl: string | null = null
+  public replaySeedOverride: string | null = null
+  public replayRandom: RandomSource = createSeededRandom("initial")
+  public replayRecorder = new ReplayRecorder()
+  public pendingReplay: ParsedReplay | null = null
+  public pendingReplaySourceJsonl: string | null = null
+  public replayPlayback: ParsedReplay | null = null
+  public replayPlaybackSourceJsonl: string | null = null
+  public replayPlaybackFrame = 0
   private musicSuppressedByFocusLoss = false
   private disposeFocusHandlers: (() => void) | null = null
 
@@ -120,7 +150,10 @@ export class FlowerArenaGame {
     this.canvas.width = VIEW_WIDTH
     this.canvas.height = VIEW_HEIGHT
     this.world = createWorldState()
+    this.replaySeedFromUrl = new URLSearchParams(globalThis.location?.search ?? "").get("seed")
     registerDebugWorldStateProvider(() => this.world)
+    registerReplayExportProvider(() => this.replayPlaybackSourceJsonl ?? this.replayRecorder.exportJsonl())
+    registerReplayLoadProvider((jsonl) => this.loadReplayJsonl(jsonl))
     this.botPool = [...this.world.bots]
     this.applyMatchMode()
     this.syncPlayerOptions()
@@ -155,6 +188,84 @@ export class FlowerArenaGame {
     this.disposeFocusHandlers = null
     this.audioDirector.stopAll()
     registerDebugWorldStateProvider(null)
+    registerReplayExportProvider(null)
+    registerReplayLoadProvider(null)
+  }
+  private applyReplaySettings(replay: ParsedReplay) {
+    const settings = replay.meta?.settings ?? {}
+    const mode = typeof settings.mode === "string" ? settings.mode : "ffa"
+    const players = typeof settings.players === "number" ? Math.max(2, Math.round(settings.players)) : 4
+
+    if (mode === "tdm") {
+      selectedGameModeSignal.value = "tdm"
+      tdmTeamSizeSignal.value = Math.max(2, Math.round(players / 2))
+      return
+    }
+
+    if (mode === "duo") {
+      selectedGameModeSignal.value = "duo"
+      duoTeamCountSignal.value = Math.max(2, Math.round(players / 2))
+      return
+    }
+
+    if (mode === "squad") {
+      selectedGameModeSignal.value = "squad"
+      squadTeamCountSignal.value = Math.max(2, Math.round(players / 4))
+      return
+    }
+
+    selectedGameModeSignal.value = "ffa"
+    ffaPlayerCountSignal.value = Math.max(2, players)
+  }
+  public async loadReplayJsonl(jsonl: string) {
+    const replay = parseReplayJsonl(jsonl)
+    if (!replay.meta?.seed || replay.inputs.length <= 0) {
+      return false
+    }
+
+    this.applyReplaySettings(replay)
+    this.pendingReplay = replay
+    this.pendingReplaySourceJsonl = jsonl
+    this.replaySeedOverride = replay.meta.seed
+    await this.beginMatch(replay.meta.difficulty)
+
+    if (this.pendingReplay !== replay || !this.world.running) {
+      return false
+    }
+
+    this.replayPlayback = replay
+    this.replayPlaybackSourceJsonl = this.pendingReplaySourceJsonl
+    this.pendingReplay = null
+    this.pendingReplaySourceJsonl = null
+    this.replayPlaybackFrame = 0
+    this.world.replayPlaybackActive = true
+    return true
+  }
+  public resetReplayForMatch(difficulty: MatchDifficulty) {
+    if (!this.pendingReplay) {
+      this.replayPlayback = null
+      this.replayPlaybackSourceJsonl = null
+      this.replayPlaybackFrame = 0
+      this.world.replayPlaybackActive = false
+    }
+
+    this.replaySeed = this.replaySeedOverride?.trim() || this.replaySeedFromUrl?.trim() || createReplaySeed()
+    this.replaySeedOverride = null
+    this.replayRandom = createSeededRandom(this.replaySeed)
+    this.replayRecorder.reset({
+      seed: this.replaySeed,
+      difficulty,
+      settings: {
+        mode: this.currentMode,
+        players: this.world.units.length,
+        matchArenaStartRadius: this.matchArenaStartRadius,
+        matchArenaEndRadius: this.matchArenaEndRadius,
+        impactFeelLevel: this.world.impactFeelLevel,
+      },
+    })
+  }
+  public withReplayRandom<T>(action: () => T): T {
+    return withRandomSource(this.replayRandom, action)
   }
   private suppressMusicForFocusLoss() {
     if (this.musicSuppressedByFocusLoss) {
@@ -271,10 +382,17 @@ export class FlowerArenaGame {
     this.world.running = false
     this.world.paused = false
     this.world.finished = true
+    this.world.replayPlaybackActive = false
     this.audioDirector.startMenu()
     finishMatchResult(this.world, this.currentMode, this.playerCoverageId())
   }
   public returnToMenu() {
+    this.pendingReplay = null
+    this.pendingReplaySourceJsonl = null
+    this.replayPlayback = null
+    this.replayPlaybackSourceJsonl = null
+    this.replayPlaybackFrame = 0
+    this.world.replayPlaybackActive = false
     returnToMenuForGame(this)
   }
   public togglePause() {
@@ -377,7 +495,28 @@ export class FlowerArenaGame {
     runFrameLoop(this, time)
   }
   public update(frameDt: number, gameplayDt: number) {
-    updateGame(this, frameDt, gameplayDt)
+    if (this.replayPlayback && this.world.running && !this.world.paused) {
+      const frame = this.replayPlayback.inputs[this.replayPlaybackFrame]
+      if (!frame) {
+        this.world.replayPlaybackActive = false
+        this.finishMatch()
+        statusMessageSignal.value = ""
+        return
+      }
+
+      applyReplayInputFrame(this.world.input, frame)
+      this.replayPlaybackFrame += 1
+      this.withReplayRandom(() => updateGame(this, frame.frameDt, frame.gameplayDt))
+      if (this.world.finished) {
+        this.world.replayPlaybackActive = false
+      }
+      return
+    }
+
+    if (this.world.running && !this.world.paused) {
+      this.replayRecorder.record(frameDt, gameplayDt, this.world.input)
+    }
+    this.withReplayRandom(() => updateGame(this, frameDt, gameplayDt))
   }
   public syncHudSignalsThrottled(dt: number) {
     this.hudSyncElapsed += dt

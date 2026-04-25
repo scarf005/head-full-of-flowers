@@ -46,3 +46,7 @@ export const isPauseResumeTarget = (event: PointerEvent) => {
 export const isPauseMainMenuTarget = (event: PointerEvent) => {
   return eventTargetsSelector(event, ".pause-main-menu-button")
 }
+
+export const isHudButtonTarget = (event: PointerEvent) => {
+  return eventTargetsSelector(event, ".hud-button")
+}

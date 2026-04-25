@@ -18,15 +18,15 @@ msgstr ""
 msgid "{0} flowers"
 msgstr "{0}송이"
 
-#: src/game/hud.tsx:102
+#: src/game/hud.tsx:103
 msgid "2 players per team"
 msgstr "팀당 2명"
 
-#: src/game/hud.tsx:101
+#: src/game/hud.tsx:102
 msgid "2 teams, even sides"
 msgstr "2개 팀, 균등 인원"
 
-#: src/game/hud.tsx:103
+#: src/game/hud.tsx:104
 msgid "4 players per team"
 msgstr "팀당 4명"
 
@@ -35,7 +35,7 @@ msgid "Adrenal Reload"
 msgstr "아드레날린 재장전"
 
 #. placeholder {0}: slot.ammo
-#: src/game/hud.tsx:192
+#: src/game/hud.tsx:204
 msgid "Ammo {0}"
 msgstr "탄약 {0}"
 
@@ -47,7 +47,7 @@ msgstr "돌격소총"
 msgid "Auto Shotgun"
 msgstr "자동 산탄총"
 
-#: src/game/hud-panels.tsx:187
+#: src/game/hud-panels.tsx:192
 msgid "Bada² and the"
 msgstr "바다바다와"
 
@@ -59,13 +59,13 @@ msgstr "바다바다 아레나"
 msgid "Battle Rifle"
 msgstr "전투소총"
 
-#: src/game/game-mode-loot.ts:92
+#: src/game/game-mode-loot.ts:93
 #: src/game/i18n/faction-label.ts:22
 msgid "Blue"
 msgstr "블루"
 
 #. placeholder {0}: index + 1
-#: src/game/game-mode-loot.ts:78
+#: src/game/game-mode-loot.ts:79
 msgid "Bot {0}"
 msgstr "봇 {0}"
 
@@ -87,7 +87,7 @@ msgid "Burnt"
 msgstr "그을림"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game-match-lifecycle.ts:122
+#: src/game/game-match-lifecycle.ts:125
 msgid "Click once to wake audio, then begin fighting"
 msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작하세요"
 
@@ -95,19 +95,23 @@ msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작�
 #. placeholder {1}: formatDebugNumber(mergedPercent)
 #. placeholder {2}: renderPathProfile.splitCompositeFrames
 #. placeholder {3}: formatDebugNumber(splitPercent)
-#: src/game/hud-panels.tsx:133
+#: src/game/hud-panels.tsx:134
 msgid "Composite {0} merged ({1}%) / {2} split ({3}%)"
 msgstr "복합 {0} 병합 ({1}%) / {2} 분할 ({3}%)"
 
-#: src/game/hud-panels.tsx:118
+#: src/game/hud.tsx:144
+msgid "Copied replay to clipboard"
+msgstr "리플레이를 클립보드에 복사했습니다"
+
+#: src/game/hud-panels.tsx:119
 msgid "Copied state to clipboard"
 msgstr "상태를 클립보드에 복사했습니다"
 
-#: src/game/hud-panels.tsx:122
+#: src/game/hud-panels.tsx:123
 msgid "Copy state to clipboard"
 msgstr "클립보드에 상태 복사"
 
-#: src/game/hud-panels.tsx:290
+#: src/game/hud-panels.tsx:318
 msgid "Credits"
 msgstr "크레딧"
 
@@ -119,12 +123,12 @@ msgstr "가한 피해"
 msgid "Damage taken -1 (min 1)"
 msgstr "받는 피해 -1 (최소 1)"
 
-#: src/game/hud.tsx:102
+#: src/game/hud.tsx:103
 msgid "Duo"
 msgstr "듀오"
 
 #. placeholder {0}: index + 1
-#: src/game/game-mode-loot.ts:108
+#: src/game/game-mode-loot.ts:109
 msgid "Duo {0}"
 msgstr "듀오 {0}"
 
@@ -132,32 +136,36 @@ msgstr "듀오 {0}"
 msgid "Duo {teamIndex}"
 msgstr "듀오 {teamIndex}"
 
-#: src/game/game-mode-loot.ts:108
+#: src/game/game-mode-loot.ts:109
 #: src/game/i18n/faction-label.ts:33
 msgid "Duo 1 (You)"
 msgstr "듀오 1 (당신)"
 
-#: src/game/hud-panels.tsx:274
+#: src/game/hud-panels.tsx:279
 msgid "Easy Mode"
 msgstr "쉬움 모드"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:405
+#: src/game/hud-panels.tsx:433
 msgid "Effects Volume {0}%"
 msgstr "효과음 볼륨 {0}%"
 
-#: src/game/hud-panels.tsx:252
-#: src/game/hud-panels.tsx:427
+#: src/game/hud-panels.tsx:257
+#: src/game/hud-panels.tsx:455
 msgid "English"
 msgstr "영어"
 
-#: src/game/hud-panels.tsx:76
+#: src/game/hud-panels.tsx:77
 msgid "Equip all with rocket launcher"
 msgstr "모두에게 로켓 발사기 장착"
 
-#: src/game/hud.tsx:100
+#: src/game/hud.tsx:101
 msgid "Every player for themselves"
 msgstr "모두가 서로의 적"
+
+#: src/game/hud.tsx:148
+msgid "Export replay"
+msgstr "리플레이 내보내기"
 
 #: src/game/i18n/localize.ts:51
 msgid "Extra Heart"
@@ -167,45 +175,53 @@ msgstr "추가 체력"
 msgid "Extra Stamina"
 msgstr "추가 스태미나"
 
-#: src/game/hud-panels.tsx:118
+#: src/game/hud.tsx:144
+msgid "Failed to copy replay"
+msgstr "리플레이 복사 실패"
+
+#: src/game/hud-panels.tsx:119
 msgid "Failed to copy state"
 msgstr "상태 복사 실패"
+
+#: src/game/hud-panels.tsx:185
+msgid "Failed to load replay"
+msgstr "리플레이 불러오기 실패"
 
 #: src/game/i18n/localize.ts:28
 msgid "Flamethrower"
 msgstr "화염방사기"
 
 #. placeholder {0}: Math.round(fpsSignal.value)
-#: src/game/hud.tsx:138
+#: src/game/hud.tsx:150
 msgid "FPS {0}"
 msgstr "FPS {0}"
 
-#: src/game/hud.tsx:100
+#: src/game/hud.tsx:101
 msgid "Free For All"
 msgstr "개인전"
 
-#: src/game/hud-panels.tsx:196
+#: src/game/hud-panels.tsx:201
 msgid "Game mode"
 msgstr "게임 모드"
 
 #. placeholder {0}: formatDebugNumber(debugGameSpeedSignal.value)
-#: src/game/hud-panels.tsx:79
+#: src/game/hud-panels.tsx:80
 msgid "Game Speed {0}x"
 msgstr "게임 속도 {0}x"
 
-#: src/game/game-match-lifecycle.ts:51
+#: src/game/game-match-lifecycle.ts:52
 msgid "Generating arena..."
 msgstr "전장을 생성하는 중..."
 
-#: src/game/hud-panels.tsx:373
+#: src/game/hud-panels.tsx:401
 msgid "GitHub"
 msgstr "깃허브"
 
-#: src/game/hud-panels.tsx:368
+#: src/game/hud-panels.tsx:396
 msgid "GitHub repository"
 msgstr "깃허브 저장소"
 
-#: src/game/hud.tsx:91
+#: src/game/hud.tsx:92
 msgid "Grenade"
 msgstr "수류탄"
 
@@ -217,15 +233,15 @@ msgstr "유탄 발사기"
 msgid "Grenades fly +50% faster and explode near enemies"
 msgstr "수류탄 속도 +50%, 근처 적에게 폭발"
 
-#: src/game/hud-panels.tsx:284
+#: src/game/hud-panels.tsx:289
 msgid "Hard Mode"
 msgstr "어려움 모드"
 
-#: src/game/hud-panels.tsx:189
+#: src/game/hud-panels.tsx:194
 msgid "Head Full of Flowers"
 msgstr "머릿속이 꽃밭"
 
-#: src/game/hud.tsx:89
+#: src/game/hud.tsx:90
 msgid "Heavy"
 msgstr "강함"
 
@@ -237,24 +253,24 @@ msgstr "고중량 탄환"
 msgid "Hit Rate"
 msgstr "명중률"
 
-#: src/game/hud.tsx:210
+#: src/game/hud.tsx:222
 msgid "HP"
 msgstr "체력"
 
-#: src/game/hud.tsx:89
+#: src/game/hud.tsx:90
 msgid "Hybrid"
 msgstr "혼합"
 
 #. placeholder {0}: formatDebugNumber(impactFeelLevel)
-#: src/game/hud-panels.tsx:92
+#: src/game/hud-panels.tsx:93
 msgid "Impact Feel {impactFeelLabel} ({0}x)"
 msgstr "타격감 {impactFeelLabel} ({0}x)"
 
-#: src/game/hud-panels.tsx:56
+#: src/game/hud-panels.tsx:57
 msgid "Infinite HP"
 msgstr "무한 체력"
 
-#: src/game/hud-panels.tsx:66
+#: src/game/hud-panels.tsx:67
 msgid "Infinite Reload"
 msgstr "무한 재장전"
 
@@ -266,13 +282,13 @@ msgstr "방탄 조끼"
 msgid "Kill an enemy: next reload time -50%"
 msgstr "적 처치 시: 다음 재장전 시간 -50%"
 
-#: src/game/hud-panels.tsx:261
-#: src/game/hud-panels.tsx:436
+#: src/game/hud-panels.tsx:266
+#: src/game/hud-panels.tsx:464
 msgid "Korean"
 msgstr "한국어"
 
-#: src/game/hud-panels.tsx:243
-#: src/game/hud-panels.tsx:418
+#: src/game/hud-panels.tsx:248
+#: src/game/hud-panels.tsx:446
 msgid "Language"
 msgstr "언어"
 
@@ -284,16 +300,24 @@ msgstr "레이저 조준기"
 msgid "Lead Margin"
 msgstr "선두 격차"
 
-#: src/game/hud-panels.tsx:442
-#: src/game/hud.tsx:272
+#: src/game/hud-panels.tsx:312
+msgid "Load replay"
+msgstr "리플레이 불러오기"
+
+#: src/game/hud-panels.tsx:185
+msgid "Loaded replay"
+msgstr "리플레이를 불러왔습니다"
+
+#: src/game/hud-panels.tsx:470
+#: src/game/hud.tsx:284
 msgid "Main Menu"
 msgstr "메인 메뉴"
 
-#: src/game/hud-panels.tsx:390
+#: src/game/hud-panels.tsx:418
 msgid "Match is frozen. Adjust options or resume."
 msgstr "경기가 멈춰 있습니다. 옵션을 조정하거나 계속하세요."
 
-#: src/game/hud.tsx:243
+#: src/game/hud.tsx:255
 msgid "Match Results"
 msgstr "경기 결과"
 
@@ -302,11 +326,11 @@ msgstr "경기 결과"
 msgid "Max HP +{0}"
 msgstr "최대 체력 +{0}"
 
-#: src/game/hud.tsx:89
+#: src/game/hud.tsx:90
 msgid "Medium"
 msgstr "보통"
 
-#: src/game/hud.tsx:91
+#: src/game/hud.tsx:92
 msgid "Molotov"
 msgstr "화염병"
 
@@ -314,17 +338,17 @@ msgstr "화염병"
 msgid "Move speed +12%"
 msgstr "이동 속도 +12%"
 
-#: src/game/hud-panels.tsx:292
+#: src/game/hud-panels.tsx:320
 msgid "Music"
 msgstr "음악"
 
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:392
+#: src/game/hud-panels.tsx:420
 msgid "Music Volume {0}%"
 msgstr "음악 볼륨 {0}%"
 
-#: src/game/hud-panels.tsx:389
-#: src/game/hud.tsx:117
+#: src/game/hud-panels.tsx:417
+#: src/game/hud.tsx:118
 msgid "Paused"
 msgstr "일시정지"
 
@@ -332,25 +356,25 @@ msgstr "일시정지"
 msgid "Pellet size +50%, fire rate -25%, damage +1"
 msgstr "탄환 크기 +50%, 연사력 -25%, 피해 +1"
 
-#: src/game/game-update.ts:103
+#: src/game/game-update.ts:104
 msgid "Perk acquired {localizedPerk}"
 msgstr "{localizedPerk} 특성 획득"
 
-#: src/game/game-update.ts:102
+#: src/game/game-update.ts:103
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "{localizedPerk} 특성 획득 x{stacks}"
 
-#: src/game/hud.tsx:219
+#: src/game/hud.tsx:231
 msgid "Perks"
 msgstr "특성"
 
-#: src/game/game-update.ts:96
+#: src/game/game-update.ts:97
 msgid "Picked up {localizedWeapon}"
 msgstr "{localizedWeapon} 획득"
 
 #. placeholder {0}: renderPathProfile.pickupVisibleFrames
 #. placeholder {1}: renderPathProfile.pickupHiddenFrames
-#: src/game/hud-panels.tsx:127
+#: src/game/hud-panels.tsx:128
 msgid "Pickups {0} visible / {1} hidden"
 msgstr "픽업 {0} 보임 / {1} 숨김"
 
@@ -363,15 +387,15 @@ msgstr "권총"
 msgid "Player Kills"
 msgstr "처치 수"
 
-#: src/game/hud.tsx:70
+#: src/game/hud.tsx:71
 msgid "Players {players}"
 msgstr "플레이어 {players}명"
 
-#: src/game/hud.tsx:72
+#: src/game/hud.tsx:73
 msgid "Players {players} ({tdmTeamSize}v{tdmTeamSize})"
 msgstr "플레이어 {players}명 ({tdmTeamSize}대{tdmTeamSize})"
 
-#: src/game/hud.tsx:182
+#: src/game/hud.tsx:194
 msgid "Primary"
 msgstr "주무기"
 
@@ -383,7 +407,7 @@ msgstr "접근 탐지 수류탄"
 msgid "Rapid Reload"
 msgstr "빠른 재장전"
 
-#: src/game/game-mode-loot.ts:91
+#: src/game/game-mode-loot.ts:92
 #: src/game/i18n/faction-label.ts:19
 msgid "Red (You)"
 msgstr "레드 (당신)"
@@ -397,11 +421,11 @@ msgid "Reloading..."
 msgstr "재장전 중..."
 
 #. placeholder {0}: renderPathProfile.frames
-#: src/game/hud-panels.tsx:125
+#: src/game/hud-panels.tsx:126
 msgid "Render Profile {0} frames"
 msgstr "렌더 프로필 {0} 프레임"
 
-#: src/game/hud-panels.tsx:441
+#: src/game/hud-panels.tsx:469
 msgid "Resume"
 msgstr "계속하기"
 
@@ -418,11 +442,11 @@ msgstr "우클릭으로 투척"
 msgid "Rocket Launcher"
 msgstr "로켓 발사기"
 
-#: src/game/hud.tsx:200
+#: src/game/hud.tsx:212
 msgid "Secondary"
 msgstr "보조무기"
 
-#: src/game/hud-panels.tsx:313
+#: src/game/hud-panels.tsx:341
 msgid "SFX"
 msgstr "효과음"
 
@@ -434,7 +458,7 @@ msgstr "산탄총"
 msgid "Shotgun bounces x5"
 msgstr "산탄 반사 x5"
 
-#: src/game/hud-panels.tsx:111
+#: src/game/hud-panels.tsx:112
 msgid "Skip to Match End"
 msgstr "즉시 경기 종료"
 
@@ -442,12 +466,12 @@ msgstr "즉시 경기 종료"
 msgid "Soft aim assist cone"
 msgstr "소프트 에임 보조"
 
-#: src/game/hud.tsx:103
+#: src/game/hud.tsx:104
 msgid "Squad"
 msgstr "스쿼드"
 
 #. placeholder {0}: index + 1
-#: src/game/game-mode-loot.ts:111
+#: src/game/game-mode-loot.ts:112
 msgid "Squad {0}"
 msgstr "스쿼드 {0}"
 
@@ -455,7 +479,7 @@ msgstr "스쿼드 {0}"
 msgid "Squad {teamIndex}"
 msgstr "스쿼드 {teamIndex}"
 
-#: src/game/game-mode-loot.ts:110
+#: src/game/game-mode-loot.ts:111
 #: src/game/i18n/faction-label.ts:36
 msgid "Squad 1 (You)"
 msgstr "스쿼드 1 (당신)"
@@ -464,24 +488,24 @@ msgstr "스쿼드 1 (당신)"
 msgid "Team Contribution"
 msgstr "팀 기여도"
 
-#: src/game/hud.tsx:101
+#: src/game/hud.tsx:102
 msgid "Team Deathmatch"
 msgstr "팀 데스매치"
 
-#: src/game/hud.tsx:74
+#: src/game/hud.tsx:75
 msgid "Teams {duoTeams} ({players} total)"
 msgstr "팀 {duoTeams}개 (총 {players}명)"
 
-#: src/game/hud.tsx:75
+#: src/game/hud.tsx:76
 msgid "Teams {squadTeams} ({players} total)"
 msgstr "팀 {squadTeams}개 (총 {players}명)"
 
-#: src/game/hud-panels.tsx:191
+#: src/game/hud-panels.tsx:196
 msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 msgstr "{MATCH_DURATION_SECONDS}초 동안 가장 넓은 꽃밭을 만든 플레이어가 승리합니다"
 
 #. placeholder {0}: formatTime(timeRemainingSignal.value)
-#: src/game/hud.tsx:116
+#: src/game/hud.tsx:117
 msgid "Time {0}"
 msgstr "시간 {0}"
 
@@ -498,26 +522,26 @@ msgstr "시간 종료. 당신의 꽃길이 전장을 지배했습니다"
 msgid "Total Flowers"
 msgstr "총 꽃 수"
 
-#: src/game/hud-panels.tsx:194
+#: src/game/hud-panels.tsx:199
 msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: secondary, wheel: swap primary"
 msgstr "wasd: 이동, 마우스: 조준 및 사격, 좌클릭: 주무기, 우클릭: 보조무기, 마우스 휠: 주무기 교체"
 
 #. placeholder {0}: renderPathProfile.obstacleFxWebGlFrames
 #. placeholder {1}: renderPathProfile.trailWebGlFrames
-#: src/game/hud-panels.tsx:130
+#: src/game/hud-panels.tsx:131
 msgid "WebGL {0} obstacle fx / {1} trails"
 msgstr "WebGL {0} 장애물 이펙트 / {1} 궤적"
 
 #. placeholder {0}: renderPathRates.sampleFrames
 #. placeholder {1}: formatDebugNumber(renderPathRates.mergedPercent)
 #. placeholder {2}: formatDebugNumber(renderPathRates.splitPercent)
-#: src/game/hud-panels.tsx:138
+#: src/game/hud-panels.tsx:139
 msgid "Window {0} f: merged {1}% / split {2}%"
 msgstr "슬라이딩 창 {0} f: 병합 {1}% / 분할 {2}%"
 
 #. placeholder {0}: formatDebugNumber(renderPathRates.pickupVisiblePercent)
 #. placeholder {1}: formatDebugNumber(renderPathRates.pickupHiddenPercent)
-#: src/game/hud-panels.tsx:143
+#: src/game/hud-panels.tsx:144
 msgid "Window pickups {0}% visible / {1}% hidden"
 msgstr "창 픽업 {0}% 보임 / {1}% 숨김"
 
@@ -525,7 +549,7 @@ msgstr "창 픽업 {0}% 보임 / {1}% 숨김"
 msgid "Winner Share"
 msgstr "승자 점유율"
 
-#: src/game/game-mode-loot.ts:72
+#: src/game/game-mode-loot.ts:73
 #: src/game/i18n/faction-label.ts:8
 msgid "You"
 msgstr "당신"

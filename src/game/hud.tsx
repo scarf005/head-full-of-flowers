@@ -30,6 +30,7 @@ import { getItemSpritePath } from "./render/pixel-art.ts"
 import { DebugPanel, MainMenuPanel, PausePanel } from "./hud-panels.tsx"
 import { activateLocale } from "../i18n.ts"
 import { t } from "@lingui/core/macro"
+import { copyReplayToClipboard } from "./replay.ts"
 
 type WeaponIconSprite = WeaponHudIcon
 
@@ -135,6 +136,17 @@ export const GameHud = () => {
                 ))}
               </div>
             </div>
+            <button
+              class="hud-pill hud-button"
+              type="button"
+              onClick={() => {
+                void copyReplayToClipboard().then((copied) => {
+                  statusMessageSignal.value = copied ? t`Copied replay to clipboard` : t`Failed to copy replay`
+                })
+              }}
+            >
+              {t`Export replay`}
+            </button>
             <div class="hud-pill hud-pill-fps">{t`FPS ${Math.round(fpsSignal.value)}`}</div>
           </div>
         )
