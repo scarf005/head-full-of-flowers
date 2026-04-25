@@ -51,6 +51,7 @@ let grassWaveTime = Math.random() * Math.PI * 2
 const VIEWPORT_OVERFLOW_SAMPLE_INTERVAL_MS = 180
 
 const EMPTY_VIEWPORT_OVERFLOW: CanvasViewportOverflowPx = { left: 0, top: 0, right: 0, bottom: 0 }
+const MIN_CHROMATIC_ABERRATION_RENDER_PX = 1.25
 
 let viewportOverflowCache: {
   canvas: HTMLCanvasElement | null
@@ -222,7 +223,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   renderAtmosphere(context)
   renderDamageVignette(context, world)
 
-  if (chromaticAberrationPx > 0.0001) {
+  if (chromaticAberrationPx > MIN_CHROMATIC_ABERRATION_RENDER_PX) {
     renderChromaticAberrationPass({ context, shiftPx: chromaticAberrationPx })
   }
 

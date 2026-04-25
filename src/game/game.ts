@@ -2,6 +2,7 @@ import { AudioDirector, SfxSynth } from "./audio.ts"
 import type { CullBounds } from "./cull.ts"
 import { resetHudSignals, syncHudSignals } from "./adapters/hud-sync.ts"
 import {
+  crosshairSignal,
   duoTeamCountSignal,
   ffaPlayerCountSignal,
   languageSignal,
@@ -136,6 +137,7 @@ export class FlowerArenaGame {
   public replayPlayback: ParsedReplay | null = null
   public replayPlaybackSourceJsonl: string | null = null
   public replayPlaybackFrame = 0
+  public replayPlaybackWallClockSeconds = 0
   private musicSuppressedByFocusLoss = false
   private disposeFocusHandlers: (() => void) | null = null
 
@@ -238,6 +240,7 @@ export class FlowerArenaGame {
     this.pendingReplay = null
     this.pendingReplaySourceJsonl = null
     this.replayPlaybackFrame = 0
+    this.replayPlaybackWallClockSeconds = 0
     this.world.replayPlaybackActive = true
     return true
   }
@@ -246,6 +249,7 @@ export class FlowerArenaGame {
       this.replayPlayback = null
       this.replayPlaybackSourceJsonl = null
       this.replayPlaybackFrame = 0
+      this.replayPlaybackWallClockSeconds = 0
       this.world.replayPlaybackActive = false
     }
 
@@ -392,8 +396,16 @@ export class FlowerArenaGame {
     this.replayPlayback = null
     this.replayPlaybackSourceJsonl = null
     this.replayPlaybackFrame = 0
+    this.replayPlaybackWallClockSeconds = 0
     this.world.replayPlaybackActive = false
     returnToMenuForGame(this)
+  }
+  private syncReplayCrosshair() {
+    const rect = this.canvas.getBoundingClientRect()
+    const frameRect = this.canvas.parentElement?.getBoundingClientRect()
+    const x = rect.left - (frameRect?.left ?? 0) + rect.width * (this.world.input.canvasX / VIEW_WIDTH)
+    const y = rect.top - (frameRect?.top ?? 0) + rect.height * (this.world.input.canvasY / VIEW_HEIGHT)
+    crosshairSignal.value = { x, y, visible: true }
   }
   public togglePause() {
     togglePauseForGame(this)
@@ -496,19 +508,32 @@ export class FlowerArenaGame {
   }
   public update(frameDt: number, gameplayDt: number) {
     if (this.replayPlayback && this.world.running && !this.world.paused) {
-      const frame = this.replayPlayback.inputs[this.replayPlaybackFrame]
-      if (!frame) {
-        this.world.replayPlaybackActive = false
-        this.finishMatch()
-        statusMessageSignal.value = ""
-        return
-      }
+      this.replayPlaybackWallClockSeconds += frameDt
+      let consumedFrames = 0
+      while (consumedFrames < 8 && this.world.running && !this.world.paused) {
+        const frame = this.replayPlayback.inputs[this.replayPlaybackFrame]
+        if (!frame) {
+          this.world.replayPlaybackActive = false
+          this.finishMatch()
+          statusMessageSignal.value = ""
+          return
+        }
 
-      applyReplayInputFrame(this.world.input, frame)
-      this.replayPlaybackFrame += 1
-      this.withReplayRandom(() => updateGame(this, frame.frameDt, frame.gameplayDt))
-      if (this.world.finished) {
-        this.world.replayPlaybackActive = false
+        const frameDuration = Math.max(0.001, frame.frameDt)
+        if (this.replayPlaybackWallClockSeconds + 0.0005 < frameDuration) {
+          break
+        }
+
+        this.replayPlaybackWallClockSeconds -= frameDuration
+        applyReplayInputFrame(this.world.input, frame)
+        this.syncReplayCrosshair()
+        this.replayPlaybackFrame += 1
+        consumedFrames += 1
+        this.withReplayRandom(() => updateGame(this, frame.frameDt, frame.gameplayDt))
+        if (this.world.finished) {
+          this.world.replayPlaybackActive = false
+          break
+        }
       }
       return
     }
