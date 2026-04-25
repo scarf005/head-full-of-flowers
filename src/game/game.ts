@@ -4,6 +4,7 @@ import { resetHudSignals, syncHudSignals } from "./adapters/hud-sync.ts"
 import {
   crosshairSignal,
   debugEquipAllRocketLauncherSignal,
+  debugGameSpeedSignal,
   debugImpactFeelLevelSignal,
   debugInfiniteHpSignal,
   debugInfiniteReloadSignal,
@@ -28,6 +29,7 @@ import {
   type RandomSource,
   registerReplayExportProvider,
   registerReplayLoadProvider,
+  replayFramePlaybackDuration,
   ReplayRecorder,
   withRandomSource,
 } from "./replay.ts"
@@ -313,6 +315,7 @@ export class FlowerArenaGame {
         matchArenaStartRadius: this.matchArenaStartRadius,
         matchArenaEndRadius: this.matchArenaEndRadius,
         impactFeelLevel: this.world.impactFeelLevel,
+        gameSpeed: debugGameSpeedSignal.value,
         debugEquipAllRocketLauncher: this.replayDebugOptions.equipAllRocketLauncher,
         debugInfiniteHp: this.replayDebugOptions.infiniteHp,
         debugInfiniteReload: this.replayDebugOptions.infiniteReload,
@@ -570,7 +573,7 @@ export class FlowerArenaGame {
           return
         }
 
-        const frameDuration = Math.max(0.001, frame.frameDt)
+        const frameDuration = replayFramePlaybackDuration(frame)
         if (this.replayPlaybackWallClockSeconds + 0.0005 < frameDuration) {
           break
         }

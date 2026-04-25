@@ -25,7 +25,7 @@ export interface ParsedReplay {
 
 export interface ReplayMeta {
   type: "meta"
-  version: 2
+  version: 3
   seed: string
   difficulty: MatchDifficulty
   settings: Record<string, unknown>
@@ -91,7 +91,7 @@ export class ReplayRecorder {
     this.frame = 0
     const meta: ReplayMeta = {
       type: "meta",
-      version: 2,
+      version: 3,
       seed: this.seed,
       difficulty: this.difficulty,
       settings: options.settings,
@@ -143,6 +143,9 @@ export const applyReplayInputFrame = (target: InputState, frame: ReplayInputFram
   target.canvasY = frame.input.canvasY
   target.primarySwapDirection = frame.input.primarySwapDirection
 }
+
+export const replayFramePlaybackDuration = (frame: ReplayInputFrame) =>
+  Number.isFinite(frame.gameplayDt) && frame.gameplayDt > 0 ? frame.gameplayDt : Math.max(0.001, frame.frameDt)
 
 export const parseReplayJsonl = (jsonl: string): ParsedReplay => {
   const parsed: ParsedReplay = { meta: null, inputs: [] }

@@ -100,6 +100,11 @@ export const setupInputAdapter = (
 
   const flushCrosshair = () => {
     crosshairRaf = 0
+    if (world.replayPlaybackActive) {
+      pendingCrosshair.dirty = false
+      return
+    }
+
     if (!pendingCrosshair.dirty) {
       return
     }
@@ -120,6 +125,11 @@ export const setupInputAdapter = (
 
   const flushDesktopPointerMove = () => {
     desktopPointerRaf = 0
+    if (world.replayPlaybackActive) {
+      pendingDesktopPointer.dirty = false
+      return
+    }
+
     if (!pendingDesktopPointer.dirty) {
       return
     }
@@ -271,6 +281,11 @@ export const setupInputAdapter = (
   }
 
   const onTouchPointerMove = (event: PointerEvent) => {
+    if (world.replayPlaybackActive) {
+      event.preventDefault()
+      return
+    }
+
     if (event.pointerId === moveStickState.pointerId) {
       updateMoveStick(event.clientX, event.clientY)
       event.preventDefault()
