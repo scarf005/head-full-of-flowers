@@ -87,7 +87,7 @@ msgid "Burnt"
 msgstr "그을림"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game-match-lifecycle.ts:125
+#: src/game/game-match-lifecycle.ts:126
 msgid "Click once to wake audio, then begin fighting"
 msgstr "오디오를 활성화하려면 한 번 클릭한 뒤 전투를 시작하세요"
 
@@ -115,13 +115,17 @@ msgstr "클립보드에 상태 복사"
 msgid "Credits"
 msgstr "크레딧"
 
-#: src/game/game-match-results.ts:90
+#: src/game/game-match-results.ts:91
 msgid "Damage"
 msgstr "가한 피해"
 
 #: src/game/i18n/localize.ts:86
 msgid "Damage taken -1 (min 1)"
 msgstr "받는 피해 -1 (최소 1)"
+
+#: src/game/game-match-results.ts:90
+msgid "Deaths"
+msgstr "사망 횟수"
 
 #: src/game/hud.tsx:103
 msgid "Duo"
@@ -209,7 +213,7 @@ msgstr "게임 모드"
 msgid "Game Speed {0}x"
 msgstr "게임 속도 {0}x"
 
-#: src/game/game-match-lifecycle.ts:52
+#: src/game/game-match-lifecycle.ts:53
 msgid "Generating arena..."
 msgstr "전장을 생성하는 중..."
 

@@ -87,7 +87,7 @@ msgid "Burnt"
 msgstr "Burnt"
 
 #: src/game/adapters/hud-sync.ts:235
-#: src/game/game-match-lifecycle.ts:125
+#: src/game/game-match-lifecycle.ts:126
 msgid "Click once to wake audio, then begin fighting"
 msgstr "Click once to wake audio, then begin fighting"
 
@@ -115,13 +115,17 @@ msgstr "Copy state to clipboard"
 msgid "Credits"
 msgstr "Credits"
 
-#: src/game/game-match-results.ts:90
+#: src/game/game-match-results.ts:91
 msgid "Damage"
 msgstr "Damage"
 
 #: src/game/i18n/localize.ts:86
 msgid "Damage taken -1 (min 1)"
 msgstr "Damage taken -1 (min 1)"
+
+#: src/game/game-match-results.ts:90
+msgid "Deaths"
+msgstr "Deaths"
 
 #: src/game/hud.tsx:103
 msgid "Duo"
@@ -209,7 +213,7 @@ msgstr "Game mode"
 msgid "Game Speed {0}x"
 msgstr "Game Speed {0}x"
 
-#: src/game/game-match-lifecycle.ts:52
+#: src/game/game-match-lifecycle.ts:53
 msgid "Generating arena..."
 msgstr "Generating arena..."
 

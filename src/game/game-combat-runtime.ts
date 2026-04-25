@@ -202,6 +202,10 @@ export function applyDamageForGame(
     onUnitKilled: (target, isSuicide, killer, killImpulse) => {
       game.spawnUnitRagdoll(target, killImpulse)
 
+      if (target.isPlayer) {
+        game.world.playerDeaths += 1
+      }
+
       if (isSuicide || !killer) {
         return
       }

@@ -87,6 +87,7 @@ export function finishMatchResult(
       { label: t`Bullets Hit`, value: shotsHit.toLocaleString() },
       { label: t`Hit Rate`, value: `${hitRate.toFixed(1)}%` },
       { label: t`Player Kills`, value: world.playerKills.toString() },
+      { label: t`Deaths`, value: world.playerDeaths.toString() },
       { label: t`Damage`, value: Math.round(world.playerDamageDealt).toLocaleString() },
     ]
 

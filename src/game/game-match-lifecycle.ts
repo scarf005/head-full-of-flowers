@@ -41,6 +41,7 @@ export async function beginMatchForGame(game: FlowerArenaGame, difficulty: Match
   game.world.playerBulletsFired = 0
   game.world.playerBulletsHit = 0
   game.world.playerKills = 0
+  game.world.playerDeaths = 0
   game.world.playerDamageDealt = 0
   game.world.playerFlowerTotal = 0
   resetRenderPathProfile(game.world)

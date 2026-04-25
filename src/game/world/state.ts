@@ -124,6 +124,7 @@ export interface WorldState {
   playerBulletsFired: number
   playerBulletsHit: number
   playerKills: number
+  playerDeaths: number
   playerDamageDealt: number
   flowerDensityGrid: Uint16Array
   flowerCellHead: Int32Array
@@ -251,6 +252,7 @@ export const createWorldState = (): WorldState => {
     playerBulletsFired: 0,
     playerBulletsHit: 0,
     playerKills: 0,
+    playerDeaths: 0,
     playerDamageDealt: 0,
     flowerDensityGrid: new Uint16Array(terrainMap.size * terrainMap.size),
     flowerCellHead,
