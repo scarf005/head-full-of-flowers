@@ -26,15 +26,31 @@ const RAGDOLL_RICOCHET_JITTER_RADIANS = 0.16
 type FogCullBounds = CullBounds
 
 export function updateExplosions(world: WorldState, dt: number) {
-  for (const explosion of world.explosions) {
-    if (!explosion.active) {
-      continue
+  const updateExplosionAtIndex = (explosionIndex: number) => {
+    const explosion = world.explosions[explosionIndex]
+    if (!explosion || !explosion.active) {
+      if (explosion?.slotIndex !== undefined && explosion.slotIndex >= 0) {
+        world.activeExplosionIndices.delete(explosion.slotIndex)
+      }
+      return
     }
 
     explosion.life -= dt
     if (explosion.life <= 0) {
       explosion.active = false
+      world.activeExplosionIndices.delete(explosion.slotIndex)
     }
+  }
+
+  if (world.activeExplosionIndices.size > 0) {
+    for (const explosionIndex of world.activeExplosionIndices) {
+      updateExplosionAtIndex(explosionIndex)
+    }
+    return
+  }
+
+  for (let explosionIndex = 0; explosionIndex < world.explosions.length; explosionIndex += 1) {
+    updateExplosionAtIndex(explosionIndex)
   }
 }
 
@@ -451,6 +467,7 @@ export function spawnExplosion(world: WorldState, explosionCursor: number, x: nu
   const allocated = allocExplosion(world, explosionCursor)
   const slot = allocated.slot
   slot.active = true
+  world.activeExplosionIndices.add(slot.slotIndex)
   slot.position.set(x, y)
   slot.radius = radius
   slot.life = 0.24

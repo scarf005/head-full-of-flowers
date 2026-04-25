@@ -73,12 +73,15 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     }
 
     projectile.active = false
+    if (projectile.slotIndex >= 0) {
+      world.activeProjectileIndices.delete(projectile.slotIndex)
+    }
   }
 
-  for (let projectileIndex = 0; projectileIndex < world.projectiles.length; projectileIndex += 1) {
+  const updateProjectileAtIndex = (projectileIndex: number) => {
     const projectile = world.projectiles[projectileIndex]
     if (!projectile.active) {
-      continue
+      return
     }
 
     if (projectile.acceleration > 0) {
@@ -112,12 +115,12 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       !Number.isFinite(projectile.velocity.y)
     ) {
       deactivateProjectile(projectileIndex, false)
-      continue
+      return
     }
 
     if (projectile.ttl <= 0) {
       deactivateProjectile(projectileIndex, true, isExplosive)
-      continue
+      return
     }
 
     const progress = projectile.traveled / projectile.maxRange
@@ -130,7 +133,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
     const speedSquared = projectile.velocity.x * projectile.velocity.x + projectile.velocity.y * projectile.velocity.y
     if (progress >= 1 || (progress > 0.72 && speedSquared < 16) || speedSquared < 0.36) {
       deactivateProjectile(projectileIndex, true, isExplosive)
-      continue
+      return
     }
 
     const arenaDistance = projectile.position.length()
@@ -170,7 +173,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         if (ricochetSpeedSquared < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED * GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
           deactivateProjectile(projectileIndex, true, true)
         }
-        continue
+        return
       }
 
       if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
@@ -182,16 +185,16 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         ) {
           deactivateProjectile(projectileIndex, true)
         }
-        continue
+        return
       }
 
       if (arenaDistance > world.arenaRadius + 4) {
         deactivateProjectile(projectileIndex, false)
-        continue
+        return
       }
 
       deactivateProjectile(projectileIndex, false, isExplosive)
-      continue
+      return
     }
 
     if (projectile.kind === "rocket") {
@@ -217,7 +220,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
       if (proximityFuseTriggered) {
         deactivateProjectile(projectileIndex, true, true)
-        continue
+        return
       }
     }
 
@@ -255,7 +258,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
 
       if (proximityFuseTriggered) {
         deactivateProjectile(projectileIndex, true, true)
-        continue
+        return
       }
 
       const grenadeHitObstacle = deps.hitObstacle(projectileIndex)
@@ -279,11 +282,11 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
           if (ricochetSpeedSquared < GRENADE_PROJECTILE_RICOCHET_MIN_SPEED * GRENADE_PROJECTILE_RICOCHET_MIN_SPEED) {
             deactivateProjectile(projectileIndex, true, true)
           }
-          continue
+          return
         }
 
         deactivateProjectile(projectileIndex, true, true)
-        continue
+        return
       }
     } else if (deps.hitObstacle(projectileIndex)) {
       if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
@@ -295,11 +298,11 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         ) {
           deactivateProjectile(projectileIndex, true)
         }
-        continue
+        return
       }
 
       deactivateProjectile(projectileIndex, true, isExplosive)
-      continue
+      return
     }
 
     const hitSearchRadius = projectile.radius + broadphase.maxUnitRadius
@@ -350,5 +353,16 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
       deactivateProjectile(projectileIndex, true)
       return true
     })
+  }
+
+  if (world.activeProjectileIndices.size > 0) {
+    for (const projectileIndex of world.activeProjectileIndices) {
+      updateProjectileAtIndex(projectileIndex)
+    }
+    return
+  }
+
+  for (let projectileIndex = 0; projectileIndex < world.projectiles.length; projectileIndex += 1) {
+    updateProjectileAtIndex(projectileIndex)
   }
 }

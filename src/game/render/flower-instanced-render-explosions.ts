@@ -1,7 +1,7 @@
 import { buildCullBounds } from "../cull.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
-import { initFlowerGpuState } from "./flower-instanced-state.ts"
+import { ensureGpuViewport, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { GPU_EXPLOSION_INSTANCES, MAX_GPU_EXPLOSIONS } from "./flower-instanced-types.ts"
 
 interface RenderExplosionInstancesArgs {
@@ -30,9 +30,9 @@ export const renderExplosionInstances = (
   const cullBounds = buildCullBounds(cameraX, cameraY, 2.2)
   let explosionCount = 0
 
-  for (const explosion of world.explosions) {
+  const collectExplosion = (explosion: WorldState["explosions"][number]) => {
     if (!explosion.active || explosion.radius <= 0.01) {
-      continue
+      return false
     }
     if (
       explosion.position.x < cullBounds.minX - explosion.radius - 1 ||
@@ -40,10 +40,10 @@ export const renderExplosionInstances = (
       explosion.position.y < cullBounds.minY - explosion.radius - 1 ||
       explosion.position.y > cullBounds.maxY + explosion.radius + 1
     ) {
-      continue
+      return false
     }
     if (explosionCount >= MAX_GPU_EXPLOSIONS) {
-      break
+      return true
     }
 
     const writeIndex = explosionCount * 4
@@ -52,9 +52,25 @@ export const renderExplosionInstances = (
     state.explosionUniformData[writeIndex + 2] = explosion.radius
     state.explosionUniformData[writeIndex + 3] = Math.max(0, Math.min(1, explosion.life / 0.24))
     explosionCount += 1
+    return false
   }
 
-  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  if (world.activeExplosionIndices.size > 0) {
+    for (const explosionIndex of world.activeExplosionIndices) {
+      const explosion = world.explosions[explosionIndex]
+      if (explosion && collectExplosion(explosion)) {
+        break
+      }
+    }
+  } else {
+    for (const explosion of world.explosions) {
+      if (collectExplosion(explosion)) {
+        break
+      }
+    }
+  }
+
+  ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   if (clearCanvas) {
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)

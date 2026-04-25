@@ -127,6 +127,9 @@ const emitPrimaryShot = (
     const dirY = Math.sin(angle)
 
     projectile.active = true
+    if (projectile.slotIndex >= 0) {
+      world.activeProjectileIndices.add(projectile.slotIndex)
+    }
     projectile.kind = projectileKind
     projectile.ownerId = shooter.id
     projectile.ownerTeam = shooter.team

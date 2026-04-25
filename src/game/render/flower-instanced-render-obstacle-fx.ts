@@ -2,7 +2,7 @@ import { buildCullBounds } from "../cull.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 import { parseHexColorFloat } from "./flower-instanced-color.ts"
-import { ensureQuadCapacity, initFlowerGpuState } from "./flower-instanced-state.ts"
+import { ensureGpuViewport, ensureQuadCapacity, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { QUAD_INSTANCE_STRIDE } from "./flower-instanced-types.ts"
 
 interface RenderObstacleFxInstancesArgs {
@@ -135,7 +135,7 @@ export const renderObstacleFxInstances = (
     instanceCount += 1
   }
 
-  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   if (clearCanvas) {
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)

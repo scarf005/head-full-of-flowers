@@ -153,6 +153,7 @@ export class Unit {
 
 export class Projectile {
   active = false
+  slotIndex = -1
   kind: "ballistic" | "flame" | "grenade" | "rocket" = "ballistic"
   ownerId = ""
   ownerTeam: Team = "white"
@@ -233,6 +234,12 @@ export class Flower {
   nextInCell = -1
   color = "#f7ffef"
   accent = "#e5efcf"
+  petalRed = 1
+  petalGreen = 1
+  petalBlue = 1
+  centerRed = 1
+  centerGreen = 1
+  centerBlue = 1
   scorched = false
   position = new Vec2()
   size = 0

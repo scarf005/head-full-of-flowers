@@ -2,7 +2,7 @@ import { buildCullBounds } from "../cull.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
 import { parseHexColorFloat } from "./flower-instanced-color.ts"
-import { ensureTrailCapacity, initFlowerGpuState } from "./flower-instanced-state.ts"
+import { ensureGpuViewport, ensureTrailCapacity, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { TRAIL_INSTANCE_STRIDE } from "./flower-instanced-types.ts"
 
 interface RenderFlightTrailInstancesArgs {
@@ -83,7 +83,7 @@ export const renderFlightTrailInstances = (
     instanceCount += 1
   }
 
-  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   if (clearCanvas) {
     gl.clearColor(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT)

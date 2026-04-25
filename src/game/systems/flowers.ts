@@ -82,6 +82,18 @@ const shiftHex = (hex: string, offset: number) => {
   return `#${toHex(red + offset)}${toHex(green + offset)}${toHex(blue + offset)}`
 }
 
+const parseHexColorFloat = (hex: string) => {
+  const cleaned = hex.replace("#", "")
+  if (cleaned.length !== 6) {
+    return [1, 1, 1] as const
+  }
+
+  const red = Number.parseInt(cleaned.slice(0, 2), 16)
+  const green = Number.parseInt(cleaned.slice(2, 4), 16)
+  const blue = Number.parseInt(cleaned.slice(4, 6), 16)
+  return [red / 255, green / 255, blue / 255] as const
+}
+
 const flowerPalette = (
   _world: WorldState,
   ownerId: string,
@@ -366,6 +378,15 @@ export const spawnFlowers = (
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]
     flower.color = shiftHex(palette.color, colorOffset)
     flower.accent = shiftHex(palette.accent, Math.round(colorOffset * 0.6))
+    const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
+    const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
+    const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
+    flower.petalRed = petalRed
+    flower.petalGreen = petalGreen
+    flower.petalBlue = petalBlue
+    flower.centerRed = centerRed
+    flower.centerGreen = centerGreen
+    flower.centerBlue = centerBlue
     flower.scorched = isBurnt
     flower.position.set(
       spawnX,

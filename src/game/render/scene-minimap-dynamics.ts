@@ -118,24 +118,32 @@ const collectMinimapProjectileMarkers = (
   const maxX = centerX + minimapRadiusPx
   const minY = centerY - minimapRadiusPx
   const maxY = centerY + minimapRadiusPx
-  const projectileStep = Math.max(1, Math.ceil(world.projectiles.length / MINIMAP_PROJECTILE_SAMPLE_LIMIT))
+  const activeProjectileCount = world.activeProjectileIndices.size > 0
+    ? world.activeProjectileIndices.size
+    : world.projectiles.length
+  const projectileStep = Math.max(1, Math.ceil(activeProjectileCount / MINIMAP_PROJECTILE_SAMPLE_LIMIT))
+  let projectileVisit = 0
 
-  for (let projectileIndex = 0; projectileIndex < world.projectiles.length; projectileIndex += projectileStep) {
-    const projectile = world.projectiles[projectileIndex]
+  const collectProjectile = (projectile: WorldState["projectiles"][number]) => {
+    projectileVisit += 1
+    if ((projectileVisit - 1) % projectileStep !== 0) {
+      return
+    }
+
     if (!projectile.active) {
-      continue
+      return
     }
 
     const markerX = centerX + projectile.position.x * worldToMinimapScale
     const markerY = centerY + projectile.position.y * worldToMinimapScale
     if (markerX < minX || markerX > maxX || markerY < minY || markerY > maxY) {
-      continue
+      return
     }
 
     const deltaX = markerX - centerX
     const deltaY = markerY - centerY
     if (deltaX * deltaX + deltaY * deltaY > minimapRadiusSquared) {
-      continue
+      return
     }
 
     const isFriendlyProjectile = projectile.ownerId === playerId ||
@@ -178,13 +186,26 @@ const collectMinimapProjectileMarkers = (
       } else {
         minimapFriendlyProjectileMarkers.push(markerX, markerY)
       }
-      continue
+      return
     }
 
     if (isExplosiveProjectile) {
       minimapHostileExplosiveProjectileMarkers.push(markerX, markerY)
     } else {
       minimapHostileProjectileMarkers.push(markerX, markerY)
+    }
+  }
+
+  if (world.activeProjectileIndices.size > 0) {
+    for (const projectileIndex of world.activeProjectileIndices) {
+      const projectile = world.projectiles[projectileIndex]
+      if (projectile) {
+        collectProjectile(projectile)
+      }
+    }
+  } else {
+    for (const projectile of world.projectiles) {
+      collectProjectile(projectile)
     }
   }
 
@@ -298,12 +319,20 @@ const collectMinimapExplosionMarkers = (
 ) => {
   minimapExplosionMarkers.length = 0
   const worldToMinimapScale = minimapRadiusPx / arenaRadiusWorld
-  const explosionStep = Math.max(1, Math.ceil(world.explosions.length / MINIMAP_EXPLOSION_SAMPLE_LIMIT))
+  const activeExplosionCount = world.activeExplosionIndices.size > 0
+    ? world.activeExplosionIndices.size
+    : world.explosions.length
+  const explosionStep = Math.max(1, Math.ceil(activeExplosionCount / MINIMAP_EXPLOSION_SAMPLE_LIMIT))
+  let explosionVisit = 0
 
-  for (let explosionIndex = 0; explosionIndex < world.explosions.length; explosionIndex += explosionStep) {
-    const explosion = world.explosions[explosionIndex]
+  const collectExplosion = (explosion: WorldState["explosions"][number]) => {
+    explosionVisit += 1
+    if ((explosionVisit - 1) % explosionStep !== 0) {
+      return
+    }
+
     if (!explosion.active || explosion.radius <= 0.01) {
-      continue
+      return
     }
 
     const deltaX = explosion.position.x * worldToMinimapScale
@@ -311,12 +340,26 @@ const collectMinimapExplosionMarkers = (
     const drawRadiusPx = Math.max(MINIMAP_EXPLOSION_MIN_RADIUS_PX, explosion.radius * worldToMinimapScale)
     const visibilityRadiusPx = minimapRadiusPx + drawRadiusPx
     if (deltaX * deltaX + deltaY * deltaY > visibilityRadiusPx * visibilityRadiusPx) {
-      continue
+      return
     }
 
     const markerX = centerX + deltaX
     const markerY = centerY + deltaY
     minimapExplosionMarkers.push(markerX, markerY, drawRadiusPx)
+  }
+
+  if (world.activeExplosionIndices.size > 0) {
+    for (const explosionIndex of world.activeExplosionIndices) {
+      const explosion = world.explosions[explosionIndex]
+      if (explosion) {
+        collectExplosion(explosion)
+      }
+    }
+    return
+  }
+
+  for (const explosion of world.explosions) {
+    collectExplosion(explosion)
   }
 }
 

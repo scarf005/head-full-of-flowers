@@ -1,8 +1,7 @@
 import { buildCullBounds } from "../cull.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
-import { parseHexColorFloat } from "./flower-instanced-color.ts"
-import { ensureCapacity, initFlowerGpuState } from "./flower-instanced-state.ts"
+import { ensureCapacity, ensureGpuViewport, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { FLOWER_INSTANCE_STRIDE } from "./flower-instanced-types.ts"
 
 interface RenderFlowerInstancesArgs {
@@ -61,19 +60,15 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
               const writeIndex = instanceCount * FLOWER_INSTANCE_STRIDE
               ensureCapacity(state, instanceCount + 1)
 
-              const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
-              const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
-              const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
-
               state.instanceData[writeIndex] = flower.position.x
               state.instanceData[writeIndex + 1] = flower.position.y
               state.instanceData[writeIndex + 2] = size
-              state.instanceData[writeIndex + 3] = petalRed
-              state.instanceData[writeIndex + 4] = petalGreen
-              state.instanceData[writeIndex + 5] = petalBlue
-              state.instanceData[writeIndex + 6] = centerRed
-              state.instanceData[writeIndex + 7] = centerGreen
-              state.instanceData[writeIndex + 8] = centerBlue
+              state.instanceData[writeIndex + 3] = flower.petalRed
+              state.instanceData[writeIndex + 4] = flower.petalGreen
+              state.instanceData[writeIndex + 5] = flower.petalBlue
+              state.instanceData[writeIndex + 6] = flower.centerRed
+              state.instanceData[writeIndex + 7] = flower.centerGreen
+              state.instanceData[writeIndex + 8] = flower.centerBlue
 
               instanceCount += 1
             }
@@ -91,7 +86,7 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
     state.flowerBufferDirty = false
   }
 
-  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   gl.clearColor(0, 0, 0, 0)
   gl.clear(gl.COLOR_BUFFER_BIT)
   if (instanceCount <= 0) {

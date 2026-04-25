@@ -28,6 +28,8 @@ export interface FlowerGpuState {
   postProcessTexture: WebGLTexture
   postProcessTextureWidth: number
   postProcessTextureHeight: number
+  viewportWidth: number
+  viewportHeight: number
   explosionProgram: WebGLProgram
   explosionVao: WebGLVertexArrayObject
   explosionStaticBuffer: WebGLBuffer

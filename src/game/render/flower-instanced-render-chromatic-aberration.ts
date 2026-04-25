@@ -1,5 +1,5 @@
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../world/constants.ts"
-import { initFlowerGpuState } from "./flower-instanced-state.ts"
+import { ensureGpuViewport, initFlowerGpuState } from "./flower-instanced-state.ts"
 import { screenShakeChromaticAberrationAlpha } from "./chromatic-aberration.ts"
 
 const CHROMATIC_ABERRATION_SOURCE_SCALE = 0.5
@@ -73,7 +73,7 @@ export const renderChromaticAberrationPass = ({ context, shiftPx }: RenderChroma
     state.canvas.height = VIEW_HEIGHT
   }
 
-  gl.viewport(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   gl.disable(gl.BLEND)
   gl.clearColor(0, 0, 0, 0)
   gl.clear(gl.COLOR_BUFFER_BIT)

@@ -86,13 +86,13 @@ export const renderExplosions = (
   world: WorldState,
   fogCullBounds: FogCullBounds,
 ) => {
-  for (const explosion of world.explosions) {
+  const renderExplosion = (explosion: WorldState["explosions"][number]) => {
     if (!explosion.active) {
-      continue
+      return
     }
 
     if (!isInsideFogCullBounds(explosion.position.x, explosion.position.y, fogCullBounds, explosion.radius + 0.85)) {
-      continue
+      return
     }
 
     const alpha = clamp(explosion.life / 0.24, 0, 1)
@@ -106,7 +106,7 @@ export const renderExplosions = (
         explosion.radius * 2 * pulse,
         explosion.radius * 2 * pulse,
       )
-      continue
+      return
     }
 
     context.fillStyle = `rgba(255, 192, 74, ${0.24 * alpha})`
@@ -125,6 +125,20 @@ export const renderExplosions = (
         0.16,
       )
     }
+  }
+
+  if (world.activeExplosionIndices.size > 0) {
+    for (const explosionIndex of world.activeExplosionIndices) {
+      const explosion = world.explosions[explosionIndex]
+      if (explosion) {
+        renderExplosion(explosion)
+      }
+    }
+    return
+  }
+
+  for (const explosion of world.explosions) {
+    renderExplosion(explosion)
   }
 }
 
@@ -172,15 +186,15 @@ export const renderProjectiles = (
   renderTrails: boolean,
   fogCullBounds: FogCullBounds,
 ) => {
-  for (const projectile of world.projectiles) {
+  const renderProjectile = (projectile: WorldState["projectiles"][number]) => {
     if (!projectile.active) {
-      continue
+      return
     }
 
     if (
       !isInsideFogCullBounds(projectile.position.x, projectile.position.y, fogCullBounds, projectile.radius * 3.2 + 0.7)
     ) {
-      continue
+      return
     }
 
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
@@ -268,7 +282,7 @@ export const renderProjectiles = (
 
     if (projectile.kind === "flame") {
       drawFlameProjectileSprite(context, projectile.position.x, projectile.position.y, 0.07)
-      continue
+      return
     }
 
     context.save()
@@ -293,5 +307,19 @@ export const renderProjectiles = (
     context.fill()
 
     context.restore()
+  }
+
+  if (world.activeProjectileIndices.size > 0) {
+    for (const projectileIndex of world.activeProjectileIndices) {
+      const projectile = world.projectiles[projectileIndex]
+      if (projectile) {
+        renderProjectile(projectile)
+      }
+    }
+    return
+  }
+
+  for (const projectile of world.projectiles) {
+    renderProjectile(projectile)
   }
 }

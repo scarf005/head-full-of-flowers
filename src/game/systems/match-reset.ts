@@ -55,6 +55,7 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
     projectile.proximityRadiusBonus = 0
     projectile.acceleration = 0
   }
+  world.activeProjectileIndices.clear()
 
   for (const throwable of world.throwables) {
     throwable.active = false
@@ -78,6 +79,12 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
     flower.bloomWeight = 1
     flower.prevInCell = -1
     flower.nextInCell = -1
+    flower.petalRed = 1
+    flower.petalGreen = 1
+    flower.petalBlue = 1
+    flower.centerRed = 1
+    flower.centerGreen = 1
+    flower.centerBlue = 1
     flower.bloomDelay = 0
     flower.pop = 0
     flower.size = 0
@@ -119,6 +126,7 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
   for (const trail of world.flightTrails) trail.active = false
   world.activeFlightTrailIndices.clear()
   for (const explosion of world.explosions) explosion.active = false
+  world.activeExplosionIndices.clear()
 
   world.flightTrailCursor = 0
 }

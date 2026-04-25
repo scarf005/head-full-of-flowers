@@ -36,6 +36,7 @@ import { createBarrenGardenMap, type TerrainMap } from "./terrain-map.ts"
 import type { MatchDifficulty } from "../types.ts"
 
 export interface ExplosionFx {
+  slotIndex: number
   active: boolean
   position: Vec2
   life: number
@@ -79,6 +80,7 @@ export interface WorldState {
   units: Unit[]
   unitById: Map<string, Unit>
   projectiles: Projectile[]
+  activeProjectileIndices: Set<number>
   throwables: Throwable[]
   flowers: Flower[]
   damagePopups: DamagePopup[]
@@ -95,6 +97,7 @@ export interface WorldState {
   flightTrails: FlightTrailSegment[]
   activeFlightTrailIndices: Set<number>
   explosions: ExplosionFx[]
+  activeExplosionIndices: Set<number>
   muzzleFlashes: MuzzleFlashFx[]
   projectileCursor: number
   throwableCursor: number
@@ -163,7 +166,12 @@ export const createWorldState = (): WorldState => {
     bots,
     units: [player, ...bots],
     unitById: new Map([player, ...bots].map((unit) => [unit.id, unit])),
-    projectiles: Array.from({ length: PROJECTILE_POOL_SIZE }, () => new Projectile()),
+    projectiles: Array.from({ length: PROJECTILE_POOL_SIZE }, (_, index) => {
+      const projectile = new Projectile()
+      projectile.slotIndex = index
+      return projectile
+    }),
+    activeProjectileIndices: new Set<number>(),
     throwables: Array.from({ length: THROWABLE_POOL_SIZE }, () => new Throwable()),
     flowers: Array.from({ length: FLOWER_POOL_SIZE }, (_, index) => {
       const flower = new Flower()
@@ -203,12 +211,14 @@ export const createWorldState = (): WorldState => {
       return trail
     }),
     activeFlightTrailIndices: new Set<number>(),
-    explosions: Array.from({ length: 24 }, () => ({
+    explosions: Array.from({ length: 24 }, (_, index) => ({
+      slotIndex: index,
       active: false,
       position: new Vec2(),
       life: 0,
       radius: 0,
     })),
+    activeExplosionIndices: new Set<number>(),
     muzzleFlashes: Array.from({ length: 96 }, () => ({
       active: false,
       position: new Vec2(),

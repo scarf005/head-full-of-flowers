@@ -76,6 +76,16 @@ export const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
   state.gl.bufferData(state.gl.ARRAY_BUFFER, state.trailInstanceData.byteLength, state.gl.DYNAMIC_DRAW)
 }
 
+export const ensureGpuViewport = (state: FlowerGpuState, width: number, height: number) => {
+  if (state.viewportWidth === width && state.viewportHeight === height) {
+    return
+  }
+
+  state.gl.viewport(0, 0, width, height)
+  state.viewportWidth = width
+  state.viewportHeight = height
+}
+
 export const initFlowerGpuState = () => {
   if (flowerGpuState || flowerGpuInitTried || typeof document === "undefined") {
     return flowerGpuState
@@ -450,6 +460,8 @@ export const initFlowerGpuState = () => {
     postProcessTexture,
     postProcessTextureWidth: 0,
     postProcessTextureHeight: 0,
+    viewportWidth: -1,
+    viewportHeight: -1,
     explosionProgram,
     explosionVao,
     explosionStaticBuffer,
