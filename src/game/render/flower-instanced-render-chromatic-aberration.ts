@@ -52,6 +52,11 @@ export const renderChromaticAberrationPass = ({ context, shiftPx }: RenderChroma
     return false
   }
 
+  const state = initFlowerGpuState()
+  if (!state) {
+    return false
+  }
+
   const sourceBuffer = ensureChromaticAberrationSourceBuffer()
   if (!sourceBuffer) {
     return false
@@ -62,11 +67,6 @@ export const renderChromaticAberrationPass = ({ context, shiftPx }: RenderChroma
   sourceBuffer.context.globalCompositeOperation = "copy"
   sourceBuffer.context.drawImage(context.canvas, 0, 0, sourceBuffer.canvas.width, sourceBuffer.canvas.height)
   sourceBuffer.context.restore()
-
-  const state = initFlowerGpuState()
-  if (!state) {
-    return false
-  }
 
   const { gl } = state
   if (state.canvas.width !== VIEW_WIDTH || state.canvas.height !== VIEW_HEIGHT) {
