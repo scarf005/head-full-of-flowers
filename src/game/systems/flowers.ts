@@ -269,6 +269,11 @@ const removeFlowerFromDensity = (world: WorldState, flower: WorldState["flowers"
   flower.nextInCell = -1
 }
 
+interface FlowerPositionScratch {
+  x: number
+  y: number
+}
+
 const pickFlowerPosition = (
   world: WorldState,
   originX: number,
@@ -277,6 +282,7 @@ const pickFlowerPosition = (
   angleDeltaNormalized: number,
   occupancyWeight: number,
   seed: number,
+  out: FlowerPositionScratch,
 ) => {
   const spreadX = Math.cos(angle)
   const spreadY = Math.sin(angle)
@@ -309,11 +315,14 @@ const pickFlowerPosition = (
     }
 
     if (projectedCount <= FLOWER_TILE_CAPACITY) {
-      return { x: candidateX, y: candidateY }
+      out.x = candidateX
+      out.y = candidateY
+      return
     }
   }
 
-  return { x: chosenX, y: chosenY }
+  out.x = chosenX
+  out.y = chosenY
 }
 
 const flowerOccupancyWeight = (targetSize: number) => {
@@ -349,6 +358,7 @@ export const spawnFlowers = (
     nx * 2.11 +
     ny * 2.67 +
     world.playerFlowerTotal * 0.0023
+  const spawnPosition: FlowerPositionScratch = { x: 0, y: 0 }
 
   for (let index = 0; index < amount; index += 1) {
     const flowerSeed = baseSeed + index * 0.619
@@ -358,7 +368,7 @@ export const spawnFlowers = (
     const angle = baseAngle + angleOffset
     const targetSize = seededRange(flowerSeed + 1.47, FLOWER_SIZE_MIN, FLOWER_SIZE_MAX) * bloomScale
     const bloomWeight = flowerOccupancyWeight(targetSize)
-    const spawn = pickFlowerPosition(
+    pickFlowerPosition(
       world,
       originX,
       originY,
@@ -366,9 +376,10 @@ export const spawnFlowers = (
       angleOffset / FLOWER_SPAWN_CONE_HALF_ANGLE,
       bloomWeight,
       flowerSeed + 2.03,
+      spawnPosition,
     )
-    let spawnX = spawn.x
-    let spawnY = spawn.y
+    let spawnX = spawnPosition.x
+    let spawnY = spawnPosition.y
     const spawnLength = Math.hypot(spawnX, spawnY)
     const maxRadius = world.arenaRadius - 0.2
     if (spawnLength > maxRadius && spawnLength > 0) {
