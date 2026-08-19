@@ -26,6 +26,42 @@ const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
 const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
 
+let damageVignetteCanvas: HTMLCanvasElement | null = null
+
+const ensureDamageVignetteCanvas = () => {
+  if (damageVignetteCanvas) {
+    return damageVignetteCanvas
+  }
+  if (typeof document === "undefined") {
+    return null
+  }
+
+  const canvas = document.createElement("canvas")
+  canvas.width = VIEW_WIDTH
+  canvas.height = VIEW_HEIGHT
+  const context = canvas.getContext("2d")
+  if (!context) {
+    return null
+  }
+
+  const maxDimension = Math.max(VIEW_WIDTH, VIEW_HEIGHT)
+  const gradient = context.createRadialGradient(
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    maxDimension * DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO,
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    maxDimension * DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO,
+  )
+  gradient.addColorStop(0, "rgba(255, 0, 0, 0)")
+  gradient.addColorStop(0.55, `rgba(255, 0, 0, ${DAMAGE_VIGNETTE_MAX_ALPHA * 0.42})`)
+  gradient.addColorStop(1, `rgba(255, 0, 0, ${DAMAGE_VIGNETTE_MAX_ALPHA})`)
+  context.fillStyle = gradient
+  context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  damageVignetteCanvas = canvas
+  return canvas
+}
+
 const atmosphereGradientByContext = new WeakMap<CanvasRenderingContext2D, CanvasGradient>()
 
 const atmosphereGradientFor = (context: CanvasRenderingContext2D) => {
@@ -341,20 +377,14 @@ export const renderDamageVignette = (context: CanvasRenderingContext2D, world: W
     return
   }
 
-  const intensity = damageRatio ** DAMAGE_VIGNETTE_INTENSITY_CURVE
-  const alpha = intensity * DAMAGE_VIGNETTE_MAX_ALPHA
-  const gradient = context.createRadialGradient(
-    VIEW_WIDTH * 0.5,
-    VIEW_HEIGHT * 0.5,
-    Math.max(VIEW_WIDTH, VIEW_HEIGHT) * DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO,
-    VIEW_WIDTH * 0.5,
-    VIEW_HEIGHT * 0.5,
-    Math.max(VIEW_WIDTH, VIEW_HEIGHT) * DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO,
-  )
+  const vignette = ensureDamageVignetteCanvas()
+  if (!vignette) {
+    return
+  }
 
-  gradient.addColorStop(0, "rgba(255, 0, 0, 0)")
-  gradient.addColorStop(0.55, `rgba(255, 0, 0, ${alpha * 0.42})`)
-  gradient.addColorStop(1, `rgba(255, 0, 0, ${alpha})`)
-  context.fillStyle = gradient
-  context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  const intensity = damageRatio ** DAMAGE_VIGNETTE_INTENSITY_CURVE
+  context.save()
+  context.globalAlpha = intensity
+  context.drawImage(vignette, 0, 0)
+  context.restore()
 }
