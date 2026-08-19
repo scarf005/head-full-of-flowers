@@ -32,28 +32,50 @@ export interface ProjectileBroadphase {
   maxUnitRadius: number
 }
 
-export const buildProjectileBroadphase = (world: WorldState): ProjectileBroadphase => {
-  const unitBucketIndices = new Map<number, number[]>()
-  let maxUnitRadius = 0
+interface CachedProjectileBroadphase extends ProjectileBroadphase {
+  buckets: number[][]
+}
 
+const projectileBroadphaseByWorld = new WeakMap<WorldState, CachedProjectileBroadphase>()
+
+export const buildProjectileBroadphase = (world: WorldState): ProjectileBroadphase => {
+  let broadphase = projectileBroadphaseByWorld.get(world)
+  if (!broadphase) {
+    broadphase = {
+      unitBucketIndices: new Map<number, number[]>(),
+      maxUnitRadius: 0,
+      buckets: [],
+    }
+    projectileBroadphaseByWorld.set(world, broadphase)
+  }
+
+  broadphase.unitBucketIndices.clear()
+  broadphase.maxUnitRadius = 0
+  for (const bucket of broadphase.buckets) {
+    bucket.length = 0
+  }
+
+  let nextBucketIndex = 0
   for (let unitIndex = 0; unitIndex < world.units.length; unitIndex += 1) {
     const unit = world.units[unitIndex]
-    maxUnitRadius = Math.max(maxUnitRadius, unit.radius)
+    broadphase.maxUnitRadius = Math.max(broadphase.maxUnitRadius, unit.radius)
     const cellX = Math.floor(unit.position.x / PROJECTILE_BROADPHASE_BUCKET_SIZE)
     const cellY = Math.floor(unit.position.y / PROJECTILE_BROADPHASE_BUCKET_SIZE)
     const key = bucketKey(cellX, cellY)
-    const bucket = unitBucketIndices.get(key)
-    if (bucket) {
-      bucket.push(unitIndex)
-    } else {
-      unitBucketIndices.set(key, [unitIndex])
+    let bucket = broadphase.unitBucketIndices.get(key)
+    if (!bucket) {
+      bucket = broadphase.buckets[nextBucketIndex]
+      if (!bucket) {
+        bucket = []
+        broadphase.buckets.push(bucket)
+      }
+      nextBucketIndex += 1
+      broadphase.unitBucketIndices.set(key, bucket)
     }
+    bucket.push(unitIndex)
   }
 
-  return {
-    unitBucketIndices,
-    maxUnitRadius,
-  }
+  return broadphase
 }
 
 export const forEachNearbyProjectileUnit = (
