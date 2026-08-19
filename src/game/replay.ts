@@ -83,7 +83,8 @@ export class ReplayRecorder {
   private seed = ""
   private difficulty: MatchDifficulty = "hard"
   private frame = 0
-  private lines: string[] = []
+  private meta: ReplayMeta | null = null
+  private frames: ReplayInputFrame[] = []
 
   reset(options: { seed: string; difficulty: MatchDifficulty; settings: Record<string, unknown> }) {
     this.seed = options.seed
@@ -97,7 +98,8 @@ export class ReplayRecorder {
       settings: options.settings,
       createdAt: new Date().toISOString(),
     }
-    this.lines = [JSON.stringify(meta)]
+    this.meta = meta
+    this.frames = []
   }
 
   record(frameDt: number, gameplayDt: number, input: InputState) {
@@ -121,12 +123,21 @@ export class ReplayRecorder {
         primarySwapDirection: input.primarySwapDirection,
       },
     }
-    this.lines.push(JSON.stringify(frame))
+    this.frames.push(frame)
     this.frame += 1
   }
 
   exportJsonl() {
-    return this.lines.join("\n")
+    if (!this.meta) {
+      return ""
+    }
+
+    const lines = new Array<string>(this.frames.length + 1)
+    lines[0] = JSON.stringify(this.meta)
+    for (let index = 0; index < this.frames.length; index += 1) {
+      lines[index + 1] = JSON.stringify(this.frames[index])
+    }
+    return lines.join("\n")
   }
 }
 
