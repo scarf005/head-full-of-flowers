@@ -169,22 +169,27 @@ export function respawnUnitForGame(game: FlowerArenaGame, unitId: string) {
   })
 }
 
-export function applyDamageForGame(
-  game: FlowerArenaGame,
-  targetId: string,
-  amount: number,
-  sourceId: string,
-  sourceTeam: Team,
-  hitX: number,
-  hitY: number,
-  impactX: number,
-  impactY: number,
-  damageSource: DamageSource = "other",
-) {
-  applyDamage(game.world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
+const damageDepsCache = new WeakMap<FlowerArenaGame, Parameters<typeof applyDamage>[9]>()
+
+const damageDepsForGame = (game: FlowerArenaGame): Parameters<typeof applyDamage>[9] => {
+  const cached = damageDepsCache.get(game)
+  if (cached) {
+    return cached
+  }
+
+  const flowerSpawnDeps: Parameters<typeof spawnFlowers>[9] = {
+    allocFlower: () => allocFlower(game),
+    playerId: game.playerCoverageId(),
+    botPalette: (id) => botPalette(id),
+    factionColor: (id) => game.world.factions.find((faction) => faction.id === id)?.color ?? null,
+    onCoverageUpdated: () => updateCoverageSignals(game.world),
+  }
+
+  const deps: Parameters<typeof applyDamage>[9] = {
     allocPopup: () => allocPopup(game),
     spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt, options) => {
       const scoreOwnerId = game.resolveScoreOwnerId(ownerId)
+      flowerSpawnDeps.playerId = game.playerCoverageId()
       spawnFlowers(
         game.world,
         ownerId,
@@ -195,13 +200,7 @@ export function applyDamageForGame(
         dirY,
         amountValue,
         sizeScale,
-        {
-          allocFlower: () => allocFlower(game),
-          playerId: game.playerCoverageId(),
-          botPalette: (id) => botPalette(id),
-          factionColor: (id) => game.world.factions.find((faction) => faction.id === id)?.color ?? null,
-          onCoverageUpdated: () => updateCoverageSignals(game.world),
-        },
+        flowerSpawnDeps,
         isBurnt,
         options,
       )
@@ -232,9 +231,9 @@ export function applyDamageForGame(
     onSfxDeath: () => game.sfx.die(),
     onSfxPlayerDeath: () => game.sfx.playerDeath(),
     onSfxPlayerKill: () => game.sfx.playerKill(),
-    onPlayerHit: () => {
+    onPlayerHit: (_targetId, damageAmount) => {
       game.world.playerBulletsHit += 1
-      game.world.playerDamageDealt += amount
+      game.world.playerDamageDealt += damageAmount
     },
     onPlayerKill: () => {
       game.world.playerKills += 1
@@ -242,5 +241,35 @@ export function applyDamageForGame(
     onPlayerHpChanged: () => updatePlayerHpSignal(game.world),
     isInfiniteHpEnabled: () =>
       game.world.replayPlaybackActive ? game.replayDebugOptions.infiniteHp : debugInfiniteHpSignal.value,
-  }, damageSource)
+  }
+
+  damageDepsCache.set(game, deps)
+  return deps
+}
+
+export function applyDamageForGame(
+  game: FlowerArenaGame,
+  targetId: string,
+  amount: number,
+  sourceId: string,
+  sourceTeam: Team,
+  hitX: number,
+  hitY: number,
+  impactX: number,
+  impactY: number,
+  damageSource: DamageSource = "other",
+) {
+  applyDamage(
+    game.world,
+    targetId,
+    amount,
+    sourceId,
+    sourceTeam,
+    hitX,
+    hitY,
+    impactX,
+    impactY,
+    damageDepsForGame(game),
+    damageSource,
+  )
 }

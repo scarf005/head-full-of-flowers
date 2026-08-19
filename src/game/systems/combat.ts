@@ -317,6 +317,19 @@ export const firePrimary = (world: WorldState, shooterId: string, deps: FirePrim
   postShotAmmoHandling(shooter, deps)
 }
 
+const damageRuntimeDepsCache = new WeakMap<DamageDeps, DamageDeps & { completeReload: typeof completeReload }>()
+
+const damageRuntimeDeps = (deps: DamageDeps) => {
+  const cached = damageRuntimeDepsCache.get(deps)
+  if (cached) {
+    return cached
+  }
+
+  const created = { ...deps, completeReload }
+  damageRuntimeDepsCache.set(deps, created)
+  return created
+}
+
 export const applyDamage = (
   world: WorldState,
   targetId: string,
@@ -330,8 +343,17 @@ export const applyDamage = (
   deps: DamageDeps,
   damageSource: DamageSource = "other",
 ) => {
-  applyDamageCore(world, targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, {
-    ...deps,
-    completeReload,
-  }, damageSource)
+  applyDamageCore(
+    world,
+    targetId,
+    amount,
+    sourceId,
+    sourceTeam,
+    hitX,
+    hitY,
+    impactX,
+    impactY,
+    damageRuntimeDeps(deps),
+    damageSource,
+  )
 }
