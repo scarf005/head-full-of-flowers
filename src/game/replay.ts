@@ -85,6 +85,7 @@ export class ReplayRecorder {
   private frame = 0
   private meta: ReplayMeta | null = null
   private frames: ReplayInputFrame[] = []
+  private lastKeys: string[] = []
 
   reset(options: { seed: string; difficulty: MatchDifficulty; settings: Record<string, unknown> }) {
     this.seed = options.seed
@@ -100,6 +101,17 @@ export class ReplayRecorder {
     }
     this.meta = meta
     this.frames = []
+    this.lastKeys = []
+  }
+
+  private snapshotKeys(keys: ReadonlySet<string>) {
+    if (keys.size === this.lastKeys.length && this.lastKeys.every((key) => keys.has(key))) {
+      return this.lastKeys
+    }
+
+    const nextKeys = [...keys].sort()
+    this.lastKeys = nextKeys
+    return nextKeys
   }
 
   record(frameDt: number, gameplayDt: number, input: InputState) {
@@ -113,7 +125,7 @@ export class ReplayRecorder {
       frameDt,
       gameplayDt,
       input: {
-        keys: [...input.keys].sort(),
+        keys: this.snapshotKeys(input.keys),
         leftDown: input.leftDown,
         rightDown: input.rightDown,
         moveAxisX: input.moveAxisX,

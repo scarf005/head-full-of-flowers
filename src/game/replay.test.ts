@@ -106,3 +106,27 @@ Deno.test("replay recorder preserves JSONL v3 frame behavior", () => {
   assertEquals(resetReplay.meta?.seed, "seed-b")
   assertEquals(resetReplay.inputs.length, 0)
 })
+
+Deno.test("replay recorder keeps key snapshots stable when input keys change", () => {
+  const input = createWorldState().input
+  input.keys.add("w")
+
+  const recorder = new ReplayRecorder()
+  recorder.reset({ seed: "seed-a", difficulty: "hard", settings: {} })
+  recorder.record(0.016, 0.016, input)
+  recorder.record(0.016, 0.016, input)
+
+  input.keys.add("shift")
+  recorder.record(0.016, 0.016, input)
+
+  input.keys.delete("w")
+  recorder.record(0.016, 0.016, input)
+
+  const replay = parseReplayJsonl(recorder.exportJsonl())
+  assertEquals(replay.inputs.map((frame) => frame.input.keys), [
+    ["w"],
+    ["w"],
+    ["shift", "w"],
+    ["shift"],
+  ])
+})
