@@ -95,6 +95,7 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
   world.flowerBloomingIndices.clear()
   world.flowerDirtyIndices.clear()
   world.flowerDirtyCount = 0
+  world.flowerRenderRevision += 1
 
   for (const popup of world.damagePopups) popup.active = false
 
