@@ -48,27 +48,20 @@ export function allocThrowable(game: FlowerArenaGame) {
 }
 
 export function allocFlower(game: FlowerArenaGame) {
-  if (game.world.flowers.length > 0) {
-    const index = game.world.flowerCursor % game.world.flowers.length
-    const slot = game.world.flowers[index]
-    if (slot.slotIndex !== index) {
-      slot.slotIndex = index
-    }
-    game.world.flowerCursor = (index + 1) % game.world.flowers.length
-    if (!slot.active) {
-      return slot
-    }
+  const flowers = game.world.flowers
+  if (flowers.length === 0) {
+    const spawned = new Flower()
+    spawned.slotIndex = 0
+    flowers.push(spawned)
   }
 
-  const spawned = new Flower()
-  spawned.slotIndex = game.world.flowers.length
-  game.world.flowers.push(spawned)
-  if (game.world.flowers.length > 0) {
-    game.world.flowerCursor = game.world.flowerCursor % game.world.flowers.length
-  } else {
-    game.world.flowerCursor = 0
+  const index = game.world.flowerCursor % flowers.length
+  const slot = flowers[index]
+  if (slot.slotIndex !== index) {
+    slot.slotIndex = index
   }
-  return spawned
+  game.world.flowerCursor = (index + 1) % flowers.length
+  return slot
 }
 
 export function allocPopup(game: FlowerArenaGame) {
