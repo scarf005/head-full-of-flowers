@@ -64,3 +64,45 @@ Deno.test("replay playback duration falls back to frame dt", () => {
 
   assertEquals(replayFramePlaybackDuration(replay.inputs[0]), 0.016)
 })
+
+Deno.test("replay recorder preserves JSONL v3 frame behavior", () => {
+  const input = createWorldState().input
+  input.keys.add("z")
+  input.keys.add("a")
+  input.leftDown = true
+  input.moveAxisX = -0.5
+  input.moveAxisY = 0.25
+  input.canvasX = 123
+  input.canvasY = 456
+  input.primarySwapDirection = -1
+
+  const recorder = new ReplayRecorder()
+  recorder.reset({ seed: "seed-a", difficulty: "hard", settings: { mode: "ffa" } })
+  recorder.record(0.016, 0.012, input)
+  recorder.record(0.017, 0.013, input)
+
+  const lines = recorder.exportJsonl().split("\n")
+  const meta = JSON.parse(lines[0])
+  const first = JSON.parse(lines[1])
+  const second = JSON.parse(lines[2])
+
+  assertEquals(meta.type, "meta")
+  assertEquals(meta.version, 3)
+  assertEquals(meta.seed, "seed-a")
+  assertEquals(first.frame, 0)
+  assertEquals(second.frame, 1)
+  assertEquals(first.frameDt, 0.016)
+  assertEquals(first.gameplayDt, 0.012)
+  assertEquals(first.input.keys, ["a", "z"])
+  assertEquals(first.input.leftDown, true)
+  assertEquals(first.input.moveAxisX, -0.5)
+  assertEquals(first.input.moveAxisY, 0.25)
+  assertEquals(first.input.canvasX, 123)
+  assertEquals(first.input.canvasY, 456)
+  assertEquals(first.input.primarySwapDirection, -1)
+
+  recorder.reset({ seed: "seed-b", difficulty: "easy", settings: {} })
+  const resetReplay = parseReplayJsonl(recorder.exportJsonl())
+  assertEquals(resetReplay.meta?.seed, "seed-b")
+  assertEquals(resetReplay.inputs.length, 0)
+})
