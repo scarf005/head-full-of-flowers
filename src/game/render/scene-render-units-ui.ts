@@ -26,6 +26,28 @@ const DAMAGE_VIGNETTE_CENTER_RADIUS_RATIO = 0.26
 const DAMAGE_VIGNETTE_EDGE_RADIUS_RATIO = 0.64
 const DAMAGE_VIGNETTE_INTENSITY_CURVE = 0.62
 
+const atmosphereGradientByContext = new WeakMap<CanvasRenderingContext2D, CanvasGradient>()
+
+const atmosphereGradientFor = (context: CanvasRenderingContext2D) => {
+  const cached = atmosphereGradientByContext.get(context)
+  if (cached) {
+    return cached
+  }
+
+  const gradient = context.createRadialGradient(
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    60,
+    VIEW_WIDTH * 0.5,
+    VIEW_HEIGHT * 0.5,
+    VIEW_WIDTH * 0.75,
+  )
+  gradient.addColorStop(0, "rgba(212, 216, 214, 0)")
+  gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")
+  atmosphereGradientByContext.set(context, gradient)
+  return gradient
+}
+
 const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padding = 0) => {
   return isInsideCullBounds(x, y, bounds, padding)
 }
@@ -309,17 +331,7 @@ export const renderDamagePopups = (
 }
 
 export const renderAtmosphere = (context: CanvasRenderingContext2D) => {
-  const gradient = context.createRadialGradient(
-    VIEW_WIDTH * 0.5,
-    VIEW_HEIGHT * 0.5,
-    60,
-    VIEW_WIDTH * 0.5,
-    VIEW_HEIGHT * 0.5,
-    VIEW_WIDTH * 0.75,
-  )
-  gradient.addColorStop(0, "rgba(212, 216, 214, 0)")
-  gradient.addColorStop(1, "rgba(64, 69, 67, 0.24)")
-  context.fillStyle = gradient
+  context.fillStyle = atmosphereGradientFor(context)
   context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 }
 
