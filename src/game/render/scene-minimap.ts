@@ -10,6 +10,7 @@ import {
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 import type { CanvasViewportOverflowPx } from "./offscreen-indicators.ts"
+import { shouldRefreshMinimapComposite } from "./minimap-refresh.ts"
 import { drawMinimapDynamics } from "./scene-minimap-dynamics.ts"
 
 const MINIMAP_SIZE_PX = 164 * 0.8
@@ -194,13 +195,15 @@ export const renderMinimap = ({
   const top = Math.max(1, canvasHeight - MINIMAP_PADDING_PX - sizePx - viewportOverflow.bottom)
   const arenaRadiusWorld = Math.max(1, world.arenaRadius)
   const now = typeof performance !== "undefined" ? performance.now() : 0
-  const shouldRefreshComposite = !minimapCompositeLayerCache.canvas ||
-    !minimapCompositeLayerCache.context ||
-    minimapCompositeLayerCache.mapSize !== mapSize ||
-    minimapCompositeLayerCache.pixelSize !== sizePx ||
-    Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08 ||
-    world.flowerDirtyCount > 0 ||
-    now >= minimapCompositeLayerCache.nextRefreshAt
+  const shouldRefreshComposite = shouldRefreshMinimapComposite({
+    hasCanvas: Boolean(minimapCompositeLayerCache.canvas),
+    hasContext: Boolean(minimapCompositeLayerCache.context),
+    mapChanged: minimapCompositeLayerCache.mapSize !== mapSize,
+    pixelSizeChanged: minimapCompositeLayerCache.pixelSize !== sizePx,
+    arenaChanged: Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08,
+    flowersDirty: world.flowerDirtyCount > 0,
+    refreshDue: now >= minimapCompositeLayerCache.nextRefreshAt,
+  })
 
   if (shouldRefreshComposite) {
     let compositeCanvas = minimapCompositeLayerCache.canvas
