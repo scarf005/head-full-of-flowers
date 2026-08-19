@@ -11,6 +11,10 @@ interface RenderFlowerInstancesArgs {
   cameraY: number
 }
 
+let cachedFlowerWorld: WorldState | null = null
+let cachedFlowerRevision = -1
+let cachedFlowerHadBlooming = false
+
 export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: RenderFlowerInstancesArgs) => {
   const state = initFlowerGpuState()
   if (!state) {
@@ -31,13 +35,17 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   const minGridY = Math.max(0, Math.floor(cullBounds.minY) + halfGrid - 1)
   const maxGridY = Math.min(gridSize - 1, Math.floor(cullBounds.maxY) + halfGrid + 1)
 
+  const hasBloomingFlowers = world.flowerBloomingIndices.size > 0
+  const flowerRevisionChanged = cachedFlowerWorld !== world || cachedFlowerRevision !== world.flowerRenderRevision
+  const bloomJustFinished = cachedFlowerWorld === world && cachedFlowerHadBlooming && !hasBloomingFlowers
   const needsBufferUpload = state.flowerBufferDirty ||
     state.flowerCacheMinGridX !== minGridX ||
     state.flowerCacheMaxGridX !== maxGridX ||
     state.flowerCacheMinGridY !== minGridY ||
     state.flowerCacheMaxGridY !== maxGridY ||
-    world.flowerBloomingIndices.size > 0 ||
-    world.flowerDirtyIndices.size > 0
+    flowerRevisionChanged ||
+    hasBloomingFlowers ||
+    bloomJustFinished
 
   let instanceCount = state.flowerInstanceCount
   if (needsBufferUpload) {
@@ -85,6 +93,10 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
     state.flowerCacheMaxGridY = maxGridY
     state.flowerBufferDirty = false
   }
+
+  cachedFlowerWorld = world
+  cachedFlowerRevision = world.flowerRenderRevision
+  cachedFlowerHadBlooming = hasBloomingFlowers
 
   ensureGpuViewport(state, VIEW_WIDTH, VIEW_HEIGHT)
   gl.clearColor(0, 0, 0, 0)

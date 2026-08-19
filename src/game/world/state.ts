@@ -131,6 +131,7 @@ export interface WorldState {
   flowerBloomingIndices: Set<number>
   flowerDirtyIndices: Set<number>
   flowerDirtyCount: number
+  flowerRenderRevision: number
   playerFlowerTotal: number
   impactFeelLevel: number
   cameraShake: number
@@ -259,6 +260,7 @@ export const createWorldState = (): WorldState => {
     flowerBloomingIndices: new Set<number>(),
     flowerDirtyIndices: new Set<number>(),
     flowerDirtyCount: 0,
+    flowerRenderRevision: 0,
     playerFlowerTotal: 0,
     impactFeelLevel: 1,
     cameraShake: 0,

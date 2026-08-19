@@ -3,6 +3,7 @@ import type { Throwable } from "../entities.ts"
 import { distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID, BURNED_FLOWER_ACCENT, BURNED_FLOWER_COLOR } from "../factions.ts"
+import { setFlowerRenderColors } from "./flowers.ts"
 
 export const igniteMolotov = (
   _world: WorldState,
@@ -122,8 +123,8 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
                   }
 
                   if (flower.color !== BURNED_FLOWER_COLOR || flower.accent !== BURNED_FLOWER_ACCENT) {
-                    flower.color = BURNED_FLOWER_COLOR
-                    flower.accent = BURNED_FLOWER_ACCENT
+                    setFlowerRenderColors(flower, BURNED_FLOWER_COLOR, BURNED_FLOWER_ACCENT)
+                    world.flowerRenderRevision += 1
                   }
                   if (!flower.renderDirty) {
                     flower.renderDirty = true

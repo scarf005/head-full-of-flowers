@@ -82,16 +82,45 @@ const shiftHex = (hex: string, offset: number) => {
   return `#${toHex(red + offset)}${toHex(green + offset)}${toHex(blue + offset)}`
 }
 
-const parseHexColorFloat = (hex: string) => {
-  const cleaned = hex.replace("#", "")
+const parseHexColor24 = (hex: string) => {
+  const cleaned = hex.startsWith("#") ? hex.slice(1) : hex
   if (cleaned.length !== 6) {
-    return [1, 1, 1] as const
+    return -1
   }
 
-  const red = Number.parseInt(cleaned.slice(0, 2), 16)
-  const green = Number.parseInt(cleaned.slice(2, 4), 16)
-  const blue = Number.parseInt(cleaned.slice(4, 6), 16)
-  return [red / 255, green / 255, blue / 255] as const
+  const value = Number.parseInt(cleaned, 16)
+  return Number.isFinite(value) ? value : -1
+}
+
+export const setFlowerRenderColors = (
+  flower: WorldState["flowers"][number],
+  color: string,
+  accent: string,
+) => {
+  flower.color = color
+  flower.accent = accent
+
+  const petal = parseHexColor24(color)
+  const center = parseHexColor24(accent === "#29261f" ? "#6d5e42" : accent)
+  if (petal < 0) {
+    flower.petalRed = 1
+    flower.petalGreen = 1
+    flower.petalBlue = 1
+  } else {
+    flower.petalRed = ((petal >> 16) & 0xff) / 255
+    flower.petalGreen = ((petal >> 8) & 0xff) / 255
+    flower.petalBlue = (petal & 0xff) / 255
+  }
+
+  if (center < 0) {
+    flower.centerRed = 1
+    flower.centerGreen = 1
+    flower.centerBlue = 1
+  } else {
+    flower.centerRed = ((center >> 16) & 0xff) / 255
+    flower.centerGreen = ((center >> 8) & 0xff) / 255
+    flower.centerBlue = (center & 0xff) / 255
+  }
 }
 
 const flowerPalette = (
@@ -376,17 +405,11 @@ export const spawnFlowers = (
     const colorVariantIndex = Math.floor(seeded01(flowerSeed + 6.43) * FLOWER_COLOR_VARIANTS.length) %
       FLOWER_COLOR_VARIANTS.length
     const colorOffset = FLOWER_COLOR_VARIANTS[colorVariantIndex]
-    flower.color = shiftHex(palette.color, colorOffset)
-    flower.accent = shiftHex(palette.accent, Math.round(colorOffset * 0.6))
-    const centerColor = flower.accent === "#29261f" ? "#6d5e42" : flower.accent
-    const [petalRed, petalGreen, petalBlue] = parseHexColorFloat(flower.color)
-    const [centerRed, centerGreen, centerBlue] = parseHexColorFloat(centerColor)
-    flower.petalRed = petalRed
-    flower.petalGreen = petalGreen
-    flower.petalBlue = petalBlue
-    flower.centerRed = centerRed
-    flower.centerGreen = centerGreen
-    flower.centerBlue = centerBlue
+    setFlowerRenderColors(
+      flower,
+      shiftHex(palette.color, colorOffset),
+      shiftHex(palette.accent, Math.round(colorOffset * 0.6)),
+    )
     flower.scorched = isBurnt
     flower.position.set(
       spawnX,
@@ -411,6 +434,10 @@ export const spawnFlowers = (
     if (scoreOwnerId in world.factionFlowerCounts) {
       world.factionFlowerCounts[scoreOwnerId] += 1
     }
+  }
+
+  if (amount > 0) {
+    world.flowerRenderRevision += 1
   }
 
   if (palette.fromPlayer) {
