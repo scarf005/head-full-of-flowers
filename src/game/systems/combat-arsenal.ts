@@ -401,7 +401,8 @@ export const equipPrimary = (
         unit.primarySlotIndex = unit.primarySlots.length - 1
       } else {
         const incomingTier = primaryWeaponTier(weaponId)
-        if (incomingTier < highestPrimaryWeaponTier(unit)) {
+        const hasFallbackPistol = unit.primarySlots.some((slot) => slot.weaponId === "pistol")
+        if (!hasFallbackPistol && incomingTier < highestPrimaryWeaponTier(unit)) {
           syncUnitPrimaryFromSlot(unit)
           if (unit.isPlayer) {
             onPlayerWeaponUpdate()

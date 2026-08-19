@@ -333,7 +333,15 @@ export const canCollectWeaponPickup = (unit: Unit, weaponId: PrimaryWeaponId) =>
     return true
   }
 
-  return unit.primarySlots.length < 2 || incomingTier >= highestHeldTier
+  if (unit.primarySlots.length < 2) {
+    return true
+  }
+
+  if (unit.primarySlots.some((slot) => slot.weaponId === "pistol")) {
+    return true
+  }
+
+  return incomingTier >= highestHeldTier
 }
 
 export const collectNearbyPickup = (world: WorldState, unit: Unit, deps: CollectPickupDeps) => {
