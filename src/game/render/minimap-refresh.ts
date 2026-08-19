@@ -4,7 +4,6 @@ export interface MinimapCompositeRefreshState {
   mapChanged: boolean
   pixelSizeChanged: boolean
   arenaChanged: boolean
-  flowersDirty: boolean
   refreshDue: boolean
 }
 
@@ -14,7 +13,6 @@ export const shouldRefreshMinimapComposite = ({
   mapChanged,
   pixelSizeChanged,
   arenaChanged,
-  flowersDirty,
   refreshDue,
 }: MinimapCompositeRefreshState) =>
   !hasCanvas ||
@@ -22,5 +20,4 @@ export const shouldRefreshMinimapComposite = ({
   mapChanged ||
   pixelSizeChanged ||
   arenaChanged ||
-  flowersDirty ||
   refreshDue

@@ -8,7 +8,6 @@ const baseState = {
   mapChanged: false,
   pixelSizeChanged: false,
   arenaChanged: false,
-  flowersDirty: false,
   refreshDue: false,
 }
 
@@ -19,6 +18,10 @@ Deno.test("minimap composite refreshes for each existing invalidation source", (
   assertEquals(shouldRefreshMinimapComposite({ ...baseState, mapChanged: true }), true)
   assertEquals(shouldRefreshMinimapComposite({ ...baseState, pixelSizeChanged: true }), true)
   assertEquals(shouldRefreshMinimapComposite({ ...baseState, arenaChanged: true }), true)
-  assertEquals(shouldRefreshMinimapComposite({ ...baseState, flowersDirty: true }), true)
+  assertEquals(shouldRefreshMinimapComposite({ ...baseState, refreshDue: true }), true)
+})
+
+Deno.test("flower dirtiness alone does not bypass the minimap refresh interval", () => {
+  assertEquals(shouldRefreshMinimapComposite(baseState), false)
   assertEquals(shouldRefreshMinimapComposite({ ...baseState, refreshDue: true }), true)
 })

@@ -201,7 +201,6 @@ export const renderMinimap = ({
     mapChanged: minimapCompositeLayerCache.mapSize !== mapSize,
     pixelSizeChanged: minimapCompositeLayerCache.pixelSize !== sizePx,
     arenaChanged: Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08,
-    flowersDirty: world.flowerDirtyCount > 0,
     refreshDue: now >= minimapCompositeLayerCache.nextRefreshAt,
   })
 
