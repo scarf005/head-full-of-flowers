@@ -110,8 +110,15 @@ export function finishReloadForGame(game: FlowerArenaGame, unitId: string) {
   }
 }
 
+const primaryFireDepsCache = new WeakMap<FlowerArenaGame, FirePrimaryDeps>()
+
 export function primaryFireDepsForGame(game: FlowerArenaGame): FirePrimaryDeps {
-  return {
+  const cached = primaryFireDepsCache.get(game)
+  if (cached) {
+    return cached
+  }
+
+  const deps: FirePrimaryDeps = {
     allocProjectile: () => allocProjectile(game),
     startReload: (id) => startReloadForGame(game, id),
     onShellEjected: (shooter) => {
@@ -132,6 +139,8 @@ export function primaryFireDepsForGame(game: FlowerArenaGame): FirePrimaryDeps {
     },
     onOtherShoot: () => game.sfx.shoot(),
   }
+  primaryFireDepsCache.set(game, deps)
+  return deps
 }
 
 export function firePrimaryForGame(game: FlowerArenaGame, unitId: string) {
