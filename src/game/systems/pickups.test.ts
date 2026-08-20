@@ -158,7 +158,7 @@ Deno.test("canCollectWeaponPickup blocks lower-tier weapon of same kind", () => 
   assertEquals(canCollectWeaponPickup(player, "rocket-launcher"), true)
 })
 
-Deno.test("canCollectWeaponPickup blocks lower-tier grenade launcher when rocket launcher loadout is full", () => {
+Deno.test("canCollectWeaponPickup allows incoming weapon at the lowest held tier", () => {
   const world = createWorldState()
   const player = world.player
   world.units = [player]
@@ -167,10 +167,11 @@ Deno.test("canCollectWeaponPickup blocks lower-tier grenade launcher when rocket
   equipPrimary(player.id, world, "shotgun", 12, () => {})
   equipPrimary(player.id, world, "rocket-launcher", 3, () => {})
 
-  assertEquals(canCollectWeaponPickup(player, "grenade-launcher"), false)
+  assertEquals(canCollectWeaponPickup(player, "grenade-launcher"), true)
+  assertEquals(canCollectWeaponPickup(player, "flamethrower"), true)
 })
 
-Deno.test("collectNearbyPickup keeps grenade launcher pickup when blocked by stronger full loadout", () => {
+Deno.test("collectNearbyPickup replaces the lowest-tier weapon with grenade launcher", () => {
   const world = createWorldState()
   const player = world.player
   world.units = [player]
@@ -198,21 +199,22 @@ Deno.test("collectNearbyPickup keeps grenade launcher pickup when blocked by str
   })
 
   assertEquals(player.primarySlots.some((slot) => slot.weaponId === "rocket-launcher"), true)
-  assertEquals(player.primarySlots.some((slot) => slot.weaponId === "grenade-launcher"), false)
+  assertEquals(player.primarySlots.some((slot) => slot.weaponId === "grenade-launcher"), true)
+  assertEquals(player.primarySlots.some((slot) => slot.weaponId === "shotgun"), false)
   assertEquals(pickup.active, true)
-  assertEquals(pickup.weapon, "grenade-launcher")
+  assertEquals(pickup.weapon, "shotgun")
 })
 
-Deno.test("canCollectWeaponPickup blocks lower-tier weapon when loadout already has a higher-tier weapon", () => {
+Deno.test("canCollectWeaponPickup blocks weapon below the lowest held tier", () => {
   const world = createWorldState()
   const player = world.player
   world.units = [player]
   world.bots = []
 
-  equipPrimary(player.id, world, "shotgun", 12, () => {})
+  equipPrimary(player.id, world, "auto-shotgun", 12, () => {})
   equipPrimary(player.id, world, "rocket-launcher", 3, () => {})
 
-  assertEquals(canCollectWeaponPickup(player, "flamethrower"), false)
+  assertEquals(canCollectWeaponPickup(player, "grenade-launcher"), false)
   assertEquals(canCollectWeaponPickup(player, "battle-rifle"), true)
 })
 
@@ -247,19 +249,19 @@ Deno.test("collectNearbyPickup keeps lower-tier same-kind pickup when blocked", 
   assertEquals(player.primarySlots.some((slot) => slot.weaponId === "assault"), false)
 })
 
-Deno.test("equipPrimary rejects lower-tier pickup when loadout already has a higher-tier weapon", () => {
+Deno.test("equipPrimary rejects pickup below the lowest held tier", () => {
   const world = createWorldState()
   const player = world.player
   world.units = [player]
   world.bots = []
 
-  equipPrimary(player.id, world, "shotgun", 12, () => {})
+  equipPrimary(player.id, world, "auto-shotgun", 12, () => {})
   equipPrimary(player.id, world, "rocket-launcher", 3, () => {})
 
   const ejectedWeapon = equipPrimary(player.id, world, "flamethrower", 45, () => {})
 
   assertEquals(ejectedWeapon, null)
-  assertEquals(player.primarySlots.some((slot) => slot.weaponId === "shotgun"), true)
+  assertEquals(player.primarySlots.some((slot) => slot.weaponId === "auto-shotgun"), true)
   assertEquals(player.primarySlots.some((slot) => slot.weaponId === "rocket-launcher"), true)
   assertEquals(player.primarySlots.some((slot) => slot.weaponId === "flamethrower"), false)
 })

@@ -70,16 +70,6 @@ const buildPrimarySlot = (weaponId: PrimaryWeaponId, ammo: number, acquiredAt: n
   }
 }
 
-const highestPrimaryWeaponTier = (unit: Unit) => {
-  let highestTier = 0
-
-  for (const slot of unit.primarySlots) {
-    highestTier = Math.max(highestTier, primaryWeaponTier(slot.weaponId))
-  }
-
-  return highestTier
-}
-
 const lowestPrimaryWeaponSlotIndex = (unit: Unit) => {
   let lowestIndex = 0
 
@@ -401,8 +391,9 @@ export const equipPrimary = (
         unit.primarySlotIndex = unit.primarySlots.length - 1
       } else {
         const incomingTier = primaryWeaponTier(weaponId)
-        const hasFallbackPistol = unit.primarySlots.some((slot) => slot.weaponId === "pistol")
-        if (!hasFallbackPistol && incomingTier < highestPrimaryWeaponTier(unit)) {
+        const replacementIndex = lowestPrimaryWeaponSlotIndex(unit)
+        const replacedWeaponId = unit.primarySlots[replacementIndex].weaponId
+        if (incomingTier < primaryWeaponTier(replacedWeaponId)) {
           syncUnitPrimaryFromSlot(unit)
           if (unit.isPlayer) {
             onPlayerWeaponUpdate()
@@ -410,8 +401,6 @@ export const equipPrimary = (
           return null
         }
 
-        const replacementIndex = lowestPrimaryWeaponSlotIndex(unit)
-        const replacedWeaponId = unit.primarySlots[replacementIndex].weaponId
         if (replacedWeaponId !== "pistol") {
           ejectedWeaponId = replacedWeaponId
         }
