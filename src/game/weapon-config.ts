@@ -33,7 +33,8 @@ export interface WeaponSfxConfig {
   url: string
   volume: number
   continuous?: boolean
-  endAt?: number
+  stopAt?: number
+  stopFadeDuration?: number
 }
 
 export interface PrimaryWeaponConfig {
@@ -120,7 +121,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "assault",
     color: "#ffd67a",
     sprite: { default: assaultSprite, unloaded: assaultUnloadedSprite, magazine: assaultMagazineSprite },
-    sfx: { url: assaultSfx, volume: 0.48, continuous: true },
+    sfx: { url: assaultSfx, volume: 0.48, continuous: true, stopAt: 2.1, stopFadeDuration: 0.1 },
     cooldown: 0.1,
     damage: 3,
     speed: 50,
@@ -204,7 +205,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "battle-rifle",
     color: "#ffd37f",
     sprite: { default: battleRifleSprite, unloaded: battleRifleUnloadedSprite, magazine: battleRifleMagazineSprite },
-    sfx: { url: battleRifleSfx, volume: 0.48, endAt: 0.13 },
+    sfx: { url: battleRifleSfx, volume: 0.48, continuous: true, stopAt: 0.8, stopFadeDuration: 0.1 },
     cooldown: 0.2,
     damage: 4,
     speed: 52,

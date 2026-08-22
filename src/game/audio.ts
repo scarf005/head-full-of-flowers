@@ -159,6 +159,7 @@ export class SfxSynth {
   private playerDeathSamplePool = this.createSamplePool(playerDeathUrl, 4)
   private reloadSamplePool = this.createSamplePool(reloadUrl, 4)
   private weaponSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
+  private sampleFadeTimers = new Map<HTMLAudioElement, number>()
   private sampleStopTimers = new Map<HTMLAudioElement, number>()
 
   private ensureContext() {
@@ -210,11 +211,14 @@ export class SfxSynth {
     const weapon = weaponId ? PRIMARY_WEAPONS[weaponId] : undefined
     if (weapon?.sfx) {
       const pool = this.weaponSamplePool(weapon.id)
-      if (weapon.sfx.continuous && pool.some((sample) => !sample.paused && !sample.ended)) {
+      if (
+        weapon.sfx.continuous &&
+        pool.some((sample) => !sample.paused && !sample.ended && !this.sampleFadeTimers.has(sample))
+      ) {
         return
       }
 
-      this.playSample(pool, weapon.sfx.volume, 0, weapon.sfx.endAt)
+      this.playSample(pool, weapon.sfx.volume)
       return
     }
 
@@ -341,14 +345,59 @@ export class SfxSynth {
   }
 
   private stopWeapon(weaponId: PrimaryWeaponId) {
+    const sfx = PRIMARY_WEAPONS[weaponId].sfx
     for (const sample of this.weaponSamplePools.get(weaponId) ?? []) {
-      const pendingStop = this.sampleStopTimers.get(sample)
-      if (pendingStop !== undefined) {
-        clearTimeout(pendingStop)
-        this.sampleStopTimers.delete(sample)
+      if (sample.paused || sample.ended || this.sampleFadeTimers.has(sample)) {
+        continue
       }
-      sample.pause()
-      sample.currentTime = 0
+
+      this.clearSampleTimers(sample)
+      if (!sfx?.stopAt || !sfx.stopFadeDuration) {
+        sample.pause()
+        sample.currentTime = 0
+        continue
+      }
+
+      try {
+        sample.currentTime = sfx.stopAt
+      } catch {
+        sample.currentTime = 0
+      }
+      this.fadeOutSample(sample, sfx.stopFadeDuration)
+    }
+  }
+
+  private fadeOutSample(sample: HTMLAudioElement, duration: number) {
+    const initialVolume = sample.volume
+    const startedAt = performance.now()
+    const tick = () => {
+      const progress = Math.min(1, (performance.now() - startedAt) / (duration * 1000))
+      sample.volume = initialVolume * (1 - progress)
+      if (progress >= 1) {
+        sample.pause()
+        sample.currentTime = 0
+        sample.volume = initialVolume
+        this.sampleFadeTimers.delete(sample)
+        return
+      }
+
+      this.sampleFadeTimers.set(sample, globalThis.setTimeout(tick, 16))
+    }
+
+    this.sampleFadeTimers.set(sample, globalThis.setTimeout(tick, 16))
+  }
+
+  private clearSampleTimers(sample: HTMLAudioElement) {
+    const pendingFade = this.sampleFadeTimers.get(sample)
+    if (pendingFade !== undefined) {
+      clearTimeout(pendingFade)
+      this.sampleFadeTimers.delete(sample)
+    }
+
+    const pendingStop = this.sampleStopTimers.get(sample)
+    if (pendingStop !== undefined) {
+      clearTimeout(pendingStop)
+      this.sampleStopTimers.delete(sample)
     }
   }
 
@@ -377,11 +426,7 @@ export class SfxSynth {
 
   private playSample(pool: HTMLAudioElement[], baseVolume: number, startAt = 0, endAt = 0) {
     const sample = pool.find((voice) => voice.paused || voice.ended) ?? pool[0]
-    const pendingStop = this.sampleStopTimers.get(sample)
-    if (pendingStop !== undefined) {
-      clearTimeout(pendingStop)
-      this.sampleStopTimers.delete(sample)
-    }
+    this.clearSampleTimers(sample)
 
     sample.pause()
     sample.currentTime = 0
