@@ -1,20 +1,5 @@
+import { PRIMARY_WEAPONS, type WeaponSpriteMode } from "../weapon-config.ts"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
-import pistolSprite from "../../assets/items/pistol.png"
-import assaultSprite from "../../assets/items/assault.png"
-import battleRifleSprite from "../../assets/items/battle-rifle.png"
-import battleRifleMagazineSprite from "../../assets/items/battle-rifle-magazine.png"
-import battleRifleUnloadedSprite from "../../assets/items/battle-rifle-unloaded.png"
-import shotgunSprite from "../../assets/items/shotgun.png"
-import autoShotgunSprite from "../../assets/items/auto-shotgun.png"
-import grenadeLauncherSprite from "../../assets/items/grenade-launcher.png"
-import flamethrowerSprite from "../../assets/items/flamethrower.png"
-import flamethrowerMagazineSprite from "../../assets/items/flamethrower-magazine.png"
-import flamethrowerUnloadedSprite from "../../assets/items/flamethrower-unloaded.png"
-import rocketLauncherSprite from "../../assets/items/rocket-launcher.png"
-import rocketLauncherMagazineSprite from "../../assets/items/rocket-launcher-magazine.png"
-import rocketLauncherUnloadedSprite from "../../assets/items/rocket-launcher-unloaded.png"
-import assaultMagazineSprite from "../../assets/items/assault-magazine.png"
-import assaultUnloadedSprite from "../../assets/items/assault-unloaded.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
 import laserSightSprite from "../../assets/perks/laser-sight.png"
@@ -29,20 +14,10 @@ import kevlarVestSprite from "../../assets/perks/iron-bark.png"
 
 type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
-export type WeaponSpriteMode = "default" | "unloaded" | "magazine"
-
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
 const LOOT_SPRITE_SIZE = 0.15
-const itemSpritePath: Record<ItemSpriteId, string> = {
-  pistol: pistolSprite,
-  assault: assaultSprite,
-  shotgun: shotgunSprite,
-  flamethrower: flamethrowerSprite,
-  "auto-shotgun": autoShotgunSprite,
-  "battle-rifle": battleRifleSprite,
-  "grenade-launcher": grenadeLauncherSprite,
-  "rocket-launcher": rocketLauncherSprite,
+const itemSpritePath: Record<Exclude<ItemSpriteId, PrimaryWeaponId>, string> = {
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
   laser_sight: laserSightSprite,
@@ -56,17 +31,6 @@ const itemSpritePath: Record<ItemSpriteId, string> = {
   kevlar_vest: kevlarVestSprite,
 }
 
-const weaponVariantSpritePath: Record<string, string> = {
-  "assault-unloaded": assaultUnloadedSprite,
-  "assault-magazine": assaultMagazineSprite,
-  "battle-rifle-unloaded": battleRifleUnloadedSprite,
-  "battle-rifle-magazine": battleRifleMagazineSprite,
-  "flamethrower-unloaded": flamethrowerUnloadedSprite,
-  "flamethrower-magazine": flamethrowerMagazineSprite,
-  "rocket-launcher-unloaded": rocketLauncherUnloadedSprite,
-  "rocket-launcher-magazine": rocketLauncherMagazineSprite,
-}
-
 const legacyPerkSpriteAlias: Record<string, PerkId> = {
   "laser-sight": "laser_sight",
   "ricochet-shells": "ricochet_shells",
@@ -78,15 +42,32 @@ const legacyPerkSpriteAlias: Record<string, PerkId> = {
   "iron-bark": "kevlar_vest",
 }
 
+const weaponSpritePath = (id: string) => {
+  const weapon = Object.values(PRIMARY_WEAPONS).find((candidate) => candidate.id === id)
+  if (weapon) {
+    return weapon.sprite.default
+  }
+
+  const weaponVariant = Object.values(PRIMARY_WEAPONS).find((candidate) => {
+    return ["unloaded", "magazine"].some((mode) => `${candidate.id}-${mode}` === id)
+  })
+  if (!weaponVariant) {
+    return undefined
+  }
+
+  const mode = id.slice(weaponVariant.id.length + 1) as Exclude<WeaponSpriteMode, "default">
+  return weaponVariant.sprite[mode]
+}
+
 export const getItemSpritePath = (id: ItemSpriteId | string) => {
+  const weaponSprite = weaponSpritePath(id)
+  if (weaponSprite) {
+    return weaponSprite
+  }
+
   const direct = (itemSpritePath as Record<string, string | undefined>)[id]
   if (direct) {
     return direct
-  }
-
-  const variant = weaponVariantSpritePath[id]
-  if (variant) {
-    return variant
   }
 
   const alias = legacyPerkSpriteAlias[id]
@@ -100,7 +81,15 @@ export const getItemSpritePath = (id: ItemSpriteId | string) => {
 const itemSpriteCache = new Map<string, HTMLImageElement | null>()
 let itemSpritePreloadPromise: Promise<void> | null = null
 
-const itemSpriteIds = [...Object.keys(itemSpritePath), ...Object.keys(weaponVariantSpritePath)]
+const itemSpriteIds = [
+  ...Object.keys(PRIMARY_WEAPONS),
+  ...Object.values(PRIMARY_WEAPONS).flatMap((weapon) => {
+    return ["unloaded", "magazine"].flatMap((mode) =>
+      weapon.sprite[mode as Exclude<WeaponSpriteMode, "default">] ? [`${weapon.id}-${mode}`] : []
+    )
+  }),
+  ...Object.keys(itemSpritePath),
+]
 
 const ensureItemSprite = (id: ItemSpriteId | string) => {
   const cached = itemSpriteCache.get(id)
@@ -203,8 +192,7 @@ export const getWeaponSpriteHalfLength = (weaponId: PrimaryWeaponId, size: numbe
 }
 
 export const getWeaponSpriteVariantId = (weaponId: PrimaryWeaponId, mode: Exclude<WeaponSpriteMode, "default">) => {
-  const spriteId = `${weaponId}-${mode}`
-  return weaponVariantSpritePath[spriteId] ? spriteId : null
+  return PRIMARY_WEAPONS[weaponId].sprite[mode] ? `${weaponId}-${mode}` : null
 }
 
 export const scaleWeaponVariantToWeaponSize = (

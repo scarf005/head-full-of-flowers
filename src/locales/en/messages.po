@@ -360,11 +360,11 @@ msgstr "Paused"
 msgid "Pellet size +50%, fire rate -25%, damage +1"
 msgstr "Pellet size +50%, fire rate -25%, damage +1"
 
-#: src/game/game-update.ts:104
+#: src/game/game-update.ts:68
 msgid "Perk acquired {localizedPerk}"
 msgstr "Perk acquired {localizedPerk}"
 
-#: src/game/game-update.ts:103
+#: src/game/game-update.ts:67
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "Perk acquired {localizedPerk} x{stacks}"
 
@@ -372,7 +372,7 @@ msgstr "Perk acquired {localizedPerk} x{stacks}"
 msgid "Perks"
 msgstr "Perks"
 
-#: src/game/game-update.ts:97
+#: src/game/game-update.ts:61
 msgid "Picked up {localizedWeapon}"
 msgstr "Picked up {localizedWeapon}"
 

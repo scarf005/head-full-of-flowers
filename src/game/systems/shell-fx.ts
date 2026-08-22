@@ -73,11 +73,8 @@ export const spawnShellCasingFx = (
   cursor: number,
   unit: Unit,
 ): number => {
-  if (
-    unit.primaryWeapon === "flamethrower" ||
-    unit.primaryWeapon === "grenade-launcher" ||
-    unit.primaryWeapon === "rocket-launcher"
-  ) {
+  const weapon = PRIMARY_WEAPONS[unit.primaryWeapon]
+  if (!weapon.shellEjectionSpeed) {
     return cursor
   }
 
@@ -85,7 +82,7 @@ export const spawnShellCasingFx = (
   const aimAngle = Math.atan2(unit.aim.y, unit.aim.x)
   const side = randomFloat() > 0.5 ? 1 : -1
   const angle = aimAngle + side * Math.PI * 0.5 + randomRange(-0.4, 0.4)
-  const baseSpeed = unit.primaryWeapon === "shotgun" ? 7.6 : unit.primaryWeapon === "assault" ? 6.4 : 5.2
+  const baseSpeed = weapon.shellEjectionSpeed
   slot.active = true
   world.activeShellCasingIndices.add(slot.slotIndex)
   slot.position.set(

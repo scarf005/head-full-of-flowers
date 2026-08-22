@@ -1,6 +1,6 @@
 import { clamp, distSquared, limitToArena, randomRange } from "../utils.ts"
 import { randomFloat } from "../replay.ts"
-import { GRENADE_COOLDOWN, MOLOTOV_COOLDOWN } from "../weapons.ts"
+import { SECONDARY_WEAPON_COOLDOWNS } from "../weapon-config.ts"
 import type { Team } from "../types.ts"
 import {
   damageObstacleCell,
@@ -104,7 +104,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
   throwable.contactFuse = mode === "grenade" && shooter.proximityGrenades
   throwable.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
 
-  const cooldown = mode === "grenade" ? GRENADE_COOLDOWN : MOLOTOV_COOLDOWN
+  const cooldown = SECONDARY_WEAPON_COOLDOWNS[mode]
   shooter.secondaryCooldown = cooldown * shooter.grenadeTimer
   shooter.secondaryCooldownMax = shooter.secondaryCooldown
   shooter.secondaryMode = mode

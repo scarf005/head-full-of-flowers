@@ -104,7 +104,7 @@ const emitPrimaryShot = (
   shotsTotal: number,
   burstSpread: number,
 ) => {
-  const projectileKind = weapon.projectileKind ?? (weapon.id === "flamethrower" ? "flame" : "ballistic")
+  const projectileKind = weapon.projectileKind
   const pelletsPerShot = Math.max(1, weapon.pellets)
   const baseAngle = resolveAssistedAimAngle(world, shooter, Math.atan2(shooter.aim.y, shooter.aim.x))
   const centeredBurstOffset = (shotIndex - (shotsTotal - 1) * 0.5) * burstSpread
@@ -153,8 +153,7 @@ const emitPrimaryShot = (
     projectile.trailY = projectile.position.y
     projectile.trailReady = false
     projectile.ricochets = 0
-    projectile.ballisticRicochetRemaining =
-      shooter.shotgunRicochet && (weapon.id === "shotgun" || weapon.id === "auto-shotgun") ? 5 : 0
+    projectile.ballisticRicochetRemaining = shooter.shotgunRicochet ? (weapon.shotgunRicochetCount ?? 0) : 0
     projectile.contactFuse = shooter.proximityGrenades && projectileKind === "grenade"
     projectile.explosiveRadiusMultiplier = shooter.explosiveRadiusMultiplier
     projectile.proximityRadiusBonus = Math.max(0, shooter.projectileProximityBonus)
