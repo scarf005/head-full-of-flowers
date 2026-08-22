@@ -10,11 +10,11 @@ export const decideRenderFxCompositionPlan = (
   hasVisiblePickupLayer: boolean,
   renderedObstacleFxWithWebGl: boolean,
 ): RenderFxCompositionPlan => {
-  const runCombinedTrailComposite = !hasVisiblePickupLayer && renderedObstacleFxWithWebGl
-  const runPostPickupTrailPass = hasVisiblePickupLayer
+  const runCombinedTrailComposite = renderedObstacleFxWithWebGl
+  const runPostPickupTrailPass = hasVisiblePickupLayer && !renderedObstacleFxWithWebGl
 
   return {
-    renderObstacleToContext: hasVisiblePickupLayer,
+    renderObstacleToContext: false,
     runCombinedTrailComposite,
     runPostPickupTrailPass,
   }

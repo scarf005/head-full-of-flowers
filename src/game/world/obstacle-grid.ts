@@ -20,6 +20,7 @@ export interface ObstacleGridState {
   flash: Float32Array
   flashKind: Uint8Array
   flashActiveIndices: Set<number>
+  revision: number
 }
 
 const hpForMaterial = (material: number) => {
@@ -88,6 +89,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     flash: new Float32Array(cellCount),
     flashKind: new Uint8Array(cellCount),
     flashActiveIndices: new Set<number>(),
+    revision: 0,
   }
 }
 
@@ -199,6 +201,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
     grid.material[index] = OBSTACLE_MATERIAL_NONE
     grid.highTierLoot[index] = 0
     grid.flashKind[index] = OBSTACLE_FLASH_NONE
+    grid.revision += 1
   }
   return {
     damaged: true,

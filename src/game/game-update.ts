@@ -41,7 +41,16 @@ interface StableUnitUpdateDeps {
   ai: UpdateAIDeps
 }
 
+interface StableFrameUpdateDeps {
+  arenaBoundary: NonNullable<Parameters<typeof constrainUnitsToArena>[2]>
+  projectiles: Parameters<typeof updateProjectiles>[2]
+  throwables: Parameters<typeof updateThrowables>[2]
+  molotov: Parameters<typeof updateMolotovZones>[2]
+  pickups: Parameters<typeof updatePickups>[2]
+}
+
 const stableUnitUpdateDepsCache = new WeakMap<FlowerArenaGame, StableUnitUpdateDeps>()
+const stableFrameUpdateDepsCache = new WeakMap<FlowerArenaGame, StableFrameUpdateDeps>()
 
 const stableUnitUpdateDepsForGame = (game: FlowerArenaGame): StableUnitUpdateDeps => {
   const cached = stableUnitUpdateDepsCache.get(game)
@@ -113,6 +122,116 @@ const stableUnitUpdateDepsForGame = (game: FlowerArenaGame): StableUnitUpdateDep
   return created
 }
 
+const stableFrameUpdateDepsForGame = (game: FlowerArenaGame): StableFrameUpdateDeps => {
+  const cached = stableFrameUpdateDepsCache.get(game)
+  if (cached) {
+    return cached
+  }
+
+  const onSfxHit = () => game.sfx.hit()
+  const onSfxBreak = () => game.sfx.obstacleBreak()
+  const onObstacleDamaged = (x: number, y: number, material: number, damage: number) =>
+    game.spawnObstacleChipFx(x, y, material, damage)
+  const onObstacleDestroyed = (x: number, y: number, material: number) => game.spawnObstacleDebris(x, y, material)
+  const onBoxDestroyed = (x: number, y: number, highTier: boolean) =>
+    game.spawnLootPickupAt(x, y, true, highTier, highTier)
+  const allocMolotovZone = () => game.allocMolotovZone()
+
+  const obstacleDamageDeps: Parameters<typeof hitObstacle>[2] = {
+    onSfxHit,
+    onSfxBreak,
+    onObstacleDamaged,
+    onObstacleDestroyed,
+    onBoxDestroyed,
+  }
+
+  const projectileExplosionDeps: Parameters<typeof explodeProjectilePayload>[2] = {
+    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "projectile")
+    },
+    spawnExplosion: (x, y, radius) => game.spawnExplosion(x, y, radius),
+    onSfxHit,
+    onSfxBreak,
+    onObstacleDamaged,
+    onObstacleDestroyed,
+    onBoxDestroyed,
+    onExplosion: () => game.sfx.explosion(),
+  }
+
+  const grenadeExplosionDeps: Parameters<typeof explodeGrenade>[2] = {
+    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
+    },
+    damageObstaclesByExplosion: (x, y, radius) => {
+      damageObstaclesByExplosion(game.world, x, y, radius, obstacleDamageDeps)
+    },
+    spawnExplosion: (x, y, radius) => game.spawnExplosion(x, y, radius),
+    applyExplosionImpulse: (x, y, radius, explosivePower, sourceId, sourceTeam) => {
+      applyExplosionImpulse(game.world, x, y, radius, explosivePower, sourceId, sourceTeam)
+    },
+  }
+
+  const created: StableFrameUpdateDeps = {
+    arenaBoundary: {
+      onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
+        game.applyDamage(targetId, amount, sourceId, game.world.player.team, hitX, hitY, impactX, impactY, "arena")
+      },
+    },
+    projectiles: {
+      hitObstacle: (projectileIndex) => {
+        const projectile = game.world.projectiles[projectileIndex]
+        return hitObstacle(game.world, projectile, obstacleDamageDeps)
+      },
+      spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
+        spawnFlamePatch(game.world, x, y, ownerId, ownerTeam, allocMolotovZone)
+      },
+      explodeProjectile: (projectile) => explodeProjectilePayload(game.world, projectile, projectileExplosionDeps),
+      onTrailEnd: (x, y, velocityX, velocityY, kind) => {
+        emitProjectileTrailEnd(game.world, x, y, velocityX, velocityY, kind)
+      },
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "projectile")
+      },
+    },
+    throwables: {
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
+      },
+      explodeGrenade: (throwableIndex) => explodeGrenade(game.world, throwableIndex, grenadeExplosionDeps),
+      igniteMolotov: (throwableIndex) => {
+        const throwable = game.world.throwables[throwableIndex]
+        if (throwable) {
+          igniteMolotov(game.world, throwable, allocMolotovZone)
+        }
+      },
+      onTrailEnd: (x, y, velocityX, velocityY, mode) => {
+        emitThrowableTrailEnd(game.world, x, y, velocityX, velocityY, mode)
+      },
+      onExplosion: () => game.sfx.explosion(),
+      onObstacleDamaged,
+    },
+    molotov: {
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "molotov")
+      },
+    },
+    pickups: {
+      randomLootablePrimary: () => {
+        const id = game.randomLootablePrimaryForMatch()
+        return id === "pistol" ? "assault" : id
+      },
+      randomHighTierPrimary: () => game.randomHighTierPrimary(),
+      highTierChance: 0,
+      applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
+        game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
+      },
+    },
+  }
+
+  stableFrameUpdateDepsCache.set(game, created)
+  return created
+}
+
 export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: number) {
   game.syncPlayerOptions()
 
@@ -167,6 +286,7 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
   game.world.arenaRadius = lerp(game.matchArenaStartRadius, game.matchArenaEndRadius, clamp(shrinkProgress, 0, 1))
 
   const unitUpdateDeps = stableUnitUpdateDepsForGame(game)
+  const frameUpdateDeps = stableFrameUpdateDepsForGame(game)
   updatePlayer(game.world, gameplayDt, unitUpdateDeps.player)
   game.sfx.updateContinuousWeaponSfx(
     game.world.player.primaryWeapon,
@@ -182,92 +302,10 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
   updateAI(game.world, gameplayDt, unitUpdateDeps.ai)
 
   resolveUnitCollisions(game.world)
-  constrainUnitsToArena(game.world, simDt, {
-    onArenaBoundaryDamage: (targetId, amount, sourceId, hitX, hitY, impactX, impactY) => {
-      game.applyDamage(targetId, amount, sourceId, game.world.player.team, hitX, hitY, impactX, impactY, "arena")
-    },
-  })
-
-  updateProjectiles(game.world, simDt, {
-    hitObstacle: (projectileIndex) => {
-      const projectile = game.world.projectiles[projectileIndex]
-      return hitObstacle(game.world, projectile, {
-        onSfxHit: () => game.sfx.hit(),
-        onSfxBreak: () => game.sfx.obstacleBreak(),
-        onObstacleDamaged: (x, y, material, damage) => game.spawnObstacleChipFx(x, y, material, damage),
-        onObstacleDestroyed: (x, y, material) => game.spawnObstacleDebris(x, y, material),
-        onBoxDestroyed: (x, y, highTier) => game.spawnLootPickupAt(x, y, true, highTier, highTier),
-      })
-    },
-    spawnFlamePatch: (x, y, ownerId, ownerTeam) => {
-      spawnFlamePatch(game.world, x, y, ownerId, ownerTeam, () => game.allocMolotovZone())
-    },
-    explodeProjectile: (projectile) => {
-      explodeProjectilePayload(game.world, projectile, {
-        applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-          game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "projectile")
-        },
-        spawnExplosion: (x, y, radius) => game.spawnExplosion(x, y, radius),
-        onSfxHit: () => game.sfx.hit(),
-        onSfxBreak: () => game.sfx.obstacleBreak(),
-        onObstacleDamaged: (x, y, material, damage) => game.spawnObstacleChipFx(x, y, material, damage),
-        onObstacleDestroyed: (x, y, material) => game.spawnObstacleDebris(x, y, material),
-        onBoxDestroyed: (x, y, highTier) => game.spawnLootPickupAt(x, y, true, highTier, highTier),
-        onExplosion: () => game.sfx.explosion(),
-      })
-    },
-    onTrailEnd: (x, y, velocityX, velocityY, kind) => {
-      emitProjectileTrailEnd(game.world, x, y, velocityX, velocityY, kind)
-    },
-    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "projectile")
-    },
-  })
-
-  updateThrowables(game.world, simDt, {
-    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
-    },
-    explodeGrenade: (throwableIndex) => {
-      explodeGrenade(game.world, throwableIndex, {
-        applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-          game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
-        },
-        damageObstaclesByExplosion: (x, y, radius) => {
-          damageObstaclesByExplosion(game.world, x, y, radius, {
-            onSfxHit: () => game.sfx.hit(),
-            onSfxBreak: () => game.sfx.obstacleBreak(),
-            onObstacleDamaged: (chipX, chipY, material, damage) =>
-              game.spawnObstacleChipFx(chipX, chipY, material, damage),
-            onObstacleDestroyed: (dropX, dropY, material) => game.spawnObstacleDebris(dropX, dropY, material),
-            onBoxDestroyed: (dropX, dropY, highTier) => game.spawnLootPickupAt(dropX, dropY, true, highTier, highTier),
-          })
-        },
-        spawnExplosion: (x, y, radius) => game.spawnExplosion(x, y, radius),
-        applyExplosionImpulse: (x, y, radius, explosivePower, sourceId, sourceTeam) => {
-          applyExplosionImpulse(game.world, x, y, radius, explosivePower, sourceId, sourceTeam)
-        },
-      })
-    },
-    igniteMolotov: (throwableIndex) => {
-      const throwable = game.world.throwables[throwableIndex]
-      if (!throwable) {
-        return
-      }
-      igniteMolotov(game.world, throwable, () => game.allocMolotovZone())
-    },
-    onTrailEnd: (x, y, velocityX, velocityY, mode) => {
-      emitThrowableTrailEnd(game.world, x, y, velocityX, velocityY, mode)
-    },
-    onExplosion: () => game.sfx.explosion(),
-    onObstacleDamaged: (x, y, material, damage) => game.spawnObstacleChipFx(x, y, material, damage),
-  })
-
-  updateMolotovZones(game.world, simDt, {
-    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "molotov")
-    },
-  })
+  constrainUnitsToArena(game.world, simDt, frameUpdateDeps.arenaBoundary)
+  updateProjectiles(game.world, simDt, frameUpdateDeps.projectiles)
+  updateThrowables(game.world, simDt, frameUpdateDeps.throwables)
+  updateMolotovZones(game.world, simDt, frameUpdateDeps.molotov)
 
   updateFlowers(game.world, effectDt)
   updateDamagePopups(game.world, effectDt)
@@ -279,17 +317,8 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
   updateFlightTrails(game.world, effectDt, fxCullBounds)
   cullHiddenDamagePopups(game.world, fxCullBounds)
 
-  updatePickups(game.world, simDt, {
-    randomLootablePrimary: () => {
-      const id = game.randomLootablePrimaryForMatch()
-      return id === "pistol" ? "assault" : id
-    },
-    randomHighTierPrimary: () => game.randomHighTierPrimary(),
-    highTierChance: game.highTierLootBoxChance(),
-    applyDamage: (targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY) => {
-      game.applyDamage(targetId, amount, sourceId, sourceTeam, hitX, hitY, impactX, impactY, "throwable")
-    },
-  })
+  frameUpdateDeps.pickups.highTierChance = game.highTierLootBoxChance()
+  updatePickups(game.world, simDt, frameUpdateDeps.pickups)
 
   game.world.lootBoxTimer -= simDt
   if (game.world.lootBoxTimer <= 0) {

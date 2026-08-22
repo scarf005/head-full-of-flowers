@@ -10,7 +10,6 @@ import {
 } from "../world/obstacle-grid.ts"
 import type { WorldState } from "../world/state.ts"
 import type { CanvasViewportOverflowPx } from "./offscreen-indicators.ts"
-import { shouldRefreshMinimapComposite } from "./minimap-refresh.ts"
 import { drawMinimapDynamics } from "./scene-minimap-dynamics.ts"
 
 const MINIMAP_SIZE_PX = 164 * 0.8
@@ -18,8 +17,9 @@ const MINIMAP_PADDING_PX = 12
 const MINIMAP_UNIT_RADIUS_PX = 2.1
 const MINIMAP_PLAYER_RADIUS_PX = 2.8
 const MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS = 180
-const MINIMAP_COMPOSITE_REFRESH_INTERVAL_MS = 80
+const MINIMAP_COMPOSITE_REFRESH_INTERVAL_MS = 160
 const MINIMAP_COMPOSITE_PADDING_PX = 2
+const MINIMAP_ARENA_REFRESH_DELTA = 0.35
 
 let minimapObstacleLayerCache: {
   canvas: HTMLCanvasElement | null
@@ -45,6 +45,8 @@ let minimapCompositeLayerCache: {
   mapSize: number
   pixelSize: number
   arenaRadius: number
+  flowerRevision: number
+  obstacleRevision: number
   nextRefreshAt: number
 } = {
   canvas: null,
@@ -52,6 +54,8 @@ let minimapCompositeLayerCache: {
   mapSize: 0,
   pixelSize: 0,
   arenaRadius: 0,
+  flowerRevision: -1,
+  obstacleRevision: -1,
   nextRefreshAt: 0,
 }
 
@@ -87,7 +91,7 @@ const ensureMinimapObstacleLayer = (world: WorldState, sizePx: number, arenaRadi
     minimapObstacleLayerCache.gridRef !== obstacleGrid ||
     minimapObstacleLayerCache.gridSize !== obstacleGrid.size ||
     minimapObstacleLayerCache.pixelSize !== pixelSize ||
-    Math.abs(minimapObstacleLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08 ||
+    Math.abs(minimapObstacleLayerCache.arenaRadius - arenaRadiusWorld) >= MINIMAP_ARENA_REFRESH_DELTA ||
     now >= minimapObstacleLayerCache.nextRefreshAt
 
   if (!shouldRefresh && minimapObstacleLayerCache.canvas) {
@@ -193,16 +197,27 @@ export const renderMinimap = ({
 
   const left = Math.max(1, canvasWidth - MINIMAP_PADDING_PX - sizePx - viewportOverflow.right)
   const top = Math.max(1, canvasHeight - MINIMAP_PADDING_PX - sizePx - viewportOverflow.bottom)
+  const centerX = left + sizePx * 0.5
+  const centerY = top + sizePx * 0.5
+  const minimapRadiusPx = sizePx * 0.5
   const arenaRadiusWorld = Math.max(1, world.arenaRadius)
   const now = typeof performance !== "undefined" ? performance.now() : 0
-  const shouldRefreshComposite = shouldRefreshMinimapComposite({
-    hasCanvas: Boolean(minimapCompositeLayerCache.canvas),
-    hasContext: Boolean(minimapCompositeLayerCache.context),
-    mapChanged: minimapCompositeLayerCache.mapSize !== mapSize,
-    pixelSizeChanged: minimapCompositeLayerCache.pixelSize !== sizePx,
-    arenaChanged: Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= 0.08,
-    refreshDue: now >= minimapCompositeLayerCache.nextRefreshAt,
+
+  const toMinimap = (worldX: number, worldY: number) => ({
+    x: centerX + (worldX / arenaRadiusWorld) * minimapRadiusPx,
+    y: centerY + (worldY / arenaRadiusWorld) * minimapRadiusPx,
   })
+
+  const cacheMissing = !minimapCompositeLayerCache.canvas || !minimapCompositeLayerCache.context
+  const layoutChanged = minimapCompositeLayerCache.mapSize !== mapSize ||
+    minimapCompositeLayerCache.pixelSize !== sizePx
+  const arenaChanged = Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= MINIMAP_ARENA_REFRESH_DELTA
+  const flowerLayerDirty = minimapCompositeLayerCache.flowerRevision !== world.flowerRenderRevision ||
+    world.flowerDirtyCount > 0
+  const obstacleLayerDirty = minimapCompositeLayerCache.obstacleRevision !== world.obstacleGrid.revision
+  const staticLayerDirty = arenaChanged || flowerLayerDirty || obstacleLayerDirty
+  const shouldRefreshComposite = cacheMissing || layoutChanged ||
+    (staticLayerDirty && now >= minimapCompositeLayerCache.nextRefreshAt)
 
   if (shouldRefreshComposite) {
     let compositeCanvas = minimapCompositeLayerCache.canvas
@@ -223,17 +238,9 @@ export const renderMinimap = ({
 
     const localLeft = MINIMAP_COMPOSITE_PADDING_PX
     const localTop = MINIMAP_COMPOSITE_PADDING_PX
-    const centerX = localLeft + sizePx * 0.5
-    const centerY = localTop + sizePx * 0.5
-    const minimapRadiusPx = sizePx * 0.5
+    const compositeCenterX = localLeft + sizePx * 0.5
+    const compositeCenterY = localTop + sizePx * 0.5
     const halfMap = mapSize * 0.5
-
-    const toMinimap = (worldX: number, worldY: number) => {
-      return {
-        x: centerX + (worldX / arenaRadiusWorld) * minimapRadiusPx,
-        y: centerY + (worldY / arenaRadiusWorld) * minimapRadiusPx,
-      }
-    }
 
     const layerSlice = (layerCanvas: HTMLCanvasElement) => {
       const normalizedSpan = (arenaRadiusWorld * 2) / mapSize
@@ -257,12 +264,12 @@ export const renderMinimap = ({
 
     compositeContext.fillStyle = "#111611"
     compositeContext.beginPath()
-    compositeContext.arc(centerX, centerY, minimapRadiusPx + 2, 0, Math.PI * 2)
+    compositeContext.arc(compositeCenterX, compositeCenterY, minimapRadiusPx + 2, 0, Math.PI * 2)
     compositeContext.fill()
 
     compositeContext.save()
     compositeContext.beginPath()
-    compositeContext.arc(centerX, centerY, minimapRadiusPx, 0, Math.PI * 2)
+    compositeContext.arc(compositeCenterX, compositeCenterY, minimapRadiusPx, 0, Math.PI * 2)
     compositeContext.clip()
 
     compositeContext.fillStyle = "#5f6d5d"
@@ -303,50 +310,12 @@ export const renderMinimap = ({
       compositeContext.drawImage(obstacleLayer, localLeft, localTop, sizePx, sizePx)
     }
 
-    const viewBounds = buildCullBounds(renderCameraX, renderCameraY, 0)
-    const viewTopLeft = toMinimap(viewBounds.minX, viewBounds.minY)
-    const viewBottomRight = toMinimap(viewBounds.maxX, viewBounds.maxY)
-    const viewWidth = Math.max(1, viewBottomRight.x - viewTopLeft.x)
-    const viewHeight = Math.max(1, viewBottomRight.y - viewTopLeft.y)
-    compositeContext.strokeStyle = "rgba(255, 246, 188, 0.72)"
-    compositeContext.lineWidth = 1
-    compositeContext.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
-
-    drawMinimapDynamics(compositeContext, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
-
-    for (const unit of world.units) {
-      const marker = toMinimap(unit.position.x, unit.position.y)
-      if (
-        marker.x < localLeft ||
-        marker.x > localLeft + sizePx ||
-        marker.y < localTop ||
-        marker.y > localTop + sizePx
-      ) {
-        continue
-      }
-
-      const palette = deps.paletteForUnit(world, unit)
-      compositeContext.fillStyle = unit.isPlayer ? "#fff7bf" : palette.tone
-      compositeContext.strokeStyle = "rgba(0, 0, 0, 0.75)"
-      compositeContext.lineWidth = 1
-      compositeContext.beginPath()
-      compositeContext.arc(
-        marker.x,
-        marker.y,
-        unit.isPlayer ? MINIMAP_PLAYER_RADIUS_PX : MINIMAP_UNIT_RADIUS_PX,
-        0,
-        Math.PI * 2,
-      )
-      compositeContext.fill()
-      compositeContext.stroke()
-    }
-
     compositeContext.restore()
 
     compositeContext.strokeStyle = "rgba(233, 238, 231, 0.82)"
     compositeContext.lineWidth = 1.5
     compositeContext.beginPath()
-    compositeContext.arc(centerX, centerY, minimapRadiusPx, 0, Math.PI * 2)
+    compositeContext.arc(compositeCenterX, compositeCenterY, minimapRadiusPx, 0, Math.PI * 2)
     compositeContext.stroke()
     compositeContext.restore()
 
@@ -356,6 +325,8 @@ export const renderMinimap = ({
       mapSize,
       pixelSize: sizePx,
       arenaRadius: arenaRadiusWorld,
+      flowerRevision: world.flowerRenderRevision,
+      obstacleRevision: world.obstacleGrid.revision,
       nextRefreshAt: now + MINIMAP_COMPOSITE_REFRESH_INTERVAL_MS,
     }
   }
@@ -372,5 +343,43 @@ export const renderMinimap = ({
     left - MINIMAP_COMPOSITE_PADDING_PX,
     top - MINIMAP_COMPOSITE_PADDING_PX,
   )
+
+  context.beginPath()
+  context.arc(centerX, centerY, minimapRadiusPx, 0, Math.PI * 2)
+  context.clip()
+
+  const viewBounds = buildCullBounds(renderCameraX, renderCameraY, 0)
+  const viewTopLeft = toMinimap(viewBounds.minX, viewBounds.minY)
+  const viewBottomRight = toMinimap(viewBounds.maxX, viewBounds.maxY)
+  const viewWidth = Math.max(1, viewBottomRight.x - viewTopLeft.x)
+  const viewHeight = Math.max(1, viewBottomRight.y - viewTopLeft.y)
+  context.strokeStyle = "rgba(255, 246, 188, 0.72)"
+  context.lineWidth = 1
+  context.strokeRect(viewTopLeft.x, viewTopLeft.y, viewWidth, viewHeight)
+
+  drawMinimapDynamics(context, world, centerX, centerY, minimapRadiusPx, arenaRadiusWorld)
+
+  for (const unit of world.units) {
+    const marker = toMinimap(unit.position.x, unit.position.y)
+    if (marker.x < left || marker.x > left + sizePx || marker.y < top || marker.y > top + sizePx) {
+      continue
+    }
+
+    const palette = deps.paletteForUnit(world, unit)
+    context.fillStyle = unit.isPlayer ? "#fff7bf" : palette.tone
+    context.strokeStyle = "rgba(0, 0, 0, 0.75)"
+    context.lineWidth = 1
+    context.beginPath()
+    context.arc(
+      marker.x,
+      marker.y,
+      unit.isPlayer ? MINIMAP_PLAYER_RADIUS_PX : MINIMAP_UNIT_RADIUS_PX,
+      0,
+      Math.PI * 2,
+    )
+    context.fill()
+    context.stroke()
+  }
+
   context.restore()
 }
