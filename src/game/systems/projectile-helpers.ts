@@ -1,6 +1,6 @@
 import { clamp, distSquared } from "../utils.ts"
 import type { WorldState } from "../world/state.ts"
-import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
+import { applyObstacleRicochet, type ObstacleRicochetImpact } from "./obstacle-ricochet.ts"
 
 export const ROCKET_PROXIMITY_RADIUS = 1.2
 export const GRENADE_PROXIMITY_RADIUS = 1.25
@@ -221,6 +221,7 @@ export const ricochetBallisticProjectile = (
   projectile: WorldState["projectiles"][number],
   previousX: number,
   previousY: number,
+  impact: ObstacleRicochetImpact | null,
 ) => {
   applyObstacleRicochet({
     obstacleGrid: world.obstacleGrid,
@@ -232,6 +233,7 @@ export const ricochetBallisticProjectile = (
     tangentFriction: BALLISTIC_RICOCHET_TANGENT_FRICTION,
     jitterRadians: 0,
     separation: 0.02,
+    impact,
   })
 
   projectile.velocity.x *= 0.78

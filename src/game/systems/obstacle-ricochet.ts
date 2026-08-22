@@ -6,6 +6,13 @@ interface VecLike {
   y: number
 }
 
+export interface ObstacleRicochetImpact {
+  normalX: number
+  normalY: number
+  x: number
+  y: number
+}
+
 interface ApplyObstacleRicochetArgs {
   obstacleGrid: ObstacleGridState
   previousX: number
@@ -16,6 +23,65 @@ interface ApplyObstacleRicochetArgs {
   tangentFriction: number
   jitterRadians: number
   separation: number
+  impact?: ObstacleRicochetImpact | null
+}
+
+export const findObstacleRicochetImpact = (
+  obstacleGrid: ObstacleGridState,
+  previousX: number,
+  previousY: number,
+  position: VecLike,
+): ObstacleRicochetImpact | null => {
+  const moveX = position.x - previousX
+  const moveY = position.y - previousY
+  const stepX = Math.sign(moveX)
+  const stepY = Math.sign(moveY)
+  if (stepX === 0 && stepY === 0) {
+    return null
+  }
+
+  let cell = worldToObstacleGrid(obstacleGrid.size, previousX, previousY)
+  if (isObstacleCellSolid(obstacleGrid, cell.x, cell.y)) {
+    return null
+  }
+
+  const half = Math.floor(obstacleGrid.size * 0.5)
+  const xBoundary = stepX > 0 ? cell.x - half + 1 : cell.x - half
+  const yBoundary = stepY > 0 ? cell.y - half + 1 : cell.y - half
+  let tMaxX = stepX === 0 ? Number.POSITIVE_INFINITY : (xBoundary - previousX) / moveX
+  let tMaxY = stepY === 0 ? Number.POSITIVE_INFINITY : (yBoundary - previousY) / moveY
+  const tDeltaX = stepX === 0 ? Number.POSITIVE_INFINITY : 1 / Math.abs(moveX)
+  const tDeltaY = stepY === 0 ? Number.POSITIVE_INFINITY : 1 / Math.abs(moveY)
+
+  while (Math.min(tMaxX, tMaxY) <= 1) {
+    const hitX = Math.min(tMaxX, tMaxY)
+    const crossesX = Math.abs(tMaxX - hitX) <= 0.0000001
+    const crossesY = Math.abs(tMaxY - hitX) <= 0.0000001
+    const nextXCell = cell.x + (crossesX ? stepX : 0)
+    const nextYCell = cell.y + (crossesY ? stepY : 0)
+
+    if (isObstacleCellSolid(obstacleGrid, nextXCell, nextYCell)) {
+      const normalX = crossesX ? -stepX : 0
+      const normalY = crossesY ? -stepY : 0
+      const normalLength = Math.hypot(normalX, normalY)
+      return {
+        normalX: normalX / normalLength,
+        normalY: normalY / normalLength,
+        x: previousX + moveX * hitX,
+        y: previousY + moveY * hitX,
+      }
+    }
+
+    cell = { x: nextXCell, y: nextYCell }
+    if (crossesX) {
+      tMaxX += tDeltaX
+    }
+    if (crossesY) {
+      tMaxY += tDeltaY
+    }
+  }
+
+  return null
 }
 
 export const applyObstacleRicochet = ({
@@ -28,34 +94,18 @@ export const applyObstacleRicochet = ({
   tangentFriction,
   jitterRadians,
   separation,
+  impact = findObstacleRicochetImpact(obstacleGrid, previousX, previousY, position),
 }: ApplyObstacleRicochetArgs) => {
-  const xCell = worldToObstacleGrid(obstacleGrid.size, position.x, previousY)
-  const yCell = worldToObstacleGrid(obstacleGrid.size, previousX, position.y)
-  const blockedX = isObstacleCellSolid(obstacleGrid, xCell.x, xCell.y)
-  const blockedY = isObstacleCellSolid(obstacleGrid, yCell.x, yCell.y)
   const moveX = position.x - previousX
   const moveY = position.y - previousY
   const moveLength = Math.hypot(moveX, moveY) || 1
   const moveDirX = moveX / moveLength
   const moveDirY = moveY / moveLength
+  const normalX = impact?.normalX ?? -moveDirX
+  const normalY = impact?.normalY ?? -moveDirY
 
-  position.x = previousX
-  position.y = previousY
-
-  let normalX = 0
-  let normalY = 0
-  if (blockedX && !blockedY) {
-    normalX = moveDirX > 0 ? -1 : 1
-  } else if (blockedY && !blockedX) {
-    normalY = moveDirY > 0 ? -1 : 1
-  } else {
-    normalX = -moveDirX
-    normalY = -moveDirY
-  }
-
-  const normalLength = Math.hypot(normalX, normalY) || 1
-  normalX /= normalLength
-  normalY /= normalLength
+  position.x = impact?.x ?? previousX
+  position.y = impact?.y ?? previousY
 
   const velocityDotNormal = velocity.x * normalX + velocity.y * normalY
   const normalVelocityX = velocityDotNormal * normalX

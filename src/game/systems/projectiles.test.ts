@@ -3,6 +3,8 @@
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert"
 
 import { updateProjectiles } from "./projectiles.ts"
+import { withRandomSource } from "../replay.ts"
+import { createObstacleGrid, obstacleGridIndex } from "../world/obstacle-grid.ts"
 import { createWorldState } from "../world/state.ts"
 
 Deno.test("updateProjectiles applies damage when a ballistic projectile intersects an enemy", () => {
@@ -399,6 +401,43 @@ Deno.test("updateProjectiles deactivates slow grenade after ricochet", () => {
 
   assertEquals(explodeCalls, 1)
   assertEquals(projectile.active, false)
+})
+
+Deno.test("updateProjectiles reflects grenade velocity across the wall face instead of reversing its path", () => {
+  const world = createWorldState()
+  const player = world.player
+  const projectile = world.projectiles[0]
+
+  world.units = [player]
+  world.bots = []
+  world.obstacleGrid = createObstacleGrid(8)
+  world.obstacleGrid.solid[obstacleGridIndex(world.obstacleGrid.size, 4, 4)] = 1
+
+  projectile.active = true
+  projectile.kind = "grenade"
+  projectile.ownerId = player.id
+  projectile.ownerTeam = player.team
+  projectile.position.set(-0.5, -0.1)
+  projectile.velocity.set(10, 6)
+  projectile.radius = 0.1
+  projectile.damage = 2
+  projectile.maxRange = 100
+  projectile.ttl = 2
+  projectile.ricochets = 0
+
+  withRandomSource(() => 0.5, () => {
+    updateProjectiles(world, 0.075, {
+      hitObstacle: () => true,
+      spawnFlamePatch: () => {},
+      explodeProjectile: () => {},
+      applyDamage: () => {},
+    })
+  })
+
+  assertAlmostEquals(projectile.velocity.x, -5.8, 0.000001)
+  assertAlmostEquals(projectile.velocity.y, 4.68, 0.000001)
+  assertAlmostEquals(projectile.position.x, -0.02, 0.000001)
+  assertAlmostEquals(projectile.position.y, 0.2, 0.000001)
 })
 
 Deno.test("updateProjectiles ricochets ballistic projectiles at arena border when ricochet remains", () => {

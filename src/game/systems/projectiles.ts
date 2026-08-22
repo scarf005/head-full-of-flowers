@@ -2,7 +2,7 @@ import { clamp, distSquared } from "../utils.ts"
 import { randomFloat } from "../replay.ts"
 import type { WorldState } from "../world/state.ts"
 import type { Team } from "../types.ts"
-import { applyObstacleRicochet } from "./obstacle-ricochet.ts"
+import { applyObstacleRicochet, findObstacleRicochetImpact } from "./obstacle-ricochet.ts"
 import {
   BALLISTIC_RICOCHET_MIN_SPEED,
   buildProjectileBroadphase,
@@ -262,6 +262,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         return
       }
 
+      const obstacleImpact = findObstacleRicochetImpact(world.obstacleGrid, previousX, previousY, projectile.position)
       const grenadeHitObstacle = deps.hitObstacle(projectileIndex)
       if (grenadeHitObstacle) {
         if (projectile.ricochets < GRENADE_PROJECTILE_MAX_RICOCHETS) {
@@ -275,6 +276,7 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
             tangentFriction: GRENADE_PROJECTILE_RICOCHET_TANGENT_FRICTION,
             jitterRadians: GRENADE_PROJECTILE_RICOCHET_RANDOM_RADIANS,
             separation: 0.02,
+            impact: obstacleImpact,
           })
           projectile.ricochets += 1
 
@@ -289,21 +291,25 @@ export const updateProjectiles = (world: WorldState, dt: number, deps: Projectil
         deactivateProjectile(projectileIndex, true, true)
         return
       }
-    } else if (deps.hitObstacle(projectileIndex)) {
-      if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
-        ricochetBallisticProjectile(world, projectile, previousX, previousY)
-        const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x +
-          projectile.velocity.y * projectile.velocity.y
-        if (
-          ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED || projectile.damage < 0.8
-        ) {
-          deactivateProjectile(projectileIndex, true)
+    } else {
+      const obstacleImpact = findObstacleRicochetImpact(world.obstacleGrid, previousX, previousY, projectile.position)
+      if (deps.hitObstacle(projectileIndex)) {
+        if (projectile.kind === "ballistic" && projectile.ballisticRicochetRemaining > 0) {
+          ricochetBallisticProjectile(world, projectile, previousX, previousY, obstacleImpact)
+          const ballisticSpeedSquared = projectile.velocity.x * projectile.velocity.x +
+            projectile.velocity.y * projectile.velocity.y
+          if (
+            ballisticSpeedSquared < BALLISTIC_RICOCHET_MIN_SPEED * BALLISTIC_RICOCHET_MIN_SPEED ||
+            projectile.damage < 0.8
+          ) {
+            deactivateProjectile(projectileIndex, true)
+          }
+          return
         }
+
+        deactivateProjectile(projectileIndex, true, isExplosive)
         return
       }
-
-      deactivateProjectile(projectileIndex, true, isExplosive)
-      return
     }
 
     const hitSearchRadius = projectile.radius + broadphase.maxUnitRadius
