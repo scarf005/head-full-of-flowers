@@ -20,16 +20,20 @@ import {
 } from "./systems/flight-trails.ts"
 import { updateDamagePopups, updateFlowers } from "./systems/flowers.ts"
 import { igniteMolotov, spawnFlamePatch, updateMolotovZones } from "./systems/molotov.ts"
-import { canCollectWeaponPickup, type CollectPickupDeps, collectNearbyPickup, updatePickups } from "./systems/pickups.ts"
-import { updateCombatFeel, updateCrosshairWorld, type UpdatePlayerDeps, updatePlayer } from "./systems/player.ts"
+import {
+  canCollectWeaponPickup,
+  collectNearbyPickup,
+  type CollectPickupDeps,
+  updatePickups,
+} from "./systems/pickups.ts"
+import { updateCombatFeel, updateCrosshairWorld, updatePlayer, type UpdatePlayerDeps } from "./systems/player.ts"
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { explodeGrenade, updateThrowables } from "./systems/throwables.ts"
-import { type UpdateAIDeps, updateAI } from "./systems/ai.ts"
+import { updateAI, type UpdateAIDeps } from "./systems/ai.ts"
 import { clamp, lerp } from "./utils.ts"
 import { EFFECT_SPEED, MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { updateShellCasingsFx } from "./systems/shell-fx.ts"
 import type { FlowerArenaGame } from "./game.ts"
-
 
 interface StableUnitUpdateDeps {
   player: UpdatePlayerDeps
@@ -160,13 +164,18 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
 
   const unitUpdateDeps = stableUnitUpdateDepsForGame(game)
   updatePlayer(game.world, gameplayDt, unitUpdateDeps.player)
+  game.sfx.updateContinuousWeaponSfx(
+    game.world.player.primaryWeapon,
+    game.world.player.primaryAmmo,
+    game.world.player.reloadCooldown,
+    game.world.input.leftDown,
+  )
 
   if (game.world.player.reloadCooldown <= 0) {
     game.finishReload(game.world.player.id)
   }
 
   updateAI(game.world, gameplayDt, unitUpdateDeps.ai)
-
 
   resolveUnitCollisions(game.world)
   constrainUnitsToArena(game.world, simDt, {

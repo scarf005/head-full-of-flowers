@@ -35,6 +35,7 @@ export function setupInputForGame(game: FlowerArenaGame) {
     onReturnToMenu: () => game.returnToMenu(),
     onTogglePause: () => game.togglePause(),
     onPrimaryDown: () => game.firePrimary(game.world.player.id),
+    onPrimaryUp: () => game.sfx.stopContinuousWeaponSfx(),
     onPrimarySwap: (direction) => game.swapPrimary(game.world.player.id, direction),
     onSecondaryDown: () => game.throwSecondary(game.world.player.id),
     onCrosshair: (x, y, visible) => {
