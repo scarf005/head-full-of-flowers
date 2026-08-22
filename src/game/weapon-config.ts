@@ -20,6 +20,7 @@ import shotgunSfx from "../assets/sfx/159710__anthonychan0__mossberg-500a-1-shot
 import grenadeLauncherSfx from "../assets/sfx/163458__lemudcrab__grenade-launcher.ogg"
 import assaultSfx from "../assets/sfx/201668__franki-01234__m16-burst-in-street.ogg"
 import battleRifleSfx from "../assets/sfx/702225__areniporgen__fn-scar-h.ogg"
+import explosionSfx from "../assets/sfx/47252__deleted_user_364925__bad-explosion.ogg"
 import type { PrimaryWeaponId } from "./types.ts"
 
 export type WeaponSpriteMode = "default" | "unloaded" | "magazine"
@@ -45,6 +46,7 @@ export interface PrimaryWeaponConfig {
   color: string
   sprite: WeaponSpriteConfig
   sfx?: WeaponSfxConfig
+  explosionSfx?: WeaponSfxConfig
   cooldown: number
   damage: number
   speed: number
@@ -232,6 +234,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     color: "#ffe48a",
     sprite: { default: grenadeLauncherSprite },
     sfx: { url: grenadeLauncherSfx, volume: 0.65 },
+    explosionSfx: { url: explosionSfx, volume: 0.25 },
     cooldown: 0.7,
     damage: 20,
     speed: 40,
@@ -255,6 +258,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
       unloaded: rocketLauncherUnloadedSprite,
       magazine: rocketLauncherMagazineSprite,
     },
+    explosionSfx: { url: explosionSfx, volume: 0.4 },
     cooldown: 0.66,
     damage: 20,
     speed: 20,

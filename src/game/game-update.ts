@@ -155,7 +155,7 @@ const stableFrameUpdateDepsForGame = (game: FlowerArenaGame): StableFrameUpdateD
     onObstacleDamaged,
     onObstacleDestroyed,
     onBoxDestroyed,
-    onExplosion: () => game.sfx.explosion(),
+    onExplosion: (weaponId) => game.sfx.explosion(weaponId),
   }
 
   const grenadeExplosionDeps: Parameters<typeof explodeGrenade>[2] = {
@@ -207,7 +207,7 @@ const stableFrameUpdateDepsForGame = (game: FlowerArenaGame): StableFrameUpdateD
       onTrailEnd: (x, y, velocityX, velocityY, mode) => {
         emitThrowableTrailEnd(game.world, x, y, velocityX, velocityY, mode)
       },
-      onExplosion: () => game.sfx.explosion(),
+      onExplosion: (mode) => game.sfx.explosion(mode === "grenade" ? "grenade-launcher" : undefined),
       onObstacleDamaged,
     },
     molotov: {
