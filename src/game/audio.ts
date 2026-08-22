@@ -159,6 +159,7 @@ export class SfxSynth {
   private playerDeathSamplePool = this.createSamplePool(playerDeathUrl, 4)
   private reloadSamplePool = this.createSamplePool(reloadUrl, 4)
   private weaponSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
+  private explosionSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
   private sampleFadeTimers = new Map<HTMLAudioElement, number>()
   private sampleStopTimers = new Map<HTMLAudioElement, number>()
 
@@ -202,6 +203,9 @@ export class SfxSynth {
     for (const weapon of Object.values(PRIMARY_WEAPONS)) {
       if (weapon.sfx) {
         this.weaponSamplePool(weapon.id)
+      }
+      if (weapon.explosionSfx) {
+        this.explosionSamplePool(weapon.id)
       }
     }
     this.preloadSamples()
@@ -292,7 +296,18 @@ export class SfxSynth {
     this.playSample(this.reloadSamplePool, 0.8, 2.168, 2.7)
   }
 
-  explosion() {
+  countdownTick() {
+    const context = this.ensureContext()
+    this.chirp(context, 1320, 1180, 0.035, "square", 0.1)
+  }
+
+  explosion(weaponId?: PrimaryWeaponId) {
+    const explosionSfx = weaponId ? PRIMARY_WEAPONS[weaponId].explosionSfx : undefined
+    if (weaponId && explosionSfx) {
+      this.playSample(this.explosionSamplePool(weaponId), explosionSfx.volume)
+      return
+    }
+
     const context = this.ensureContext()
     this.chirp(context, 310, 36, 0.24, "sawtooth", 0.22)
   }
@@ -341,6 +356,22 @@ export class SfxSynth {
 
     const pool = this.createSamplePool(weapon.sfx.url, weapon.sfx.continuous ? 1 : 4)
     this.weaponSamplePools.set(weaponId, pool)
+    return pool
+  }
+
+  private explosionSamplePool(weaponId: PrimaryWeaponId) {
+    const existing = this.explosionSamplePools.get(weaponId)
+    if (existing) {
+      return existing
+    }
+
+    const weapon = PRIMARY_WEAPONS[weaponId]
+    if (!weapon.explosionSfx) {
+      return []
+    }
+
+    const pool = this.createSamplePool(weapon.explosionSfx.url, 4)
+    this.explosionSamplePools.set(weaponId, pool)
     return pool
   }
 
@@ -418,6 +449,7 @@ export class SfxSynth {
         ...this.playerDeathSamplePool,
         ...this.reloadSamplePool,
         ...Array.from(this.weaponSamplePools.values()).flat(),
+        ...Array.from(this.explosionSamplePools.values()).flat(),
       ]
     ) {
       sample.load()

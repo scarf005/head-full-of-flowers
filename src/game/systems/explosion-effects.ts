@@ -1,7 +1,7 @@
 import { damageObstaclesByExplosion } from "./collisions.ts"
 import { destroyPickupsByExplosion } from "./pickups.ts"
 import { clamp, randomRange } from "../utils.ts"
-import type { Team } from "../types.ts"
+import type { PrimaryWeaponId, Team } from "../types.ts"
 import type { WorldState } from "../world/state.ts"
 
 const EXPLOSION_UNIT_FLING_BASE = 6.5
@@ -82,7 +82,7 @@ interface ExplodeProjectilePayloadDeps extends ExplosionObstacleFxDeps {
     impactY: number,
   ) => void
   spawnExplosion: (x: number, y: number, radius: number) => void
-  onExplosion: () => void
+  onExplosion: (weaponId: PrimaryWeaponId) => void
 }
 
 const applyRadialExplosionDamage = (
@@ -166,7 +166,7 @@ export const explodeProjectilePayload = (
     damageObstaclesAtExplosion(world, projectile.position.x, projectile.position.y, explosionRadius, deps)
     world.cameraShake = Math.min(1.6, world.cameraShake + 0.24)
     world.hitStop = Math.max(world.hitStop, 0.01)
-    deps.onExplosion()
+    deps.onExplosion("grenade-launcher")
     return
   }
 
@@ -193,5 +193,5 @@ export const explodeProjectilePayload = (
 
   world.cameraShake = Math.min(2.4, world.cameraShake + 0.42)
   world.hitStop = Math.max(world.hitStop, 0.016)
-  deps.onExplosion()
+  deps.onExplosion("rocket-launcher")
 }

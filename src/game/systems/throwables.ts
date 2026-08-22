@@ -130,7 +130,7 @@ export interface ThrowableUpdateDeps {
     velocityY: number,
     mode: "grenade" | "molotov",
   ) => void
-  onExplosion: () => void
+  onExplosion: (mode: "grenade" | "molotov") => void
   onObstacleDamaged?: (x: number, y: number, material: number, damage: number) => void
   applyDamage: (
     targetId: string,
@@ -281,7 +281,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
         deps.explodeGrenade(throwableIndex)
         world.cameraShake = Math.min(1.4 + shakeCapBoost, world.cameraShake + GRENADE_HIT_CAMERA_SHAKE * shakeScale)
         world.hitStop = Math.max(world.hitStop, GRENADE_HIT_STOP * hitStopScale)
-        deps.onExplosion()
+        deps.onExplosion(throwable.mode)
       }
 
       continue
@@ -290,7 +290,7 @@ export const updateThrowables = (world: WorldState, dt: number, deps: ThrowableU
     deps.igniteMolotov(throwableIndex)
     world.cameraShake = Math.min(1.15 + shakeCapBoost, world.cameraShake + 0.16 * shakeScale)
     world.hitStop = Math.max(world.hitStop, 0.006 * hitStopScale)
-    deps.onExplosion()
+    deps.onExplosion(throwable.mode)
   }
 }
 
