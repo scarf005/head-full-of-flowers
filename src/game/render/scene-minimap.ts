@@ -16,7 +16,6 @@ const MINIMAP_SIZE_PX = 164 * 0.8
 const MINIMAP_PADDING_PX = 12
 const MINIMAP_UNIT_RADIUS_PX = 2.1
 const MINIMAP_PLAYER_RADIUS_PX = 2.8
-const MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS = 180
 const MINIMAP_COMPOSITE_REFRESH_INTERVAL_MS = 160
 const MINIMAP_COMPOSITE_PADDING_PX = 2
 const MINIMAP_ARENA_REFRESH_DELTA = 0.35
@@ -28,7 +27,7 @@ let minimapObstacleLayerCache: {
   gridSize: number
   pixelSize: number
   arenaRadius: number
-  nextRefreshAt: number
+  revision: number
 } = {
   canvas: null,
   context: null,
@@ -36,7 +35,7 @@ let minimapObstacleLayerCache: {
   gridSize: 0,
   pixelSize: 0,
   arenaRadius: 0,
-  nextRefreshAt: 0,
+  revision: -1,
 }
 
 let minimapCompositeLayerCache: {
@@ -84,7 +83,6 @@ const ensureMinimapObstacleLayer = (world: WorldState, sizePx: number, arenaRadi
     return null
   }
 
-  const now = typeof performance !== "undefined" ? performance.now() : 0
   const pixelSize = Math.max(1, Math.round(sizePx))
   const shouldRefresh = !minimapObstacleLayerCache.canvas ||
     !minimapObstacleLayerCache.context ||
@@ -92,7 +90,7 @@ const ensureMinimapObstacleLayer = (world: WorldState, sizePx: number, arenaRadi
     minimapObstacleLayerCache.gridSize !== obstacleGrid.size ||
     minimapObstacleLayerCache.pixelSize !== pixelSize ||
     Math.abs(minimapObstacleLayerCache.arenaRadius - arenaRadiusWorld) >= MINIMAP_ARENA_REFRESH_DELTA ||
-    now >= minimapObstacleLayerCache.nextRefreshAt
+    minimapObstacleLayerCache.revision !== obstacleGrid.revision
 
   if (!shouldRefresh && minimapObstacleLayerCache.canvas) {
     return minimapObstacleLayerCache.canvas
@@ -140,7 +138,7 @@ const ensureMinimapObstacleLayer = (world: WorldState, sizePx: number, arenaRadi
     gridSize: obstacleGrid.size,
     pixelSize,
     arenaRadius: arenaRadiusWorld,
-    nextRefreshAt: now + MINIMAP_OBSTACLE_LAYER_REFRESH_INTERVAL_MS,
+    revision: obstacleGrid.revision,
   }
 
   return canvas

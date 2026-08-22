@@ -1,4 +1,5 @@
 import { clamp } from "../utils.ts"
+import type { CullBounds } from "../cull.ts"
 import type { WorldState } from "../world/state.ts"
 import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
@@ -220,6 +221,40 @@ const drawFlowerToLayer = (
   return true
 }
 
+export const renderBloomingFlowers = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  cullBounds: CullBounds,
+) => {
+  for (const flowerIndex of world.flowerBloomingIndices) {
+    const flower = world.flowers[flowerIndex]
+    if (!flower?.active || flower.size <= 0) {
+      continue
+    }
+    if (
+      flower.position.x < cullBounds.minX ||
+      flower.position.x > cullBounds.maxX ||
+      flower.position.y < cullBounds.minY ||
+      flower.position.y > cullBounds.maxY
+    ) {
+      continue
+    }
+
+    const sprite = flowerSpriteForPalette(flower.color, flower.accent)
+    if (!sprite) {
+      continue
+    }
+    const sizeWorld = Math.max(0.12, flower.size * 1.8)
+    context.drawImage(
+      sprite,
+      flower.position.x - sizeWorld * 0.5,
+      flower.position.y - sizeWorld * 0.5,
+      sizeWorld,
+      sizeWorld,
+    )
+  }
+}
+
 export const flushFlowerLayer = (world: WorldState, frameToken?: number) => {
   if (typeof frameToken === "number" && flowerLayerLastFlushToken === frameToken) {
     return
@@ -252,6 +287,9 @@ export const flushFlowerLayer = (world: WorldState, frameToken?: number) => {
     const flower = world.flowers[flowerIndex]
     if (!flower || !flower.active || !flower.renderDirty) {
       world.flowerDirtyIndices.delete(flowerIndex)
+      continue
+    }
+    if (flower.bloomDelay > 0 || flower.pop < 1) {
       continue
     }
 

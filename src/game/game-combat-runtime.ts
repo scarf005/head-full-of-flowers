@@ -19,6 +19,27 @@ import type { PrimaryWeaponId, Team } from "./types.ts"
 import { updateCoverageSignals, updatePlayerHpSignal, updatePlayerWeaponSignals } from "./adapters/hud-sync.ts"
 import type { FlowerArenaGame } from "./game.ts"
 
+const FLOWER_SPAWN_BUDGET_PER_FRAME = 32
+
+type FlowerSpawnOptions = Parameters<typeof spawnFlowers>[11]
+
+interface PendingFlowerSpawn {
+  generationToken: number
+  ownerId: string
+  scoreOwnerId: string
+  x: number
+  y: number
+  dirX: number
+  dirY: number
+  amountRemaining: number
+  sizeScale: number
+  fromPlayer: boolean
+  isBurnt: boolean
+  options: FlowerSpawnOptions
+}
+
+const pendingFlowerSpawns = new WeakMap<FlowerArenaGame, PendingFlowerSpawn[]>()
+
 export function allocProjectile(game: FlowerArenaGame) {
   const slot = game.world.projectiles[game.world.projectileCursor]
   game.world.projectileCursor = (game.world.projectileCursor + 1) % game.world.projectiles.length
@@ -48,19 +69,44 @@ export function allocThrowable(game: FlowerArenaGame) {
 }
 
 export function allocFlower(game: FlowerArenaGame) {
-  const flowers = game.world.flowers
+  const world = game.world
+  const flowers = world.flowers
   if (flowers.length === 0) {
     const spawned = new Flower()
     spawned.slotIndex = 0
     flowers.push(spawned)
   }
 
-  const index = game.world.flowerCursor % flowers.length
+  const index = world.flowerCursor % flowers.length
   const slot = flowers[index]
+  if (slot.active) {
+    const cellIndex = slot.bloomCell
+    const previous = slot.prevInCell
+    const next = slot.nextInCell
+    if (cellIndex >= 0 && cellIndex < world.flowerCellHead.length) {
+      if (previous >= 0 && previous < flowers.length) {
+        flowers[previous].nextInCell = next
+      } else {
+        world.flowerCellHead[cellIndex] = next
+      }
+      if (next >= 0 && next < flowers.length) {
+        flowers[next].prevInCell = previous
+      }
+    }
+
+    world.flowerBloomingIndices.delete(index)
+    world.flowerDirtyIndices.delete(index)
+    world.flowerDirtyCount = world.flowerDirtyIndices.size
+    slot.active = false
+    slot.renderDirty = false
+    slot.bloomCell = -1
+    slot.prevInCell = -1
+    slot.nextInCell = -1
+  }
   if (slot.slotIndex !== index) {
     slot.slotIndex = index
   }
-  game.world.flowerCursor = (index + 1) % flowers.length
+  world.flowerCursor = (index + 1) % flowers.length
   return slot
 }
 
@@ -164,6 +210,131 @@ export function respawnUnitForGame(game: FlowerArenaGame, unitId: string) {
   })
 }
 
+const flowerSpawnDepsCache = new WeakMap<FlowerArenaGame, Parameters<typeof spawnFlowers>[9]>()
+
+const flowerSpawnDepsForGame = (game: FlowerArenaGame): Parameters<typeof spawnFlowers>[9] => {
+  const cached = flowerSpawnDepsCache.get(game)
+  if (cached) {
+    return cached
+  }
+
+  const deps: Parameters<typeof spawnFlowers>[9] = {
+    allocFlower: () => allocFlower(game),
+    playerId: game.playerCoverageId(),
+    botPalette: (id) => botPalette(id),
+    factionColor: (id) => game.world.factions.find((faction) => faction.id === id)?.color ?? null,
+    onCoverageUpdated: () => {},
+  }
+  flowerSpawnDepsCache.set(game, deps)
+  return deps
+}
+
+const queueFlowerSpawnForGame = (
+  game: FlowerArenaGame,
+  ownerId: string,
+  x: number,
+  y: number,
+  dirX: number,
+  dirY: number,
+  amount: number,
+  sizeScale: number,
+  isBurnt = false,
+  options: FlowerSpawnOptions = {},
+) => {
+  const amountRemaining = Math.max(0, Math.floor(amount))
+  if (amountRemaining <= 0) {
+    return
+  }
+
+  const scoreOwnerId = game.resolveScoreOwnerId(ownerId)
+  const playerCoverageId = game.playerCoverageId()
+  const fromPlayer = scoreOwnerId === playerCoverageId
+  if (scoreOwnerId in game.world.factionFlowerCounts) {
+    game.world.factionFlowerCounts[scoreOwnerId] += amountRemaining
+  }
+  if (fromPlayer) {
+    game.world.playerFlowerTotal += amountRemaining
+  }
+
+  let queue = pendingFlowerSpawns.get(game)
+  if (!queue) {
+    queue = []
+    pendingFlowerSpawns.set(game, queue)
+  }
+  queue.push({
+    generationToken: game.beginMatchGenerationToken,
+    ownerId,
+    scoreOwnerId,
+    x,
+    y,
+    dirX,
+    dirY,
+    amountRemaining,
+    sizeScale,
+    fromPlayer,
+    isBurnt,
+    options,
+  })
+}
+
+export function drainFlowerSpawnsForGame(game: FlowerArenaGame) {
+  const queue = pendingFlowerSpawns.get(game)
+  if (!queue || queue.length <= 0) {
+    return
+  }
+
+  let remainingBudget = FLOWER_SPAWN_BUDGET_PER_FRAME
+  let didSpawn = false
+  const spawnDeps = flowerSpawnDepsForGame(game)
+  spawnDeps.playerId = game.playerCoverageId()
+
+  while (remainingBudget > 0 && queue.length > 0) {
+    const pending = queue[0]
+    if (pending.generationToken !== game.beginMatchGenerationToken) {
+      queue.shift()
+      continue
+    }
+
+    const amount = Math.min(remainingBudget, pending.amountRemaining)
+    spawnFlowers(
+      game.world,
+      pending.ownerId,
+      pending.scoreOwnerId,
+      pending.x,
+      pending.y,
+      pending.dirX,
+      pending.dirY,
+      amount,
+      pending.sizeScale,
+      spawnDeps,
+      pending.isBurnt,
+      pending.options,
+    )
+    if (pending.scoreOwnerId in game.world.factionFlowerCounts) {
+      game.world.factionFlowerCounts[pending.scoreOwnerId] = Math.max(
+        0,
+        game.world.factionFlowerCounts[pending.scoreOwnerId] - amount,
+      )
+    }
+    if (pending.fromPlayer) {
+      game.world.playerFlowerTotal = Math.max(0, game.world.playerFlowerTotal - amount)
+    }
+    didSpawn = true
+    pending.amountRemaining -= amount
+    remainingBudget -= amount
+    if (pending.amountRemaining <= 0) {
+      queue.shift()
+    }
+  }
+
+  if (didSpawn) {
+    updateCoverageSignals(game.world)
+  }
+  if (queue.length <= 0) {
+    pendingFlowerSpawns.delete(game)
+  }
+}
+
 const damageDepsCache = new WeakMap<FlowerArenaGame, Parameters<typeof applyDamage>[9]>()
 
 const damageDepsForGame = (game: FlowerArenaGame): Parameters<typeof applyDamage>[9] => {
@@ -172,33 +343,10 @@ const damageDepsForGame = (game: FlowerArenaGame): Parameters<typeof applyDamage
     return cached
   }
 
-  const flowerSpawnDeps: Parameters<typeof spawnFlowers>[9] = {
-    allocFlower: () => allocFlower(game),
-    playerId: game.playerCoverageId(),
-    botPalette: (id) => botPalette(id),
-    factionColor: (id) => game.world.factions.find((faction) => faction.id === id)?.color ?? null,
-    onCoverageUpdated: () => updateCoverageSignals(game.world),
-  }
-
   const deps: Parameters<typeof applyDamage>[9] = {
     allocPopup: () => allocPopup(game),
     spawnFlowers: (ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt, options) => {
-      const scoreOwnerId = game.resolveScoreOwnerId(ownerId)
-      flowerSpawnDeps.playerId = game.playerCoverageId()
-      spawnFlowers(
-        game.world,
-        ownerId,
-        scoreOwnerId,
-        x,
-        y,
-        dirX,
-        dirY,
-        amountValue,
-        sizeScale,
-        flowerSpawnDeps,
-        isBurnt,
-        options,
-      )
+      queueFlowerSpawnForGame(game, ownerId, x, y, dirX, dirY, amountValue, sizeScale, isBurnt, options)
     },
     respawnUnit: (id) => respawnUnitForGame(game, id),
     onKillPetalBurst: (x, y) => game.spawnKillPetalBurst(x, y),

@@ -1,8 +1,4 @@
-import {
-  renderFlightTrailInstances,
-  renderFlowerInstances,
-  renderObstacleFxInstances,
-} from "./flower-instanced.ts"
+import { renderFlightTrailInstances, renderObstacleFxInstances } from "./flower-instanced.ts"
 import { decideRenderFxCompositionPlan, recordRenderPathProfileFrame } from "./composition-plan.ts"
 import { type CanvasViewportOverflowPx } from "./offscreen-indicators.ts"
 import { renderMinimap } from "./scene-minimap.ts"
@@ -11,7 +7,7 @@ import {
   GRASS_BASE_COLOR,
   hasGrassTransitionsTextureLoaded,
 } from "./scene-ground-layer-cache.ts"
-import { ensureFlowerLayerCache, flushFlowerLayer } from "./scene-flower-layer-cache.ts"
+import { ensureFlowerLayerCache, flushFlowerLayer, renderBloomingFlowers } from "./scene-flower-layer-cache.ts"
 import { paletteForUnit } from "./scene-palette.ts"
 import { renderMolotovZones, renderObstacles, renderPickups, renderThrowables } from "./scene-render-world.ts"
 import {
@@ -139,7 +135,7 @@ export const renderScene = ({ context, world, dt }: RenderSceneArgs) => {
   context.clip()
 
   renderMolotovZones(context, world, fogCullBounds)
-  renderFlowers(context, world, renderCameraX, renderCameraY, renderFrameToken)
+  renderFlowers(context, world, fogCullBounds, renderFrameToken)
   renderObstacles(context, world)
   const hasVisiblePickupLayer = hasVisiblePickupsInCullBounds(world.pickups, fogCullBounds)
   const compositionPlan = decideRenderFxCompositionPlan(hasVisiblePickupLayer, true)
@@ -290,28 +286,36 @@ const renderArenaBoundary = (context: CanvasRenderingContext2D, world: WorldStat
 const renderFlowers = (
   context: CanvasRenderingContext2D,
   world: WorldState,
-  renderCameraX: number,
-  renderCameraY: number,
+  cullBounds: FogCullBounds,
   frameToken: number,
 ) => {
-  const renderedWithWebGl = renderFlowerInstances({
-    context,
-    world,
-    cameraX: renderCameraX,
-    cameraY: renderCameraY,
-  })
-  if (renderedWithWebGl) {
-    return
-  }
-
   flushFlowerLayer(world, frameToken)
 
   const layer = ensureFlowerLayerCache(world)
-  if (!layer.canvas) {
-    return
+  if (layer.canvas) {
+    const mapSize = layer.size
+    const halfMap = Math.floor(mapSize * 0.5)
+    const minWorldX = Math.max(-halfMap, cullBounds.minX)
+    const maxWorldX = Math.min(halfMap, cullBounds.maxX)
+    const minWorldY = Math.max(-halfMap, cullBounds.minY)
+    const maxWorldY = Math.min(halfMap, cullBounds.maxY)
+    const worldWidth = Math.max(0, maxWorldX - minWorldX)
+    const worldHeight = Math.max(0, maxWorldY - minWorldY)
+    if (worldWidth > 0 && worldHeight > 0) {
+      const pixelsPerWorld = layer.canvas.width / mapSize
+      context.drawImage(
+        layer.canvas,
+        (minWorldX + halfMap) * pixelsPerWorld,
+        (minWorldY + halfMap) * pixelsPerWorld,
+        worldWidth * pixelsPerWorld,
+        worldHeight * pixelsPerWorld,
+        minWorldX,
+        minWorldY,
+        worldWidth,
+        worldHeight,
+      )
+    }
   }
 
-  const mapSize = layer.size
-  const halfMap = Math.floor(mapSize * 0.5)
-  context.drawImage(layer.canvas, -halfMap, -halfMap, mapSize, mapSize)
+  renderBloomingFlowers(context, world, cullBounds)
 }

@@ -92,6 +92,7 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
     flower.targetSize = 0
   }
 
+  world.flowerCursor = 0
   world.flowerBloomingIndices.clear()
   world.flowerDirtyIndices.clear()
   world.flowerDirtyCount = 0

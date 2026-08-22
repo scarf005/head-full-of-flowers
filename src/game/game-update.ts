@@ -33,6 +33,7 @@ import { updateAI, type UpdateAIDeps } from "./systems/ai.ts"
 import { clamp, lerp } from "./utils.ts"
 import { EFFECT_SPEED, MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { updateShellCasingsFx } from "./systems/shell-fx.ts"
+import { drainFlowerSpawnsForGame } from "./game-combat-runtime.ts"
 import type { FlowerArenaGame } from "./game.ts"
 
 interface StableUnitUpdateDeps {
@@ -259,6 +260,7 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
   const fxCullBounds = game.buildFogCullBounds()
 
   if (!game.world.running) {
+    drainFlowerSpawnsForGame(game)
     updateFlowers(game.world, effectDt)
     updateDamagePopups(game.world, effectDt)
     game.updateObstacleDebris(effectDt, fxCullBounds)
@@ -303,6 +305,7 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
   updateThrowables(game.world, simDt, frameUpdateDeps.throwables)
   updateMolotovZones(game.world, simDt, frameUpdateDeps.molotov)
 
+  drainFlowerSpawnsForGame(game)
   updateFlowers(game.world, effectDt)
   updateDamagePopups(game.world, effectDt)
   game.updateObstacleDebris(effectDt, fxCullBounds)
