@@ -49,7 +49,7 @@ const PRIMARY_WEAPON_TIERS: Record<PrimaryWeaponId, number> = {
   flamethrower: 1,
   "auto-shotgun": 2,
   "battle-rifle": 2,
-  "grenade-launcher": 1,
+  "grenade-launcher": 2,
   "rocket-launcher": 2,
 }
 
