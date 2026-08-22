@@ -33,6 +33,7 @@ export interface WeaponSfxConfig {
   url: string
   volume: number
   continuous?: boolean
+  endAt?: number
 }
 
 export interface PrimaryWeaponConfig {
@@ -203,7 +204,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "battle-rifle",
     color: "#ffd37f",
     sprite: { default: battleRifleSprite, unloaded: battleRifleUnloadedSprite, magazine: battleRifleMagazineSprite },
-    sfx: { url: battleRifleSfx, volume: 0.48 },
+    sfx: { url: battleRifleSfx, volume: 0.48, endAt: 0.13 },
     cooldown: 0.2,
     damage: 4,
     speed: 52,

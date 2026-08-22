@@ -17,6 +17,7 @@ export interface InputAdapterHandlers {
   onReturnToMenu: () => void
   onTogglePause: () => void
   onPrimaryDown: () => void
+  onPrimaryUp: () => void
   onPrimarySwap: (direction: number) => void
   onSecondaryDown: () => void
   onCrosshair: (x: number, y: number, visible: boolean) => void
@@ -227,6 +228,7 @@ export const setupInputAdapter = (
 
   const resetAimStick = () => {
     world.input.leftDown = false
+    handlers.onPrimaryUp()
     world.input.canvasX = VIEW_WIDTH * 0.5
     world.input.canvasY = VIEW_HEIGHT * 0.5
     syncAimFromCanvas()
@@ -449,6 +451,7 @@ export const setupInputAdapter = (
 
     if (event.button === 0) {
       world.input.leftDown = false
+      handlers.onPrimaryUp()
     }
 
     if (event.button === 2) {

@@ -124,19 +124,15 @@ export function primaryFireDepsForGame(game: FlowerArenaGame): FirePrimaryDeps {
       game.muzzleFlashCursor = spawnMuzzleFlashFx(game.world, game.muzzleFlashCursor, shooter, shotAngle, weaponId)
     },
     onPlayerShoot: (weaponId, startsBurst) => {
+      game.sfx.shoot(weaponId)
       if (startsBurst) {
-        game.sfx.shoot(weaponId)
         updatePlayerWeaponSignals(game.world)
       }
     },
     onPlayerBulletsFired: (count: number) => {
       game.world.playerBulletsFired += count
     },
-    onOtherShoot: (weaponId, startsBurst) => {
-      if (startsBurst) {
-        game.sfx.shoot(weaponId)
-      }
-    },
+    onOtherShoot: (weaponId) => game.sfx.shoot(weaponId),
   }
   primaryFireDepsCache.set(game, deps)
   return deps

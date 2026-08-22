@@ -214,12 +214,20 @@ export class SfxSynth {
         return
       }
 
-      this.playSample(pool, weapon.sfx.volume)
+      this.playSample(pool, weapon.sfx.volume, 0, weapon.sfx.endAt)
       return
     }
 
     const context = this.ensureContext()
     this.chirp(context, 920, 260, 0.05, "square", 0.12)
+  }
+
+  stopContinuousWeaponSfx() {
+    for (const weapon of Object.values(PRIMARY_WEAPONS)) {
+      if (weapon.sfx?.continuous) {
+        this.stopWeapon(weapon.id)
+      }
+    }
   }
 
   updateContinuousWeaponSfx(
