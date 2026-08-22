@@ -1,10 +1,10 @@
 import { PRIMARY_WEAPONS } from "./weapon-config.ts"
 import type { PrimaryWeaponId } from "./types.ts"
-import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.mp3"
-import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.mp3"
-import damageUrl from "../assets/sfx/damage-690623-guinamun.mp3"
-import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.mp3"
-import reloadUrl from "../assets/sfx/reload-276963-gfl7.mp3"
+import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.ogg"
+import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg"
+import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg"
+import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg"
+import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg"
 
 export class AudioDirector {
   private menuTrack: HTMLAudioElement
