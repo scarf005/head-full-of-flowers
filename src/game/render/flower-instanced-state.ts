@@ -38,10 +38,13 @@ export const ensureCapacity = (state: FlowerGpuState, needed: number) => {
     nextCapacity = Math.max(512, nextCapacity * 2)
   }
 
+  const previousData = state.instanceData
   state.capacity = nextCapacity
   state.instanceData = new Float32Array(state.capacity * FLOWER_INSTANCE_STRIDE)
+  state.instanceData.set(previousData)
   state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.instanceBuffer)
   state.gl.bufferData(state.gl.ARRAY_BUFFER, state.instanceData.byteLength, state.gl.DYNAMIC_DRAW)
+  state.gl.bufferSubData(state.gl.ARRAY_BUFFER, 0, previousData)
 }
 
 export const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
@@ -54,10 +57,13 @@ export const ensureQuadCapacity = (state: FlowerGpuState, needed: number) => {
     nextCapacity = Math.max(256, nextCapacity * 2)
   }
 
+  const previousData = state.quadInstanceData
   state.quadCapacity = nextCapacity
   state.quadInstanceData = new Float32Array(state.quadCapacity * QUAD_INSTANCE_STRIDE)
+  state.quadInstanceData.set(previousData)
   state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.quadInstanceBuffer)
   state.gl.bufferData(state.gl.ARRAY_BUFFER, state.quadInstanceData.byteLength, state.gl.DYNAMIC_DRAW)
+  state.gl.bufferSubData(state.gl.ARRAY_BUFFER, 0, previousData)
 }
 
 export const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
@@ -70,10 +76,13 @@ export const ensureTrailCapacity = (state: FlowerGpuState, needed: number) => {
     nextCapacity = Math.max(512, nextCapacity * 2)
   }
 
+  const previousData = state.trailInstanceData
   state.trailCapacity = nextCapacity
   state.trailInstanceData = new Float32Array(state.trailCapacity * TRAIL_INSTANCE_STRIDE)
+  state.trailInstanceData.set(previousData)
   state.gl.bindBuffer(state.gl.ARRAY_BUFFER, state.trailInstanceBuffer)
   state.gl.bufferData(state.gl.ARRAY_BUFFER, state.trailInstanceData.byteLength, state.gl.DYNAMIC_DRAW)
+  state.gl.bufferSubData(state.gl.ARRAY_BUFFER, 0, previousData)
 }
 
 export const ensureGpuViewport = (state: FlowerGpuState, width: number, height: number) => {

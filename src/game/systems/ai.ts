@@ -16,6 +16,8 @@ const parseBotIndex = (botId: string) => {
 }
 
 const AI_SHOT_BLOCKER_CHECK_DISTANCE = 16
+const AI_GEOMETRY_REFRESH_MS = 120
+const AI_ESCAPE_REFRESH_MS = 180
 
 const updateBotAim = (
   bot: WorldState["bots"][number],
@@ -313,6 +315,46 @@ const findEscapeDirection = (
   }
 }
 
+type ShotBlocker = ReturnType<typeof assessShotBlocker>
+type EscapeRoute = ReturnType<typeof findEscapeDirection>
+
+interface AIGeometryCache {
+  targetId: string
+  lastNowMs: number
+  shotBlocker: ShotBlocker
+  shotBlockerRefreshAt: number
+  trappedByGeometry: boolean
+  clearanceRefreshAt: number
+  escapeRoute: EscapeRoute | null
+  escapeRefreshAt: number
+  escapeNearArenaEdge: boolean
+  escapeBlockedByCover: boolean
+}
+
+const aiGeometryCacheByBot = new WeakMap<WorldState["bots"][number], AIGeometryCache>()
+
+const geometryCacheForBot = (bot: WorldState["bots"][number]) => {
+  const cached = aiGeometryCacheByBot.get(bot)
+  if (cached) {
+    return cached
+  }
+
+  const created: AIGeometryCache = {
+    targetId: "",
+    lastNowMs: 0,
+    shotBlocker: null,
+    shotBlockerRefreshAt: 0,
+    trappedByGeometry: false,
+    clearanceRefreshAt: 0,
+    escapeRoute: null,
+    escapeRefreshAt: 0,
+    escapeNearArenaEdge: false,
+    escapeBlockedByCover: false,
+  }
+  aiGeometryCacheByBot.set(bot, created)
+  return created
+}
+
 export interface UpdateAIDeps {
   firePrimary: (botId: string) => void
   continueBurst: (botId: string) => void
@@ -346,11 +388,32 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const distanceToTarget = nearestTarget.distance
     const toTargetX = nearestTarget.deltaX
     const toTargetY = nearestTarget.deltaY
+    const geometryCache = geometryCacheForBot(bot)
+    const timeReset = nowMs < geometryCache.lastNowMs
+    geometryCache.lastNowMs = nowMs
+    const targetChanged = geometryCache.targetId !== nearestTarget.targetId
+    if (targetChanged || timeReset) {
+      geometryCache.targetId = nearestTarget.targetId
+      geometryCache.shotBlockerRefreshAt = 0
+      geometryCache.clearanceRefreshAt = 0
+      geometryCache.escapeRefreshAt = 0
+      geometryCache.escapeRoute = null
+    }
+
     const shouldCheckShotBlocker = !easyMode && hasTarget &&
       (distanceToTarget <= AI_SHOT_BLOCKER_CHECK_DISTANCE || bot.hp <= bot.maxHp * 0.42)
-    const shotBlocker = shouldCheckShotBlocker
-      ? assessShotBlocker(world, bot, toTargetX, toTargetY, distanceToTarget)
-      : null
+    let shotBlocker: ShotBlocker = null
+    if (shouldCheckShotBlocker) {
+      if (targetChanged || timeReset || nowMs >= geometryCache.shotBlockerRefreshAt) {
+        geometryCache.shotBlocker = assessShotBlocker(world, bot, toTargetX, toTargetY, distanceToTarget)
+        geometryCache.shotBlockerRefreshAt = nowMs + AI_GEOMETRY_REFRESH_MS
+      }
+      shotBlocker = geometryCache.shotBlocker
+    } else {
+      geometryCache.shotBlocker = null
+      geometryCache.shotBlockerRefreshAt = nowMs + AI_GEOMETRY_REFRESH_MS
+    }
+
     const blockedByIndestructibleCover = shotBlocker !== null && !shotBlocker.canDamageWithPrimary
     const distanceFromArenaCenter = Math.hypot(bot.position.x, bot.position.y) || 1
     const nearArenaEdge = distanceFromArenaCenter > world.arenaRadius - Math.max(3.5, bot.radius * 0.4)
@@ -452,13 +515,31 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const desiredSpeed = Math.hypot(desiredVelocityX, desiredVelocityY)
     const desiredDirX = desiredSpeed > 0 ? desiredVelocityX / desiredSpeed : 0
     const desiredDirY = desiredSpeed > 0 ? desiredVelocityY / desiredSpeed : 0
-    const shouldCheckDesiredClearance = !easyMode && hasTarget && nearArenaEdge
-    const desiredClearance = shouldCheckDesiredClearance && desiredSpeed > 0
-      ? clearanceAlongDirection(world, bot, desiredDirX, desiredDirY, 1.1)
-      : Number.POSITIVE_INFINITY
-    const trappedByGeometry = hasTarget && nearArenaEdge && desiredClearance < 0.25
+    const shouldCheckDesiredClearance = !easyMode && hasTarget && nearArenaEdge && desiredSpeed > 0
+    if (!shouldCheckDesiredClearance) {
+      geometryCache.trappedByGeometry = false
+      geometryCache.clearanceRefreshAt = nowMs + AI_GEOMETRY_REFRESH_MS
+    } else if (targetChanged || timeReset || nowMs >= geometryCache.clearanceRefreshAt) {
+      geometryCache.trappedByGeometry = clearanceAlongDirection(world, bot, desiredDirX, desiredDirY, 1.1) < 0.25
+      geometryCache.clearanceRefreshAt = nowMs + AI_GEOMETRY_REFRESH_MS
+    }
+    const trappedByGeometry = geometryCache.trappedByGeometry
+
     if (!easyMode && (blockedByIndestructibleCover || trappedByGeometry)) {
-      const escapeRoute = findEscapeDirection(world, bot, toTargetX, toTargetY, nearArenaEdge, shotBlocker)
+      const escapeStateChanged =
+        geometryCache.escapeNearArenaEdge !== nearArenaEdge ||
+        geometryCache.escapeBlockedByCover !== blockedByIndestructibleCover
+      if (
+        targetChanged || timeReset || escapeStateChanged || !geometryCache.escapeRoute ||
+        nowMs >= geometryCache.escapeRefreshAt
+      ) {
+        geometryCache.escapeRoute = findEscapeDirection(world, bot, toTargetX, toTargetY, nearArenaEdge, shotBlocker)
+        geometryCache.escapeRefreshAt = nowMs + AI_ESCAPE_REFRESH_MS
+        geometryCache.escapeNearArenaEdge = nearArenaEdge
+        geometryCache.escapeBlockedByCover = blockedByIndestructibleCover
+      }
+
+      const escapeRoute = geometryCache.escapeRoute
       const escapeSpeed = bot.speed * (nearArenaEdge ? 1 : 0.9)
       desiredVelocityX = escapeRoute.dirX * escapeSpeed
       desiredVelocityY = escapeRoute.dirY * escapeSpeed
@@ -475,6 +556,8 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
         bot.aim.y = aimY / aimLength
         deps.throwSecondary(bot.id)
       }
+    } else {
+      geometryCache.escapeRoute = null
     }
 
     const acceleration = easyMode ? 6 : 16
