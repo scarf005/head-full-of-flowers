@@ -28,8 +28,8 @@ const LASER_SIGHT_SPREAD_MULTIPLIER = 0.7
 export interface FirePrimaryDeps {
   allocProjectile: () => WorldState["projectiles"][number]
   startReload: (unitId: string) => void
-  onPlayerShoot: () => void
-  onOtherShoot: () => void
+  onPlayerShoot: (weaponId: PrimaryWeaponId, startsBurst: boolean) => void
+  onOtherShoot: (weaponId: PrimaryWeaponId, startsBurst: boolean) => void
   onMuzzleFlash?: (shooter: Unit, shotAngle: number, weaponId: PrimaryWeaponId) => void
   onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
@@ -164,9 +164,9 @@ const emitPrimaryShot = (
     const impactFeel = Math.max(1, Math.min(2, world.impactFeelLevel || 1))
     const shakeScale = 1 + (impactFeel - 1) * 1.2
     world.cameraShake = Math.min(1.3 + (impactFeel - 1) * 0.9, world.cameraShake + 0.1 * shakeScale)
-    deps.onPlayerShoot()
-  } else if (randomFloat() > 0.82) {
-    deps.onOtherShoot()
+    deps.onPlayerShoot(weapon.id, shotIndex === 0)
+  } else if (shotIndex === 0 && randomFloat() > 0.82) {
+    deps.onOtherShoot(weapon.id, true)
   }
 }
 

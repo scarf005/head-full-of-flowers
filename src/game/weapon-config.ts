@@ -1,21 +1,25 @@
+import assaultMagazineSprite from "../assets/items/assault-magazine.png"
+import assaultSprite from "../assets/items/assault.png"
+import assaultUnloadedSprite from "../assets/items/assault-unloaded.png"
+import autoShotgunSprite from "../assets/items/auto-shotgun.png"
+import battleRifleMagazineSprite from "../assets/items/battle-rifle-magazine.png"
+import battleRifleSprite from "../assets/items/battle-rifle.png"
+import battleRifleUnloadedSprite from "../assets/items/battle-rifle-unloaded.png"
+import flamethrowerMagazineSprite from "../assets/items/flamethrower-magazine.png"
+import flamethrowerSprite from "../assets/items/flamethrower.png"
+import flamethrowerUnloadedSprite from "../assets/items/flamethrower-unloaded.png"
+import grenadeLauncherSprite from "../assets/items/grenade-launcher.png"
+import pistolSprite from "../assets/items/pistol.png"
+import rocketLauncherMagazineSprite from "../assets/items/rocket-launcher-magazine.png"
+import rocketLauncherSprite from "../assets/items/rocket-launcher.png"
+import rocketLauncherUnloadedSprite from "../assets/items/rocket-launcher-unloaded.png"
+import shotgunSprite from "../assets/items/shotgun.png"
+import autoShotgunSfx from "../assets/sfx/156904__duesto__spas-12.mp3"
+import shotgunSfx from "../assets/sfx/159710__anthonychan0__mossberg-500a-1-shot-and-pump.mp3"
+import grenadeLauncherSfx from "../assets/sfx/163458__lemudcrab__grenade-launcher.mp3"
+import assaultSfx from "../assets/sfx/201668__franki-01234__m16-burst-in-street.mp3"
+import battleRifleSfx from "../assets/sfx/702225__areniporgen__fn-scar-h.mp3"
 import type { PrimaryWeaponId } from "./types.ts"
-
-const assaultMagazineSprite = new URL("../assets/items/assault-magazine.png", import.meta.url).href
-const assaultSprite = new URL("../assets/items/assault.png", import.meta.url).href
-const assaultUnloadedSprite = new URL("../assets/items/assault-unloaded.png", import.meta.url).href
-const autoShotgunSprite = new URL("../assets/items/auto-shotgun.png", import.meta.url).href
-const battleRifleMagazineSprite = new URL("../assets/items/battle-rifle-magazine.png", import.meta.url).href
-const battleRifleSprite = new URL("../assets/items/battle-rifle.png", import.meta.url).href
-const battleRifleUnloadedSprite = new URL("../assets/items/battle-rifle-unloaded.png", import.meta.url).href
-const flamethrowerMagazineSprite = new URL("../assets/items/flamethrower-magazine.png", import.meta.url).href
-const flamethrowerSprite = new URL("../assets/items/flamethrower.png", import.meta.url).href
-const flamethrowerUnloadedSprite = new URL("../assets/items/flamethrower-unloaded.png", import.meta.url).href
-const grenadeLauncherSprite = new URL("../assets/items/grenade-launcher.png", import.meta.url).href
-const pistolSprite = new URL("../assets/items/pistol.png", import.meta.url).href
-const rocketLauncherMagazineSprite = new URL("../assets/items/rocket-launcher-magazine.png", import.meta.url).href
-const rocketLauncherSprite = new URL("../assets/items/rocket-launcher.png", import.meta.url).href
-const rocketLauncherUnloadedSprite = new URL("../assets/items/rocket-launcher-unloaded.png", import.meta.url).href
-const shotgunSprite = new URL("../assets/items/shotgun.png", import.meta.url).href
 
 export type WeaponSpriteMode = "default" | "unloaded" | "magazine"
 
@@ -28,6 +32,7 @@ export interface WeaponSpriteConfig {
 export interface WeaponSfxConfig {
   url: string
   volume: number
+  continuous?: boolean
 }
 
 export interface PrimaryWeaponConfig {
@@ -114,6 +119,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "assault",
     color: "#ffd67a",
     sprite: { default: assaultSprite, unloaded: assaultUnloadedSprite, magazine: assaultMagazineSprite },
+    sfx: { url: assaultSfx, volume: 0.48, continuous: true },
     cooldown: 0.1,
     damage: 3,
     speed: 50,
@@ -134,6 +140,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "shotgun",
     color: "#ffc36f",
     sprite: { default: shotgunSprite },
+    sfx: { url: shotgunSfx, volume: 0.58 },
     cooldown: 0.5,
     damage: 2,
     speed: 38,
@@ -174,6 +181,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "auto-shotgun",
     color: "#ffad67",
     sprite: { default: autoShotgunSprite },
+    sfx: { url: autoShotgunSfx, volume: 0.52 },
     cooldown: 0.16,
     damage: 2,
     speed: 38,
@@ -195,6 +203,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "battle-rifle",
     color: "#ffd37f",
     sprite: { default: battleRifleSprite, unloaded: battleRifleUnloadedSprite, magazine: battleRifleMagazineSprite },
+    sfx: { url: battleRifleSfx, volume: 0.48 },
     cooldown: 0.2,
     damage: 4,
     speed: 52,
@@ -218,6 +227,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "grenade-launcher",
     color: "#ffe48a",
     sprite: { default: grenadeLauncherSprite },
+    sfx: { url: grenadeLauncherSfx, volume: 0.65 },
     cooldown: 0.7,
     damage: 20,
     speed: 40,

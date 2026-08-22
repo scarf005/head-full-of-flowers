@@ -1,3 +1,5 @@
+import { PRIMARY_WEAPONS } from "./weapon-config.ts"
+import type { PrimaryWeaponId } from "./types.ts"
 import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.mp3"
 import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.mp3"
 import damageUrl from "../assets/sfx/damage-690623-guinamun.mp3"
@@ -133,6 +135,18 @@ export class AudioDirector {
   }
 }
 
+export const shouldContinueWeaponSfx = (
+  weaponId: PrimaryWeaponId,
+  primaryAmmo: number,
+  reloadCooldown: number,
+  primaryDown: boolean,
+) => {
+  return primaryDown &&
+    primaryAmmo > 0 &&
+    reloadCooldown <= 0 &&
+    PRIMARY_WEAPONS[weaponId].sfx?.continuous === true
+}
+
 export class SfxSynth {
   private context: AudioContext | null = null
   private bus: DynamicsCompressorNode | null = null
@@ -144,6 +158,7 @@ export class SfxSynth {
   private damageSamplePool = this.createSamplePool(damageUrl, 8)
   private playerDeathSamplePool = this.createSamplePool(playerDeathUrl, 4)
   private reloadSamplePool = this.createSamplePool(reloadUrl, 4)
+  private weaponSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
   private sampleStopTimers = new Map<HTMLAudioElement, number>()
 
   private ensureContext() {
@@ -183,12 +198,44 @@ export class SfxSynth {
 
   prime() {
     this.ensureContext()
+    for (const weapon of Object.values(PRIMARY_WEAPONS)) {
+      if (weapon.sfx) {
+        this.weaponSamplePool(weapon.id)
+      }
+    }
     this.preloadSamples()
   }
 
-  shoot() {
+  shoot(weaponId?: PrimaryWeaponId) {
+    const weapon = weaponId ? PRIMARY_WEAPONS[weaponId] : undefined
+    if (weapon?.sfx) {
+      const pool = this.weaponSamplePool(weapon.id)
+      if (weapon.sfx.continuous && pool.some((sample) => !sample.paused && !sample.ended)) {
+        return
+      }
+
+      this.playSample(pool, weapon.sfx.volume)
+      return
+    }
+
     const context = this.ensureContext()
     this.chirp(context, 920, 260, 0.05, "square", 0.12)
+  }
+
+  updateContinuousWeaponSfx(
+    weaponId: PrimaryWeaponId,
+    primaryAmmo: number,
+    reloadCooldown: number,
+    primaryDown: boolean,
+  ) {
+    for (const weapon of Object.values(PRIMARY_WEAPONS)) {
+      if (
+        weapon.sfx?.continuous &&
+        (weapon.id !== weaponId || !shouldContinueWeaponSfx(weaponId, primaryAmmo, reloadCooldown, primaryDown))
+      ) {
+        this.stopWeapon(weapon.id)
+      }
+    }
   }
 
   hit() {
@@ -269,6 +316,34 @@ export class SfxSynth {
     oscillator.stop(startTime + duration + 0.01)
   }
 
+  private weaponSamplePool(weaponId: PrimaryWeaponId) {
+    const existing = this.weaponSamplePools.get(weaponId)
+    if (existing) {
+      return existing
+    }
+
+    const weapon = PRIMARY_WEAPONS[weaponId]
+    if (!weapon.sfx) {
+      return []
+    }
+
+    const pool = this.createSamplePool(weapon.sfx.url, weapon.sfx.continuous ? 1 : 4)
+    this.weaponSamplePools.set(weaponId, pool)
+    return pool
+  }
+
+  private stopWeapon(weaponId: PrimaryWeaponId) {
+    for (const sample of this.weaponSamplePools.get(weaponId) ?? []) {
+      const pendingStop = this.sampleStopTimers.get(sample)
+      if (pendingStop !== undefined) {
+        clearTimeout(pendingStop)
+        this.sampleStopTimers.delete(sample)
+      }
+      sample.pause()
+      sample.currentTime = 0
+    }
+  }
+
   private createSamplePool(url: string, voices: number) {
     return Array.from({ length: voices }, () => {
       const sample = new Audio(url)
@@ -285,6 +360,7 @@ export class SfxSynth {
         ...this.damageSamplePool,
         ...this.playerDeathSamplePool,
         ...this.reloadSamplePool,
+        ...Array.from(this.weaponSamplePools.values()).flat(),
       ]
     ) {
       sample.load()
