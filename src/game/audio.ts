@@ -292,6 +292,11 @@ export class SfxSynth {
     this.playSample(this.reloadSamplePool, 0.8, 2.168, 2.7)
   }
 
+  countdownTick() {
+    const context = this.ensureContext()
+    this.chirp(context, 1320, 1180, 0.035, "square", 0.1)
+  }
+
   explosion() {
     const context = this.ensureContext()
     this.chirp(context, 310, 36, 0.24, "sawtooth", 0.22)

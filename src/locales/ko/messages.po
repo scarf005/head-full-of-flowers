@@ -360,11 +360,11 @@ msgstr "일시정지"
 msgid "Pellet size +50%, fire rate -25%, damage +1"
 msgstr "탄환 크기 +50%, 연사력 -25%, 피해 +1"
 
-#: src/game/game-update.ts:72
+#: src/game/game-update.ts:73
 msgid "Perk acquired {localizedPerk}"
 msgstr "{localizedPerk} 특성 획득"
 
-#: src/game/game-update.ts:71
+#: src/game/game-update.ts:72
 msgid "Perk acquired {localizedPerk} x{stacks}"
 msgstr "{localizedPerk} 특성 획득 x{stacks}"
 
@@ -372,7 +372,7 @@ msgstr "{localizedPerk} 특성 획득 x{stacks}"
 msgid "Perks"
 msgstr "특성"
 
-#: src/game/game-update.ts:65
+#: src/game/game-update.ts:66
 msgid "Picked up {localizedWeapon}"
 msgstr "{localizedWeapon} 획득"
 

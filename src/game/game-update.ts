@@ -30,6 +30,7 @@ import { updateCombatFeel, updateCrosshairWorld, updatePlayer, type UpdatePlayer
 import { updateProjectiles } from "./systems/projectiles.ts"
 import { explodeGrenade, updateThrowables } from "./systems/throwables.ts"
 import { updateAI, type UpdateAIDeps } from "./systems/ai.ts"
+import { countCountdownTicks } from "./countdown-ticks.ts"
 import { clamp, lerp } from "./utils.ts"
 import { EFFECT_SPEED, MATCH_DURATION_SECONDS } from "./world/constants.ts"
 import { updateShellCasingsFx } from "./systems/shell-fx.ts"
@@ -153,9 +154,12 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
     return
   }
 
-  game.world.timeRemaining -= gameplayDt
+  const timeBeforeUpdate = game.world.timeRemaining
+  game.world.timeRemaining = Math.max(0, timeBeforeUpdate - gameplayDt)
+  for (let tick = 0; tick < countCountdownTicks(timeBeforeUpdate, game.world.timeRemaining); tick += 1) {
+    game.sfx.countdownTick()
+  }
   if (game.world.timeRemaining <= 0) {
-    game.world.timeRemaining = 0
     game.finishMatch()
   }
 
