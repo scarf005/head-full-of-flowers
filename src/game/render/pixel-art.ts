@@ -1,5 +1,6 @@
 import { PRIMARY_WEAPONS, type WeaponSpriteMode } from "../weapon-config.ts"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
+import fireSpriteUrl from "../../assets/items/fire.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
 import laserSightSprite from "../../assets/perks/laser-sight.png"
@@ -12,12 +13,12 @@ import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
 import kevlarVestSprite from "../../assets/perks/kevlar-vest.png"
 
-type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
 const ITEM_SPRITE_UNIT = 8
 const ITEM_WORLD_SCALE = 0.75
 const LOOT_SPRITE_SIZE = 0.15
-const itemSpritePath: Record<Exclude<ItemSpriteId, PrimaryWeaponId>, string> = {
+const itemSpritePath: Record<string, string> = {
+  fire: fireSpriteUrl,
   grenade: grenadeSpriteUrl,
   molotov: molotovSpriteUrl,
   laser_sight: laserSightSprite,
@@ -255,60 +256,6 @@ const drawItemSpriteFallback = (
   context.stroke()
 }
 
-const palette = {
-  r: "#8f3a2e",
-  C: "#b6f5e9",
-  y: "#d4aa3a",
-}
-
-const flameProjectileSprite: SpriteRow[] = [
-  "........",
-  "...r....",
-  "..rrr...",
-  ".rCCyyr.",
-  "..rCCr..",
-  "...rr...",
-  "....r...",
-  "........",
-]
-
-const draw = (
-  context: CanvasRenderingContext2D,
-  sprite: SpriteRow[] | undefined,
-  x: number,
-  y: number,
-  pixelSize: number,
-) => {
-  if (!sprite || sprite.length <= 0) {
-    return
-  }
-
-  const size = sprite.length
-  const half = (size * pixelSize) * 0.5
-  for (let row = 0; row < size; row += 1) {
-    const line = sprite[row]
-    for (let col = 0; col < line.length; col += 1) {
-      const key = line[col] as keyof typeof palette | "."
-      if (key === ".") {
-        continue
-      }
-
-      const color = palette[key]
-      if (!color) {
-        continue
-      }
-
-      context.fillStyle = color
-      context.fillRect(
-        x - half + col * pixelSize,
-        y - half + row * pixelSize,
-        pixelSize,
-        pixelSize,
-      )
-    }
-  }
-}
-
 export const drawWeaponPickupSprite = (
   context: CanvasRenderingContext2D,
   weaponId: PrimaryWeaponId,
@@ -369,7 +316,7 @@ export const drawFlameProjectileSprite = (
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
-  size = 0.07,
+  size = 0.14,
 ) => {
-  draw(context, flameProjectileSprite, x, y, size)
+  drawItemSpritePng(context, "fire", x, y, size)
 }

@@ -281,7 +281,7 @@ export const renderProjectiles = (
     }
 
     if (projectile.kind === "flame") {
-      drawFlameProjectileSprite(context, projectile.position.x, projectile.position.y, 0.07)
+      drawFlameProjectileSprite(context, projectile.position.x, projectile.position.y, 0.14)
       return
     }
 

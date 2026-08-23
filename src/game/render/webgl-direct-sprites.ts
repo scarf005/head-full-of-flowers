@@ -1,6 +1,7 @@
 import { PRIMARY_WEAPONS, type WeaponSpriteMode } from "../weapon-config.ts"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
 
+import fireSpriteUrl from "../../assets/items/fire.png"
 import grenadeSpriteUrl from "../../assets/items/grenade.png"
 import molotovSpriteUrl from "../../assets/items/molotov.png"
 import laserSightSprite from "../../assets/perks/laser-sight.png"
@@ -28,6 +29,7 @@ export const FLOWER_PETAL_SPRITE = "flower:petal"
 export const FLOWER_ACCENT_SPRITE = "flower:accent"
 
 const spriteUrls = new Map<string, string>([
+  ["fire", fireSpriteUrl],
   ["grenade", grenadeSpriteUrl],
   ["molotov", molotovSpriteUrl],
   ["laser_sight", laserSightSprite],

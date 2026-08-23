@@ -368,19 +368,6 @@ const renderThrowables = (renderer: DirectWebGLRenderer, world: WorldState, cull
   }
 }
 
-const renderFlamePixel = (renderer: DirectWebGLRenderer, x: number, y: number) => {
-  const size = 0.07
-  const rows = ["........", "...r....", "..rrr...", ".rCCyyr.", "..rCCr..", "...rr...", "....r...", "........"]
-  const colors: Record<string, string> = { r: "#8f3a2e", C: "#b6f5e9", y: "#d4aa3a" }
-  const half = rows.length * size * 0.5
-  for (let row = 0; row < rows.length; row += 1) {
-    for (let col = 0; col < rows[row].length; col += 1) {
-      const color = colors[rows[row][col]]
-      if (color) renderer.rect(x - half + col * size, y - half + row * size, size, size, color)
-    }
-  }
-}
-
 const renderProjectiles = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds) => {
   const draw = (projectile: WorldState["projectiles"][number]) => {
     if (!projectile.active || !inside(projectile.position.x, projectile.position.y, cull, projectile.radius * 3.2 + 0.7)) return
@@ -396,7 +383,7 @@ const renderProjectiles = (renderer: DirectWebGLRenderer, world: WorldState, cul
     if (projectile.kind === "flame") renderer.circle(projectile.position.x, projectile.position.y, glow, "#ff9448", 0.36, 14)
     else renderer.circle(projectile.position.x, projectile.position.y, projectile.radius * 1.05, "#fff5d0", 0.16, 12)
     if (projectile.kind === "flame") {
-      renderFlamePixel(renderer, projectile.position.x, projectile.position.y)
+      renderer.sprite("fire", projectile.position.x, projectile.position.y, itemSpriteHeight(0.14))
       return
     }
     const c = Math.cos(angle)
