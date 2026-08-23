@@ -55,7 +55,7 @@ const distToSegmentSquared = (
 export interface ThrowSecondaryDeps {
   allocThrowable: () => WorldState["throwables"][number]
   onPlayerThrow: (mode: "grenade" | "molotov") => void
-  onOtherThrow: () => void
+  onOtherThrow: (mode: "grenade" | "molotov") => void
 }
 
 export const throwSecondary = (world: WorldState, shooterId: string, deps: ThrowSecondaryDeps) => {
@@ -116,7 +116,7 @@ export const throwSecondary = (world: WorldState, shooterId: string, deps: Throw
     world.cameraShake = Math.min(1.2 + (impactFeel - 1) * 1, world.cameraShake + 0.15 * shakeScale)
     deps.onPlayerThrow(mode)
   } else if (randomFloat() > 0.88) {
-    deps.onOtherThrow()
+    deps.onOtherThrow(mode)
   }
 }
 

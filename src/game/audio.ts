@@ -5,6 +5,7 @@ import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg"
 import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg"
 import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg"
 import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg"
+import grenadeThrowUrl from "../assets/sfx/161622__ryanconway__grenade-throw.ogg"
 import { MINIMUM_AUDIO_PARAM_VALUE, nonZeroAudioParamValue } from "./audio-param.ts"
 import { weaponSfxVolumeMultiplierForDistance } from "./weapon-sfx-distance.ts"
 
@@ -160,6 +161,7 @@ export class SfxSynth {
   private damageSamplePool = this.createSamplePool(damageUrl, 8)
   private playerDeathSamplePool = this.createSamplePool(playerDeathUrl, 4)
   private reloadSamplePool = this.createSamplePool(reloadUrl, 4)
+  private grenadeThrowSamplePool = this.createSamplePool(grenadeThrowUrl, 4)
   private weaponSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
   private explosionSamplePools = new Map<PrimaryWeaponId, HTMLAudioElement[]>()
   private sampleFadeTimers = new Map<HTMLAudioElement, number>()
@@ -211,6 +213,10 @@ export class SfxSynth {
       }
     }
     this.preloadSamples()
+  }
+
+  grenadeThrow() {
+    this.playSample(this.grenadeThrowSamplePool, 1)
   }
 
   shoot(weaponId?: PrimaryWeaponId, distanceToPlayerMeters = 0) {
@@ -451,6 +457,7 @@ export class SfxSynth {
         ...this.damageSamplePool,
         ...this.playerDeathSamplePool,
         ...this.reloadSamplePool,
+        ...this.grenadeThrowSamplePool,
         ...Array.from(this.weaponSamplePools.values()).flat(),
         ...Array.from(this.explosionSamplePools.values()).flat(),
       ]

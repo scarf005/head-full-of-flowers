@@ -8,6 +8,7 @@ import battleRifleUnloadedSprite from "../assets/items/battle-rifle-unloaded.png
 import flamethrowerMagazineSprite from "../assets/items/flamethrower-magazine.png"
 import flamethrowerSprite from "../assets/items/flamethrower.png"
 import flamethrowerUnloadedSprite from "../assets/items/flamethrower-unloaded.png"
+import flamethrowerSfx from "../assets/sfx/490166__samsterbirdies__flamethrower.ogg"
 import grenadeLauncherSprite from "../assets/items/grenade-launcher.png"
 import pistolSprite from "../assets/items/pistol.png"
 import pistolSfx from "../assets/sfx/828786__areniporgen__glock-19x.ogg"
@@ -125,7 +126,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "assault",
     color: "#ffd67a",
     sprite: { default: assaultSprite, unloaded: assaultUnloadedSprite, magazine: assaultMagazineSprite },
-    sfx: { url: assaultSfx, volume: 0.25, continuous: true, stopAt: 2.1, stopFadeDuration: 0.1 },
+    sfx: { url: assaultSfx, volume: 0.25 },
     cooldown: 0.1,
     damage: 3,
     speed: 50,
@@ -168,6 +169,7 @@ export const PRIMARY_WEAPONS: Record<PrimaryWeaponId, PrimaryWeaponConfig> = {
     icon: "flamethrower",
     color: "#ffab5d",
     sprite: { default: flamethrowerSprite, unloaded: flamethrowerUnloadedSprite, magazine: flamethrowerMagazineSprite },
+    sfx: { url: flamethrowerSfx, volume: 0.25, continuous: true },
     cooldown: 0.06,
     damage: 4,
     speed: 24,

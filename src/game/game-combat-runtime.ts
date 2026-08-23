@@ -196,10 +196,14 @@ export function throwSecondaryForGame(game: FlowerArenaGame, unitId: string) {
   throwSecondary(game.world, unitId, {
     allocThrowable: () => allocThrowable(game),
     onPlayerThrow: (mode) => {
-      game.sfx.shoot()
+      if (mode === "grenade") {
+        game.sfx.grenadeThrow()
+      } else {
+        game.sfx.shoot()
+      }
       secondaryModeSignal.value = mode
     },
-    onOtherThrow: () => game.sfx.shoot(),
+    onOtherThrow: (mode) => mode === "grenade" ? game.sfx.grenadeThrow() : game.sfx.shoot(),
   })
 }
 

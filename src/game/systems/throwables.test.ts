@@ -12,15 +12,19 @@ Deno.test("throwSecondary uses base grenade speed without proximity_grenades per
   shooter.secondaryMode = "grenade"
   shooter.aim.set(1, 0)
 
+  let thrownMode: "grenade" | "molotov" | null = null
   throwSecondary(world, shooter.id, {
     allocThrowable: () => world.throwables[0],
-    onPlayerThrow: () => {},
+    onPlayerThrow: (mode) => {
+      thrownMode = mode
+    },
     onOtherThrow: () => {},
   })
 
   const throwable = world.throwables[0]
   assertEquals(throwable.active, true)
   assertEquals(throwable.mode, "grenade")
+  assertEquals(thrownMode, "grenade")
   assertAlmostEquals(Math.hypot(throwable.velocity.x, throwable.velocity.y), 20, 0.000001)
 })
 
