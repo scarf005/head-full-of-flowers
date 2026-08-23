@@ -340,6 +340,79 @@ export const MainMenuPanel = (
             </ul>
             <div class="menu-credits-section-title">{t`SFX`}</div>
             <ul class="menu-credits-list">
+              {/* SFX_CREDITS_START */}
+              <li>
+                <a
+                  href="https://freesound.org/people/samsterbirdies/sounds/490166/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Flamethrower - samsterbirdies #490166 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/areniporgen/sounds/828786/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Pistol - areniporgen #828786 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/duesto/sounds/156904/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Auto shotgun - duesto #156904 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/AnthonyChan0/sounds/159710/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Shotgun - AnthonyChan0 #159710 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/LeMudCrab/sounds/163458/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Grenade launcher - LeMudCrab #163458 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/Franki-01234/sounds/201668/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Assault rifle - Franki-01234 #201668 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/areniporgen/sounds/702225/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Battle rifle - areniporgen #702225 (CC0)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/deleted_user_364925/sounds/47252/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Explosions - deleted_user_364925 #47252 (CC0)
+                </a>
+              </li>
               <li>
                 <a
                   href="https://freesound.org/people/damnsatinist/sounds/493913/"
@@ -385,6 +458,16 @@ export const MainMenuPanel = (
                   Reload - GFL7 #276963 (CC0)
                 </a>
               </li>
+              <li>
+                <a
+                  href="https://freesound.org/people/ryanconway/sounds/161622/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Grenade throw - ryanconway #161622 (CC BY 4.0)
+                </a>
+              </li>
+              {/* SFX_CREDITS_END */}
             </ul>
           </div>
         </details>

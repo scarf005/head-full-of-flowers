@@ -8,20 +8,20 @@ import battleRifleUnloadedSprite from "../assets/items/battle-rifle-unloaded.png
 import flamethrowerMagazineSprite from "../assets/items/flamethrower-magazine.png"
 import flamethrowerSprite from "../assets/items/flamethrower.png"
 import flamethrowerUnloadedSprite from "../assets/items/flamethrower-unloaded.png"
-import flamethrowerSfx from "../assets/sfx/490166__samsterbirdies__flamethrower.ogg"
+import flamethrowerSfx from "../assets/sfx/490166__samsterbirdies__flamethrower.ogg" // @sfx-credit {"label":"Flamethrower","title":"Flamethrower","creator":"samsterbirdies","id":"490166","license":"CC0","asset":"490166__samsterbirdies__flamethrower.ogg"}
 import grenadeLauncherSprite from "../assets/items/grenade-launcher.png"
 import pistolSprite from "../assets/items/pistol.png"
-import pistolSfx from "../assets/sfx/828786__areniporgen__glock-19x.ogg"
+import pistolSfx from "../assets/sfx/828786__areniporgen__glock-19x.ogg" // @sfx-credit {"label":"Pistol","title":"Glock 19X","creator":"areniporgen","id":"828786","license":"CC0","asset":"828786__areniporgen__glock-19x.ogg"}
 import rocketLauncherMagazineSprite from "../assets/items/rocket-launcher-magazine.png"
 import rocketLauncherSprite from "../assets/items/rocket-launcher.png"
 import rocketLauncherUnloadedSprite from "../assets/items/rocket-launcher-unloaded.png"
 import shotgunSprite from "../assets/items/shotgun.png"
-import autoShotgunSfx from "../assets/sfx/156904__duesto__spas-12.ogg"
-import shotgunSfx from "../assets/sfx/159710__anthonychan0__mossberg-500a-1-shot-and-pump.ogg"
-import grenadeLauncherSfx from "../assets/sfx/163458__lemudcrab__grenade-launcher.ogg"
-import assaultSfx from "../assets/sfx/201668__franki-01234__m16-burst-in-street.ogg"
-import battleRifleSfx from "../assets/sfx/702225__areniporgen__fn-scar-h.ogg"
-import explosionSfx from "../assets/sfx/47252__deleted_user_364925__bad-explosion.ogg"
+import autoShotgunSfx from "../assets/sfx/156904__duesto__spas-12.ogg" // @sfx-credit {"label":"Auto shotgun","title":"SPAS-12","creator":"duesto","id":"156904","license":"CC0","asset":"156904__duesto__spas-12.ogg"}
+import shotgunSfx from "../assets/sfx/159710__anthonychan0__mossberg-500a-1-shot-and-pump.ogg" // @sfx-credit {"label":"Shotgun","title":"Mossberg 500A - 1 shot and pump","creator":"AnthonyChan0","id":"159710","license":"CC0","asset":"159710__anthonychan0__mossberg-500a-1-shot-and-pump.ogg"}
+import grenadeLauncherSfx from "../assets/sfx/163458__lemudcrab__grenade-launcher.ogg" // @sfx-credit {"label":"Grenade launcher","title":"Grenade Launcher","creator":"LeMudCrab","id":"163458","license":"CC0","asset":"163458__lemudcrab__grenade-launcher.ogg"}
+import assaultSfx from "../assets/sfx/201668__franki-01234__m16-burst-in-street.ogg" // @sfx-credit {"label":"Assault rifle","title":"M16 burst in street.aif","creator":"Franki-01234","id":"201668","license":"CC0","asset":"201668__franki-01234__m16-burst-in-street.ogg"}
+import battleRifleSfx from "../assets/sfx/702225__areniporgen__fn-scar-h.ogg" // @sfx-credit {"label":"Battle rifle","title":"FN SCAR-H","creator":"areniporgen","id":"702225","license":"CC0","asset":"702225__areniporgen__fn-scar-h.ogg"}
+import explosionSfx from "../assets/sfx/47252__deleted_user_364925__bad-explosion.ogg" // @sfx-credit {"label":"Explosions","title":"bad explosion","creator":"deleted_user_364925","id":"47252","license":"CC0","asset":"47252__deleted_user_364925__bad-explosion.ogg"}
 import type { PrimaryWeaponId } from "./types.ts"
 
 export type WeaponSpriteMode = "default" | "unloaded" | "magazine"

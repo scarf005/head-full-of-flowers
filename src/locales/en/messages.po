@@ -150,12 +150,12 @@ msgid "Easy Mode"
 msgstr "Easy Mode"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:433
+#: src/game/hud-panels.tsx:516
 msgid "Effects Volume {0}%"
 msgstr "Effects Volume {0}%"
 
 #: src/game/hud-panels.tsx:257
-#: src/game/hud-panels.tsx:455
+#: src/game/hud-panels.tsx:538
 msgid "English"
 msgstr "English"
 
@@ -217,11 +217,11 @@ msgstr "Game Speed {0}x"
 msgid "Generating arena..."
 msgstr "Generating arena..."
 
-#: src/game/hud-panels.tsx:401
+#: src/game/hud-panels.tsx:484
 msgid "GitHub"
 msgstr "GitHub"
 
-#: src/game/hud-panels.tsx:396
+#: src/game/hud-panels.tsx:479
 msgid "GitHub repository"
 msgstr "GitHub repository"
 
@@ -287,12 +287,12 @@ msgid "Kill an enemy: next reload time -50%"
 msgstr "Kill an enemy: next reload time -50%"
 
 #: src/game/hud-panels.tsx:266
-#: src/game/hud-panels.tsx:464
+#: src/game/hud-panels.tsx:547
 msgid "Korean"
 msgstr "Korean"
 
 #: src/game/hud-panels.tsx:248
-#: src/game/hud-panels.tsx:446
+#: src/game/hud-panels.tsx:529
 msgid "Language"
 msgstr "Language"
 
@@ -312,12 +312,12 @@ msgstr "Load replay"
 msgid "Loaded replay"
 msgstr "Loaded replay"
 
-#: src/game/hud-panels.tsx:470
+#: src/game/hud-panels.tsx:553
 #: src/game/hud.tsx:284
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: src/game/hud-panels.tsx:418
+#: src/game/hud-panels.tsx:501
 msgid "Match is frozen. Adjust options or resume."
 msgstr "Match is frozen. Adjust options or resume."
 
@@ -347,11 +347,11 @@ msgid "Music"
 msgstr "Music"
 
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:420
+#: src/game/hud-panels.tsx:503
 msgid "Music Volume {0}%"
 msgstr "Music Volume {0}%"
 
-#: src/game/hud-panels.tsx:417
+#: src/game/hud-panels.tsx:500
 #: src/game/hud.tsx:118
 msgid "Paused"
 msgstr "Paused"
@@ -429,7 +429,7 @@ msgstr "Reloading..."
 msgid "Render Profile {0} frames"
 msgstr "Render Profile {0} frames"
 
-#: src/game/hud-panels.tsx:469
+#: src/game/hud-panels.tsx:552
 msgid "Resume"
 msgstr "Resume"
 

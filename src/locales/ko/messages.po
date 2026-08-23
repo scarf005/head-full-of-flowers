@@ -150,12 +150,12 @@ msgid "Easy Mode"
 msgstr "이지 모드"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:433
+#: src/game/hud-panels.tsx:516
 msgid "Effects Volume {0}%"
 msgstr "효과음 볼륨 {0}%"
 
 #: src/game/hud-panels.tsx:257
-#: src/game/hud-panels.tsx:455
+#: src/game/hud-panels.tsx:538
 msgid "English"
 msgstr "영어"
 
@@ -217,11 +217,11 @@ msgstr "게임 속도 {0}x"
 msgid "Generating arena..."
 msgstr "전장을 생성하는 중..."
 
-#: src/game/hud-panels.tsx:401
+#: src/game/hud-panels.tsx:484
 msgid "GitHub"
 msgstr "깃허브"
 
-#: src/game/hud-panels.tsx:396
+#: src/game/hud-panels.tsx:479
 msgid "GitHub repository"
 msgstr "깃허브 저장소"
 
@@ -287,12 +287,12 @@ msgid "Kill an enemy: next reload time -50%"
 msgstr "적 처치 시: 다음 재장전 시간 -50%"
 
 #: src/game/hud-panels.tsx:266
-#: src/game/hud-panels.tsx:464
+#: src/game/hud-panels.tsx:547
 msgid "Korean"
 msgstr "한국어"
 
 #: src/game/hud-panels.tsx:248
-#: src/game/hud-panels.tsx:446
+#: src/game/hud-panels.tsx:529
 msgid "Language"
 msgstr "언어"
 
@@ -312,12 +312,12 @@ msgstr "리플레이 불러오기"
 msgid "Loaded replay"
 msgstr "리플레이를 불러왔습니다"
 
-#: src/game/hud-panels.tsx:470
+#: src/game/hud-panels.tsx:553
 #: src/game/hud.tsx:284
 msgid "Main Menu"
 msgstr "메인 메뉴"
 
-#: src/game/hud-panels.tsx:418
+#: src/game/hud-panels.tsx:501
 msgid "Match is frozen. Adjust options or resume."
 msgstr "경기가 멈춰 있습니다. 옵션을 조정하거나 계속하세요."
 
@@ -347,11 +347,11 @@ msgid "Music"
 msgstr "음악"
 
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:420
+#: src/game/hud-panels.tsx:503
 msgid "Music Volume {0}%"
 msgstr "음악 볼륨 {0}%"
 
-#: src/game/hud-panels.tsx:417
+#: src/game/hud-panels.tsx:500
 #: src/game/hud.tsx:118
 msgid "Paused"
 msgstr "일시정지"
@@ -429,7 +429,7 @@ msgstr "재장전 중..."
 msgid "Render Profile {0} frames"
 msgstr "렌더 프로필 {0} 프레임"
 
-#: src/game/hud-panels.tsx:469
+#: src/game/hud-panels.tsx:552
 msgid "Resume"
 msgstr "계속하기"
 

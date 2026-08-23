@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+credit_sources='src/game/weapon-config.ts src/game/audio.ts'
+generated_outputs='README.md src/game/hud-panels.tsx src/locales'
+
+if git diff --quiet --cached -- $credit_sources; then
+  exit 0
+fi
+
+if ! git diff --quiet -- $credit_sources; then
+  printf '%s\n' 'Stage or stash SFX source changes before committing SFX credits.' >&2
+  exit 1
+fi
+
+if ! git diff --quiet -- $generated_outputs; then
+  printf '%s\n' 'Stage or stash generated credit and translation changes before committing SFX credits.' >&2
+  exit 1
+fi
+
+deno task credits:sync
+deno task i18n:extract
+
+if ! git diff --quiet -- $generated_outputs; then
+  printf '%s\n' 'SFX credits or translations were regenerated. Review and stage them, then commit again.' >&2
+  exit 1
+fi

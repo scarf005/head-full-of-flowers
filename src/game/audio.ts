@@ -1,11 +1,11 @@
 import { PRIMARY_WEAPONS } from "./weapon-config.ts"
 import type { PrimaryWeaponId } from "./types.ts"
-import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.ogg"
-import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg"
-import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg"
-import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg"
-import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg"
-import grenadeThrowUrl from "../assets/sfx/161622__ryanconway__grenade-throw.ogg"
+import killConfirmUrl from "../assets/sfx/kill-confirm-493913-damnsatinist.ogg" // @sfx-credit {"label":"Kill confirm","title":"heavy punch","creator":"damnsatinist","id":"493913","license":"CC BY 4.0","asset":"kill-confirm-493913-damnsatinist.ogg"}
+import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg" // @sfx-credit {"label":"Item acquire","title":"item-pickup-v2.wav","creator":"DeltaCode","id":"678385","license":"CC0","asset":"item-acquire-678385-deltacode.ogg"}
+import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg" // @sfx-credit {"label":"Character damage","title":"Item wag","creator":"Guinamun","id":"690623","license":"CC0","asset":"damage-690623-guinamun.ogg"}
+import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg" // @sfx-credit {"label":"Player death","title":"Sword swing.wav","creator":"Angrycrazii","id":"277322","license":"CC0","asset":"player-death-277322-angrycrazii.ogg"}
+import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg" // @sfx-credit {"label":"Reload","title":"galil reload sound.mp3","creator":"GFL7","id":"276963","license":"CC0","asset":"reload-276963-gfl7.ogg"}
+import grenadeThrowUrl from "../assets/sfx/161622__ryanconway__grenade-throw.ogg" // @sfx-credit {"label":"Grenade throw","title":"Grenade Throw","creator":"ryanconway","id":"161622","license":"CC BY 4.0","asset":"161622__ryanconway__grenade-throw.ogg"}
 import { MINIMUM_AUDIO_PARAM_VALUE, nonZeroAudioParamValue } from "./audio-param.ts"
 import { weaponSfxVolumeMultiplierForDistance } from "./weapon-sfx-distance.ts"
 
