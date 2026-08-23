@@ -527,8 +527,8 @@ msgid "Total Flowers"
 msgstr "총 꽃 수"
 
 #: src/game/hud-panels.tsx:199
-msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: secondary, wheel: swap primary"
-msgstr "wasd: 이동, 마우스: 조준 및 사격, 좌클릭: 주무기, 우클릭: 보조무기, 마우스 휠: 주무기 교체"
+msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload"
+msgstr "wasd: 이동, 마우스: 조준 및 사격, 좌클릭: 주무기, 우클릭: 수류탄, 마우스 휠: 주무기 교체, R: 재장전"
 
 #. placeholder {0}: renderPathProfile.obstacleFxWebGlFrames
 #. placeholder {1}: renderPathProfile.trailWebGlFrames

@@ -196,7 +196,7 @@ export const MainMenuPanel = (
           {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
         </div>
         <div class="menu-subtitle">
-          {t`wasd: move, mouse: aim and shoot, LMB: primary, RMB: secondary, wheel: swap primary`}
+          {t`wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload`}
         </div>
         <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
           {modeCards.map((mode) => (
