@@ -24,7 +24,7 @@ msgstr "팀당 2명"
 
 #: src/game/hud.tsx:102
 msgid "2 teams, even sides"
-msgstr "2개 팀, 균등 인원"
+msgstr "2개 팀"
 
 #: src/game/hud.tsx:104
 msgid "4 players per team"
@@ -62,7 +62,7 @@ msgstr "전투소총"
 #: src/game/game-mode-loot.ts:93
 #: src/game/i18n/faction-label.ts:22
 msgid "Blue"
-msgstr "블루"
+msgstr "파랑"
 
 #. placeholder {0}: index + 1
 #: src/game/game-mode-loot.ts:79
@@ -75,11 +75,11 @@ msgstr "봇 {botIndex}"
 
 #: src/game/game-match-results.ts:86
 msgid "Bullets Fired"
-msgstr "발사 탄 수"
+msgstr "쏜 탄환 수"
 
 #: src/game/game-match-results.ts:87
 msgid "Bullets Hit"
-msgstr "명중 탄 수"
+msgstr "맞춘 탄 수"
 
 #: src/game/adapters/hud-sync.ts:85
 #: src/game/game-match-results.ts:33
@@ -147,7 +147,7 @@ msgstr "듀오 1 (당신)"
 
 #: src/game/hud-panels.tsx:279
 msgid "Easy Mode"
-msgstr "쉬움 모드"
+msgstr "이지 모드"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
 #: src/game/hud-panels.tsx:433
@@ -239,7 +239,7 @@ msgstr "수류탄 속도 +50%, 근처 적에게 폭발"
 
 #: src/game/hud-panels.tsx:289
 msgid "Hard Mode"
-msgstr "어려움 모드"
+msgstr "하드 모드"
 
 #: src/game/hud-panels.tsx:194
 msgid "Head Full of Flowers"
@@ -405,7 +405,7 @@ msgstr "주무기"
 
 #: src/game/i18n/localize.ts:39
 msgid "Proximity Grenades"
-msgstr "접근 탐지 수류탄"
+msgstr "근접 수류탄"
 
 #: src/game/i18n/localize.ts:42
 msgid "Rapid Reload"
@@ -414,7 +414,7 @@ msgstr "빠른 재장전"
 #: src/game/game-mode-loot.ts:92
 #: src/game/i18n/faction-label.ts:19
 msgid "Red (You)"
-msgstr "레드 (당신)"
+msgstr "빨강 (당신)"
 
 #: src/game/i18n/localize.ts:71
 msgid "Reload speed +25%"
@@ -468,7 +468,7 @@ msgstr "즉시 경기 종료"
 
 #: src/game/i18n/localize.ts:62
 msgid "Soft aim assist cone"
-msgstr "소프트 에임 보조"
+msgstr "약한 조준 보조"
 
 #: src/game/hud.tsx:104
 msgid "Squad"
@@ -516,11 +516,11 @@ msgstr "시간 {0}"
 #. placeholder {0}: winner.label
 #: src/game/game-match-results.ts:62
 msgid "Time up. {0} overwhelms the field"
-msgstr "시간 종료. {0}이(가) 전장을 압도했습니다"
+msgstr "경기 종료. {0}이(가) 우승했습니다"
 
 #: src/game/game-match-results.ts:61
 msgid "Time up. Your trail dominates the arena"
-msgstr "시간 종료. 당신의 꽃길이 전장을 지배했습니다"
+msgstr "경기 종료. 당신이 우승했습니다"
 
 #: src/game/game-match-results.ts:76
 msgid "Total Flowers"
