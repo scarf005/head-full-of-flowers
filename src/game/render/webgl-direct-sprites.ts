@@ -7,11 +7,11 @@ import laserSightSprite from "../../assets/perks/laser-sight.png"
 import ricochetShellsSprite from "../../assets/perks/ricochet-shells.png"
 import contactGrenadesSprite from "../../assets/perks/contact-grenades.png"
 import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
-import blastWeaveSprite from "../../assets/perks/blast-weave.png"
+import killReloadSprite from "../../assets/perks/kill-reload.png"
 import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
 import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
-import kevlarVestSprite from "../../assets/perks/iron-bark.png"
+import kevlarVestSprite from "../../assets/perks/kevlar-vest.png"
 import grassBaseTextureUrl from "../../assets/tiles/grass-base-24.png"
 import grassDarkTextureUrl from "../../assets/tiles/grass-dark-24.png"
 import grassTransitionsTextureUrl from "../../assets/tiles/grass-transitions-24.png"
@@ -34,7 +34,7 @@ const spriteUrls = new Map<string, string>([
   ["ricochet_shells", ricochetShellsSprite],
   ["proximity_grenades", contactGrenadesSprite],
   ["rapid_reload", rapidReloadSprite],
-  ["kill_reload", blastWeaveSprite],
+  ["kill_reload", killReloadSprite],
   ["heavy_pellets", heavyPelletsSprite],
   ["extra_heart", vitalBloomSprite],
   ["extra_stamina", quickstepSprite],

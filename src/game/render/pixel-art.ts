@@ -6,11 +6,11 @@ import laserSightSprite from "../../assets/perks/laser-sight.png"
 import ricochetShellsSprite from "../../assets/perks/ricochet-shells.png"
 import contactGrenadesSprite from "../../assets/perks/contact-grenades.png"
 import rapidReloadSprite from "../../assets/perks/rapid-reload.png"
-import blastWeaveSprite from "../../assets/perks/blast-weave.png"
+import killReloadSprite from "../../assets/perks/kill-reload.png"
 import heavyPelletsSprite from "../../assets/perks/heavy-pellets.png"
 import vitalBloomSprite from "../../assets/perks/vital-bloom.png"
 import quickstepSprite from "../../assets/perks/quickstep.png"
-import kevlarVestSprite from "../../assets/perks/iron-bark.png"
+import kevlarVestSprite from "../../assets/perks/kevlar-vest.png"
 
 type SpriteRow = string
 export type ItemSpriteId = PrimaryWeaponId | "grenade" | "molotov" | PerkId
@@ -24,7 +24,7 @@ const itemSpritePath: Record<Exclude<ItemSpriteId, PrimaryWeaponId>, string> = {
   ricochet_shells: ricochetShellsSprite,
   proximity_grenades: contactGrenadesSprite,
   rapid_reload: rapidReloadSprite,
-  kill_reload: blastWeaveSprite,
+  kill_reload: killReloadSprite,
   heavy_pellets: heavyPelletsSprite,
   extra_heart: vitalBloomSprite,
   extra_stamina: quickstepSprite,
