@@ -18,10 +18,24 @@ Build production assets:
 $ deno task build
 ```
 
-## Credits
+## Credit
 
-- [MY DIVINE PERVERSIONS / linear & gestalt](https://hellstarplus.bandcamp.com/album/my-divine-perversions-linear-gestalt) - by [hellstar.plus](https://hellstarplus.bandcamp.com) (CC BY 4.0)
-- Kill confirm SFX: [Freesound #493913 "heavy punch" by damnsatinist](https://freesound.org/people/damnsatinist/sounds/493913/) (CC BY 4.0)
-- Item acquire SFX: [Freesound #678385 "item-pickup-v2.wav" by DeltaCode](https://freesound.org/people/DeltaCode/sounds/678385/) (CC0)
-- Character damage SFX: [Freesound #690623 "Item wag" by Guinamun](https://freesound.org/people/Guinamun/sounds/690623/) (CC0)
-- Player death SFX: [Freesound #277322 "Sword swing.wav" by Angrycrazii](https://freesound.org/people/Angrycrazii/sounds/277322/) (CC0)
+### Music
+
+- [MY DIVINE PERVERSIONS by hellstar.plus](https://hellstarplus.bandcamp.com/track/my-divine-perversions) - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- [linear & gestalt by hellstar.plus](https://hellstarplus.bandcamp.com/track/linear-gestalt) - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+### Sound effects
+
+- Pistol: [Glock 19X by areniporgen](https://freesound.org/s/828786/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Assault rifle: [M16 burst in street.aif by Franki-01234](https://freesound.org/s/201668/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Shotgun: [Mossberg 500A - 1 shot and pump by AnthonyChan0](https://freesound.org/s/159710/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Auto shotgun: [SPAS-12 by duesto](https://freesound.org/s/156904/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Battle rifle: [FN SCAR-H by areniporgen](https://freesound.org/s/702225/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Grenade launcher: [Grenade Launcher by LeMudCrab](https://freesound.org/s/163458/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Explosions: [bad explosion by deleted_user_364925](https://freesound.org/s/47252/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Kill confirm: [heavy punch by damnsatinist](https://freesound.org/s/493913/) - [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- Item acquire: [item-pickup-v2.wav by DeltaCode](https://freesound.org/s/678385/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Character damage: [Item wag by Guinamun](https://freesound.org/s/690623/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Player death: [Sword swing.wav by Angrycrazii](https://freesound.org/s/277322/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+- Reload: [galil reload sound.mp3 by GFL7](https://freesound.org/s/276963/) - [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
