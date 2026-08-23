@@ -1,4 +1,8 @@
-# Vite + Deno + Preact + TypeScript
+# Head Full Of Flowers
+
+![](./thumbnail.png)
+
+play at https://scarf005.itch.io/head-full-of-flowers
 
 ## Running
 
@@ -25,6 +29,10 @@ Build production assets:
 ```
 $ deno task build
 ```
+
+## License
+
+[AGPL-3.0-only](./LICENSE) for source code. For 3rd party assets, see below
 
 ## Credit
 
