@@ -29,7 +29,7 @@ export interface FirePrimaryDeps {
   allocProjectile: () => WorldState["projectiles"][number]
   startReload: (unitId: string) => void
   onPlayerShoot: (weaponId: PrimaryWeaponId, startsBurst: boolean) => void
-  onOtherShoot: (weaponId: PrimaryWeaponId, startsBurst: boolean) => void
+  onOtherShoot: (weaponId: PrimaryWeaponId, startsBurst: boolean, distanceToPlayerMeters: number) => void
   onMuzzleFlash?: (shooter: Unit, shotAngle: number, weaponId: PrimaryWeaponId) => void
   onPlayerBulletsFired?: (count: number) => void
   onPrimaryWeaponChanged?: (unitId: string) => void
@@ -166,7 +166,11 @@ const emitPrimaryShot = (
     world.cameraShake = Math.min(1.3 + (impactFeel - 1) * 0.9, world.cameraShake + 0.1 * shakeScale)
     deps.onPlayerShoot(weapon.id, shotIndex === 0)
   } else if (shotIndex === 0 && randomFloat() > 0.82) {
-    deps.onOtherShoot(weapon.id, true)
+    const distanceToPlayerMeters = Math.hypot(
+      shooter.position.x - world.player.position.x,
+      shooter.position.y - world.player.position.y,
+    )
+    deps.onOtherShoot(weapon.id, true, distanceToPlayerMeters)
   }
 }
 

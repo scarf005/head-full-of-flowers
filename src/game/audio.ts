@@ -5,6 +5,7 @@ import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg"
 import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg"
 import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg"
 import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg"
+import { weaponSfxVolumeMultiplierForDistance } from "./weapon-sfx-distance.ts"
 
 export class AudioDirector {
   private menuTrack: HTMLAudioElement
@@ -211,7 +212,8 @@ export class SfxSynth {
     this.preloadSamples()
   }
 
-  shoot(weaponId?: PrimaryWeaponId) {
+  shoot(weaponId?: PrimaryWeaponId, distanceToPlayerMeters = 0) {
+    const volumeMultiplier = weaponSfxVolumeMultiplierForDistance(distanceToPlayerMeters)
     const weapon = weaponId ? PRIMARY_WEAPONS[weaponId] : undefined
     if (weapon?.sfx) {
       const pool = this.weaponSamplePool(weapon.id)
@@ -222,12 +224,12 @@ export class SfxSynth {
         return
       }
 
-      this.playSample(pool, weapon.sfx.volume)
+      this.playSample(pool, weapon.sfx.volume * volumeMultiplier)
       return
     }
 
     const context = this.ensureContext()
-    this.chirp(context, 920, 260, 0.05, "square", 0.12)
+    this.chirp(context, 920, 260, 0.05, "square", 0.12 * volumeMultiplier)
   }
 
   stopContinuousWeaponSfx() {

@@ -178,7 +178,7 @@ export function primaryFireDepsForGame(game: FlowerArenaGame): FirePrimaryDeps {
     onPlayerBulletsFired: (count: number) => {
       game.world.playerBulletsFired += count
     },
-    onOtherShoot: (weaponId) => game.sfx.shoot(weaponId),
+    onOtherShoot: (weaponId, _startsBurst, distanceToPlayerMeters) => game.sfx.shoot(weaponId, distanceToPlayerMeters),
   }
   primaryFireDepsCache.set(game, deps)
   return deps

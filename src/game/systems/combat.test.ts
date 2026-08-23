@@ -7,6 +7,7 @@ import { updateProjectiles } from "./projectiles.ts"
 import { createWorldState } from "../world/state.ts"
 import { BURNED_FACTION_ID } from "../factions.ts"
 import { applyPerkToUnit } from "../perks.ts"
+import { withRandomSource } from "../replay.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 
 Deno.test("applyDamage keeps vectors finite for zero impact direction", () => {
@@ -594,6 +595,31 @@ Deno.test("firePrimary applies laser range bonus and additive proximity stats to
   assertAlmostEquals(projectile.maxRange, PRIMARY_WEAPONS["rocket-launcher"].range * 1.2, 0.000001)
   assertAlmostEquals(projectile.proximityRadiusBonus, 0.45, 0.000001)
   assertEquals(projectile.acceleration, PRIMARY_WEAPONS["rocket-launcher"].projectileAcceleration ?? 0)
+})
+
+Deno.test("firePrimary reports the other shooter's distance to the player in meters", () => {
+  const world = createWorldState()
+  const shooter = world.bots[0]
+  world.units = [world.player, shooter]
+  world.bots = [shooter]
+  world.player.position.set(0, 0)
+  shooter.position.set(24, 7)
+  shooter.aim.set(-1, 0)
+  equipPrimary(shooter.id, world, "pistol", 1, () => {})
+
+  let distanceToPlayerMeters = Number.NaN
+  withRandomSource(() => 0, () => {
+    firePrimary(world, shooter.id, {
+      allocProjectile: () => world.projectiles[0],
+      startReload: () => {},
+      onPlayerShoot: () => {},
+      onOtherShoot: (_weaponId, _startsBurst, distance) => {
+        distanceToPlayerMeters = distance
+      },
+    })
+  })
+
+  assertAlmostEquals(distanceToPlayerMeters, 25, 0.000001)
 })
 
 Deno.test("firePrimary reduces weapon spread by 30% when laser sight is active", () => {
