@@ -19,6 +19,7 @@ import { paletteForRagdoll, paletteForUnit } from "./scene-palette.ts"
 import { computeHorizontalSkewX, computeWeaponKickbackDistance } from "./unit-motion-transform.ts"
 import { computeDamageTakenRatio } from "./vignette.ts"
 import { DirectWebGLRenderer } from "./webgl-direct-renderer.ts"
+import { measureDirectWebGLText } from "./webgl-direct-text.ts"
 import { renderDirectExplosions } from "./webgl-direct-explosions.ts"
 import { renderDirectFlightTrails } from "./webgl-direct-flight-trails.ts"
 import {
@@ -801,7 +802,7 @@ const renderOffscreenIndicators = (
     renderer.rect(marker.x - 15, marker.y - 3, 4, 4, "#eff3ff")
     const distanceLabel = `${marker.distance.toFixed(1)}m`
     const labelPixelSize = 2
-    const labelTextWidth = distanceLabel.length * 4 * labelPixelSize - labelPixelSize
+    const { width: labelTextWidth } = measureDirectWebGLText(distanceLabel, labelPixelSize)
     const labelWidth = Math.max(30, labelTextWidth + 8)
     const labelHeight = 14
     const labelCenterX = clamp(marker.x + 8, left + labelWidth * 0.5, right - labelWidth * 0.5)

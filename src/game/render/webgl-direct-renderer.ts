@@ -1,4 +1,5 @@
 import { loadedWebGLSprites, canonicalWebGLSpriteId } from "./webgl-direct-sprites.ts"
+import { directWebGLGlyphFor, measureDirectWebGLText } from "./webgl-direct-text.ts"
 
 export type Rgba = readonly [number, number, number, number]
 export type BlendMode = "normal" | "additive"
@@ -164,24 +165,6 @@ void main() {
   t = pow(t, max(0.001, uPower));
   outColor = vec4(uColor.rgb, uColor.a * t);
 }`
-
-const FONT: Record<string, readonly string[]> = {
-  "0": ["111", "101", "101", "101", "111"],
-  "1": ["010", "110", "010", "010", "111"],
-  "2": ["111", "001", "111", "100", "111"],
-  "3": ["111", "001", "111", "001", "111"],
-  "4": ["101", "101", "111", "001", "001"],
-  "5": ["111", "100", "111", "001", "111"],
-  "6": ["111", "100", "111", "101", "111"],
-  "7": ["111", "001", "010", "010", "010"],
-  "8": ["111", "101", "111", "101", "111"],
-  "9": ["111", "101", "111", "001", "111"],
-  "-": ["000", "000", "111", "000", "000"],
-  "+": ["000", "010", "111", "010", "000"],
-  ".": ["000", "000", "000", "000", "010"],
-  "m": ["000", "110", "101", "101", "101"],
-  "x": ["000", "101", "010", "101", "000"],
-}
 
 const nextPow2 = (value: number) => {
   let result = 1
@@ -732,12 +715,10 @@ export class DirectWebGLRenderer {
     alpha = 1,
     align: "left" | "center" | "right" = "left",
   ) {
-    const glyphWidth = 3 * pixelSize
-    const advance = 4 * pixelSize
-    const totalWidth = text.length > 0 ? text.length * advance - pixelSize : 0
+    const { width: totalWidth, height } = measureDirectWebGLText(text, pixelSize)
     let cursor = align === "center" ? x - totalWidth * 0.5 : align === "right" ? x - totalWidth : x
     for (const char of text) {
-      const glyph = FONT[char]
+      const glyph = directWebGLGlyphFor(char)
       if (glyph) {
         for (let row = 0; row < glyph.length; row += 1) {
           for (let col = 0; col < glyph[row].length; col += 1) {
@@ -747,9 +728,9 @@ export class DirectWebGLRenderer {
           }
         }
       }
-      cursor += advance
+      cursor += ((glyph?.[0]?.length ?? 3) + 1) * pixelSize
     }
-    return { width: Math.max(glyphWidth, totalWidth), height: 5 * pixelSize }
+    return { width: totalWidth, height }
   }
 
   beginCircleClip(x: number, y: number, radius: number) {
