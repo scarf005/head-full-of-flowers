@@ -1,4 +1,4 @@
-import { renderScene } from "./render/scene.ts"
+import { renderScene } from "./render/scene-direct-webgl.ts"
 import { debugGameSpeedSignal } from "./signals.ts"
 import { setFpsSignal } from "./adapters/hud-sync.ts"
 import { clamp, lerp } from "./utils.ts"
@@ -22,6 +22,6 @@ export function runFrameLoop(game: FlowerArenaGame, time: number) {
   }
 
   game.update(frameDt, gameplayDt)
-  renderScene({ context: game.context, world: game.world, dt: game.world.paused ? 0 : frameDt })
+  renderScene({ renderer: game.renderer, world: game.world, dt: game.world.paused ? 0 : frameDt })
   game.raf = requestAnimationFrame(game.loop)
 }

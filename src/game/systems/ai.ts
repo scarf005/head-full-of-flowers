@@ -526,8 +526,7 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
     const trappedByGeometry = geometryCache.trappedByGeometry
 
     if (!easyMode && (blockedByIndestructibleCover || trappedByGeometry)) {
-      const escapeStateChanged =
-        geometryCache.escapeNearArenaEdge !== nearArenaEdge ||
+      const escapeStateChanged = geometryCache.escapeNearArenaEdge !== nearArenaEdge ||
         geometryCache.escapeBlockedByCover !== blockedByIndestructibleCover
       if (
         targetChanged || timeReset || escapeStateChanged || !geometryCache.escapeRoute ||

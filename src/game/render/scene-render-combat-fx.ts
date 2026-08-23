@@ -231,7 +231,7 @@ export const renderProjectiles = (
       context.fill()
     }
 
-    if (renderTrails) {
+    if (renderTrails && world.activeFlightTrailIndices.size <= 0) {
       context.save()
       context.translate(projectile.position.x, projectile.position.y)
       context.rotate(angle)

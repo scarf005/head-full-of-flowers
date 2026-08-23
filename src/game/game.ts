@@ -18,7 +18,8 @@ import {
   tdmTeamSizeSignal,
 } from "./signals.ts"
 import type { InputAdapter } from "./adapters/input.ts"
-import { renderScene } from "./render/scene.ts"
+import { renderScene } from "./render/scene-direct-webgl.ts"
+import { DirectWebGLRenderer } from "./render/webgl-direct-renderer.ts"
 import { registerDebugWorldStateProvider } from "./debug-state-copy.ts"
 import {
   applyReplayInputFrame,
@@ -139,7 +140,7 @@ const readReplayDebugOptions = (settings: Record<string, unknown>): ReplayDebugO
 
 export class FlowerArenaGame {
   public canvas: HTMLCanvasElement
-  public context: CanvasRenderingContext2D
+  public renderer: DirectWebGLRenderer
   public world: WorldState
   public inputAdapter: InputAdapter | null = null
   public raf = 0
@@ -180,14 +181,9 @@ export class FlowerArenaGame {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
-    const context = canvas.getContext("2d")
-    if (!context) {
-      throw new Error("Canvas2D context is not available")
-    }
-
-    this.context = context
     this.canvas.width = VIEW_WIDTH
     this.canvas.height = VIEW_HEIGHT
+    this.renderer = new DirectWebGLRenderer(canvas)
     this.world = createWorldState()
     this.replaySeedFromUrl = new URLSearchParams(globalThis.location?.search ?? "").get("seed")
     registerDebugWorldStateProvider(() => this.world)
@@ -201,7 +197,7 @@ export class FlowerArenaGame {
     this.setupInput()
     this.setupFocusAudioHandling()
     resetHudSignals(this.world, this.canvas)
-    renderScene({ context: this.context, world: this.world, dt: 0 })
+    renderScene({ renderer: this.renderer, world: this.world, dt: 0 })
   }
   public syncPlayerOptions() {
     syncPlayerOptionsForGame(this)
@@ -222,6 +218,7 @@ export class FlowerArenaGame {
   destroy() {
     this.beginMatchGenerationToken += 1
     cancelAnimationFrame(this.raf)
+    this.renderer.destroy()
     this.inputAdapter?.destroy()
     this.disposeFocusHandlers?.()
     this.disposeFocusHandlers = null

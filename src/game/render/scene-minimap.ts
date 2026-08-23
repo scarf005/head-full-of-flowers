@@ -209,7 +209,8 @@ export const renderMinimap = ({
   const cacheMissing = !minimapCompositeLayerCache.canvas || !minimapCompositeLayerCache.context
   const layoutChanged = minimapCompositeLayerCache.mapSize !== mapSize ||
     minimapCompositeLayerCache.pixelSize !== sizePx
-  const arenaChanged = Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= MINIMAP_ARENA_REFRESH_DELTA
+  const arenaChanged =
+    Math.abs(minimapCompositeLayerCache.arenaRadius - arenaRadiusWorld) >= MINIMAP_ARENA_REFRESH_DELTA
   const flowerLayerDirty = minimapCompositeLayerCache.flowerRevision !== world.flowerRenderRevision ||
     world.flowerDirtyCount > 0
   const obstacleLayerDirty = minimapCompositeLayerCache.obstacleRevision !== world.obstacleGrid.revision

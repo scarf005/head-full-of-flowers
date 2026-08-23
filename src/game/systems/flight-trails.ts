@@ -4,7 +4,7 @@ import { randomFloat } from "../replay.ts"
 import type { WorldState } from "../world/state.ts"
 const BULLET_TRAIL_WIDTH_SCALE = 4
 const SECONDARY_TRAIL_WIDTH_SCALE = 6
-const BULLET_TRAIL_COLOR = "#ff9e3a"
+const BULLET_TRAIL_COLOR = "#ffe6aa"
 const ROCKET_TRAIL_LENGTH_MULTIPLIER = 4
 const ROCKET_SMOKE_SIZE_SCALE = 0.75
 
@@ -189,7 +189,7 @@ export const emitProjectileTrail = (
         0.34 + speedFactor * 0.22,
         (0.028 + speedFactor * 0.01) * BULLET_TRAIL_WIDTH_SCALE,
         BULLET_TRAIL_COLOR,
-        0.9,
+        0.22,
         0.14 + speedFactor * 0.08,
       )
     }

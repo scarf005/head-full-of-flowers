@@ -162,15 +162,14 @@ export const renderFlowerInstances = ({ context, world, cameraX, cameraY }: Rend
   const minGridY = Math.max(0, Math.floor(cullBounds.minY) + halfGrid - 1)
   const maxGridY = Math.min(gridSize - 1, Math.floor(cullBounds.maxY) + halfGrid + 1)
 
-  const cacheBoundsChanged =
-    state.flowerCacheMinGridX !== minGridX ||
+  const cacheBoundsChanged = state.flowerCacheMinGridX !== minGridX ||
     state.flowerCacheMaxGridX !== maxGridX ||
     state.flowerCacheMinGridY !== minGridY ||
     state.flowerCacheMaxGridY !== maxGridY
   const flowerRevisionChanged = cachedFlowerRevision !== world.flowerRenderRevision
   const revisionNeedsFullRebuild = flowerRevisionChanged && world.flowerDirtyIndices.size === 0
-  const needsFullRebuild =
-    state.flowerBufferDirty || cachedFlowerWorld !== world || cacheBoundsChanged || revisionNeedsFullRebuild
+  const needsFullRebuild = state.flowerBufferDirty || cachedFlowerWorld !== world || cacheBoundsChanged ||
+    revisionNeedsFullRebuild
 
   ensureIndexStorage(world, state.capacity)
   gl.bindBuffer(gl.ARRAY_BUFFER, state.instanceBuffer)

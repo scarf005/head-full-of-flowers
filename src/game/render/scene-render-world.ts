@@ -20,6 +20,67 @@ const isInsideFogCullBounds = (x: number, y: number, bounds: FogCullBounds, padd
   return isInsideCullBounds(x, y, bounds, padding)
 }
 
+const renderPersistentFlightTrails = (
+  context: CanvasRenderingContext2D,
+  world: WorldState,
+  fogCullBounds: FogCullBounds,
+) => {
+  for (const trailIndex of world.activeFlightTrailIndices) {
+    const trail = world.flightTrails[trailIndex]
+    if (!trail || !trail.active || trail.maxLife <= 0) {
+      continue
+    }
+    if (!isInsideFogCullBounds(trail.position.x, trail.position.y, fogCullBounds, trail.length + trail.width)) {
+      continue
+    }
+
+    const lifeRatio = clamp(trail.life / trail.maxLife, 0, 1)
+    const alpha = trail.style > 0.5
+      ? trail.alpha * (lifeRatio * lifeRatio * (3 - 2 * lifeRatio))
+      : trail.alpha * lifeRatio * lifeRatio
+    if (alpha <= 0.01) {
+      continue
+    }
+
+    context.save()
+    context.globalAlpha = alpha
+    context.fillStyle = trail.color
+
+    if (trail.style > 0.5) {
+      const puffRadius = Math.max(0.02, trail.width * 0.6 + trail.growth * 0.12)
+      context.beginPath()
+      context.arc(trail.position.x, trail.position.y, puffRadius, 0, Math.PI * 2)
+      context.fill()
+      context.restore()
+      continue
+    }
+
+    const directionLength = Math.hypot(trail.direction.x, trail.direction.y)
+    if (directionLength <= 0.0001) {
+      context.restore()
+      continue
+    }
+
+    const directionX = trail.direction.x / directionLength
+    const directionY = trail.direction.y / directionLength
+    const normalX = -directionY
+    const normalY = directionX
+    const tailX = trail.position.x - directionX * trail.length
+    const tailY = trail.position.y - directionY * trail.length
+    const headHalfWidth = trail.width * 0.5
+    const tailHalfWidth = trail.width * 0.09
+
+    context.beginPath()
+    context.moveTo(tailX + normalX * tailHalfWidth, tailY + normalY * tailHalfWidth)
+    context.lineTo(trail.position.x + normalX * headHalfWidth, trail.position.y + normalY * headHalfWidth)
+    context.lineTo(trail.position.x - normalX * headHalfWidth, trail.position.y - normalY * headHalfWidth)
+    context.lineTo(tailX - normalX * tailHalfWidth, tailY - normalY * tailHalfWidth)
+    context.closePath()
+    context.fill()
+    context.restore()
+  }
+}
+
 const pickupGlowColor = (pickup: WorldState["pickups"][number]) => {
   if (pickup.kind === "perk") {
     return "255, 118, 118"
@@ -38,6 +99,8 @@ export const renderPickups = (
   dt: number,
   fogCullBounds: FogCullBounds,
 ) => {
+  renderPersistentFlightTrails(context, world, fogCullBounds)
+
   for (const pickup of world.pickups) {
     if (!pickup.active) {
       continue
@@ -89,7 +152,7 @@ export const renderThrowables = (
 
     if (throwable.mode === "grenade") {
       const speed = Math.hypot(throwable.velocity.x, throwable.velocity.y)
-      if (renderTrails && speed > 0.45) {
+      if (renderTrails && world.activeFlightTrailIndices.size <= 0 && speed > 0.45) {
         const directionX = throwable.velocity.x / speed
         const directionY = throwable.velocity.y / speed
         const trailLength = clamp(speed * 0.045, 0.12, 0.58)

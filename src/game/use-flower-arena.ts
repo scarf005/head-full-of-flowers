@@ -2,7 +2,7 @@ import type { RefObject } from "preact"
 import { useEffect } from "preact/hooks"
 
 import { FlowerArenaGame } from "./game.ts"
-import { preloadItemSprites } from "./render/pixel-art.ts"
+import { preloadWebGLSprites } from "./render/webgl-direct-sprites.ts"
 
 export const useFlowerArena = (canvasRef: RefObject<HTMLCanvasElement>) => {
   useEffect(() => {
@@ -13,7 +13,7 @@ export const useFlowerArena = (canvasRef: RefObject<HTMLCanvasElement>) => {
     let isDisposed = false
     let game: FlowerArenaGame | null = null
 
-    void preloadItemSprites().then(() => {
+    void preloadWebGLSprites().then(() => {
       if (isDisposed || !canvasRef.current) {
         return
       }
