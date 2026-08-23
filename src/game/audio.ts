@@ -5,6 +5,7 @@ import itemAcquireUrl from "../assets/sfx/item-acquire-678385-deltacode.ogg"
 import damageUrl from "../assets/sfx/damage-690623-guinamun.ogg"
 import playerDeathUrl from "../assets/sfx/player-death-277322-angrycrazii.ogg"
 import reloadUrl from "../assets/sfx/reload-276963-gfl7.ogg"
+import { MINIMUM_AUDIO_PARAM_VALUE, nonZeroAudioParamValue } from "./audio-param.ts"
 import { weaponSfxVolumeMultiplierForDistance } from "./weapon-sfx-distance.ts"
 
 export class AudioDirector {
@@ -333,9 +334,9 @@ export class SfxSynth {
     oscillator.frequency.setValueAtTime(from, startTime)
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(24, to), startTime + duration)
 
-    gain.gain.setValueAtTime(0.0001, startTime)
-    gain.gain.exponentialRampToValueAtTime(gainPeak, startTime + duration * 0.15)
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
+    gain.gain.setValueAtTime(MINIMUM_AUDIO_PARAM_VALUE, startTime)
+    gain.gain.exponentialRampToValueAtTime(nonZeroAudioParamValue(gainPeak), startTime + duration * 0.15)
+    gain.gain.exponentialRampToValueAtTime(MINIMUM_AUDIO_PARAM_VALUE, startTime + duration)
 
     oscillator.connect(gain)
     const output = impact ? this.impactGain : (this.bus ?? this.masterGain)
