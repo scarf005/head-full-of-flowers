@@ -827,6 +827,11 @@ export const renderScene = ({ renderer, world, dt }: RenderSceneArgs) => {
   renderMolotovZones(renderer, world, cull)
   renderFlowers(renderer, world, cull)
   renderObstacles(renderer, world)
+  if (!world.started) {
+    renderer.endClip()
+    renderer.endFrame()
+    return
+  }
   renderObstacleFx(renderer, world, cull)
   renderShellCasings(renderer, world, cull)
   renderPickups(renderer, world, dt, cull)

@@ -1,14 +1,28 @@
+@font-face {
+  font-family: "NeoDunggeunmo";
+  src: url("./assets/fonts/neodgm.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
 :root {
-  font-family: "Chakra Petch", "Trebuchet MS", sans-serif;
-  line-height: 1.35;
-  font-weight: 400;
+  font-family: "NeoDunggeunmo", sans-serif;
+  line-height: 1.5;
+  font-weight: 800;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-  color: #f4ffe7;
-  background: radial-gradient(circle at 14% 14%, #d8f0ba 0%, #a9c788 42%, #6f8f5a 100%);
+  color-scheme: light dark;
+  --ui-surface: #fafaf7;
+  --ui-ink: #232621;
+  --ui-muted: #62675e;
+  --ui-line: #d9dcd4;
+  --ui-subtle: #eef0e9;
+  color: var(--ui-ink);
+  background: var(--ui-surface);
 }
 
 * {
@@ -25,4 +39,29 @@ body,
 
 body {
   min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+summary {
+  min-height: 44px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink, var(--ui-ink));
+  outline-offset: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ui-surface: #202320;
+    --ui-ink: #f1f2ef;
+    --ui-muted: #b9bdb7;
+    --ui-line: #494e47;
+    --ui-subtle: #343a32;
+  }
 }

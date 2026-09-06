@@ -1,3 +1,5 @@
+import { useSignal } from "@preact/signals"
+import neoDunggeunmoLicense from "../assets/fonts/NeoDunggeunmo-LICENSE.txt?url"
 import {
   debugEquipAllRocketLauncherSignal,
   debugGameSpeedSignal,
@@ -168,6 +170,9 @@ interface MainMenuPanelProps {
   onSelectLocale: (nextLocale: "en" | "ko") => void
 }
 
+const revealColumn = (node: HTMLElement | null) =>
+  node?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" })
+
 export const MainMenuPanel = (
   {
     modeCards,
@@ -181,6 +186,9 @@ export const MainMenuPanel = (
     onSelectLocale,
   }: MainMenuPanelProps,
 ) => {
+  const activeSection = useSignal<"game" | "options" | "help" | null>(null)
+  const selectedDifficulty = useSignal<"easy" | "hard">("easy")
+
   const setReplayLoadStatus = (loaded: boolean) => {
     statusMessageSignal.value = loaded ? t`Loaded replay` : t`Failed to load replay`
   }
@@ -188,135 +196,210 @@ export const MainMenuPanel = (
   return (
     <div class="hud menu-layer">
       <div class="menu-panel">
-        <div class="menu-subtitle">
-          {t`Bada² and the`}
-        </div>
-        <div class="menu-title">{t`Head Full of Flowers`}</div>
-        <div class="menu-subtitle">
-          {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
-        </div>
-        <div class="menu-subtitle">
-          {t`wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload`}
-        </div>
-        <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
-          {modeCards.map((mode) => (
-            <button
-              key={mode.id}
-              type="button"
-              class={`mode-card ${selectedMode === mode.id ? "active" : ""}`}
-              aria-pressed={selectedMode === mode.id}
-              onClick={() => {
-                selectedGameModeSignal.value = mode.id
-              }}
-            >
-              <span class="mode-card-title">{mode.label}</span>
-              <span class="mode-card-detail">{mode.detail}</span>
-            </button>
-          ))}
-        </div>
-        <label class="mode-row mode-row-slider">
-          <span>{sliderLabel}</span>
-          <input
-            type="range"
-            min={sliderMin}
-            max={sliderMax}
-            step={sliderStep}
-            value={sliderValue}
-            onInput={(event) => {
-              const next = Number(event.currentTarget.value)
-              const mode = selectedGameModeSignal.value
-              if (mode === "ffa") {
-                ffaPlayerCountSignal.value = next
-                return
-              }
-
-              if (mode === "tdm") {
-                tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
-                return
-              }
-
-              if (mode === "duo") {
-                duoTeamCountSignal.value = next
-                return
-              }
-
-              squadTeamCountSignal.value = next
-            }}
-          />
-        </label>
-        <div class="mode-row">
-          <span>{t`Language`}</span>
-          <div class="option-language-row">
+        <header class="menu-heading">
+          <div class="menu-subtitle">{t`Bada² and the`}</div>
+          <h1 class="menu-title">{t`Head Full of Flowers`}</h1>
+        </header>
+        <div class="menu-columns">
+          <nav class="menu-navigation" aria-label={t`Main Menu`} ref={revealColumn}>
             <button
               type="button"
-              class={`option-language-button ${locale === "en" ? "active" : ""}`}
+              class="menu-link"
+              aria-expanded={activeSection.value === "game"}
+              aria-controls="menu-game-column"
               onClick={() => {
-                onSelectLocale("en")
+                activeSection.value = activeSection.value === "game" ? null : "game"
+                selectedDifficulty.value = "easy"
               }}
             >
-              {t`English`}
+              {t`New game`}
             </button>
             <button
               type="button"
-              class={`option-language-button ${locale === "ko" ? "active" : ""}`}
+              class="menu-link menu-load-replay"
+              onDragOver={(event) => {
+                event.preventDefault()
+              }}
+              onDrop={(event) => {
+                event.preventDefault()
+                const file = event.dataTransfer?.files?.[0]
+                if (!file) {
+                  setReplayLoadStatus(false)
+                  return
+                }
+
+                void file.text().then(loadReplayJsonlText).then(setReplayLoadStatus)
+                  .catch(() => setReplayLoadStatus(false))
+              }}
               onClick={() => {
-                onSelectLocale("ko")
+                void loadReplayFromClipboard().then(setReplayLoadStatus)
               }}
             >
-              {t`Korean`}
+              {t`Load replay`}
             </button>
-          </div>
-        </div>
-        <div class="menu-start-actions">
-          <button
-            type="button"
-            class="menu-start-button menu-start-easy"
-            data-difficulty="easy"
-            onClick={() => {
-              menuStartDifficultySignal.value = "easy"
-            }}
-          >
-            {t`Easy Mode`}
-          </button>
-          <button
-            type="button"
-            class="menu-start-button menu-start-hard"
-            data-difficulty="hard"
-            onClick={() => {
-              menuStartDifficultySignal.value = "hard"
-            }}
-          >
-            {t`Hard Mode`}
-          </button>
-          <button
-            type="button"
-            class="menu-start-button menu-load-replay"
-            onDragOver={(event) => {
-              event.preventDefault()
-            }}
-            onDrop={(event) => {
-              event.preventDefault()
-              const file = event.dataTransfer?.files?.[0]
-              if (!file) {
-                setReplayLoadStatus(false)
-                return
-              }
+            <button
+              type="button"
+              class="menu-link"
+              aria-expanded={activeSection.value === "options"}
+              aria-controls="menu-options-column"
+              onClick={() => {
+                activeSection.value = activeSection.value === "options" ? null : "options"
+              }}
+            >
+              {t`Options`}
+            </button>
+            <button
+              type="button"
+              class="menu-link"
+              aria-expanded={activeSection.value === "help"}
+              aria-controls="menu-help-column"
+              onClick={() => {
+                activeSection.value = activeSection.value === "help" ? null : "help"
+              }}
+            >
+              {t`Help`}
+            </button>
+          </nav>
+          {activeSection.value === "game" && (
+            <div class="menu-choice-column" id="menu-game-column" ref={revealColumn}>
+              <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
+                {modeCards.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    class={`mode-card ${selectedMode === mode.id ? "active" : ""}`}
+                    aria-pressed={selectedMode === mode.id}
+                    onClick={() => {
+                      selectedGameModeSignal.value = mode.id
+                    }}
+                  >
+                    <span class="mode-card-title">{mode.label}</span>
+                    <span class="mode-card-detail">{mode.detail}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {activeSection.value === "game" && (
+            <div class="menu-difficulty-column" ref={revealColumn}>
+              <div class="menu-start-actions">
+                <button
+                  type="button"
+                  class="menu-start-button menu-start-easy"
+                  data-difficulty="easy"
+                  aria-pressed={selectedDifficulty.value === "easy"}
+                  onClick={() => {
+                    selectedDifficulty.value = "easy"
+                  }}
+                >
+                  {t`Easy Mode`}
+                </button>
+                <button
+                  type="button"
+                  class="menu-start-button menu-start-hard"
+                  data-difficulty="hard"
+                  aria-pressed={selectedDifficulty.value === "hard"}
+                  onClick={() => {
+                    selectedDifficulty.value = "hard"
+                  }}
+                >
+                  {t`Hard Mode`}
+                </button>
+              </div>
+            </div>
+          )}
+          {activeSection.value === "game" && (
+            <div class="menu-player-column" ref={revealColumn}>
+              <label class="mode-row mode-row-slider">
+                <span>{sliderLabel}</span>
+                <input
+                  type="range"
+                  min={sliderMin}
+                  max={sliderMax}
+                  step={sliderStep}
+                  value={sliderValue}
+                  onInput={(event) => {
+                    const next = Number(event.currentTarget.value)
+                    const mode = selectedGameModeSignal.value
+                    if (mode === "ffa") {
+                      ffaPlayerCountSignal.value = next
+                      return
+                    }
 
-              void file.text().then(loadReplayJsonlText).then(setReplayLoadStatus)
-                .catch(() => setReplayLoadStatus(false))
-            }}
-            onClick={() => {
-              void loadReplayFromClipboard().then(setReplayLoadStatus)
-            }}
-          >
-            {t`Load replay`}
-          </button>
+                    if (mode === "tdm") {
+                      tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
+                      return
+                    }
+
+                    if (mode === "duo") {
+                      duoTeamCountSignal.value = next
+                      return
+                    }
+
+                    squadTeamCountSignal.value = next
+                  }}
+                />
+              </label>
+              <button
+                type="button"
+                class="menu-start-button menu-confirm-start"
+                onClick={() => {
+                  menuStartDifficultySignal.value = selectedDifficulty.value
+                }}
+              >
+                {t`Start game`}
+              </button>
+            </div>
+          )}
+          {activeSection.value === "options" && (
+            <div class="menu-choice-column" id="menu-options-column" ref={revealColumn}>
+              <div class="mode-row">
+                <span>{t`Language`}</span>
+                <div class="option-language-row">
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "en" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("en")
+                    }}
+                  >
+                    {t`English`}
+                  </button>
+                  <button
+                    type="button"
+                    class={`option-language-button ${locale === "ko" ? "active" : ""}`}
+                    onClick={() => {
+                      onSelectLocale("ko")
+                    }}
+                  >
+                    {t`Korean`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {activeSection.value === "help" && (
+            <div class="menu-choice-column" id="menu-help-column" ref={revealColumn}>
+              <p class="menu-subtitle">
+                {t`the player with the biggest flower patch for ${MATCH_DURATION_SECONDS} seconds wins the match`}
+              </p>
+              <p class="menu-subtitle">
+                {t`wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload`}
+              </p>
+            </div>
+          )}
         </div>
       </div>
       <div class="menu-viewport-links">
         <details class="menu-credits-panel">
           <summary class="menu-credits-summary">{t`Credits`}</summary>
           <div class="menu-credits-content">
+            <div class="menu-credits-section-title">{t`Fonts`}</div>
+            <ul class="menu-credits-list">
+              <li>
+                <a href={neoDunggeunmoLicense} target="_blank" rel="noreferrer">Neo둥근모 · SIL OFL 1.1</a>
+              </li>
+            </ul>
             <div class="menu-credits-section-title">{t`Music`}</div>
             <ul class="menu-credits-list">
               <li>

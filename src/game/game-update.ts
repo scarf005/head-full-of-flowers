@@ -240,6 +240,12 @@ export function updateGame(game: FlowerArenaGame, frameDt: number, gameplayDt: n
     game.beginMatch(menuStartDifficulty)
   }
 
+  if (!game.world.started) {
+    game.world.camera.set(0, 0)
+    game.world.cameraOffset.set(0, 0)
+    return
+  }
+
   const effectDt = frameDt * EFFECT_SPEED
 
   if (game.world.paused) {

@@ -253,7 +253,7 @@ export const GameHud = () => {
         ? (
           <div class="hud match-result" aria-live="polite">
             <div class="match-result-title">{t`Match Results`}</div>
-            <div class="match-result-name" style={{ color: result.winnerColor }}>{result.winnerLabel}</div>
+            <div class="match-result-name">{result.winnerLabel}</div>
             <div class="match-result-content">
               <div class="match-result-pie" style={{ background: result.pieGradient }} />
               <div class="match-result-standings">

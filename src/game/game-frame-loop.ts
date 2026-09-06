@@ -92,7 +92,7 @@ export function runFrameLoop(game: FlowerArenaGame, time: number) {
   const updateMs = performance.now() - updateStartedAt
 
   const renderStartedAt = performance.now()
-  const renderDt = game.world.paused ? 0 : Math.min(realDt, MAX_RENDER_DELTA_SECONDS)
+  const renderDt = (game.world.paused || !game.world.started) ? 0 : Math.min(realDt, MAX_RENDER_DELTA_SECONDS)
   renderScene({ renderer: game.renderer, world: game.world, dt: renderDt })
   const renderMs = performance.now() - renderStartedAt
 
