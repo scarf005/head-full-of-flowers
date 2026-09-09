@@ -13,10 +13,10 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
+#. placeholder {0}: Math.max(0, winner.petals - runnerUpPetals)
 #: src/game/game-match-results.ts:84
-msgid "{0} flowers"
-msgstr "{0} flowers"
+msgid "{0} petals"
+msgstr "{0} petals"
 
 #: src/game/hud.tsx:103
 msgid "2 players per team"
@@ -544,8 +544,8 @@ msgid "Time up. Your trail dominates the arena"
 msgstr "Time up. Your trail dominates the arena"
 
 #: src/game/game-match-results.ts:76
-msgid "Total Flowers"
-msgstr "Total Flowers"
+msgid "Total Petals"
+msgstr "Total Petals"
 
 #: src/game/hud-panels.tsx:387
 msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload"

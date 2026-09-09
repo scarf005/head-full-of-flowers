@@ -17,6 +17,7 @@ Deno.test("updateMolotovZones scorches flowers and updates score buckets", () =>
   flower.color = "#ffffff"
   flower.accent = "#aaaaaa"
   flower.scorched = false
+  flower.petalCount = 4
   flower.renderDirty = false
   flower.position.set(0, 0)
 
@@ -29,7 +30,7 @@ Deno.test("updateMolotovZones scorches flowers and updates score buckets", () =>
   world.flowerCellHead.fill(-1)
   world.flowerCellHead[cellIndex] = 0
 
-  world.factionFlowerCounts[world.player.id] = 1
+  world.factionFlowerCounts[world.player.id] = 4
   world.factionFlowerCounts[BURNED_FACTION_ID] = 0
 
   const zone = world.molotovZones[0]
@@ -52,7 +53,7 @@ Deno.test("updateMolotovZones scorches flowers and updates score buckets", () =>
   assertEquals(flower.color, BURNED_FLOWER_COLOR)
   assertEquals(flower.accent, BURNED_FLOWER_ACCENT)
   assertEquals(world.factionFlowerCounts[world.player.id], 0)
-  assertEquals(world.factionFlowerCounts[BURNED_FACTION_ID], 1)
+  assertEquals(world.factionFlowerCounts[BURNED_FACTION_ID], 4)
   assertEquals(world.flowerDirtyIndices.has(flower.slotIndex), true)
   assertEquals(world.flowerDirtyCount, 1)
 })

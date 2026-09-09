@@ -13,10 +13,10 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#. placeholder {0}: Math.max(0, winner.flowers - runnerUpFlowers)
+#. placeholder {0}: Math.max(0, winner.petals - runnerUpPetals)
 #: src/game/game-match-results.ts:84
-msgid "{0} flowers"
-msgstr "{0}송이"
+msgid "{0} petals"
+msgstr "꽃잎 {0}개"
 
 #: src/game/hud.tsx:103
 msgid "2 players per team"
@@ -544,8 +544,8 @@ msgid "Time up. Your trail dominates the arena"
 msgstr "경기 종료. 당신이 우승했습니다"
 
 #: src/game/game-match-results.ts:76
-msgid "Total Flowers"
-msgstr "총 꽃 수"
+msgid "Total Petals"
+msgstr "총 꽃잎 수"
 
 #: src/game/hud-panels.tsx:387
 msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload"

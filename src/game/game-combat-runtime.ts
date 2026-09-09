@@ -97,7 +97,6 @@ export function allocFlower(game: FlowerArenaGame) {
     world.flowerBloomingIndices.delete(index)
     world.flowerDirtyIndices.delete(index)
     world.flowerDirtyCount = world.flowerDirtyIndices.size
-    slot.active = false
     slot.renderDirty = false
     slot.bloomCell = -1
     slot.prevInCell = -1

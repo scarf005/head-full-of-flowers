@@ -361,7 +361,7 @@ export const setMatchResultSignal = (
   winner: { label: string; color: string },
   slices: { id: string; color: string; percent: number }[],
   stats: { label: string; value: string }[],
-  standings: { id: string; label: string; color: string; flowers: number; percent: number }[],
+  standings: { id: string; label: string; color: string; petals: number; percent: number }[],
   playerContributionSlice?: { teamId: string; percentOfTeam: number },
 ) => {
   matchResultSignal.value = {

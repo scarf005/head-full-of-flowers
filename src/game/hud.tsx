@@ -265,7 +265,7 @@ export const GameHud = () => {
                       <span>{standing.label}</span>
                     </div>
                     <div class="match-result-standing-values">
-                      <span>{standing.flowers.toLocaleString()}</span>
+                      <span>{standing.petals.toLocaleString()}</span>
                       <span>{standing.percent.toFixed(1)}%</span>
                     </div>
                   </div>

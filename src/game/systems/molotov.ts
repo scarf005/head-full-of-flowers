@@ -113,11 +113,11 @@ export const updateMolotovZones = (world: WorldState, dt: number, deps: MolotovD
                     if (previousOwner in world.factionFlowerCounts) {
                       world.factionFlowerCounts[previousOwner] = Math.max(
                         0,
-                        world.factionFlowerCounts[previousOwner] - 1,
+                        world.factionFlowerCounts[previousOwner] - flower.petalCount,
                       )
                     }
                     if (BURNED_FACTION_ID in world.factionFlowerCounts) {
-                      world.factionFlowerCounts[BURNED_FACTION_ID] += 1
+                      world.factionFlowerCounts[BURNED_FACTION_ID] += flower.petalCount
                     }
                     flower.scorched = true
                   }

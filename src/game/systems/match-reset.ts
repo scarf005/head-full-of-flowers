@@ -86,6 +86,7 @@ export const resetTransientEntitiesForMatch = (world: WorldState) => {
     flower.centerRed = 1
     flower.centerGreen = 1
     flower.centerBlue = 1
+    flower.petalCount = 1
     flower.bloomDelay = 0
     flower.pop = 0
     flower.size = 0

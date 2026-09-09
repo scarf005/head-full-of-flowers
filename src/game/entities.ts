@@ -241,6 +241,7 @@ export class Flower {
   centerGreen = 1
   centerBlue = 1
   scorched = false
+  petalCount = 1
   position = new Vec2()
   size = 0
   targetSize = 4

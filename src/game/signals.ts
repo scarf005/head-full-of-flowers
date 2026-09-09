@@ -17,7 +17,7 @@ export interface MatchResultHud {
   winnerColor: string
   pieGradient: string
   stats: { label: string; value: string }[]
-  standings: { id: string; label: string; color: string; flowers: number; percent: number }[]
+  standings: { id: string; label: string; color: string; petals: number; percent: number }[]
 }
 
 export interface PrimaryWeaponHudItem {

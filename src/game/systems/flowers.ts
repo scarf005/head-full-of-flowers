@@ -184,6 +184,8 @@ const flowerScoreBucket = (flower: WorldState["flowers"][number]) => {
   return flower.scorched ? BURNED_FACTION_ID : flower.ownerId
 }
 
+export const flowerPetalCount = (targetSize: number) => Math.max(1, Math.round(targetSize / FLOWER_SIZE_MIN))
+
 const ownerSeed = (ownerId: string) => {
   let seed = 2166136261
   for (let index = 0; index < ownerId.length; index += 1) {
@@ -397,7 +399,10 @@ export const spawnFlowers = (
     if (flower.active) {
       const previousBucket = flowerScoreBucket(flower)
       if (previousBucket in world.factionFlowerCounts) {
-        world.factionFlowerCounts[previousBucket] = Math.max(0, world.factionFlowerCounts[previousBucket] - 1)
+        world.factionFlowerCounts[previousBucket] = Math.max(
+          0,
+          world.factionFlowerCounts[previousBucket] - flower.petalCount,
+        )
       }
       world.flowerBloomingIndices.delete(flower.slotIndex)
       removeFlowerFromDensity(world, flower)
@@ -436,6 +441,7 @@ export const spawnFlowers = (
       flower.bloomCell = -1
     }
     flower.targetSize = targetSize
+    flower.petalCount = flowerPetalCount(targetSize)
     flower.bloomDelay = options.staggeredBloom
       ? PLAYER_IMPACT_BLOOM_DELAYS[index % PLAYER_IMPACT_BLOOM_DELAYS.length]
       : 0
@@ -443,7 +449,7 @@ export const spawnFlowers = (
     flower.size = 0
 
     if (scoreOwnerId in world.factionFlowerCounts) {
-      world.factionFlowerCounts[scoreOwnerId] += 1
+      world.factionFlowerCounts[scoreOwnerId] += flower.petalCount
     }
   }
 
