@@ -31,7 +31,7 @@ async (page) => {
   assert(await page.locator(".menu-difficulty-column, .menu-player-column").count() === 2, "New game opens all four columns at once")
   const columns = await Promise.all([".menu-player-column", ".menu-difficulty-column", ".menu-choice-column", ".menu-navigation"].map(box))
   for (let index = 0; index < 3; index++) {
-    assert(columns[index].width === 200, "Choice columns are 200px wide")
+    assert(Math.abs(columns[index].width - 224) < 0.01, "Choice columns are 224px wide")
     assert(Math.abs(columns[index + 1].x - columns[index].x - columns[index].width - 16) < 1, "Column gaps are 16px")
     assert(Math.abs(columns[index].y - columns[index + 1].y) < 1, "Four columns stay on one row")
   }
@@ -40,6 +40,9 @@ async (page) => {
   assert(await page.locator(".menu-columns h2").count() === 0, "No duplicate column titles")
   assert(await navigation.locator("button").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 54), "Rightmost Korean menu retains its large type")
   assert(await page.locator(".menu-columns button, .mode-card-detail").evaluateAll(els => els.every(el => getComputedStyle(el).color === "rgb(255, 255, 255)" && Number(getComputedStyle(el).fontWeight) >= 800)), "All choices use bold white text")
+  const modeTitleSize = await page.locator(".mode-card-title").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+  const modeDetailSize = await page.locator(".mode-card-detail").first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+  assert(modeTitleSize >= modeDetailSize * 1.5, "Game mode titles clearly outweigh their descriptions")
 
   const slider = page.locator('.menu-player-column input[type="range"]')
   await slider.focus()
