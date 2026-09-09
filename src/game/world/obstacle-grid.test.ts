@@ -22,6 +22,7 @@ const createWallMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "wall", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 const createHedgeMap = (): TerrainMap => ({
@@ -29,6 +30,7 @@ const createHedgeMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "hedge", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [[true]] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 const createWarehouseMap = (): TerrainMap => ({
@@ -36,6 +38,7 @@ const createWarehouseMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "warehouse", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [[true]] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 Deno.test("buildObstacleGridFromMap sets brick wall hp to 3", () => {

@@ -1,6 +1,6 @@
 import {
   createGardenHedgeMazeTiles,
-  createThreeRoomHouseTiles,
+  createThreeRoomHouseLayout,
   createWarehouseVariantTiles,
 } from "./terrain-layouts.ts"
 import { randomFloat } from "../replay.ts"
@@ -9,6 +9,7 @@ import {
   circleFitsArena,
   gridRectToWorldRect,
   gridToWorld,
+  hasConnectedOpenTiles,
   hasNeighbor,
   randomInt,
   rectFitsArena,
@@ -30,52 +31,38 @@ const carveBrush = (mask: boolean[][], centerX: number, centerY: number, radius:
   }
 }
 
-const connectPoints = (mask: boolean[][], fromX: number, fromY: number, toX: number, toY: number) => {
-  let x = fromX
-  let y = fromY
-  carveBrush(mask, x, y, randomInt(0, 1))
-
-  for (let guard = 0; guard < mask.length * mask.length; guard += 1) {
-    if (x === toX && y === toY) {
-      break
-    }
-
-    const dx = toX - x
-    const dy = toY - y
-    const preferHorizontal = randomFloat() > 0.5
-    if (dx !== 0 && (preferHorizontal || dy === 0)) {
-      x += Math.sign(dx)
-    } else if (dy !== 0) {
-      y += Math.sign(dy)
-    }
-
-    carveBrush(mask, x, y, randomFloat() > 0.88 ? 1 : 0)
+const connectPoints = ({ mask, from, to }: { mask: boolean[][]; from: [number, number]; to: [number, number] }) => {
+  const dx = to[0] - from[0]
+  const dy = to[1] - from[1]
+  const bend = (randomFloat() - 0.5) * 0.65
+  const controlX = (from[0] + to[0]) / 2 - dy * bend
+  const controlY = (from[1] + to[1]) / 2 + dx * bend
+  const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) * 3))
+  for (let step = 0; step <= steps; step += 1) {
+    const t = step / steps
+    const inverse = 1 - t
+    const x = Math.round(inverse * inverse * from[0] + 2 * inverse * t * controlX + t * t * to[0])
+    const y = Math.round(inverse * inverse * from[1] + 2 * inverse * t * controlY + t * t * to[1])
+    carveBrush(mask, x, y, 1)
   }
 }
 
 const buildRoadNetworkMask = (size: number) => {
   const mask = Array.from({ length: size }, () => Array.from({ length: size }, () => false))
   const center = Math.floor(size * 0.5)
-  const hubCount = randomInt(3, 5)
-  const hubs: [number, number][] = [[center, center]]
+  const hubCount = randomInt(4, 7)
+  const rotation = randomFloat() * Math.PI * 2
+  const hubs: [number, number][] = Array.from({ length: hubCount }, (_, index) => {
+    const radius = size * (0.27 + randomFloat() * 0.09)
+    const angle = rotation + Math.PI * 2 * (index + randomFloat() * 0.3) / hubCount
+    return [Math.round(center + Math.cos(angle) * radius), Math.round(center + Math.sin(angle) * radius)]
+  })
 
-  for (let index = 1; index < hubCount; index += 1) {
-    const ring = size * randomInt(18, 40) * 0.01
-    const angle = (Math.PI * 2 * index) / hubCount + randomFloat() * 0.9
-    const x = Math.round(center + Math.cos(angle) * ring)
-    const y = Math.round(center + Math.sin(angle) * ring)
-    hubs.push([Math.max(4, Math.min(size - 5, x)), Math.max(4, Math.min(size - 5, y))])
-  }
-
-  for (let index = 1; index < hubs.length; index += 1) {
-    const [fromX, fromY] = hubs[index - 1]
-    const [toX, toY] = hubs[index]
-    connectPoints(mask, fromX, fromY, toX, toY)
-  }
-
-  for (let index = 1; index < hubs.length; index += 1) {
-    const [toX, toY] = hubs[index]
-    connectPoints(mask, center, center, toX, toY)
+  // A complete outer loop offers flanking routes; alternating spokes leave large building plots.
+  for (let index = 0; index < hubs.length; index += 1) {
+    connectPoints({ mask, from: hubs[index], to: hubs[(index + 1) % hubs.length] })
+    if (index % 2 === 0) connectPoints({ mask, from: [center, center], to: hubs[index] })
+    carveBrush(mask, hubs[index][0], hubs[index][1], randomInt(2, 3))
   }
 
   return mask
@@ -87,7 +74,7 @@ export const applyRoadNetwork = (tiles: TerrainTile[][]) => {
   for (let y = 0; y < size; y += 1) {
     for (let x = 0; x < size; x += 1) {
       if (roads[y][x]) {
-        tiles[y][x] = randomFloat() > 0.18 ? "dirt-road" : "gravel"
+        tiles[y][x] = tiles[y][x] === "dirt" ? "gravel" : "dirt-road"
         continue
       }
 
@@ -116,6 +103,9 @@ export const createWarehouseBlueprints = (size: number, paths: boolean[][]) => {
       continue
     }
 
+    if (rectTouchesMask(paths, left, top, width, height, 0)) {
+      continue
+    }
     if (!rectTouchesMask(paths, left, top, width, height, 2)) {
       continue
     }
@@ -209,13 +199,15 @@ export const createHouseBlueprints = (size: number, paths: boolean[][], blocked:
       continue
     }
 
+    const { tiles, rooms } = createThreeRoomHouseLayout(width, height)
     houses.push({
       kind: "house",
       x: worldRect.x,
       y: worldRect.y,
       width,
       height,
-      tiles: createThreeRoomHouseTiles(width, height),
+      tiles,
+      rooms,
     })
   }
 
@@ -261,8 +253,18 @@ export const createHouseLootBoxBlueprints = (size: number, houses: MapObstacleBl
     shuffleCandidates(candidates)
     const spawnCount = Math.min(candidates.length, 1 + (randomFloat() > 0.58 ? 1 : 0))
 
-    for (let index = 0; index < spawnCount; index += 1) {
-      const [gridX, gridY] = candidates[index]
+    const blocked = house.tiles.map((row) => [...row])
+    let spawned = 0
+    for (const [gridX, gridY] of candidates) {
+      if (spawned >= spawnCount) break
+      const row = gridY - top
+      const col = gridX - left
+      blocked[row][col] = true
+      if (!hasConnectedOpenTiles(blocked)) {
+        blocked[row][col] = false
+        continue
+      }
+      spawned += 1
       const whiteLootChance = 0.78
       const kind: MapObstacleBlueprint["kind"] = randomFloat() < whiteLootChance ? "high-tier-box" : "box"
       boxes.push({
@@ -317,151 +319,6 @@ export const createHedgeMazeBlueprints = (size: number, paths: boolean[][], bloc
   }
 
   return mazes
-}
-
-export const createWallBlueprints = (size: number, paths: boolean[][], blockedStructures: MapObstacleBlueprint[]) => {
-  const walls: MapObstacleBlueprint[] = []
-  const wallCount = randomInt(150, 220)
-
-  for (let attempt = 0; attempt < 5200 && walls.length < wallCount; attempt += 1) {
-    const centerX = randomInt(2, size - 3)
-    const centerY = randomInt(2, size - 3)
-    const onRoad = paths[centerY][centerX]
-    const nearRoad = onRoad || hasNeighbor(paths, centerX, centerY)
-
-    if (!nearRoad && randomFloat() > 0.72) {
-      continue
-    }
-
-    if (!circleFitsArena(centerX, centerY, size, 2.3)) {
-      continue
-    }
-
-    let width = 1
-    let height = 1
-    const setLinearWall = (minSpan: number, maxSpan: number, favorLongest = false) => {
-      const longestBias = favorLongest && maxSpan > minSpan && randomFloat() > 0.42
-      const span = longestBias ? maxSpan : randomInt(minSpan, maxSpan)
-      if (randomFloat() > 0.5) {
-        width = span
-        height = 1
-        return
-      }
-
-      width = 1
-      height = span
-    }
-
-    const shapeRoll = randomFloat()
-    if (onRoad) {
-      if (shapeRoll > 0.2) {
-        setLinearWall(2, 4, shapeRoll > 0.68)
-      }
-    } else if (nearRoad) {
-      if (shapeRoll > 0.16) {
-        setLinearWall(2, 5, shapeRoll > 0.52)
-      } else {
-        width = randomInt(2, 3)
-        height = randomInt(2, 3)
-      }
-    } else {
-      if (shapeRoll > 0.5) {
-        setLinearWall(2, 4, shapeRoll > 0.8)
-      } else if (shapeRoll > 0.28) {
-        width = randomInt(2, 3)
-        height = randomInt(1, 2)
-      }
-    }
-
-    if (onRoad && width > 1 && height > 1) {
-      if (randomFloat() > 0.5) {
-        width = 1
-      } else {
-        height = 1
-      }
-    }
-
-    const left = centerX - Math.floor(width * 0.5)
-    const top = centerY - Math.floor(height * 0.5)
-    if (left < 2 || top < 2 || left + width > size - 2 || top + height > size - 2) {
-      continue
-    }
-    if (!rectFitsArena(left, top, width, height, size, 2.3)) {
-      continue
-    }
-
-    if (!nearRoad && randomFloat() > 0.42 && !rectTouchesMask(paths, left, top, width, height, 2)) {
-      continue
-    }
-
-    const wallRect = gridRectToWorldRect(left, top, width, height, size)
-    const blockedByStructure = blockedStructures.some((structure) =>
-      rectsOverlap(wallRect, structure, onRoad ? 0.35 : 0.55)
-    )
-    if (blockedByStructure) {
-      continue
-    }
-
-    const blockedByWall = walls.some((existing) => rectsOverlap(wallRect, existing, onRoad ? 0.05 : 0.14))
-    if (blockedByWall) {
-      continue
-    }
-
-    if (onRoad && randomFloat() > 0.5) {
-      continue
-    }
-
-    walls.push({
-      kind: "wall",
-      x: wallRect.x,
-      y: wallRect.y,
-      width,
-      height,
-      tiles: [],
-    })
-  }
-
-  return walls
-}
-
-export const createRockBlueprints = (size: number, paths: boolean[][], blocked: MapObstacleBlueprint[]) => {
-  const rocks: MapObstacleBlueprint[] = []
-  const rockCount = randomInt(56, 92)
-
-  for (let attempt = 0; attempt < 3400 && rocks.length < rockCount; attempt += 1) {
-    const gridX = randomInt(3, size - 4)
-    const gridY = randomInt(3, size - 4)
-    if (!circleFitsArena(gridX, gridY, size, 2.3)) {
-      continue
-    }
-
-    if (!paths[gridY][gridX] && randomFloat() > 0.78) {
-      continue
-    }
-
-    const rock = {
-      kind: "box" as const,
-      x: gridToWorld(gridX, size),
-      y: gridToWorld(gridY, size),
-      width: 1,
-      height: 1,
-      tiles: [] as boolean[][],
-    }
-
-    const overlapsBlocked = blocked.some((obstacle) => rectsOverlap(rock, obstacle, 0.9))
-    if (overlapsBlocked) {
-      continue
-    }
-
-    const overlapsRock = rocks.some((existing) => rectsOverlap(rock, existing, 0.45))
-    if (overlapsRock) {
-      continue
-    }
-
-    rocks.push(rock)
-  }
-
-  return rocks
 }
 
 export const createPickupSpawnPoints = (size: number, paths: boolean[][], obstacles: MapObstacleBlueprint[]) => {

@@ -2,8 +2,9 @@
 
 import { assertEquals } from "jsr:@std/assert"
 
-import { Projectile } from "../entities.ts"
-import { damageObstaclesByExplosion, hitObstacle } from "./collisions.ts"
+import { Projectile, Unit } from "../entities.ts"
+import { spawnObstacleDebris, updateObstacleDebris } from "../game-fx.ts"
+import { damageObstaclesByExplosion, hitObstacle, resolveUnitCollisions } from "./collisions.ts"
 import {
   buildObstacleGridFromMap,
   OBSTACLE_FLASH_BLOCKED,
@@ -22,6 +23,7 @@ const createSingleWallMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "wall", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 const createSingleHedgeMap = (): TerrainMap => ({
@@ -29,6 +31,7 @@ const createSingleHedgeMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "hedge", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [[true]] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 const createProjectileAtWall = (damage: number, kind: Projectile["kind"] = "ballistic") => {
@@ -46,6 +49,7 @@ const createSingleWarehouseMap = (): TerrainMap => ({
   tiles: createTiles(8),
   obstacles: [{ kind: "warehouse", x: 0.5, y: 0.5, width: 1, height: 1, tiles: [[true]] }],
   pickupSpawnPoints: [],
+  props: [],
 })
 
 Deno.test("hitObstacle uses blocked flash and does not emit damage callback on fully blocked hit", () => {
@@ -142,4 +146,93 @@ Deno.test("damageObstaclesByExplosion reaches warehouse cells near blast edge", 
   assertEquals(damaged, true)
   assertEquals(world.obstacleGrid.hp[index] < hpBefore, true)
   assertEquals(world.obstacleGrid.flashKind[index], OBSTACLE_FLASH_DAMAGED)
+})
+
+Deno.test("passable flowerbeds take bullets and emit destruction effects across their footprint", () => {
+  const world = createWorldState()
+  world.terrainMap = {
+    size: 8,
+    tiles: createTiles(8),
+    obstacles: [],
+    pickupSpawnPoints: [],
+    props: [{ kind: "flowerbed", x: 0, y: 0.5, width: 2, height: 1, solid: false }],
+  }
+  world.obstacleGrid = buildObstacleGridFromMap(world.terrainMap)
+  const grid = world.obstacleGrid
+  const cells = [35, 36]
+  assertEquals(cells.map((cell) => grid.solid[cell]), [0, 0])
+  const unit = new Unit("walker", true, "player")
+  unit.position.set(0, 0.5)
+  unit.radius = 0.3
+  world.units = [unit]
+  resolveUnitCollisions(world)
+  assertEquals([unit.position.x, unit.position.y], [0, 0.5])
+  const projectile = createProjectileAtWall(1, "ballistic")
+  const effects: number[][] = []
+  const deps = { onObstacleDestroyed: (x: number, y: number) => effects.push([x, y]) }
+  assertEquals(hitObstacle(world, projectile, deps), true)
+  assertEquals(cells.map((cell) => grid.hp[cell]), [2, 2])
+  assertEquals(effects, [])
+  assertEquals(cells.map((cell) => grid.solid[cell]), [0, 0])
+  projectile.damage = 2
+  assertEquals(hitObstacle(world, projectile, deps), true)
+  assertEquals(effects, [[-0.5, 0.5], [0.5, 0.5]])
+  assertEquals(cells.map((cell) => grid.hp[cell]), [0, 0])
+  assertEquals(hitObstacle(world, projectile, deps), false)
+  assertEquals(effects.length, 2)
+})
+
+Deno.test("explosions damage shared prop health once and emit each destroyed cell only once", () => {
+  const world = createWorldState()
+  world.terrainMap = {
+    size: 8,
+    tiles: createTiles(8),
+    obstacles: [],
+    pickupSpawnPoints: [],
+    props: [{ kind: "rug", x: 0, y: 0, width: 2, height: 2, solid: false }],
+  }
+  world.obstacleGrid = buildObstacleGridFromMap(world.terrainMap)
+  const cells = [27, 28, 35, 36]
+  for (const cell of cells) world.obstacleGrid.hp[cell] = 20
+  const effects: number[][] = []
+  let hits = 0
+  const deps = {
+    onObstacleDamaged: () => hits += 1,
+    onObstacleDestroyed: (x: number, y: number) => effects.push([x, y]),
+  }
+  damageObstaclesByExplosion(world, 0, 0, 2, deps)
+  assertEquals(hits, 1)
+  assertEquals(effects.length, 0)
+  for (const cell of cells) world.obstacleGrid.hp[cell] = 3
+  damageObstaclesByExplosion(world, 0, 0, 2, deps)
+  assertEquals(effects.length, 4)
+  assertEquals(new Set(effects.map(([x, y]) => `${x},${y}`)).size, 4)
+  assertEquals(cells.map((cell) => world.obstacleGrid.solid[cell]), [0, 0, 0, 0])
+})
+
+Deno.test("destroyed garden props use moving, fading debris from the wall effect pipeline", () => {
+  const world = createWorldState()
+  world.terrainMap = {
+    size: 8,
+    tiles: createTiles(8),
+    obstacles: [],
+    pickupSpawnPoints: [],
+    props: [{ kind: "flowerbed", x: 0, y: 0.5, width: 2, height: 1, solid: false }],
+  }
+  world.obstacleGrid = buildObstacleGridFromMap(world.terrainMap)
+  let cursor = 0
+  hitObstacle(world, createProjectileAtWall(3), {
+    onObstacleDestroyed: (x, y, material) => {
+      cursor = spawnObstacleDebris(world, cursor, x, y, material)
+    },
+  })
+  assertEquals(world.activeObstacleDebrisIndices.size, 16)
+  const piece = world.obstacleDebris[0]
+  const before = { x: piece.position.x, y: piece.position.y, life: piece.life }
+  updateObstacleDebris(world, 0.05)
+  assertEquals(piece.position.x !== before.x || piece.position.y !== before.y, true)
+  assertEquals(piece.life < before.life, true)
+  assertEquals(["#9b8568", "#828057", "#d0c09b"].includes(piece.color), true)
+  updateObstacleDebris(world, 1)
+  assertEquals(world.activeObstacleDebrisIndices.size, 0)
 })

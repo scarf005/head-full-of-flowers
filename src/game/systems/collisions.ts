@@ -3,6 +3,7 @@ import { clamp, lerp, limitToArena } from "../utils.ts"
 import {
   damageObstacleCell,
   decayObstacleFlash,
+  isObstacleCellDamageable,
   isObstacleCellSolid,
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_HEDGE,
@@ -193,7 +194,7 @@ const sampleObstacleRay = (
     const sampleX = lerp(fromX, toX, t)
     const sampleY = lerp(fromY, toY, t)
     const cell = worldToObstacleGrid(grid.size, sampleX, sampleY)
-    if (!isObstacleCellSolid(grid, cell.x, cell.y)) {
+    if (!isObstacleCellDamageable(grid, cell.x, cell.y)) {
       continue
     }
     return cell
@@ -233,8 +234,14 @@ export const hitObstacle = (world: WorldState, projectile: Projectile, deps: Obs
   if (result.destroyed) {
     deps.onSfxBreak?.()
     if (result.destroyedMaterial !== OBSTACLE_MATERIAL_NONE) {
-      const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
-      deps.onObstacleDestroyed?.(center.x, center.y, result.destroyedMaterial)
+      for (const index of result.destroyedCells) {
+        const center = obstacleGridToWorldCenter(
+          world.obstacleGrid.size,
+          index % world.obstacleGrid.size,
+          Math.floor(index / world.obstacleGrid.size),
+        )
+        deps.onObstacleDestroyed?.(center.x, center.y, result.destroyedMaterial)
+      }
     }
     if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
       const center = obstacleGridToWorldCenter(world.obstacleGrid.size, hitCell.x, hitCell.y)
@@ -254,6 +261,7 @@ export const damageObstaclesByExplosion = (
   const grid = world.obstacleGrid
   let tookDamage = false
   let destroyedAny = false
+  const damagedProps = new Set<number[]>()
   const min = worldToObstacleGrid(grid.size, x - radius, y - radius)
   const max = worldToObstacleGrid(grid.size, x + radius, y + radius)
   const minX = Math.max(0, min.x)
@@ -263,7 +271,7 @@ export const damageObstaclesByExplosion = (
 
   for (let gy = minY; gy <= maxY; gy += 1) {
     for (let gx = minX; gx <= maxX; gx += 1) {
-      if (!isObstacleCellSolid(grid, gx, gy)) {
+      if (!isObstacleCellDamageable(grid, gx, gy)) {
         continue
       }
 
@@ -277,6 +285,9 @@ export const damageObstaclesByExplosion = (
 
       const proximity = 1 - clamp(distanceToCellEdge / Math.max(0.0001, radius), 0, 1)
       const explosionDamage = 2.5 + radius * 0.65 + proximity * 1.1
+      const propCells = grid.propCells.get(obstacleGridIndex(grid.size, gx, gy))
+      if (propCells && damagedProps.has(propCells)) continue
+      if (propCells) damagedProps.add(propCells)
       const result = damageObstacleCell(grid, gx, gy, explosionDamage)
       if (result.damaged) {
         tookDamage = true
@@ -286,7 +297,10 @@ export const damageObstaclesByExplosion = (
         if (result.destroyed) {
           destroyedAny = true
           if (result.destroyedMaterial !== OBSTACLE_MATERIAL_NONE) {
-            deps.onObstacleDestroyed?.(center.x, center.y, result.destroyedMaterial)
+            for (const index of result.destroyedCells) {
+              const cell = obstacleGridToWorldCenter(grid.size, index % grid.size, Math.floor(index / grid.size))
+              deps.onObstacleDestroyed?.(cell.x, cell.y, result.destroyedMaterial)
+            }
           }
           if (result.destroyedMaterial === OBSTACLE_MATERIAL_BOX) {
             const center = obstacleGridToWorldCenter(grid.size, gx, gy)

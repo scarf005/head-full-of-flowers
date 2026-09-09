@@ -1,4 +1,5 @@
 import { randomFloat } from "../replay.ts"
+import type { HouseRoom } from "./terrain-types.ts"
 import { clampInt, randomInt } from "./terrain-utils.ts"
 
 const createPerimeterTiles = (width: number, height: number) => {
@@ -59,17 +60,19 @@ interface ThreeRoomHousePartition {
 
 export interface ThreeRoomHouseLayout {
   tiles: boolean[][]
+  rooms: HouseRoom[]
   roomAreas: [number, number, number]
 }
 
 const chooseThreeRoomHousePartition = (width: number, height: number): ThreeRoomHousePartition => {
+  const inset = width >= 9 && height >= 7 ? 3 : 2
   for (let attempt = 0; attempt < 36; attempt += 1) {
     const primaryAxis = randomFloat() > 0.5 ? "vertical" : "horizontal"
     const splitOnPositiveSide = randomFloat() > 0.5
 
     if (primaryAxis === "vertical") {
-      const primaryIndex = randomInt(2, width - 3)
-      const secondaryIndex = randomInt(2, height - 3)
+      const primaryIndex = randomInt(inset, width - inset - 1)
+      const secondaryIndex = randomInt(inset, height - inset - 1)
       const branchWidth = splitOnPositiveSide ? width - primaryIndex - 2 : primaryIndex - 1
       const mainWidth = splitOnPositiveSide ? primaryIndex - 1 : width - primaryIndex - 2
       const topHeight = secondaryIndex - 1
@@ -92,8 +95,8 @@ const chooseThreeRoomHousePartition = (width: number, height: number): ThreeRoom
       continue
     }
 
-    const primaryIndex = randomInt(2, height - 3)
-    const secondaryIndex = randomInt(2, width - 3)
+    const primaryIndex = randomInt(inset, height - inset - 1)
+    const secondaryIndex = randomInt(inset, width - inset - 1)
     const branchHeight = splitOnPositiveSide ? height - primaryIndex - 2 : primaryIndex - 1
     const mainHeight = splitOnPositiveSide ? primaryIndex - 1 : height - primaryIndex - 2
     const leftWidth = secondaryIndex - 1
@@ -114,8 +117,8 @@ const chooseThreeRoomHousePartition = (width: number, height: number): ThreeRoom
     }
   }
 
-  const fallbackPrimary = clampInt(Math.floor(width * 0.46), 2, width - 3)
-  const fallbackSecondary = clampInt(Math.floor(height * 0.42), 2, height - 3)
+  const fallbackPrimary = clampInt(Math.floor(width * 0.46), inset, width - inset - 1)
+  const fallbackSecondary = clampInt(Math.floor(height * 0.42), inset, height - inset - 1)
   const fallbackAreas: [number, number, number] = [
     (fallbackPrimary - 1) * (height - 2),
     (width - fallbackPrimary - 2) * (fallbackSecondary - 1),
@@ -219,7 +222,49 @@ export const createThreeRoomHouseLayout = (width: number, height: number): Three
     }
   }
 
-  return { tiles, roomAreas: partition.roomAreas }
+  const { primaryAxis, primaryIndex: primary, secondaryIndex: secondary, splitOnPositiveSide: positive } = partition
+  const rooms: HouseRoom[] = primaryAxis === "vertical"
+    ? [
+      {
+        left: positive ? 1 : primary + 1,
+        top: 1,
+        width: positive ? primary - 1 : width - primary - 2,
+        height: height - 2,
+      },
+      {
+        left: positive ? primary + 1 : 1,
+        top: 1,
+        width: positive ? width - primary - 2 : primary - 1,
+        height: secondary - 1,
+      },
+      {
+        left: positive ? primary + 1 : 1,
+        top: secondary + 1,
+        width: positive ? width - primary - 2 : primary - 1,
+        height: height - secondary - 2,
+      },
+    ]
+    : [
+      {
+        left: 1,
+        top: positive ? 1 : primary + 1,
+        width: width - 2,
+        height: positive ? primary - 1 : height - primary - 2,
+      },
+      {
+        left: 1,
+        top: positive ? primary + 1 : 1,
+        width: secondary - 1,
+        height: positive ? height - primary - 2 : primary - 1,
+      },
+      {
+        left: secondary + 1,
+        top: positive ? primary + 1 : 1,
+        width: width - secondary - 2,
+        height: positive ? height - primary - 2 : primary - 1,
+      },
+    ]
+  return { tiles, rooms, roomAreas: partition.roomAreas }
 }
 
 export const createGardenHedgeMazeTiles = (width: number, height: number) => {

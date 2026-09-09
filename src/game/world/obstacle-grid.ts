@@ -6,6 +6,7 @@ export const OBSTACLE_MATERIAL_WAREHOUSE = 2
 export const OBSTACLE_MATERIAL_ROCK = 3
 export const OBSTACLE_MATERIAL_BOX = 4
 export const OBSTACLE_MATERIAL_HEDGE = 5
+export const OBSTACLE_MATERIAL_PROP = 6
 
 export const OBSTACLE_FLASH_NONE = 0
 export const OBSTACLE_FLASH_BLOCKED = 1
@@ -21,9 +22,11 @@ export interface ObstacleGridState {
   flashKind: Uint8Array
   flashActiveIndices: Set<number>
   revision: number
+  propCells: Map<number, number[]>
 }
 
 const hpForMaterial = (material: number) => {
+  if (material === OBSTACLE_MATERIAL_PROP) return 3
   if (material === OBSTACLE_MATERIAL_WALL) {
     return 3
   }
@@ -90,6 +93,7 @@ export const createObstacleGrid = (size: number): ObstacleGridState => {
     flashKind: new Uint8Array(cellCount),
     flashActiveIndices: new Set<number>(),
     revision: 0,
+    propCells: new Map(),
   }
 }
 
@@ -102,6 +106,9 @@ export const isObstacleCellSolid = (grid: ObstacleGridState, x: number, y: numbe
 
   return grid.solid[obstacleGridIndex(grid.size, x, y)] > 0
 }
+
+export const isObstacleCellDamageable = (grid: ObstacleGridState, x: number, y: number) =>
+  x >= 0 && y >= 0 && x < grid.size && y < grid.size && grid.hp[obstacleGridIndex(grid.size, x, y)] > 0
 
 export const worldToObstacleGrid = (size: number, worldX: number, worldY: number) => {
   const half = Math.floor(size * 0.5)
@@ -168,17 +175,32 @@ export const buildObstacleGridFromMap = (map: TerrainMap) => {
     }
   }
 
+  for (const prop of map.props) {
+    const left = Math.floor(prop.x - prop.width / 2 + half)
+    const top = Math.floor(prop.y - prop.height / 2 + half)
+    const cells: number[] = []
+    for (let y = top; y < top + prop.height; y += 1) {
+      for (let x = left; x < left + prop.width; x += 1) {
+        setCell(x, y, OBSTACLE_MATERIAL_PROP, false)
+        const index = obstacleGridIndex(map.size, x, y)
+        grid.solid[index] = prop.solid ? 1 : 0
+        cells.push(index)
+      }
+    }
+    for (const cell of cells) grid.propCells.set(cell, cells)
+  }
   return grid
 }
 
 export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number, amount: number) => {
-  if (!isObstacleCellSolid(grid, x, y)) {
+  if (!isObstacleCellDamageable(grid, x, y)) {
     return {
       damaged: false,
       destroyed: false,
       damageDealt: 0,
       material: OBSTACLE_MATERIAL_NONE,
       destroyedMaterial: OBSTACLE_MATERIAL_NONE,
+      destroyedCells: [] as number[],
     }
   }
 
@@ -188,21 +210,23 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
   const highTierLoot = grid.highTierLoot[index] > 0
   const hpBefore = grid.hp[index]
   const damageDealt = Math.max(0, amount - armor)
-  if (damageDealt > 0) {
-    grid.hp[index] = Math.max(0, grid.hp[index] - damageDealt)
+  const affected = grid.propCells.get(index) ?? [index]
+  const hpAfter = damageDealt > 0 ? Math.max(0, hpBefore - damageDealt) : hpBefore
+  const destroyed = hpBefore > 0 && hpAfter <= 0
+  for (const cell of affected) {
+    grid.hp[cell] = hpAfter
+    grid.flash[cell] = 1
+    grid.flashKind[cell] = damageDealt > 0 ? OBSTACLE_FLASH_DAMAGED : OBSTACLE_FLASH_BLOCKED
+    grid.flashActiveIndices.add(cell)
+    if (destroyed) {
+      grid.solid[cell] = 0
+      grid.material[cell] = OBSTACLE_MATERIAL_NONE
+      grid.highTierLoot[cell] = 0
+      grid.flashKind[cell] = OBSTACLE_FLASH_NONE
+      grid.propCells.delete(cell)
+    }
   }
-  grid.flash[index] = 1
-  grid.flashKind[index] = damageDealt > 0 ? OBSTACLE_FLASH_DAMAGED : OBSTACLE_FLASH_BLOCKED
-  grid.flashActiveIndices.add(index)
-  const destroyed = hpBefore > 0 && grid.hp[index] <= 0
-  if (destroyed) {
-    grid.hp[index] = 0
-    grid.solid[index] = 0
-    grid.material[index] = OBSTACLE_MATERIAL_NONE
-    grid.highTierLoot[index] = 0
-    grid.flashKind[index] = OBSTACLE_FLASH_NONE
-    grid.revision += 1
-  }
+  if (destroyed) grid.revision += 1
   return {
     damaged: true,
     destroyed,
@@ -210,6 +234,7 @@ export const damageObstacleCell = (grid: ObstacleGridState, x: number, y: number
     material,
     destroyedMaterial: destroyed ? material : OBSTACLE_MATERIAL_NONE,
     destroyedHighTierLoot: destroyed && highTierLoot,
+    destroyedCells: destroyed ? affected : [],
   }
 }
 

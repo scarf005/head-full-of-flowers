@@ -1,4 +1,5 @@
-import { loadedWebGLSprites, canonicalWebGLSpriteId } from "./webgl-direct-sprites.ts"
+import { spriteRegionUvs } from "./webgl-sprite-region.ts"
+import { canonicalWebGLSpriteId, loadedWebGLSprites } from "./webgl-direct-sprites.ts"
 import { directWebGLGlyphFor, measureDirectWebGLText } from "./webgl-direct-text.ts"
 
 export type Rgba = readonly [number, number, number, number]
@@ -394,9 +395,15 @@ export class DirectWebGLRenderer {
     this.view = { scaleX: pixelsPerWorld, scaleY: pixelsPerWorld, offsetX: half, offsetY: half }
   }
 
-  private sx(x: number) { return x * this.view.scaleX + this.view.offsetX }
-  private sy(y: number) { return y * this.view.scaleY + this.view.offsetY }
-  private averageScale() { return (Math.abs(this.view.scaleX) + Math.abs(this.view.scaleY)) * 0.5 }
+  private sx(x: number) {
+    return x * this.view.scaleX + this.view.offsetX
+  }
+  private sy(y: number) {
+    return y * this.view.scaleY + this.view.offsetY
+  }
+  private averageScale() {
+    return (Math.abs(this.view.scaleX) + Math.abs(this.view.scaleY)) * 0.5
+  }
 
   setBlendMode(mode: BlendMode) {
     if (mode === this.blendMode) return
@@ -442,8 +449,16 @@ export class DirectWebGLRenderer {
   }
 
   private pushTriangle(
-    ax: number, ay: number, bx: number, by: number, cx: number, cy: number,
-    color: Rgba, alphaA = 1, alphaB = 1, alphaC = 1,
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    cx: number,
+    cy: number,
+    color: Rgba,
+    alphaA = 1,
+    alphaB = 1,
+    alphaC = 1,
   ) {
     const [u, v] = this.whiteUv
     this.pushVertex(ax, ay, u, v, color, alphaA)
@@ -500,10 +515,16 @@ export class DirectWebGLRenderer {
     const y0 = this.sy(points[1])
     for (let i = 2; i + 3 < points.length; i += 2) {
       this.pushTriangle(
-        x0, y0,
-        this.sx(points[i]), this.sy(points[i + 1]),
-        this.sx(points[i + 2]), this.sy(points[i + 3]),
-        rgba, alpha, alpha, alpha,
+        x0,
+        y0,
+        this.sx(points[i]),
+        this.sy(points[i + 1]),
+        this.sx(points[i + 2]),
+        this.sy(points[i + 3]),
+        rgba,
+        alpha,
+        alpha,
+        alpha,
       )
     }
   }
@@ -658,6 +679,7 @@ export class DirectWebGLRenderer {
     width: number,
     height: number,
     options: {
+      normalized?: boolean
       anchorX?: number
       anchorY?: number
       rotation?: number
@@ -668,6 +690,17 @@ export class DirectWebGLRenderer {
   ) {
     const entry = this.atlas.get(canonicalWebGLSpriteId(id))
     if (!entry) return false
+    const uv = spriteRegionUvs({
+      entry,
+      atlasWidth: this.atlasWidth,
+      atlasHeight: this.atlasHeight,
+      sx,
+      sy,
+      sw,
+      sh,
+      normalized: options.normalized,
+    })
+    if (!uv) return false
     this.useTexture(this.atlasTexture)
     const anchorX = options.anchorX ?? 0.5
     const anchorY = options.anchorY ?? 0.5
@@ -693,10 +726,7 @@ export class DirectWebGLRenderer {
     const p1 = point(right, top)
     const p2 = point(right, bottom)
     const p3 = point(left, bottom)
-    const u0 = (entry.x + sx) / this.atlasWidth
-    const u1 = (entry.x + sx + sw) / this.atlasWidth
-    const v0 = (entry.y + sy) / this.atlasHeight
-    const v1 = (entry.y + sy + sh) / this.atlasHeight
+    const { u0, u1, v0, v1 } = uv
     this.pushVertex(p0.x, p0.y, u0, v0, color, alpha)
     this.pushVertex(p1.x, p1.y, u1, v0, color, alpha)
     this.pushVertex(p2.x, p2.y, u1, v1, color, alpha)

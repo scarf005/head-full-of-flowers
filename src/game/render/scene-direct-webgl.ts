@@ -1,4 +1,7 @@
-import { buildCullBounds, isInsideCullBounds, type CullBounds } from "../cull.ts"
+import { renderGardenProps } from "./garden-props.ts"
+import { createWaterRippleState, updateWaterRipples, type WaterRippleState } from "./water-ripples.ts"
+import { wetTerrainAt } from "../world/terrain-wetlands.ts"
+import { buildCullBounds, type CullBounds, isInsideCullBounds } from "../cull.ts"
 import { clamp } from "../utils.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
 import {
@@ -6,6 +9,7 @@ import {
   OBSTACLE_FLASH_DAMAGED,
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_HEDGE,
+  OBSTACLE_MATERIAL_PROP,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
@@ -119,8 +123,7 @@ let minimapObstacleCache: MinimapObstacleCache = {
   target: null,
 }
 
-const inside = (x: number, y: number, bounds: CullBounds, padding = 0) =>
-  isInsideCullBounds(x, y, bounds, padding)
+const inside = (x: number, y: number, bounds: CullBounds, padding = 0) => isInsideCullBounds(x, y, bounds, padding)
 
 const measureViewportOverflow = (renderer: DirectWebGLRenderer): ViewportOverflowPx => {
   if (typeof globalThis.innerWidth !== "number" || typeof globalThis.innerHeight !== "number") return EMPTY_OVERFLOW
@@ -225,7 +228,9 @@ const renderMolotovZones = (renderer: DirectWebGLRenderer, world: WorldState, cu
     if (!zone.active || !inside(zone.position.x, zone.position.y, cull, zone.radius + 0.5)) continue
     const fullLife = zone.source === "flame" ? 3 : 2.2
     const alpha = clamp(zone.life / fullLife, 0, 1)
-    if (zone.source === "flame") renderer.circle(zone.position.x, zone.position.y, zone.radius * 1.06, "#28221b", 0.46 * alpha)
+    if (zone.source === "flame") {
+      renderer.circle(zone.position.x, zone.position.y, zone.radius * 1.06, "#28221b", 0.46 * alpha)
+    }
     renderer.circle(
       zone.position.x,
       zone.position.y,
@@ -253,6 +258,7 @@ const renderObstacles = (renderer: DirectWebGLRenderer, world: WorldState) => {
       const index = gy * grid.size + gx
       if (grid.solid[index] <= 0) continue
       const material = grid.material[index]
+      if (material === OBSTACLE_MATERIAL_PROP) continue
       const center = obstacleGridToWorldCenter(grid.size, gx, gy)
       const x = center.x - 0.5
       const y = center.y - 0.5
@@ -301,15 +307,27 @@ const renderObstacles = (renderer: DirectWebGLRenderer, world: WorldState) => {
 const renderObstacleFx = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds) => {
   for (const debrisIndex of world.activeObstacleDebrisIndices) {
     const debris = world.obstacleDebris[debrisIndex]
-    if (!debris?.active || debris.maxLife <= 0 || !inside(debris.position.x, debris.position.y, cull, debris.size + 0.35)) continue
+    if (
+      !debris?.active || debris.maxLife <= 0 || !inside(debris.position.x, debris.position.y, cull, debris.size + 0.35)
+    ) continue
     const life = clamp(debris.life / debris.maxLife, 0, 1)
     const size = debris.size * (0.7 + (1 - life) * 0.5)
-    renderer.rect(debris.position.x - size * 0.5, debris.position.y - size * 0.5, size, size, debris.color, life * life, debris.rotation)
+    renderer.rect(
+      debris.position.x - size * 0.5,
+      debris.position.y - size * 0.5,
+      size,
+      size,
+      debris.color,
+      life * life,
+      debris.rotation,
+    )
   }
 
   for (const petalIndex of world.activeKillPetalIndices) {
     const petal = world.killPetals[petalIndex]
-    if (!petal?.active || petal.maxLife <= 0 || !inside(petal.position.x, petal.position.y, cull, petal.size + 0.35)) continue
+    if (!petal?.active || petal.maxLife <= 0 || !inside(petal.position.x, petal.position.y, cull, petal.size + 0.35)) {
+      continue
+    }
     const life = clamp(petal.life / petal.maxLife, 0, 1)
     const age = 1 - life
     const alpha = clamp(age / 0.14, 0, 1) * life ** 0.9
@@ -329,10 +347,22 @@ const renderObstacleFx = (renderer: DirectWebGLRenderer, world: WorldState, cull
 const renderShellCasings = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds) => {
   for (const index of world.activeShellCasingIndices) {
     const casing = world.shellCasings[index]
-    if (!casing?.active || casing.maxLife <= 0 || !inside(casing.position.x, casing.position.y, cull, casing.size + 0.3)) continue
+    if (
+      !casing?.active || casing.maxLife <= 0 || !inside(casing.position.x, casing.position.y, cull, casing.size + 0.3)
+    ) continue
     const life = clamp(casing.life / casing.maxLife, 0, 1)
     if (casing.spriteId) {
-      drawItem(renderer, casing.spriteId, casing.position.x, casing.position.y, casing.spriteSize > 0 ? casing.spriteSize : casing.size, casing.rotation, 0.5, false, life * 0.9)
+      drawItem(
+        renderer,
+        casing.spriteId,
+        casing.position.x,
+        casing.position.y,
+        casing.spriteSize > 0 ? casing.spriteSize : casing.size,
+        casing.rotation,
+        0.5,
+        false,
+        life * 0.9,
+      )
     } else {
       renderer.rect(
         casing.position.x - casing.size * 0.5,
@@ -365,13 +395,22 @@ const renderThrowables = (renderer: DirectWebGLRenderer, world: WorldState, cull
   for (const throwable of world.throwables) {
     if (!throwable.active || !inside(throwable.position.x, throwable.position.y, cull, throwable.radius + 0.8)) continue
     renderer.ellipse(throwable.position.x, throwable.position.y + 0.21, 0.2, 0.11, "#000000", 0.26)
-    drawItem(renderer, throwable.mode === "grenade" ? "grenade" : "molotov", throwable.position.x, throwable.position.y, 0.08, throwable.rotation)
+    drawItem(
+      renderer,
+      throwable.mode === "grenade" ? "grenade" : "molotov",
+      throwable.position.x,
+      throwable.position.y,
+      0.08,
+      throwable.rotation,
+    )
   }
 }
 
 const renderProjectiles = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds) => {
   const draw = (projectile: WorldState["projectiles"][number]) => {
-    if (!projectile.active || !inside(projectile.position.x, projectile.position.y, cull, projectile.radius * 3.2 + 0.7)) return
+    if (
+      !projectile.active || !inside(projectile.position.x, projectile.position.y, cull, projectile.radius * 3.2 + 0.7)
+    ) return
     const speed = Math.hypot(projectile.velocity.x, projectile.velocity.y)
     const angle = Math.atan2(projectile.velocity.y, projectile.velocity.x)
     const stretch = projectile.kind === "rocket"
@@ -380,9 +419,17 @@ const renderProjectiles = (renderer: DirectWebGLRenderer, world: WorldState, cul
     const length = projectile.radius * 2.6 * stretch
     const width = projectile.radius * 1.4
     const glow = projectile.radius * (2.2 + projectile.glow)
-    renderer.ellipse(projectile.position.x, projectile.position.y + 0.26, projectile.radius * 0.8, projectile.radius * 0.45, "#000000", 0.26)
-    if (projectile.kind === "flame") renderer.circle(projectile.position.x, projectile.position.y, glow, "#ff9448", 0.36, 14)
-    else renderer.circle(projectile.position.x, projectile.position.y, projectile.radius * 1.05, "#fff5d0", 0.16, 12)
+    renderer.ellipse(
+      projectile.position.x,
+      projectile.position.y + 0.26,
+      projectile.radius * 0.8,
+      projectile.radius * 0.45,
+      "#000000",
+      0.26,
+    )
+    if (projectile.kind === "flame") {
+      renderer.circle(projectile.position.x, projectile.position.y, glow, "#ff9448", 0.36, 14)
+    } else renderer.circle(projectile.position.x, projectile.position.y, projectile.radius * 1.05, "#fff5d0", 0.16, 12)
     if (projectile.kind === "flame") {
       renderer.sprite("fire", projectile.position.x, projectile.position.y, itemSpriteHeight(0.14))
       return
@@ -457,19 +504,41 @@ const renderProjectiles = (renderer: DirectWebGLRenderer, world: WorldState, cul
 
 const renderRagdolls = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds) => {
   for (const ragdoll of world.ragdolls) {
-    if (!ragdoll.active || ragdoll.maxLife <= 0 || ragdoll.life <= 0 || !inside(ragdoll.position.x, ragdoll.position.y, cull, ragdoll.radius * 2.8 + 0.75)) continue
+    if (
+      !ragdoll.active || ragdoll.maxLife <= 0 || ragdoll.life <= 0 ||
+      !inside(ragdoll.position.x, ragdoll.position.y, cull, ragdoll.radius * 2.8 + 0.75)
+    ) continue
     const body = ragdoll.radius * 1.2
     const palette = paletteForRagdoll(world, ragdoll)
     renderer.ellipse(ragdoll.position.x, ragdoll.position.y + body * 1.24, body * 0.58, body * 0.31, "#000000", 0.2)
-    renderer.rect(ragdoll.position.x - body * 0.85, ragdoll.position.y - body, body * 1.7, body * 2, palette.edge, 1, ragdoll.rotation)
-    renderer.rect(ragdoll.position.x - body * 0.68, ragdoll.position.y - body * 0.82, body * 1.36, body * 1.64, palette.tone, 1, ragdoll.rotation)
+    renderer.rect(
+      ragdoll.position.x - body * 0.85,
+      ragdoll.position.y - body,
+      body * 1.7,
+      body * 2,
+      palette.edge,
+      1,
+      ragdoll.rotation,
+    )
+    renderer.rect(
+      ragdoll.position.x - body * 0.68,
+      ragdoll.position.y - body * 0.82,
+      body * 1.36,
+      body * 1.64,
+      palette.tone,
+      1,
+      ragdoll.rotation,
+    )
   }
 }
 
 const renderAimLasers = (renderer: DirectWebGLRenderer, world: WorldState, cull: CullBounds, waveTime: number) => {
   const pulse = 0.7 + (Math.sin(waveTime * 6.5) * 0.5 + 0.5) * 0.3
   for (const unit of world.units) {
-    if (!(unit.laserSight || (unit.perkStacks.laser_sight ?? 0) > 0) || !inside(unit.position.x, unit.position.y, cull, unit.radius + 10)) continue
+    if (
+      !(unit.laserSight || (unit.perkStacks.laser_sight ?? 0) > 0) ||
+      !inside(unit.position.x, unit.position.y, cull, unit.radius + 10)
+    ) continue
     const aimLength = Math.hypot(unit.aim.x, unit.aim.y)
     if (aimLength <= 0.0001) continue
     const dx = unit.aim.x / aimLength
@@ -481,11 +550,18 @@ const renderAimLasers = (renderer: DirectWebGLRenderer, world: WorldState, cull:
     const nx = -dy
     const ny = dx
     const half = (unit.isPlayer ? 0.03 : 0.022) * pulse
-    renderer.polygon([
-      startX + nx * half, startY + ny * half,
-      startX - nx * half, startY - ny * half,
-      endX, endY,
-    ], unit.isPlayer ? "#ff6a6a" : "#ff5050", (unit.isPlayer ? 0.72 : 0.48) * pulse)
+    renderer.polygon(
+      [
+        startX + nx * half,
+        startY + ny * half,
+        startX - nx * half,
+        startY - ny * half,
+        endX,
+        endY,
+      ],
+      unit.isPlayer ? "#ff6a6a" : "#ff5050",
+      (unit.isPlayer ? 0.72 : 0.48) * pulse,
+    )
   }
 }
 
@@ -504,15 +580,43 @@ const renderUnits = (renderer: DirectWebGLRenderer, world: WorldState, cull: Cul
       ? clamp(unit.primaryAmmo / unit.magazineSize, 0, 1)
       : 1
     const primaryRadius = body + PRIMARY_RELOAD_RING_OFFSET_WORLD
-    renderer.ring(drawX, drawY, primaryRadius, PRIMARY_RELOAD_RING_THICKNESS_WORLD, primaryReloading ? "#c1c8cf" : "#ffffff", 1, -Math.PI * 0.5, -Math.PI * 0.5 + TWO_PI * primaryProgress)
+    renderer.ring(
+      drawX,
+      drawY,
+      primaryRadius,
+      PRIMARY_RELOAD_RING_THICKNESS_WORLD,
+      primaryReloading ? "#c1c8cf" : "#ffffff",
+      1,
+      -Math.PI * 0.5,
+      -Math.PI * 0.5 + TWO_PI * primaryProgress,
+    )
     const secondaryReloading = unit.secondaryCooldown > 0 && unit.secondaryCooldownMax > 0
-    const secondaryProgress = secondaryReloading ? clamp(1 - unit.secondaryCooldown / unit.secondaryCooldownMax, 0, 1) : 1
-    const secondaryRadius = primaryRadius - (PRIMARY_RELOAD_RING_THICKNESS_WORLD + SECONDARY_RELOAD_RING_THICKNESS_WORLD) * 0.5
-    renderer.ring(drawX, drawY, secondaryRadius, SECONDARY_RELOAD_RING_THICKNESS_WORLD, secondaryReloading ? "#fff0d8" : "#ffbf66", 1, -Math.PI * 0.5, -Math.PI * 0.5 + TWO_PI * secondaryProgress)
+    const secondaryProgress = secondaryReloading
+      ? clamp(1 - unit.secondaryCooldown / unit.secondaryCooldownMax, 0, 1)
+      : 1
+    const secondaryRadius = primaryRadius -
+      (PRIMARY_RELOAD_RING_THICKNESS_WORLD + SECONDARY_RELOAD_RING_THICKNESS_WORLD) * 0.5
+    renderer.ring(
+      drawX,
+      drawY,
+      secondaryRadius,
+      SECONDARY_RELOAD_RING_THICKNESS_WORLD,
+      secondaryReloading ? "#fff0d8" : "#ffbf66",
+      1,
+      -Math.PI * 0.5,
+      -Math.PI * 0.5 + TWO_PI * secondaryProgress,
+    )
 
     const moveSpeed = Math.hypot(unit.velocity.x, unit.velocity.y)
     const skewAmount = clamp(moveSpeed / 12, 0, 1)
-    renderer.ellipse(drawX - unit.velocity.x * 0.012, drawY + body * 1.26, body * (0.68 + skewAmount * 0.12), body * (0.37 - skewAmount * 0.05), "#000000", 0.24)
+    renderer.ellipse(
+      drawX - unit.velocity.x * 0.012,
+      drawY + body * 1.26,
+      body * (0.68 + skewAmount * 0.12),
+      body * (0.37 - skewAmount * 0.05),
+      "#000000",
+      0.24,
+    )
 
     const palette = paletteForUnit(world, unit)
     const skew = computeHorizontalSkewX(unit.velocity.x, unit.speed)
@@ -521,7 +625,11 @@ const renderUnits = (renderer: DirectWebGLRenderer, world: WorldState, cull: Cul
       const x1 = x + width + skew * y
       const x2 = x + width + skew * (y + height)
       const x3 = x + skew * (y + height)
-      renderer.polygon([drawX + x0, drawY + y, drawX + x1, drawY + y, drawX + x2, drawY + y + height, drawX + x3, drawY + y + height], color, alpha)
+      renderer.polygon(
+        [drawX + x0, drawY + y, drawX + x1, drawY + y, drawX + x2, drawY + y + height, drawX + x3, drawY + y + height],
+        color,
+        alpha,
+      )
     }
     const earLeftX = -body * 0.7
     const earRightX = body * 0.7
@@ -533,7 +641,11 @@ const renderUnits = (renderer: DirectWebGLRenderer, world: WorldState, cull: Cul
     skewRect(-body * 0.85, -body, body * 1.7, body * 2, palette.edge)
     skewRect(-body * 0.68, -body * 0.82, body * 1.36, body * 1.64, palette.tone)
 
-    const weaponKickback = computeWeaponKickbackDistance(unit.recoil, PRIMARY_WEAPONS[unit.primaryWeapon].firingKnockback, unit.radius)
+    const weaponKickback = computeWeaponKickbackDistance(
+      unit.recoil,
+      PRIMARY_WEAPONS[unit.primaryWeapon].firingKnockback,
+      unit.radius,
+    )
     const gunLength = Math.max(unit.radius * 0.42, unit.radius * 1.25 - weaponKickback)
     const weaponAngle = Math.atan2(unit.aim.y, unit.aim.x)
     const weaponScale = Math.max(0.1, unit.radius * 0.36) * 1.5
@@ -558,7 +670,13 @@ const renderUnits = (renderer: DirectWebGLRenderer, world: WorldState, cull: Cul
 
     const hpRatio = clamp(unit.hp / unit.maxHp, 0, 1)
     renderer.rect(drawX - body, drawY - body * 1.28, body * 2, body * 0.24, "#000000", 0.4)
-    renderer.rect(drawX - body, drawY - body * 1.28, body * 2 * hpRatio, body * 0.24, unit.isPlayer ? "#e8ffdb" : "#8fc0ff")
+    renderer.rect(
+      drawX - body,
+      drawY - body * 1.28,
+      body * 2 * hpRatio,
+      body * 0.24,
+      unit.isPlayer ? "#e8ffdb" : "#8fc0ff",
+    )
   }
 }
 
@@ -639,7 +757,13 @@ const ensureMinimapObstacleTarget = (
         const dx = x - radius
         const dy = y - radius
         if (dx * dx + dy * dy > (radius + cell) * (radius + cell)) continue
-        renderer.rect(x - cell * 0.5, y - cell * 0.5, cell, cell, minimapObstacleColor(grid.material[index], grid.highTierLoot[index] > 0))
+        renderer.rect(
+          x - cell * 0.5,
+          y - cell * 0.5,
+          cell,
+          cell,
+          minimapObstacleColor(grid.material[index], grid.highTierLoot[index] > 0),
+        )
       }
     }
   })
@@ -674,8 +798,32 @@ const renderMinimap = (
   renderer.rect(left, top, sizePx, sizePx, "#5f6d5d")
   const ground = ensureDirectGroundLayer(renderer, world)
   const flowers = ensureDirectFlowerLayer(renderer, world)
-  drawDirectWorldLayer(renderer, ground, -arenaRadius, -arenaRadius, arenaRadius * 2, arenaRadius * 2, left, top, sizePx, sizePx, 0.5)
-  drawDirectWorldLayer(renderer, flowers, -arenaRadius, -arenaRadius, arenaRadius * 2, arenaRadius * 2, left, top, sizePx, sizePx, 0.72)
+  drawDirectWorldLayer(
+    renderer,
+    ground,
+    -arenaRadius,
+    -arenaRadius,
+    arenaRadius * 2,
+    arenaRadius * 2,
+    left,
+    top,
+    sizePx,
+    sizePx,
+    0.5,
+  )
+  drawDirectWorldLayer(
+    renderer,
+    flowers,
+    -arenaRadius,
+    -arenaRadius,
+    arenaRadius * 2,
+    arenaRadius * 2,
+    left,
+    top,
+    sizePx,
+    sizePx,
+    0.72,
+  )
   const obstacleTarget = ensureMinimapObstacleTarget(renderer, world, sizePx, arenaRadius)
   renderer.useScreenView()
   renderer.drawRenderTarget(obstacleTarget, 0, 0, sizePx, sizePx, left, top, sizePx, sizePx, 1)
@@ -690,7 +838,9 @@ const renderMinimap = (
   renderer.line(vx, toY(view.maxY), vx, vy, 1, "#fff6bc", 0.72)
 
   let projectileVisit = 0
-  const activeCount = world.activeProjectileIndices.size > 0 ? world.activeProjectileIndices.size : world.projectiles.length
+  const activeCount = world.activeProjectileIndices.size > 0
+    ? world.activeProjectileIndices.size
+    : world.projectiles.length
   const projectileStep = Math.max(1, Math.ceil(activeCount / 180))
   const drawProjectile = (p: WorldState["projectiles"][number]) => {
     projectileVisit += 1
@@ -700,14 +850,23 @@ const renderMinimap = (
     const dx = x - centerX
     const dy = y - centerY
     if (dx * dx + dy * dy > radius * radius) return
-    const friendly = p.ownerId === world.player.id || (world.player.team !== world.player.id && p.ownerTeam === world.player.team)
+    const friendly = p.ownerId === world.player.id ||
+      (world.player.team !== world.player.id && p.ownerTeam === world.player.team)
     const explosive = p.kind === "grenade" || p.kind === "rocket"
     const color = friendly ? "#ffe390" : "#ff796a"
     const speed = Math.hypot(p.velocity.x, p.velocity.y)
     if (speed > 0.0001) {
       const maxTrail = p.kind === "rocket" ? 4.2 * ROCKET_TRAIL_LENGTH_MULTIPLIER : explosive ? 4.2 : 3.4
       const trail = clamp(speed * scale * 0.06, 0.75, maxTrail)
-      renderer.line(x - p.velocity.x / speed * trail, y - p.velocity.y / speed * trail, x, y, explosive ? 1.45 : 1, color, 0.58)
+      renderer.line(
+        x - p.velocity.x / speed * trail,
+        y - p.velocity.y / speed * trail,
+        x,
+        y,
+        explosive ? 1.45 : 1,
+        color,
+        0.58,
+      )
     }
     const r = explosive ? 1.9 : 1.2
     renderer.rect(x - r, y - r, r * 2, r * 2, color, 0.92)
@@ -728,7 +887,14 @@ const renderMinimap = (
     const dy = y - centerY
     if (dx * dx + dy * dy > radius * radius) continue
     const palette = paletteForUnit(world, unit)
-    renderer.circle(x, y, unit.isPlayer ? MINIMAP_PLAYER_RADIUS_PX : MINIMAP_UNIT_RADIUS_PX, unit.isPlayer ? "#fff7bf" : palette.tone, 1, 12)
+    renderer.circle(
+      x,
+      y,
+      unit.isPlayer ? MINIMAP_PLAYER_RADIUS_PX : MINIMAP_UNIT_RADIUS_PX,
+      unit.isPlayer ? "#fff7bf" : palette.tone,
+      1,
+      12,
+    )
   }
   renderer.endClip()
   renderer.ring(centerX, centerY, radius, 1.5, "#e9eee7", 0.82)
@@ -782,7 +948,13 @@ const renderOffscreenIndicators = (
       x = cx + dx * ((y - cy) / (Math.abs(dy) < 0.001 ? 0.001 : dy))
       x = clamp(x, left + 24, right - 24)
     }
-    markers.push({ enemy, x, y, angle, distance: Math.hypot(enemy.position.x - world.player.position.x, enemy.position.y - world.player.position.y) })
+    markers.push({
+      enemy,
+      x,
+      y,
+      angle,
+      distance: Math.hypot(enemy.position.x - world.player.position.x, enemy.position.y - world.player.position.y),
+    })
   }
 
   for (const marker of markers) {
@@ -812,6 +984,60 @@ const renderOffscreenIndicators = (
   }
 }
 
+const waterEffects = new WeakMap<WorldState, { map: WorldState["terrainMap"]; state: WaterRippleState }>()
+
+const renderWater = ({ renderer, world, dt, cull }: {
+  renderer: DirectWebGLRenderer
+  world: WorldState
+  dt: number
+  cull: CullBounds
+}) => {
+  let effects = waterEffects.get(world)
+  if (!effects || effects.map !== world.terrainMap) {
+    effects = { map: world.terrainMap, state: createWaterRippleState() }
+    waterEffects.set(world, effects)
+  }
+  updateWaterRipples({
+    state: effects.state,
+    map: world.terrainMap,
+    units: world.units,
+    dt: world.running && !world.paused ? dt : 0,
+  })
+  const time = 90 - world.timeRemaining
+  for (let y = Math.floor(cull.minY); y <= cull.maxY; y += 1) {
+    for (let x = Math.floor(cull.minX); x <= cull.maxX; x += 1) {
+      if (!wetTerrainAt(world.terrainMap, x, y) || (x + y) % 3 !== 0) continue
+      const phase = time * 1.4 + x * 0.7 + y * 1.3
+      renderer.line(
+        x + 0.2,
+        y + 0.5 + Math.sin(phase) * 0.1,
+        x + 0.65,
+        y + 0.5 + Math.sin(phase) * 0.1,
+        0.035,
+        "#c1e4cb",
+        0.15 + (Math.sin(phase) + 1) * 0.1,
+      )
+    }
+  }
+  for (const ripple of effects.state.ripples) {
+    if (!isInsideCullBounds(ripple.x, ripple.y, cull, 1)) continue
+    const radius = 0.16 + ripple.age * 0.9
+    for (let segment = 0; segment < 12; segment += 1) {
+      const a = segment * Math.PI / 6
+      const b = (segment + 1) * Math.PI / 6
+      renderer.line(
+        ripple.x + Math.cos(a) * radius,
+        ripple.y + Math.sin(a) * radius * 0.65,
+        ripple.x + Math.cos(b) * radius,
+        ripple.y + Math.sin(b) * radius * 0.65,
+        0.04,
+        "#d6efe1",
+        (1 - ripple.age / 0.8) * 0.65,
+      )
+    }
+  }
+}
+
 export const renderScene = ({ renderer, world, dt }: RenderSceneArgs) => {
   grassWaveTime += dt * 0.18
   renderer.beginFrame("#889684")
@@ -826,6 +1052,8 @@ export const renderScene = ({ renderer, world, dt }: RenderSceneArgs) => {
   renderer.beginCircleClip(0, 0, Math.max(0.1, world.arenaRadius - 0.05))
   renderMolotovZones(renderer, world, cull)
   renderFlowers(renderer, world, cull)
+  renderWater({ renderer, world, dt, cull })
+  renderGardenProps({ renderer, world, cull })
   renderObstacles(renderer, world)
   if (!world.started) {
     renderer.endClip()

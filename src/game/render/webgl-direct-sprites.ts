@@ -1,3 +1,4 @@
+import gardenAtlasUrl from "../../assets/props/garden-atlas.png"
 import { PRIMARY_WEAPONS, type WeaponSpriteMode } from "../weapon-config.ts"
 import type { PerkId, PrimaryWeaponId } from "../types.ts"
 
@@ -19,6 +20,7 @@ import grassTransitionsTextureUrl from "../../assets/tiles/grass-transitions-24.
 import flowerPetalMaskUrl from "../../assets/flowers/flower-petal-mask.png"
 import flowerAccentMaskUrl from "../../assets/flowers/flower-accent-mask.png"
 
+export const GARDEN_ATLAS_SPRITE = "garden:props"
 export const ITEM_SPRITE_UNIT = 8
 export const ITEM_WORLD_SCALE = 0.75
 export const LOOT_SPRITE_SIZE = 0.15
@@ -29,6 +31,7 @@ export const FLOWER_PETAL_SPRITE = "flower:petal"
 export const FLOWER_ACCENT_SPRITE = "flower:accent"
 
 const spriteUrls = new Map<string, string>([
+  [GARDEN_ATLAS_SPRITE, gardenAtlasUrl],
   ["fire", fireSpriteUrl],
   ["grenade", grenadeSpriteUrl],
   ["molotov", molotovSpriteUrl],

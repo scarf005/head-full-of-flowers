@@ -6,6 +6,7 @@ import {
   isObstacleCellSolid,
   OBSTACLE_MATERIAL_BOX,
   OBSTACLE_MATERIAL_HEDGE,
+  OBSTACLE_MATERIAL_PROP,
   OBSTACLE_MATERIAL_ROCK,
   OBSTACLE_MATERIAL_WALL,
   OBSTACLE_MATERIAL_WAREHOUSE,
@@ -55,7 +56,8 @@ export function updateExplosions(world: WorldState, dt: number) {
   }
 }
 
-export function obstacleDebrisPalette(material: number) {
+export const obstacleDebrisPalette = (material: number) => {
+  if (material === OBSTACLE_MATERIAL_PROP) return ["#9b8568", "#828057", "#d0c09b"]
   if (material === OBSTACLE_MATERIAL_BOX) {
     return ["#df6f3f", "#f6e5a8", "#6f2d2b"]
   }

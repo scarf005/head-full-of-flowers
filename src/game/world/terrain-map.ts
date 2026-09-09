@@ -5,8 +5,6 @@ import {
   createHouseBlueprints,
   createHouseLootBoxBlueprints,
   createPickupSpawnPoints,
-  createRockBlueprints,
-  createWallBlueprints,
   createWarehouseBlueprints,
 } from "./terrain-obstacles.ts"
 import {
@@ -14,6 +12,9 @@ import {
   createThreeRoomHouseLayout,
   createWarehouseVariantTiles,
 } from "./terrain-layouts.ts"
+import { createCourtyards } from "./terrain-courtyards.ts"
+import { populateGarden } from "./terrain-props.ts"
+import { addWetlands, isWetTerrain } from "./terrain-wetlands.ts"
 import { randomFloat } from "../replay.ts"
 import type { TerrainMap, TerrainTile } from "./terrain-types.ts"
 
@@ -21,171 +22,74 @@ export type { MapObstacleBlueprint, PickupSpawnPoint, TerrainMap, TerrainTile } 
 export { createGardenHedgeMazeTiles, createThreeRoomHouseLayout, createWarehouseVariantTiles }
 export type { ThreeRoomHouseLayout } from "./terrain-layouts.ts"
 
-const TILE_IDS: TerrainTile[] = [
-  "grass",
-  "clover",
-  "wild-grass",
-]
+// Overlapping, warped patches produce readable regions without straight biome borders.
+const createGroundTiles = (size: number): TerrainTile[][] => {
+  const palette: TerrainTile[] = ["clover", "wild-grass", "dirt", "grass"]
+  const phase = randomFloat() * Math.PI * 2
+  const patches = Array.from({ length: 16 }, (_, index) => ({
+    x: (index % 4 + randomFloat()) * size / 4,
+    y: (Math.floor(index / 4) + randomFloat()) * size / 4,
+    radius: size * (0.12 + randomFloat() * 0.12),
+    tile: palette[(index + Math.floor(index / 4)) % palette.length],
+  }))
 
-const WEIGHTS: Record<TerrainTile, number> = {
-  grass: 36,
-  clover: 24,
-  "wild-grass": 18,
-  dirt: 8,
-  "dirt-road": 6,
-  "road-edge": 5,
-  gravel: 2,
-  concrete: 1,
-}
-
-const ALLOWED: Record<TerrainTile, TerrainTile[]> = {
-  grass: ["grass", "clover", "wild-grass", "dirt", "road-edge", "gravel"],
-  clover: ["grass", "clover", "wild-grass", "dirt", "road-edge"],
-  "wild-grass": ["grass", "clover", "wild-grass", "dirt", "road-edge", "gravel"],
-  dirt: ["grass", "clover", "wild-grass", "dirt", "dirt-road", "road-edge", "gravel", "concrete"],
-  "dirt-road": ["dirt", "dirt-road", "road-edge", "gravel", "concrete"],
-  "road-edge": ["grass", "clover", "wild-grass", "dirt", "dirt-road", "road-edge", "gravel"],
-  gravel: ["grass", "wild-grass", "dirt", "dirt-road", "road-edge", "gravel", "concrete"],
-  concrete: ["dirt", "dirt-road", "gravel", "concrete"],
-}
-
-const pickWeighted = (choices: TerrainTile[]) => {
-  let total = 0
-  for (const tile of choices) {
-    total += WEIGHTS[tile]
-  }
-
-  let roll = randomFloat() * total
-  for (const tile of choices) {
-    roll -= WEIGHTS[tile]
-    if (roll <= 0) {
+  return Array.from({ length: size }, (_, y) =>
+    Array.from({ length: size }, (_, x) => {
+      const warpedX = x + Math.sin(y * 0.19 + phase) * size * 0.025
+      const warpedY = y + Math.cos(x * 0.17 + phase) * size * 0.025
+      let tile: TerrainTile = "grass"
+      let strongest = 0
+      for (const patch of patches) {
+        const strength = 1 - Math.hypot(warpedX - patch.x, warpedY - patch.y) / patch.radius
+        if (strength > strongest) {
+          strongest = strength
+          tile = patch.tile
+        }
+      }
       return tile
-    }
-  }
-
-  return choices[0] ?? "grass"
-}
-
-const neighbors = (x: number, y: number, size: number) => {
-  const out: [number, number][] = []
-  if (x > 0) out.push([x - 1, y])
-  if (x < size - 1) out.push([x + 1, y])
-  if (y > 0) out.push([x, y - 1])
-  if (y < size - 1) out.push([x, y + 1])
-  return out
+    }))
 }
 
 export const createBarrenGardenMap = (size: number) => {
-  const wave = Array.from({ length: size }, () => Array.from({ length: size }, () => new Set<TerrainTile>(TILE_IDS)))
-
-  const collapse = (startX: number, startY: number) => {
-    const queue: [number, number][] = [[startX, startY]]
-    while (queue.length > 0) {
-      const next = queue.shift()
-      if (!next) {
-        continue
-      }
-
-      const [x, y] = next
-      const self = wave[y][x]
-      for (const [nx, ny] of neighbors(x, y, size)) {
-        const allowedSet = new Set<TerrainTile>()
-        for (const selfTile of self) {
-          for (const allowedTile of ALLOWED[selfTile]) {
-            allowedSet.add(allowedTile)
-          }
-        }
-
-        const neighborSet = wave[ny][nx]
-        const before = neighborSet.size
-        for (const option of [...neighborSet]) {
-          if (!allowedSet.has(option)) {
-            neighborSet.delete(option)
-          }
-        }
-
-        if (neighborSet.size === 0) {
-          neighborSet.add("grass")
-        }
-
-        if (neighborSet.size < before) {
-          queue.push([nx, ny])
-        }
-      }
-    }
-  }
-
-  for (let iter = 0; iter < size * size; iter += 1) {
-    let pickX = -1
-    let pickY = -1
-    let minEntropy = Number.POSITIVE_INFINITY
-
-    for (let y = 0; y < size; y += 1) {
-      for (let x = 0; x < size; x += 1) {
-        const entropy = wave[y][x].size
-        if (entropy <= 1 || entropy >= minEntropy) {
-          continue
-        }
-
-        minEntropy = entropy
-        pickX = x
-        pickY = y
-      }
-    }
-
-    if (pickX < 0 || pickY < 0) {
-      break
-    }
-
-    const options = [...wave[pickY][pickX]]
-    const chosen = pickWeighted(options)
-    wave[pickY][pickX] = new Set([chosen])
-    collapse(pickX, pickY)
-  }
-
-  const tiles = Array.from(
-    { length: size },
-    (_, y) => Array.from({ length: size }, (_, x) => [...wave[y][x]][0] ?? "grass"),
-  )
+  const tiles = createGroundTiles(size)
 
   const roads = applyRoadNetwork(tiles)
-  const paths = roads
+  addWetlands({ tiles, roads })
+  const courtyards = createCourtyards(tiles)
+  const half = Math.floor(size / 2)
+  const paths = tiles.map((row, y) =>
+    row.map((tile, x) =>
+      roads[y][x] || tile === "gravel" || isWetTerrain(tile) ||
+      courtyards.plots.some((plot) =>
+        Math.abs(x - half + 0.5 - plot.x) <= plot.width / 2 + 1 &&
+        Math.abs(y - half + 0.5 - plot.y) <= plot.height / 2 + 1
+      )
+    )
+  )
   const warehouseBlueprints = createWarehouseBlueprints(size, paths)
   const highTierLootBoxBlueprints = createHighTierLootBoxBlueprints(size, warehouseBlueprints)
   const houseBlueprints = createHouseBlueprints(size, paths, warehouseBlueprints)
   const houseLootBoxBlueprints = createHouseLootBoxBlueprints(size, houseBlueprints)
   const hedgeMazeBlueprints = createHedgeMazeBlueprints(size, paths, [...warehouseBlueprints, ...houseBlueprints])
-  const wallBlueprints = createWallBlueprints(size, paths, [
-    ...warehouseBlueprints,
-    ...houseBlueprints,
-    ...hedgeMazeBlueprints,
-  ])
-  const rockBlueprints = createRockBlueprints(size, paths, [
+  const obstacles = [
+    ...courtyards.obstacles,
     ...warehouseBlueprints,
     ...houseBlueprints,
     ...hedgeMazeBlueprints,
     ...highTierLootBoxBlueprints,
     ...houseLootBoxBlueprints,
-    ...wallBlueprints,
-  ])
-  const structuralObstacles = [
-    ...warehouseBlueprints,
-    ...houseBlueprints,
-    ...hedgeMazeBlueprints,
-    ...highTierLootBoxBlueprints,
-    ...houseLootBoxBlueprints,
-    ...wallBlueprints,
-    ...rockBlueprints,
   ]
-  const obstacles = structuralObstacles
-  const pickupSpawnPoints = createPickupSpawnPoints(size, paths, structuralObstacles)
+  const pickupSpawnPoints = createPickupSpawnPoints(size, roads, obstacles)
 
-  return {
+  const map: TerrainMap = {
     size,
     tiles,
     obstacles,
     pickupSpawnPoints,
-  } satisfies TerrainMap
+    props: courtyards.props,
+  }
+  populateGarden(map, courtyards.plots)
+  return map
 }
 
 export const terrainAt = (map: TerrainMap, worldX: number, worldY: number): TerrainTile => {

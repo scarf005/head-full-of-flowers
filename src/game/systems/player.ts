@@ -1,3 +1,5 @@
+import { terrainAt } from "../world/terrain-map.ts"
+import { terrainSpeedMultiplier } from "../world/terrain-wetlands.ts"
 import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
 import { VIEW_HEIGHT, VIEW_WIDTH, WORLD_SCALE } from "../world/constants.ts"
 import type { WorldState } from "../world/state.ts"
@@ -70,7 +72,8 @@ export const updatePlayer = (world: WorldState, dt: number, deps: UpdatePlayerDe
   moveY += clamp(world.input.moveAxisY, -1, 1)
 
   const moveLength = Math.hypot(moveX, moveY)
-  const targetSpeed = player.speed
+  const targetSpeed = player.speed *
+    terrainSpeedMultiplier(terrainAt(world.terrainMap, player.position.x, player.position.y))
   const targetVelocityX = moveLength > 0 ? (moveX / moveLength) * targetSpeed : 0
   const targetVelocityY = moveLength > 0 ? (moveY / moveLength) * targetSpeed : 0
   const accel = moveLength > 0 ? 24 : 18

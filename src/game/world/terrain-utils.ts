@@ -102,3 +102,23 @@ export const gridRectToWorldRect = (left: number, top: number, width: number, he
     height,
   }
 }
+
+export const hasConnectedOpenTiles = (blocked: boolean[][]) => {
+  const width = blocked[0].length
+  const height = blocked.length
+  const open = blocked.flatMap((row, y) => row.flatMap((solid, x) => solid ? [] : [y * width + x]))
+  if (open.length === 0) return false
+  const visited = new Set([open[0]])
+  const queue = [open[0]]
+  for (let index = 0; index < queue.length; index += 1) {
+    const x = queue[index] % width
+    const y = Math.floor(queue[index] / width)
+    for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+      const key = ny * width + nx
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height || blocked[ny][nx] || visited.has(key)) continue
+      visited.add(key)
+      queue.push(key)
+    }
+  }
+  return visited.size === open.length
+}

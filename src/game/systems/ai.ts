@@ -1,3 +1,5 @@
+import { terrainAt } from "../world/terrain-map.ts"
+import { terrainSpeedMultiplier } from "../world/terrain-wetlands.ts"
 import { clamp, lerp, limitToArena, randomRange } from "../utils.ts"
 import { randomFloat } from "../replay.ts"
 import { PRIMARY_WEAPONS } from "../weapons.ts"
@@ -559,6 +561,9 @@ export const updateAI = (world: WorldState, dt: number, deps: UpdateAIDeps) => {
       geometryCache.escapeRoute = null
     }
 
+    const terrainSpeed = terrainSpeedMultiplier(terrainAt(world.terrainMap, bot.position.x, bot.position.y))
+    desiredVelocityX *= terrainSpeed
+    desiredVelocityY *= terrainSpeed
     const acceleration = easyMode ? 6 : 16
     bot.velocity.x = lerp(bot.velocity.x, desiredVelocityX, clamp(dt * acceleration, 0, 1))
     bot.velocity.y = lerp(bot.velocity.y, desiredVelocityY, clamp(dt * acceleration, 0, 1))

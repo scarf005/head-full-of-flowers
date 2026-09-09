@@ -32,6 +32,11 @@ const TERRAIN_TINTS: Record<TerrainTile, string> = {
   "road-edge": "#8f8a6b",
   gravel: "#9a9a8f",
   concrete: "#8b908c",
+  water: "#4b939f",
+  marsh: "#647c51",
+  sand: "#c3b386",
+  "wood-floor": "#a67f55",
+  "tile-floor": "#c4c1a4",
 }
 
 interface GroundPatchCache {
@@ -94,9 +99,9 @@ const buildGroundPatchCache = (world: WorldState) => {
         ? -0.06
         : -0.38
       const patchField = (
-        Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58 +
-        Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
-      ) * 0.5 + 0.5
+            Math.sin(cellX * 0.21 + cellY * 0.15 + 0.7) * 0.58 +
+            Math.sin(cellX * 0.07 - cellY * 0.13 + 1.8) * 0.42
+          ) * 0.5 + 0.5
       const grain = grassCellNoise(cellX, cellY, 0.31) * 0.16
       cells[gridY * size + gridX] = patchField + terrainBias + grain > 0.56 ? 1 : 0
     }
@@ -217,6 +222,53 @@ export const ensureDirectGroundLayer = (renderer: DirectWebGLRenderer, world: Wo
         const dx = x * pixelsPerWorld
         const dy = y * pixelsPerWorld
         renderer.rect(dx, dy, pixelsPerWorld, pixelsPerWorld, TERRAIN_TINTS[terrain], 0.84)
+        if (terrain === "wood-floor") {
+          for (let plank = 0; plank < 3; plank += 1) {
+            renderer.rect(dx, dy + plank * pixelsPerWorld / 3, pixelsPerWorld, pixelsPerWorld / 24, "#725437", 0.7)
+            const joint = (x + y + plank) % 2 === 0 ? 0.25 : 0.75
+            renderer.rect(
+              dx + joint * pixelsPerWorld,
+              dy + plank * pixelsPerWorld / 3,
+              pixelsPerWorld / 24,
+              pixelsPerWorld / 3,
+              "#725437",
+              0.6,
+            )
+          }
+        } else if (terrain === "tile-floor" || terrain === "concrete") {
+          renderer.rect(dx, dy, pixelsPerWorld, pixelsPerWorld / 24, "#747c70", 0.6)
+          renderer.rect(dx, dy, pixelsPerWorld / 24, pixelsPerWorld, "#747c70", 0.6)
+          if (terrain === "tile-floor" && (x + y) % 2 === 0) {
+            renderer.rect(
+              dx + pixelsPerWorld / 24,
+              dy + pixelsPerWorld / 24,
+              pixelsPerWorld * 0.92,
+              pixelsPerWorld * 0.92,
+              "#718980",
+              0.5,
+            )
+          }
+        }
+        if (terrain === "water" || terrain === "marsh") {
+          const color = terrain === "water" ? "#99d1cc" : "#9aab72"
+          const offset = grassCellNoise(x, y, 2) * 0.5
+          renderer.rect(
+            dx + pixelsPerWorld * offset,
+            dy + pixelsPerWorld * 0.3,
+            pixelsPerWorld * 0.36,
+            pixelsPerWorld / 24,
+            color,
+            0.5,
+          )
+          renderer.rect(
+            dx + pixelsPerWorld * 0.5,
+            dy + pixelsPerWorld * 0.7,
+            pixelsPerWorld * 0.2,
+            pixelsPerWorld / 24,
+            color,
+            0.3,
+          )
+        }
         if (terrain === "dirt-road") {
           renderer.rect(
             dx + pixelsPerWorld * 0.12,

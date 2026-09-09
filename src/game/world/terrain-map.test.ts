@@ -1,4 +1,7 @@
+/// <reference lib="deno.ns" />
+import { createSeededRandom, withRandomSource } from "../replay.ts"
 import { assert, assertEquals } from "jsr:@std/assert"
+import { createHouseLootBoxBlueprints } from "./terrain-obstacles.ts"
 
 import {
   createBarrenGardenMap,
@@ -172,7 +175,7 @@ Deno.test("createBarrenGardenMap favors white loot crates inside houses", () => 
   let totalHouseCrates = 0
   let whiteHouseCrates = 0
 
-  for (let seed = 8100; seed < 8110; seed += 1) {
+  for (let seed = 8100; seed < 8140; seed += 1) {
     withSeededRandom(seed, () => {
       const map = createBarrenGardenMap(80)
       const houses = map.obstacles.filter((obstacle) => obstacle.kind === "house")
@@ -208,4 +211,82 @@ Deno.test("createBarrenGardenMap favors white loot crates inside houses", () => 
   assertEquals(housesWithCrate, totalHouses)
   assert(totalHouseCrates >= totalHouses)
   assert(whiteHouseCrates / totalHouseCrates >= 0.65)
+})
+
+const seededMap = (seed: string, size: number) =>
+  withRandomSource(createSeededRandom(seed), () => createBarrenGardenMap(size))
+
+Deno.test("map seeds reproduce terrain, structures and loot while different seeds vary the layout", () => {
+  const first = seededMap("garden-a", 80)
+  assertEquals(seededMap("garden-a", 80), first)
+  assert(JSON.stringify(seededMap("garden-b", 80)) !== JSON.stringify(first))
+})
+
+Deno.test("garden regions stay coherent and roads stay connected and clear across seeds and sizes", () => {
+  for (const size of [64, 80, 112]) {
+    for (let seed = 0; seed < 12; seed += 1) {
+      const map = seededMap(`garden-${seed}`, size)
+      const roads = map.tiles.map((row) => row.map((tile) => tile === "dirt-road" || tile === "gravel"))
+      assertEquals(openRegionSizes(roads.map((row) => row.map((road) => !road))).length, 1)
+      assert(roads[Math.floor(size / 2)][Math.floor(size / 2)])
+      assert(openRegionSizes(roads).length > 1, "roads must enclose a plot for a flanking loop")
+      for (const tile of ["grass", "clover", "wild-grass", "dirt"]) {
+        const regions = openRegionSizes(map.tiles.map((row) => row.map((value) => value !== tile)))
+        assert(Math.max(...regions) >= 20, `${size}/${seed}: missing coherent ${tile} patch`)
+      }
+      if (size === 112) assert(map.obstacles.some((obstacle) => obstacle.kind === "house"))
+      assert(map.obstacles.some((obstacle) => obstacle.kind === "warehouse"))
+      if (size === 112) assert(map.obstacles.some((obstacle) => obstacle.kind === "hedge"))
+      assert(map.pickupSpawnPoints.length > 0)
+      for (const obstacle of map.obstacles) {
+        const left = Math.floor(obstacle.x - obstacle.width / 2 + Math.floor(size / 2))
+        const top = Math.floor(obstacle.y - obstacle.height / 2 + Math.floor(size / 2))
+        for (let y = top; y < top + obstacle.height; y += 1) {
+          for (let x = left; x < left + obstacle.width; x += 1) {
+            assert(!roads[y][x], `${size}/${seed}: ${obstacle.kind} blocks road at ${x},${y}`)
+          }
+        }
+      }
+    }
+  }
+})
+
+Deno.test("playable garden contains lakes and marshes away from buildings and roads", () => {
+  for (let seed = 0; seed < 20; seed += 1) {
+    const map = seededMap(`wetland-${seed}`, 112)
+    for (const tile of ["water", "marsh"] as const) {
+      const cells = map.tiles.flatMap((row, y) => row.flatMap((value, x) => value === tile ? [{ x, y }] : []))
+      assert(cells.length >= 12, `${seed}: missing ${tile}`)
+      for (const cell of cells) {
+        assert(Math.hypot(cell.x - 56 + 0.5, cell.y - 56 + 0.5) < 30.5)
+        for (const obstacle of map.obstacles) {
+          assert(
+            !(Math.abs(cell.x - 56 + 0.5 - obstacle.x) < obstacle.width / 2 &&
+              Math.abs(cell.y - 56 + 0.5 - obstacle.y) < obstacle.height / 2),
+          )
+        }
+      }
+    }
+  }
+})
+
+Deno.test("house loot keeps its white-crate probability boundary independently of map generation", () => {
+  const house = {
+    kind: "house" as const,
+    x: 0,
+    y: 0,
+    width: 8,
+    height: 8,
+    tiles: Array.from(
+      { length: 8 },
+      (_, y) => Array.from({ length: 8 }, (_, x) => x === 0 || y === 0 || x === 7 || y === 7),
+    ),
+  }
+  for (
+    const [roll, kind] of [[0, "high-tier-box"], [0.7799, "high-tier-box"], [0.78, "box"], [0.9999, "box"]] as const
+  ) {
+    const crates = withRandomSource(() => roll, () => createHouseLootBoxBlueprints(80, [house]))
+    assert(crates.length > 0)
+    assert(crates.every((crate) => crate.kind === kind))
+  }
 })
