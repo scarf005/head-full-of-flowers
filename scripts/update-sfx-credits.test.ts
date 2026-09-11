@@ -12,6 +12,16 @@ import {
 const pistolImport =
   `import pistolSfx from "../assets/sfx/828786__areniporgen__glock-19x.ogg" // @sfx-credit {"label":"Pistol","title":"Glock 19X","creator":"areniporgen","id":"828786","license":"CC0","asset":"828786__areniporgen__glock-19x.ogg"}`
 
+Deno.test("Generated credits follow the containing JSX indentation", () => {
+  for (const indentation of ["", "  ", "                "]) {
+    const source = `${indentation}{/* start */}\nold\n${indentation}{/* end */}`
+    const content = renderHudSfxCredits(parseSfxCredits(pistolImport))
+    const result = replaceGeneratedRegion(source, "{/* start */}", "{/* end */}", content)
+    assertEquals(result.split("\n")[1], `${indentation}<li>`)
+    assertEquals(replaceGeneratedRegion(result, "{/* start */}", "{/* end */}", content), result)
+  }
+})
+
 Deno.test("SFX credit markers follow their matching SFX imports", () => {
   const credits = parseSfxCredits(pistolImport)
 

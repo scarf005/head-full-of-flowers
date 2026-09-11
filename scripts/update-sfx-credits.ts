@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 interface SfxCredit {
   label: string
   title: string
@@ -96,15 +98,15 @@ export const renderReadmeSfxCredits = (credits: SfxCredit[]) =>
 
 export const renderHudSfxCredits = (credits: SfxCredit[]) =>
   credits.map((credit) =>
-    `              <li>
-                <a
-                  href="https://freesound.org/people/${encodeURIComponent(credit.creator)}/sounds/${credit.id}/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  ${escapeJsxText(credit.label)} - ${escapeJsxText(credit.creator)} #${credit.id} (${credit.license})
-                </a>
-              </li>`
+    `<li>
+  <a
+    href="https://freesound.org/people/${encodeURIComponent(credit.creator)}/sounds/${credit.id}/"
+    target="_blank"
+    rel="noreferrer noopener"
+  >
+    ${escapeJsxText(credit.label)} - ${escapeJsxText(credit.creator)} #${credit.id} (${credit.license})
+  </a>
+</li>`
   ).join("\n")
 
 export const replaceGeneratedRegion = (source: string, startMarker: string, endMarker: string, content: string) => {
@@ -124,7 +126,8 @@ export const replaceGeneratedRegion = (source: string, startMarker: string, endM
 
   const contentStart = startIndex + startMarker.length
   const indentation = source.slice(source.lastIndexOf("\n", startIndex) + 1, startIndex)
-  return `${source.slice(0, contentStart)}\n${content}\n${indentation}${source.slice(endIndex)}`
+  const indentedContent = content.split("\n").map((line) => line ? `${indentation}${line}` : line).join("\n")
+  return `${source.slice(0, contentStart)}\n${indentedContent}\n${indentation}${source.slice(endIndex)}`
 }
 
 export const generateSfxCreditUpdates = async () => {

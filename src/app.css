@@ -235,21 +235,15 @@
   fill: currentColor;
 }
 
-.menu-credits-panel {
-  width: fit-content;
-  max-width: min(calc(100vw - 5.5rem), 27rem);
-}
-
-.menu-credits-summary {
-  width: fit-content;
-}
-
 .menu-github-fab:hover {
   background: var(--subtle);
 }
 
-.menu-credits-panel > summary {
-  list-style: none;
+.menu-credits-trigger {
+  border: 1px solid var(--line);
+  background: #1c211c;
+  font-family: inherit;
+  min-height: 48px;
   color: #fff;
   font-size: 1.1rem;
   cursor: pointer;
@@ -259,16 +253,124 @@
   white-space: nowrap;
 }
 
-.menu-credits-panel > summary::-webkit-details-marker {
-  display: none;
+.menu-dialog {
+  width: min(640px, calc(100vw - 2rem));
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 2px solid var(--line);
+  color: var(--ink);
+  background: #1c211c;
+  font: inherit;
 }
 
-.menu-credits-content {
-  margin-top: 0.5rem;
-  background: #1c211c;
-  padding: 1rem;
-  max-height: min(56vh, 24rem);
+.menu-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-dialog::backdrop {
+  background: rgb(0 0 0 / 75%);
+}
+
+.menu-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.menu-dialog-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.menu-close-button {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.menu-dialog-body {
+  min-height: 0;
   overflow: auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.menu-dialog-header,
+.menu-dialog-footer {
+  flex-shrink: 0;
+}
+
+.menu-dialog-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.menu-dialog .menu-confirm-start {
+  width: 100%;
+  min-height: 64px;
+  background: #fff;
+  color: #1c211c;
+  font-size: 2rem;
+}
+
+.menu-settings-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.menu-settings-group legend {
+  padding: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.menu-dialog .mode-card {
+  padding: 0.75rem;
+  border: 2px solid var(--line);
+}
+
+.menu-dialog .menu-player-column {
+  grid-row: auto;
+}
+
+.menu-dialog .menu-start-actions button {
+  min-height: 56px;
+  border: 2px solid var(--line);
+}
+
+.menu-dialog [aria-pressed="true"] {
+  border-color: #fff;
+  background: var(--subtle);
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.menu-dialog .menu-start-actions .menu-start-button,
+.menu-dialog .mode-row span {
+  font-size: 1.25rem;
+}
+
+.menu-dialog :focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .menu-dialog .mode-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .menu-credits-section-title {
@@ -287,6 +389,7 @@
 .menu-credits-list a {
   color: var(--ink);
   font-size: 1.1rem;
+  overflow-wrap: anywhere;
 }
 
 .menu-title {
@@ -1116,7 +1219,6 @@
 }
 
 .menu-choice-column,
-.menu-difficulty-column,
 .menu-player-column {
   grid-row: 1;
   display: grid;
@@ -1127,15 +1229,6 @@
 
 .menu-choice-column {
   grid-column: 3;
-}
-
-.menu-difficulty-column {
-  grid-column: 2;
-}
-
-.menu-choice-column .mode-cards,
-.menu-difficulty-column .menu-start-actions {
-  grid-template-columns: 1fr;
 }
 
 .menu-navigation .menu-link {
@@ -1204,24 +1297,7 @@
   grid-template-columns: 1fr;
 }
 
-.menu-choice-column .mode-card {
-  height: 120px;
-  padding: 0.5rem;
-  align-content: center;
-}
-
-.menu-choice-column .mode-card-title {
-  font-size: 2rem;
-  line-height: 1.1;
-}
-
-.menu-choice-column .mode-card-detail {
-  font-size: 1.25rem;
-  line-height: 1.25;
-}
-
-.menu-choice-column .option-language-button,
-.menu-difficulty-column .menu-start-button {
+.menu-choice-column .option-language-button {
   height: 72px;
   padding: 0.5rem;
   font-size: 1.75rem;
@@ -1233,15 +1309,6 @@
 
 .menu-player-column {
   grid-column: 1;
-}
-
-.menu-difficulty-column .menu-start-button[aria-pressed="true"] {
-  background: var(--subtle);
-}
-
-.menu-player-column .menu-confirm-start {
-  padding: 0.5rem;
-  font-size: 1.75rem;
 }
 
 .menu-player-column input[type="range"] {

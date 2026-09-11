@@ -188,13 +188,14 @@ export const MainMenuPanel = (
 ) => {
   const activeSection = useSignal<"game" | "options" | "help" | null>(null)
   const selectedDifficulty = useSignal<"easy" | "hard">("easy")
+  const creditsOpen = useSignal(false)
 
   const setReplayLoadStatus = (loaded: boolean) => {
     statusMessageSignal.value = loaded ? t`Loaded replay` : t`Failed to load replay`
   }
 
   return (
-    <div class="hud menu-layer">
+    <div class="hud menu-layer" onKeyDown={(event) => event.stopPropagation()}>
       <div class="menu-panel">
         <header class="menu-heading">
           <div class="menu-subtitle">{t`Bada² and the`}</div>
@@ -208,8 +209,7 @@ export const MainMenuPanel = (
               aria-expanded={activeSection.value === "game"}
               aria-controls="menu-game-column"
               onClick={() => {
-                activeSection.value = activeSection.value === "game" ? null : "game"
-                selectedDifficulty.value = "easy"
+                activeSection.value = "game"
               }}
             >
               {t`New game`}
@@ -261,95 +261,120 @@ export const MainMenuPanel = (
             </button>
           </nav>
           {activeSection.value === "game" && (
-            <div class="menu-choice-column" id="menu-game-column" ref={revealColumn}>
-              <div class="mode-cards" role="radiogroup" aria-label={t`Game mode`}>
-                {modeCards.map((mode) => (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    class={`mode-card ${selectedMode === mode.id ? "active" : ""}`}
-                    aria-pressed={selectedMode === mode.id}
-                    onClick={() => {
-                      selectedGameModeSignal.value = mode.id
-                    }}
-                  >
-                    <span class="mode-card-title">{mode.label}</span>
-                    <span class="mode-card-detail">{mode.detail}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {activeSection.value === "game" && (
-            <div class="menu-difficulty-column" ref={revealColumn}>
-              <div class="menu-start-actions">
+            <dialog
+              class="menu-dialog"
+              id="menu-game-column"
+              aria-labelledby="new-game-title"
+              ref={(node) => {
+                if (node && !node.open) node.showModal()
+              }}
+              onClose={() => {
+                activeSection.value = null
+              }}
+            >
+              <header class="menu-dialog-header">
+                <h2 id="new-game-title">{t`New game`}</h2>
                 <button
                   type="button"
-                  class="menu-start-button menu-start-easy"
-                  data-difficulty="easy"
-                  aria-pressed={selectedDifficulty.value === "easy"}
-                  onClick={() => {
-                    selectedDifficulty.value = "easy"
-                  }}
+                  class="menu-close-button"
+                  aria-label={t`Close`}
+                  onClick={(event) => event.currentTarget.closest("dialog")?.close()}
                 >
-                  {t`Easy Mode`}
+                  <span aria-hidden="true">×</span>
                 </button>
+              </header>
+              <div class="menu-dialog-body">
+                <fieldset class="menu-settings-group">
+                  <legend>{t`Game mode`}</legend>
+                  <div class="mode-cards">
+                    {modeCards.map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        class={`mode-card ${selectedMode === mode.id ? "active" : ""}`}
+                        aria-pressed={selectedMode === mode.id}
+                        onClick={() => {
+                          selectedGameModeSignal.value = mode.id
+                        }}
+                      >
+                        <span class="mode-card-title">{mode.label}</span>
+                        <span class="mode-card-detail">{mode.detail}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset class="menu-settings-group">
+                  <legend>{t`Difficulty`}</legend>
+                  <div class="menu-start-actions">
+                    <button
+                      type="button"
+                      class="menu-start-button menu-start-easy"
+                      data-difficulty="easy"
+                      aria-pressed={selectedDifficulty.value === "easy"}
+                      onClick={() => {
+                        selectedDifficulty.value = "easy"
+                      }}
+                    >
+                      {t`Easy Mode`}
+                    </button>
+                    <button
+                      type="button"
+                      class="menu-start-button menu-start-hard"
+                      data-difficulty="hard"
+                      aria-pressed={selectedDifficulty.value === "hard"}
+                      onClick={() => {
+                        selectedDifficulty.value = "hard"
+                      }}
+                    >
+                      {t`Hard Mode`}
+                    </button>
+                  </div>
+                </fieldset>
+                <div class="menu-player-column">
+                  <label class="mode-row mode-row-slider">
+                    <span>{sliderLabel}</span>
+                    <input
+                      type="range"
+                      min={sliderMin}
+                      max={sliderMax}
+                      step={sliderStep}
+                      value={sliderValue}
+                      onInput={(event) => {
+                        const next = Number(event.currentTarget.value)
+                        const mode = selectedGameModeSignal.value
+                        if (mode === "ffa") {
+                          ffaPlayerCountSignal.value = next
+                          return
+                        }
+
+                        if (mode === "tdm") {
+                          tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
+                          return
+                        }
+
+                        if (mode === "duo") {
+                          duoTeamCountSignal.value = next
+                          return
+                        }
+
+                        squadTeamCountSignal.value = next
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+              <footer class="menu-dialog-footer">
                 <button
                   type="button"
-                  class="menu-start-button menu-start-hard"
-                  data-difficulty="hard"
-                  aria-pressed={selectedDifficulty.value === "hard"}
+                  class="menu-start-button menu-confirm-start"
                   onClick={() => {
-                    selectedDifficulty.value = "hard"
+                    menuStartDifficultySignal.value = selectedDifficulty.value
                   }}
                 >
-                  {t`Hard Mode`}
+                  {t`Start game`}
                 </button>
-              </div>
-            </div>
-          )}
-          {activeSection.value === "game" && (
-            <div class="menu-player-column" ref={revealColumn}>
-              <label class="mode-row mode-row-slider">
-                <span>{sliderLabel}</span>
-                <input
-                  type="range"
-                  min={sliderMin}
-                  max={sliderMax}
-                  step={sliderStep}
-                  value={sliderValue}
-                  onInput={(event) => {
-                    const next = Number(event.currentTarget.value)
-                    const mode = selectedGameModeSignal.value
-                    if (mode === "ffa") {
-                      ffaPlayerCountSignal.value = next
-                      return
-                    }
-
-                    if (mode === "tdm") {
-                      tdmTeamSizeSignal.value = Math.max(2, Math.round(next / 2))
-                      return
-                    }
-
-                    if (mode === "duo") {
-                      duoTeamCountSignal.value = next
-                      return
-                    }
-
-                    squadTeamCountSignal.value = next
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                class="menu-start-button menu-confirm-start"
-                onClick={() => {
-                  menuStartDifficultySignal.value = selectedDifficulty.value
-                }}
-              >
-                {t`Start game`}
-              </button>
-            </div>
+              </footer>
+            </dialog>
           )}
           {activeSection.value === "options" && (
             <div class="menu-choice-column" id="menu-options-column" ref={revealColumn}>
@@ -391,169 +416,199 @@ export const MainMenuPanel = (
         </div>
       </div>
       <div class="menu-viewport-links">
-        <details class="menu-credits-panel">
-          <summary class="menu-credits-summary">{t`Credits`}</summary>
-          <div class="menu-credits-content">
-            <div class="menu-credits-section-title">{t`Fonts`}</div>
-            <ul class="menu-credits-list">
-              <li>
-                <a href={neoDunggeunmoLicense} target="_blank" rel="noreferrer">Neo둥근모 · SIL OFL 1.1</a>
-              </li>
-            </ul>
-            <div class="menu-credits-section-title">{t`Music`}</div>
-            <ul class="menu-credits-list">
-              <li>
-                <a
-                  href="https://hellstarplus.bandcamp.com/track/my-divine-perversions"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  MY DIVINE PERVERSIONS - hellstar.plus (CC BY 4.0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://hellstarplus.bandcamp.com/track/linear-gestalt"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  linear & gestalt - hellstar.plus (CC BY 4.0)
-                </a>
-              </li>
-            </ul>
-            <div class="menu-credits-section-title">{t`SFX`}</div>
-            <ul class="menu-credits-list">
-              {/* SFX_CREDITS_START */}
-              <li>
-                <a
-                  href="https://freesound.org/people/samsterbirdies/sounds/490166/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Flamethrower - samsterbirdies #490166 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/areniporgen/sounds/828786/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Pistol - areniporgen #828786 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/duesto/sounds/156904/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Auto shotgun - duesto #156904 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/AnthonyChan0/sounds/159710/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Shotgun - AnthonyChan0 #159710 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/LeMudCrab/sounds/163458/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Grenade launcher - LeMudCrab #163458 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/Franki-01234/sounds/201668/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Assault rifle - Franki-01234 #201668 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/areniporgen/sounds/702225/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Battle rifle - areniporgen #702225 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/deleted_user_364925/sounds/47252/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Explosions - deleted_user_364925 #47252 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/damnsatinist/sounds/493913/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Kill confirm - damnsatinist #493913 (CC BY 4.0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/DeltaCode/sounds/678385/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Item acquire - DeltaCode #678385 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/Guinamun/sounds/690623/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Character damage - Guinamun #690623 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/Angrycrazii/sounds/277322/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Player death - Angrycrazii #277322 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/GFL7/sounds/276963/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Reload - GFL7 #276963 (CC0)
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://freesound.org/people/ryanconway/sounds/161622/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  Grenade throw - ryanconway #161622 (CC BY 4.0)
-                </a>
-              </li>
-              {/* SFX_CREDITS_END */}
-            </ul>
-          </div>
-        </details>
+        <button
+          type="button"
+          class="menu-credits-trigger"
+          onClick={() => {
+            creditsOpen.value = true
+          }}
+        >
+          {t`Credits`}
+        </button>
+        {creditsOpen.value && (
+          <dialog
+            class="menu-dialog"
+            aria-labelledby="credits-title"
+            ref={(node) => {
+              if (node && !node.open) node.showModal()
+            }}
+            onClose={() => {
+              creditsOpen.value = false
+            }}
+          >
+            <header class="menu-dialog-header">
+              <h2 id="credits-title">{t`Credits`}</h2>
+              <button
+                type="button"
+                class="menu-close-button"
+                aria-label={t`Close`}
+                onClick={(event) => event.currentTarget.closest("dialog")?.close()}
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
+            <div class="menu-dialog-body">
+              <div class="menu-credits-section-title">{t`Fonts`}</div>
+              <ul class="menu-credits-list">
+                <li>
+                  <a href={neoDunggeunmoLicense} target="_blank" rel="noreferrer">Neo둥근모 · SIL OFL 1.1</a>
+                </li>
+              </ul>
+              <div class="menu-credits-section-title">{t`Music`}</div>
+              <ul class="menu-credits-list">
+                <li>
+                  <a
+                    href="https://hellstarplus.bandcamp.com/track/my-divine-perversions"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    MY DIVINE PERVERSIONS - hellstar.plus (CC BY 4.0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://hellstarplus.bandcamp.com/track/linear-gestalt"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    linear & gestalt - hellstar.plus (CC BY 4.0)
+                  </a>
+                </li>
+              </ul>
+              <div class="menu-credits-section-title">{t`SFX`}</div>
+              <ul class="menu-credits-list">
+                {/* SFX_CREDITS_START */}
+                <li>
+                  <a
+                    href="https://freesound.org/people/samsterbirdies/sounds/490166/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Flamethrower - samsterbirdies #490166 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/areniporgen/sounds/828786/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Pistol - areniporgen #828786 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/duesto/sounds/156904/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Auto shotgun - duesto #156904 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/AnthonyChan0/sounds/159710/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Shotgun - AnthonyChan0 #159710 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/LeMudCrab/sounds/163458/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Grenade launcher - LeMudCrab #163458 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/Franki-01234/sounds/201668/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Assault rifle - Franki-01234 #201668 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/areniporgen/sounds/702225/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Battle rifle - areniporgen #702225 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/deleted_user_364925/sounds/47252/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Explosions - deleted_user_364925 #47252 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/damnsatinist/sounds/493913/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Kill confirm - damnsatinist #493913 (CC BY 4.0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/DeltaCode/sounds/678385/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Item acquire - DeltaCode #678385 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/Guinamun/sounds/690623/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Character damage - Guinamun #690623 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/Angrycrazii/sounds/277322/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Player death - Angrycrazii #277322 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/GFL7/sounds/276963/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Reload - GFL7 #276963 (CC0)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://freesound.org/people/ryanconway/sounds/161622/"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Grenade throw - ryanconway #161622 (CC BY 4.0)
+                  </a>
+                </li>
+                {/* SFX_CREDITS_END */}
+              </ul>
+            </div>
+          </dialog>
+        )}
         <a
           class="menu-github-fab"
           href="https://github.com/scarf005/head-full-of-flowers"

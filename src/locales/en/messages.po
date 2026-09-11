@@ -47,7 +47,7 @@ msgstr "Assault Rifle"
 msgid "Auto Shotgun"
 msgstr "Auto Shotgun"
 
-#: src/game/hud-panels.tsx:200
+#: src/game/hud-panels.tsx:201
 msgid "Bada² and the"
 msgstr "Bada² and the"
 
@@ -91,6 +91,11 @@ msgstr "Burnt"
 msgid "Click once to wake audio, then begin fighting"
 msgstr "Click once to wake audio, then begin fighting"
 
+#: src/game/hud-panels.tsx:280
+#: src/game/hud-panels.tsx:444
+msgid "Close"
+msgstr "Close"
+
 #. placeholder {0}: renderPathProfile.mergedCompositeFrames
 #. placeholder {1}: formatDebugNumber(mergedPercent)
 #. placeholder {2}: renderPathProfile.splitCompositeFrames
@@ -111,7 +116,8 @@ msgstr "Copied state to clipboard"
 msgid "Copy state to clipboard"
 msgstr "Copy state to clipboard"
 
-#: src/game/hud-panels.tsx:395
+#: src/game/hud-panels.tsx:426
+#: src/game/hud-panels.tsx:440
 msgid "Credits"
 msgstr "Credits"
 
@@ -126,6 +132,10 @@ msgstr "Damage taken -1 (min 1)"
 #: src/game/game-match-results.ts:90
 msgid "Deaths"
 msgstr "Deaths"
+
+#: src/game/hud-panels.tsx:307
+msgid "Difficulty"
+msgstr "Difficulty"
 
 #: src/game/hud.tsx:103
 msgid "Duo"
@@ -145,17 +155,17 @@ msgstr "Duo {teamIndex}"
 msgid "Duo 1 (You)"
 msgstr "Duo 1 (You)"
 
-#: src/game/hud-panels.tsx:295
+#: src/game/hud-panels.tsx:318
 msgid "Easy Mode"
 msgstr "Easy Mode"
 
 #. placeholder {0}: Math.round(effectsVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:599
+#: src/game/hud-panels.tsx:654
 msgid "Effects Volume {0}%"
 msgstr "Effects Volume {0}%"
 
-#: src/game/hud-panels.tsx:366
-#: src/game/hud-panels.tsx:621
+#: src/game/hud-panels.tsx:391
+#: src/game/hud-panels.tsx:676
 msgid "English"
 msgstr "English"
 
@@ -187,7 +197,7 @@ msgstr "Failed to copy replay"
 msgid "Failed to copy state"
 msgstr "Failed to copy state"
 
-#: src/game/hud-panels.tsx:193
+#: src/game/hud-panels.tsx:194
 msgid "Failed to load replay"
 msgstr "Failed to load replay"
 
@@ -195,7 +205,7 @@ msgstr "Failed to load replay"
 msgid "Flamethrower"
 msgstr "Flamethrower"
 
-#: src/game/hud-panels.tsx:397
+#: src/game/hud-panels.tsx:451
 msgid "Fonts"
 msgstr "Fonts"
 
@@ -208,7 +218,7 @@ msgstr "FPS {0}"
 msgid "Free For All"
 msgstr "Free For All"
 
-#: src/game/hud-panels.tsx:265
+#: src/game/hud-panels.tsx:288
 msgid "Game mode"
 msgstr "Game mode"
 
@@ -221,11 +231,11 @@ msgstr "Game Speed {0}x"
 msgid "Generating arena..."
 msgstr "Generating arena..."
 
-#: src/game/hud-panels.tsx:567
+#: src/game/hud-panels.tsx:622
 msgid "GitHub"
 msgstr "GitHub"
 
-#: src/game/hud-panels.tsx:562
+#: src/game/hud-panels.tsx:617
 msgid "GitHub repository"
 msgstr "GitHub repository"
 
@@ -241,11 +251,11 @@ msgstr "Grenade Launcher"
 msgid "Grenades fly +50% faster and explode near enemies"
 msgstr "Grenades fly +50% faster and explode near enemies"
 
-#: src/game/hud-panels.tsx:306
+#: src/game/hud-panels.tsx:329
 msgid "Hard Mode"
 msgstr "Hard Mode"
 
-#: src/game/hud-panels.tsx:201
+#: src/game/hud-panels.tsx:202
 msgid "Head Full of Flowers"
 msgstr "Head Full of Flowers"
 
@@ -294,13 +304,13 @@ msgstr "Kevlar Vest"
 msgid "Kill an enemy: next reload time -50%"
 msgstr "Kill an enemy: next reload time -50%"
 
-#: src/game/hud-panels.tsx:375
-#: src/game/hud-panels.tsx:630
+#: src/game/hud-panels.tsx:400
+#: src/game/hud-panels.tsx:685
 msgid "Korean"
 msgstr "Korean"
 
-#: src/game/hud-panels.tsx:357
-#: src/game/hud-panels.tsx:612
+#: src/game/hud-panels.tsx:382
+#: src/game/hud-panels.tsx:667
 msgid "Language"
 msgstr "Language"
 
@@ -316,17 +326,17 @@ msgstr "Lead Margin"
 msgid "Load replay"
 msgstr "Load replay"
 
-#: src/game/hud-panels.tsx:193
+#: src/game/hud-panels.tsx:194
 msgid "Loaded replay"
 msgstr "Loaded replay"
 
-#: src/game/hud-panels.tsx:204
-#: src/game/hud-panels.tsx:636
+#: src/game/hud-panels.tsx:205
+#: src/game/hud-panels.tsx:691
 #: src/game/hud.tsx:284
 msgid "Main Menu"
 msgstr "Main Menu"
 
-#: src/game/hud-panels.tsx:584
+#: src/game/hud-panels.tsx:639
 msgid "Match is frozen. Adjust options or resume."
 msgstr "Match is frozen. Adjust options or resume."
 
@@ -351,16 +361,17 @@ msgstr "Molotov"
 msgid "Move speed +12%"
 msgstr "Move speed +12%"
 
-#: src/game/hud-panels.tsx:403
+#: src/game/hud-panels.tsx:457
 msgid "Music"
 msgstr "Music"
 
 #. placeholder {0}: Math.round(musicVolumeSignal.value * 100)
-#: src/game/hud-panels.tsx:586
+#: src/game/hud-panels.tsx:641
 msgid "Music Volume {0}%"
 msgstr "Music Volume {0}%"
 
 #: src/game/hud-panels.tsx:215
+#: src/game/hud-panels.tsx:276
 msgid "New game"
 msgstr "New game"
 
@@ -368,7 +379,7 @@ msgstr "New game"
 msgid "Options"
 msgstr "Options"
 
-#: src/game/hud-panels.tsx:583
+#: src/game/hud-panels.tsx:638
 #: src/game/hud.tsx:118
 msgid "Paused"
 msgstr "Paused"
@@ -446,7 +457,7 @@ msgstr "Reloading..."
 msgid "Render Profile {0} frames"
 msgstr "Render Profile {0} frames"
 
-#: src/game/hud-panels.tsx:635
+#: src/game/hud-panels.tsx:690
 msgid "Resume"
 msgstr "Resume"
 
@@ -467,7 +478,7 @@ msgstr "Rocket Launcher"
 msgid "Secondary"
 msgstr "Secondary"
 
-#: src/game/hud-panels.tsx:424
+#: src/game/hud-panels.tsx:478
 msgid "SFX"
 msgstr "SFX"
 
@@ -505,7 +516,7 @@ msgstr "Squad {teamIndex}"
 msgid "Squad 1 (You)"
 msgstr "Squad 1 (You)"
 
-#: src/game/hud-panels.tsx:350
+#: src/game/hud-panels.tsx:374
 msgid "Start game"
 msgstr "Start game"
 
@@ -525,7 +536,7 @@ msgstr "Teams {duoTeams} ({players} total)"
 msgid "Teams {squadTeams} ({players} total)"
 msgstr "Teams {squadTeams} ({players} total)"
 
-#: src/game/hud-panels.tsx:384
+#: src/game/hud-panels.tsx:409
 msgid "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 msgstr "the player with the biggest flower patch for {MATCH_DURATION_SECONDS} seconds wins the match"
 
@@ -547,7 +558,7 @@ msgstr "Time up. Your trail dominates the arena"
 msgid "Total Petals"
 msgstr "Total Petals"
 
-#: src/game/hud-panels.tsx:387
+#: src/game/hud-panels.tsx:412
 msgid "wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload"
 msgstr "wasd: move, mouse: aim and shoot, LMB: primary, RMB: grenade, wheel: swap primary, R: reload"
 
