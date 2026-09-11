@@ -216,7 +216,7 @@ export class DirectWebGLRenderer {
       stencil: true,
       premultipliedAlpha: false,
       preserveDrawingBuffer: false,
-      desynchronized: true,
+      desynchronized: false,
       powerPreference: "high-performance",
     })
     if (!gl) throw new Error("WebGL2 context is not available")
