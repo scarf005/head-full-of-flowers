@@ -81,3 +81,31 @@ func test_art_of_a_crate_goes_away_when_a_hit_breaks_the_crate() -> void:
 	world.hit_cell(world.grid.cell_of(Vector2(crate.x, crate.y)), 100.0)
 	view._process(0.0)
 	assert_eq(shown.call(), before - 1)
+
+
+func test_map_without_walls_keeps_one_art_of_a_rock_when_another_cell_changes() -> void:
+	var world := SimWorld.new({seed = 7, size = 2}, TerrainMap.new())
+	world.grid.set_cell(world.grid.cell_of(Vector2(3.5, 3.5)), Defs.Mat.ROCK)
+	var view := TerrainView.new()
+	add_child_autofree(view)
+	view.setup(world)
+	view._process(0.0)
+	var before := view.get_child_count()
+	# A loot box lands. The view draws it from the box event, not from the change of the grid.
+	world.grid.set_cell(world.grid.cell_of(Vector2(8.5, 3.5)), Defs.Mat.BOX)
+	view._process(0.0)
+	assert_eq(view.get_child_count(), before, "no second art of the rock")
+
+
+func test_rocket_leaves_one_smoke_puff_for_2_frames_at_the_same_match_time() -> void:
+	var view: GameView = autofree(GameView.new())
+	view.autoplay = true
+	add_child(view)
+	view.setup({seed = 1, size = 2})
+	var unit := view.world.units[0]
+	Arsenal.equip(unit, &"rocket-launcher", 4.0)
+	assert_true(Combat.fire(view.world, unit))
+	view.world.now += 0.5
+	view._process(0.01)
+	view._process(0.01)
+	assert_eq(view._air._parts.size(), 1)
