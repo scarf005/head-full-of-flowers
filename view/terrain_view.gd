@@ -60,6 +60,8 @@ const WALL_COLORS := {
 	&"greenhouse": Color("d6e6d0"),
 }
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
+## Places for the boxes of loot boxes that appear in a match: 2 for each.
+const SPARE := 96
 const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
 const BLANKET := Color("6f8fd6")
@@ -164,10 +166,30 @@ func _process(_delta: float) -> void:
 			)
 			out.append([leaf, DOOR_COLOR])
 	_claim(out, -1)
-	_boxes.instance_count = out.size()
+	# A change of the instance count erases all instances, so the boxes of a match need their places now.
+	_boxes.instance_count = out.size() + SPARE
+	_boxes.visible_instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
 		_boxes.set_instance_color(n, Quality.raw(out[n][1]))
+
+
+## Draws a loot box that the match put on a free cell.
+func add_box(cell: Vector2i) -> void:
+	var i := cell.y * grid.size + cell.x
+	var tone: Color = HIGH_TIER_COLOR if grid.high_tier[i] else CELL_LOOK[Defs.Mat.BOX][0]
+	var top: float = CELL_LOOK[Defs.Mat.BOX][1]
+	var out := []
+	_box(out, grid.center_of(cell), Vector2(0.78, 0.78), top, tone.darkened(0.2))
+	_box(out, grid.center_of(cell), Vector2(0.56, 0.56), top + 0.05, tone)
+	for part: Array in out:
+		var n := _owners.size()
+		if n >= _boxes.instance_count:
+			return
+		_owners.append(i)
+		_boxes.set_instance_transform(n, part[0])
+		_boxes.set_instance_color(n, Quality.raw(part[1]))
+		_boxes.visible_instance_count = n + 1
 
 
 ## Records `cell` as the owner of the boxes added since the last call.

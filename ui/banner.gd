@@ -31,6 +31,8 @@ func say(text: String, color: Color, seconds: float) -> void:
 
 
 func _on_event(e: Dictionary) -> void:
+	if game.autoplay:
+		return
 	if e.type == &"go":
 		say(tr("GO"), Color.WHITE, 0.8)
 	elif e.type == &"finish":
@@ -44,7 +46,7 @@ func _on_event(e: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
-	_ttl -= delta
+	_ttl -= 0.0 if get_tree().paused else delta
 	var w := game.world
 	if game.autoplay or w.finished:
 		queue_redraw()

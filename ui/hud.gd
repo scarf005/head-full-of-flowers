@@ -39,6 +39,8 @@ static func unit_name(u: SimUnit) -> String:
 
 
 func _process(delta: float) -> void:
+	if get_tree().paused:
+		return
 	for row in feed:
 		row.ttl -= delta
 	_marker -= delta
@@ -141,9 +143,10 @@ func _draw() -> void:
 		var row: Dictionary = feed[i]
 		var base := 34.0 + i * 26.0
 		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		draw_rect(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0), Color(0.05, 0.05, 0.08, 0.7))
 		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
 		_icon(row.icon, Rect2(end - 28.0, base - 18.0, 24.0, 24.0), Color.WHITE)
-		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
 	_draw_map(w)
 	# Crosshair.

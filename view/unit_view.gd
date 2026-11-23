@@ -13,6 +13,7 @@ const GUNS := {
 	&"battle-rifle": Vector3(0.14, 0.14, 0.9),
 }
 const RIFLE := Vector3(0.14, 0.13, 0.7)
+const SCALE := 1.45
 
 var unit: SimUnit
 var color: Color
@@ -41,7 +42,7 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	var plain := StandardMaterial3D.new()
 	plain.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	plain.albedo_color = color
-	scale = Vector3.ONE * 1.45
+	scale = Vector3.ONE * SCALE
 	add_child(_legs)
 	add_child(_body)
 	for side: float in [-0.13, 0.13]:

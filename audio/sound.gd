@@ -195,9 +195,9 @@ func handle(e: Dictionary) -> void:
 			else:
 				_play(WEAPON_SOUNDS[e.weapon], _at(e.unit, e.pos))
 		&"hit":
-			if e.target == PLAYER:
+			if e.target == _me():
 				_play(&"player_death" if e.kill else &"damage")
-			elif e.source == PLAYER:
+			elif e.source == _me():
 				_play(&"kill_confirm" if e.kill else &"hit")
 		&"explosion":
 			_play(&"explosion", e.pos)
@@ -212,7 +212,9 @@ func handle(e: Dictionary) -> void:
 		&"bounce":
 			_play(&"bounce", e.pos)
 		&"zone":
-			_play(&"fire", e.pos)
+			# A flamethrower adds 16 flame patches each second and has its own sound.
+			if not e.flame:
+				_play(&"fire", e.pos)
 		&"box":
 			_play(&"box", _cell_pos(e.cell))
 		&"respawn":
@@ -232,9 +234,14 @@ func play_ui(key: StringName) -> void:
 	_play(key)
 
 
+## The unit that a person plays, or -1 in a match of bots only.
+func _me() -> int:
+	return -1 if _game and _game.autoplay else PLAYER
+
+
 ## The sound position, or null for the player's own sound.
 func _at(unit: int, pos: Vector2) -> Variant:
-	return null if unit == PLAYER else pos
+	return null if unit == _me() else pos
 
 
 func _unit_pos(unit: int) -> Vector2:

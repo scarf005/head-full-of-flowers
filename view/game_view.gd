@@ -5,6 +5,7 @@ extends Node3D
 signal event(data: Dictionary)
 
 const SHOT_HEIGHT := 0.75
+const FLAMES_PER_M2 := 1.6
 const SHOT_COLORS := {
 	&"ballistic": Color(1.0, 0.9, 0.5),
 	&"flame": Color(1.0, 0.45, 0.1),
@@ -38,6 +39,8 @@ var _focus := Vector2.ZERO
 var _shots: MultiMesh
 var _blobs: MultiMesh
 var _fires: MultiMesh
+var _flames: MultiMesh
+var _terrain := TerrainView.new()
 var _pickups: Array[Sprite3D] = []
 var _arena: MeshInstance3D
 var _lights := 0
@@ -52,9 +55,8 @@ func setup(config: Dictionary) -> void:
 	var env := WorldEnvironment.new()
 	env.environment = Quality.environment()
 	add_child(env)
-	var terrain := TerrainView.new()
-	terrain.setup(world)
-	add_child(terrain)
+	_terrain.setup(world)
+	add_child(_terrain)
 	var grass := GrassView.new()
 	grass.setup(world)
 	add_child(grass)
@@ -82,8 +84,14 @@ func setup(config: Dictionary) -> void:
 	_blobs = _multimesh(ball, 96, false)
 	var disc := CylinderMesh.new()
 	disc.height = 0.06
-	disc.radial_segments = 10
+	disc.radial_segments = 24
 	_fires = _multimesh(disc, 36, true)
+	var tongue := CylinderMesh.new()
+	tongue.top_radius = 0.0
+	tongue.height = 1.0
+	tongue.radial_segments = 5
+	tongue.rings = 0
+	_flames = _multimesh(tongue, 1000, true)
 	_arena = MeshInstance3D.new()
 	var wall := CylinderMesh.new()
 	wall.height = 1.6
@@ -186,13 +194,33 @@ func _process(delta: float) -> void:
 		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.16, 0.3, 0.16)
 		_blobs.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else shell)
 	_fires.visible_instance_count = world.zones.size()
+	var flames := 0
 	for i in world.zones.size():
 		var z := world.zones[i]
 		var flicker := 0.9 + 0.1 * sin(world.now * 30.0 + i)
 		var basis := Basis.from_scale(Vector3(z.radius * 2.0 * flicker, 1.0, z.radius * 2.0 * flicker))
 		_fires.set_instance_transform(i, Transform3D(basis, Vector3(z.pos.x, 0.05, z.pos.y)))
-		_fires.set_instance_color(i, Color(1.0, 0.4, 0.05) * (2.0 + flicker))
+		_fires.set_instance_color(i, Color(0.7, 0.2, 0.05))
+		# Flame tongues. Each one stays at a place for 0.2 s, grows to a point and starts again at a new place.
+		for k in mini(ceili(z.radius * z.radius * PI * FLAMES_PER_M2), _flames.instance_count - flames):
+			var phase: float = world.now * 5.0 + k * 0.37
+			var cell := Vector2(i * 31 + k, floorf(phase))
+			var spot: Vector2 = (
+				Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * z.radius * 0.9
+			)
+			var grow := fposmod(phase, 1.0)
+			var size := Vector3(1.1 - 0.5 * grow, 0.5 + 1.0 * grow, 1.1 - 0.5 * grow)
+			var at := Vector3(z.pos.x + spot.x, size.y * 0.5, z.pos.y + spot.y)
+			_flames.set_instance_transform(flames, Transform3D(Basis.from_scale(size), at))
+			_flames.set_instance_color(flames, Color(1.0, 0.8, 0.25).lerp(Color(0.95, 0.28, 0.05), grow))
+			flames += 1
+	_flames.visible_instance_count = flames
 	_draw_pickups()
+
+
+## Steady pseudo-random number in 0..1 for a point.
+static func _hash(p: Vector2) -> float:
+	return fposmod(sin(p.dot(Vector2(12.9898, 78.233))) * 43758.5453, 1.0)
 
 
 ## Sim position under the mouse pointer, at the height where shots fly, so that a pointer on the body of a unit
@@ -228,17 +256,21 @@ func _read_input() -> void:
 
 
 func _show(e: Dictionary) -> void:
+	# In a match of bots only, unit 0 gets no camera shake, tint or damage numbers.
+	var me := -1 if autoplay else 0
 	match e.type:
 		&"shot":
-			var at: Vector2 = e.pos + e.dir * 0.7
+			# The tip of the gun that the figure holds at its right side.
+			var reach: float = (0.3 + UnitView.GUNS.get(e.weapon, UnitView.RIFLE).z) * UnitView.SCALE
+			var at: Vector2 = e.pos + e.dir * reach - e.dir.orthogonal() * 0.2 * UnitView.SCALE
 			_flash(Vector3(at.x, 0.8, at.y), Color(1.0, 0.8, 0.4), 2.5, 0.06)
 			_pop(at, Color(1.0, 0.95, 0.6), 0.9, 0.05)
 			if e.weapon != &"flamethrower":
-				var side: Vector2 = e.dir.orthogonal() * randf_range(1.5, 3.0)
+				var side: Vector2 = -e.dir.orthogonal() * randf_range(1.5, 3.0)
 				_bits.add(
 					Vector3(e.pos.x, 0.7, e.pos.y), Vector3(side.x, 3.5, side.y), Color(0.95, 0.75, 0.25), 0.07, 0.9
 				)
-			if e.unit == 0:
+			if e.unit == me:
 				var weapon: Dictionary = Defs.WEAPONS[e.weapon]
 				var punch: float = 0.5 + 0.12 * weapon.pellets + 0.06 * weapon.damage
 				shake = minf(1.0, shake + 0.12 * punch)
@@ -249,13 +281,13 @@ func _show(e: Dictionary) -> void:
 			_pop(e.pos, Color.WHITE, 1.6 if e.kill else 1.0, 0.07)
 			if e.kill:
 				_ring(e.pos, color, 2.4, 0.3)
-			if e.target == 0 or e.source == 0:
-				shake = minf(1.2, shake + (0.66 if e.target == 0 else 0.4) + (0.5 if e.kill else 0.0))
-				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == 0 else Color.WHITE)
-			if e.target == 0:
+			if e.target == me or e.source == me:
+				shake = minf(1.2, shake + (0.66 if e.target == me else 0.4) + (0.5 if e.kill else 0.0))
+				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
+			if e.target == me:
 				tint = Color(0.85, 0.05, 0.12, 0.55)
 				_kick += e.dir * 0.4
-			elif e.source == 0 and e.kill:
+			elif e.source == me and e.kill:
 				tint = Color(1.0, 1.0, 1.0, 0.35)
 				camera.size = camera.rest_size() - 1.6
 		&"cell":
@@ -268,6 +300,8 @@ func _show(e: Dictionary) -> void:
 			_ring(e.pos, Color(1.0, 0.8, 0.4), e.radius * 1.2, 0.25)
 			_puff(e.pos, Color(0.22, 0.2, 0.2), 18, 8.0)
 			shake = minf(1.5, shake + 6.0 / maxf(4.0, e.pos.distance_to(player.pos)))
+		&"box":
+			_terrain.add_box(e.cell)
 		&"respawn":
 			_units[e.unit].grow = 0.2
 			_ring(e.pos, world.team_color(world.units[e.unit].team), 1.3, 0.25)
