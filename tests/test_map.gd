@@ -119,6 +119,19 @@ func test_props_never_cover_walls_or_doors() -> void:
 					assert_false(blocked.has(cell), "seed %d: %s on %s at %s" % [s, p.kind, blocked.get(cell), cell])
 
 
+func test_flowerbeds_and_pot_plants_stand_on_dry_ground() -> void:
+	var wet := 0
+	for map in _maps:
+		for prop: Dictionary in map.props:
+			if prop.kind not in [&"flowerbed", &"plant"]:
+				continue
+			# The 2 cell centres of a flowerbed are 0.5 m to each side of its middle on its long side.
+			var long := Vector2(prop.width - 1, prop.height - 1) * 0.5
+			for at: Vector2 in [Vector2(prop.x, prop.y) - long, Vector2(prop.x, prop.y) + long]:
+				wet += int(map.tile_at(at) in MapGen.WET)
+	assert_eq(wet, 0, "cells of flowerbeds and pot plants in water or marsh on 20 maps")
+
+
 func test_pickup_points_lie_in_open_cells() -> void:
 	for s in SEEDS:
 		assert_between(_maps[s].pickup_points.size(), 4, Defs.PICKUP_CAPACITY)
