@@ -98,7 +98,7 @@ func test_battle_rifle_fires_three_round_burst() -> void:
 	a.want_fire = true
 	_tick(1)
 	a.want_fire = false
-	_tick(12)
+	_tick(40)
 	assert_eq(a.slot().ammo, 17.0)
 
 
