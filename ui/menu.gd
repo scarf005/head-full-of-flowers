@@ -10,6 +10,16 @@ const MODES: Array[StringName] = [&"ffa", &"tdm", &"duo", &"squad"]
 const MODE_NAMES := ["Free for All", "Team Deathmatch", "Duos", "Squads"]
 ## Per mode: [smallest size, largest size, default size].
 const SIZES := [[2, 8, 8], [2, 6, 4], [2, 6, 4], [2, 3, 3]]
+## Controls legend: key caps (a StringName is an icon) and the icon of what they do.
+const LEGEND := [
+	[["W", "A", "S", "D"], &"move"],
+	[[&"mouse"], &"crosshair"],
+	[["LMB"], &"fire"],
+	[["RMB", "G"], &"grenade"],
+	[["R"], &"rapid_reload"],
+	[["Q", "Wheel"], &"swap"],
+	[["Esc"], &"pause"],
+]
 
 var settings := ConfigFile.new()
 var _box := VBoxContainer.new()
@@ -38,30 +48,32 @@ func show_title() -> void:
 		_mode.add_item(tr(MODE_NAMES[n]))
 	_mode.selected = settings.get_value("match", "mode", 0)
 	_mode.item_selected.connect(func(index: int) -> void: _fit_size(index, SIZES[index][2]))
-	_row("Mode", _mode)
+	_row(&"mode", "Mode", _mode)
 	_size = SpinBox.new()
 	_fit_size(_mode.selected, settings.get_value("match", "size", 8))
-	_row("Size", _size)
+	_row(&"players", "Size", _size)
 	_hard = CheckButton.new()
 	_hard.button_pressed = settings.get_value("match", "hard", false)
-	_row("Hard bots", _hard)
+	_row(&"bots", "Hard bots", _hard)
 	_seed = LineEdit.new()
 	_seed.placeholder_text = tr("random")
-	_row("Map seed", _seed)
-	_button("Start", _start).grab_focus()
-	_volume("Sound", &"Sfx")
-	_volume("Music", &"Music")
-	_button("한국어" if TranslationServer.get_locale() != "ko" else "English", _swap_locale)
+	_row(&"seed", "Map seed", _seed)
+	_button(&"play", "Start", _start).grab_focus()
+	_volume(&"sound", "Sound", &"Sfx")
+	_volume(&"music", "Music", &"Music")
+	_button(&"language", "한국어" if TranslationServer.get_locale() != "ko" else "English", _swap_locale)
 	if not OS.has_feature("web"):
-		_button("Quit", get_tree().quit)
+		_button(&"exit", "Quit", get_tree().quit)
+	_legend()
 	show()
 
 
 func show_pause() -> void:
 	_clear()
 	_label("Paused", 32)
-	_button("Resume", resume.emit).grab_focus()
-	_button("Leave match", quit_to_title.emit)
+	_button(&"play", "Resume", resume.emit).grab_focus()
+	_button(&"exit", "Leave match", quit_to_title.emit)
+	_legend()
 	show()
 
 
@@ -73,19 +85,24 @@ func show_results(w: SimWorld) -> void:
 	for row in rows:
 		total += row.petals
 	var player := w.units[0]
-	_label("Victory" if rows[0].team == player.team else "Defeat", 32)
+	var won: bool = rows[0].team == player.team
+	var header := _line()
+	header.add_child(_icon(&"trophy" if won else &"skull", "", 32.0))
+	_label("Victory" if won else "Defeat", 32).reparent(header)
 	for place in rows.size():
 		var names := w.units.filter(func(u: SimUnit) -> bool: return u.team == rows[place].team).map(Hud.unit_name)
 		var share: float = 100.0 * rows[place].petals / maxf(1.0, total)
 		var line := _label("%d. %s   %d (%d%%)" % [place + 1, ", ".join(names), rows[place].petals, share], 16)
 		line.add_theme_color_override("font_color", w.team_color(rows[place].team))
 	var accuracy := 100.0 * player.shots_hit / maxf(1.0, player.shots_fired)
-	_label(
-		"%s %d   %s %d   %s %d%%" % [tr("Kills"), player.kills, tr("Deaths"), player.deaths, tr("Hit rate"), accuracy],
-		16
-	)
-	_button("Play again", _start).grab_focus()
-	_button("Leave match", quit_to_title.emit)
+	var stats := _line()
+	for stat: Array in [[&"skull", "Kills", player.kills], [&"tombstone", "Deaths", player.deaths]]:
+		stats.add_child(_icon(stat[0], stat[1], 32.0))
+		_label(str(stat[2]), 16).reparent(stats)
+	stats.add_child(_icon(&"crosshair", "Hit rate", 32.0))
+	_label("%d%%" % accuracy, 16).reparent(stats)
+	_button(&"restart", "Play again", _start).grab_focus()
+	_button(&"exit", "Leave match", quit_to_title.emit)
 	show()
 
 
@@ -112,7 +129,7 @@ func _swap_locale() -> void:
 	show_title()
 
 
-func _volume(text: String, bus: StringName) -> void:
+func _volume(icon: StringName, text: String, bus: StringName) -> void:
 	var slider := HSlider.new()
 	slider.max_value = 1.0
 	slider.step = 0.05
@@ -126,7 +143,7 @@ func _volume(text: String, bus: StringName) -> void:
 	slider.value_changed.connect(apply)
 	slider.drag_ended.connect(func(_changed: bool) -> void: settings.save("user://settings.cfg"))
 	apply.call(slider.value)
-	_row(text, slider)
+	_row(icon, text, slider)
 
 
 func _clear() -> void:
@@ -144,19 +161,64 @@ func _label(text: String, px: int) -> Label:
 	return label
 
 
-func _button(text: String, action: Callable) -> Button:
+func _button(icon: StringName, text: String, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = tr(text)
+	button.icon = Icons.get_icon(icon)
 	button.pressed.connect(action)
 	_box.add_child(button)
 	return button
 
 
-func _row(text: String, control: Control) -> void:
+func _row(icon: StringName, text: String, control: Control) -> void:
 	var row := HBoxContainer.new()
+	row.add_child(_icon(icon, "", 32.0))
 	var label := Label.new()
 	label.text = tr(text)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	row.add_child(control)
 	_box.add_child(row)
+
+
+## A centred row for icons and labels.
+func _line() -> HBoxContainer:
+	var line := HBoxContainer.new()
+	line.alignment = BoxContainer.ALIGNMENT_CENTER
+	_box.add_child(line)
+	return line
+
+
+func _icon(id: StringName, tooltip: String, px: float) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.texture = Icons.get_icon(id)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2.ONE * px
+	icon.tooltip_text = tr(tooltip) if tooltip else ""
+	return icon
+
+
+func _legend() -> void:
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	grid.add_theme_constant_override("h_separation", 24)
+	var cap := StyleBoxFlat.new()
+	cap.bg_color = Color(0.05, 0.05, 0.08)
+	cap.set_border_width_all(2)
+	cap.border_color = Color(0.75, 0.75, 0.8)
+	cap.set_content_margin_all(4.0)
+	for entry: Array in LEGEND:
+		var line := HBoxContainer.new()
+		for key: Variant in entry[0]:
+			if key is StringName:
+				line.add_child(_icon(key, "", 32.0))
+				continue
+			var label := Label.new()
+			label.text = tr(key)
+			label.add_theme_stylebox_override("normal", cap)
+			line.add_child(label)
+		line.add_child(_icon(entry[1], "", 32.0))
+		grid.add_child(line)
+	_box.add_child(grid)

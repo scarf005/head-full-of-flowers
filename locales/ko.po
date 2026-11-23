@@ -57,12 +57,6 @@ msgstr "추가 지구력"
 msgid "Kevlar Vest"
 msgstr "방탄조끼"
 
-msgid "Grenade"
-msgstr "수류탄"
-
-msgid "Molotov"
-msgstr "화염병"
-
 msgid "Free for All"
 msgstr "개인전"
 
@@ -131,3 +125,12 @@ msgstr "다시 하기"
 
 msgid "Head Full of Flowers"
 msgstr "머릿속이 꽃밭"
+
+msgid "LMB"
+msgstr "좌클릭"
+
+msgid "RMB"
+msgstr "우클릭"
+
+msgid "Wheel"
+msgstr "휠"
