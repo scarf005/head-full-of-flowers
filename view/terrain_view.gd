@@ -59,6 +59,8 @@ var _owners := PackedInt32Array()
 ## Cell index -> the pixel art of the prop, rock or loot box that stands on it.
 var _sprites := {}
 var _sprite_material := ShaderMaterial.new()
+## For flat props: before the shapes on the ground, so the ring of an item shows on a rug.
+var _flat_material := ShaderMaterial.new()
 
 
 func setup(world: SimWorld) -> void:
@@ -69,6 +71,9 @@ func setup(world: SimWorld) -> void:
 	_sprite_material.set_shader_parameter(&"atlas", PropArt.atlas())
 	# After the ink outline pass, as the units: the art has its own outline.
 	_sprite_material.render_priority = 1
+	_flat_material.shader = _sprite_material.shader
+	_flat_material.set_shader_parameter(&"atlas", PropArt.atlas())
+	_flat_material.render_priority = -1
 	add_child(_ground())
 	for building in map.buildings:
 		var rect: Rect2i = building.rect
@@ -166,7 +171,7 @@ func _sprite(cell: int, kind: StringName, at: Vector2, cells: Vector2i) -> void:
 	var node := MeshInstance3D.new()
 	# 2 looks for rocks.
 	node.mesh = PropArt.mesh(&"rocks2" if kind == &"rocks" and cell % 2 == 1 else kind, cells)
-	node.material_override = _sprite_material
+	node.material_override = _flat_material if kind in PropArt.FLAT else _sprite_material
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Props and units are upright art on the ground: the one nearer to the camera draws last. A flat prop sorts by
 	# its north edge, so a unit on it draws over it.
