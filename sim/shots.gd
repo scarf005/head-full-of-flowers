@@ -36,31 +36,36 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		p.pos = p.pos.limit_length(w.arena_radius - 0.05)
 		return _bounce(w, p, inward) or _end(w, p, p.pos)
 	var ballistic: bool = p.kind == &"ballistic"
-	var cell := w.grid.ray_cell(from - back, p.pos, ballistic)
+	# The shot stops at the first unit on its step. Cover behind that unit takes no hit and no damage away.
+	var reach: float = ((1.2 if p.kind == &"rocket" else 1.25) + p.fuse) if explosive else 0.0
+	var hit: SimUnit = null
+	var stop: Vector2 = p.pos
+	for u in w.units:
+		var near := Geometry2D.get_closest_point_to_segment(u.pos, from, p.pos)
+		if u.index != p.owner and u.team != p.team and near.distance_to(u.pos) - u.radius - p.radius <= reach:
+			hit = u
+			stop = near
+			break
+	var cell := w.grid.ray_cell(from - back, stop, ballistic)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
 		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage), p.owner)
-		var impact := w.grid.ricochet_impact(from - back, p.pos, ballistic)
+		var impact := w.grid.ricochet_impact(from - back, stop, ballistic)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
 		return _bounce(w, p, normal) or _end(w, p, p.pos)
 	# A bullet goes through a hedge, hurts it and keeps half its damage. It loses damage at the first hedge only.
-	var leaf := w.grid.ray_cell(from, p.pos) if ballistic and not p.hedged else Vector2i(-1, -1)
+	var leaf := w.grid.ray_cell(from, stop) if ballistic and not p.hedged else Vector2i(-1, -1)
 	if leaf.x >= 0 and w.grid.material[leaf.y * w.grid.size + leaf.x] == Defs.Mat.HEDGE:
 		w.hit_cell(leaf, p.damage, p.owner)
 		p.damage *= 0.5
 		p.hedged = true
-	for u in w.units:
-		if u.index == p.owner or u.team == p.team:
-			continue
-		var near := Geometry2D.get_closest_point_to_segment(u.pos, from, p.pos)
-		var gap: float = near.distance_to(u.pos) - u.radius - p.radius
-		if explosive and gap <= (1.2 if p.kind == &"rocket" else 1.25) + p.fuse:
-			return _end(w, p, near)
-		if not explosive and gap <= 0.0:
-			Combat.damage(w, u, p.damage, p.owner, near, p.vel, &"shot", p.weapon)
-			return false
-	return true
+	if hit == null:
+		return true
+	if explosive:
+		return _end(w, p, stop)
+	Combat.damage(w, hit, p.damage, p.owner, stop, p.vel, &"shot", p.weapon)
+	return false
 
 
 static func _home(w: SimWorld, p: Dictionary, dt: float) -> void:
