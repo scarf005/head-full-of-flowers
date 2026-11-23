@@ -65,3 +65,18 @@ func test_kill_feed_shows_the_weapon_of_the_hit_and_a_skull_without_one() -> voi
 	for e in w.events:
 		view.event.emit(e)
 	assert_eq(hud.feed.map(func(row: Dictionary) -> StringName: return row.icon), [&"shotgun", &"skull"])
+
+
+func test_damage_number_adds_hits_and_shows_again_after_it_is_gone() -> void:
+	var view: GameView = autofree(GameView.new())
+	# A match of bots reads no input actions. Only main.gd adds those.
+	view.autoplay = true
+	add_child(view)
+	view.setup({seed = 1, size = 2})
+	view._number(1, Vector2.ZERO, 3.0, Color.WHITE)
+	view._number(1, Vector2.ZERO, 4.0, Color.WHITE)
+	assert_eq(view._numbers[1].text, "7")
+	# The number goes away after 0.72 s. The next hit starts a new number.
+	await wait_seconds(0.9)
+	view._number(1, Vector2.ZERO, 5.0, Color.WHITE)
+	assert_true(is_instance_valid(view._numbers[1]) and view._numbers[1].text == "5")
