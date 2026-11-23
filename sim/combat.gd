@@ -13,7 +13,7 @@ static func fire(w: SimWorld, u: SimUnit) -> bool:
 	var s := u.slot()
 	var weapon: Dictionary = Defs.WEAPONS[s.id]
 	if s.ammo <= 0.0:
-		_after_shot(u)
+		_after_shot(w, u)
 		return false
 	var shots: int = mini(weapon.get("burst_shots", 1), int(s.ammo))
 	var interval: float = weapon.get("burst_interval", 0.0) / u.fire_rate_mul
@@ -83,11 +83,13 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 	u.recoil = minf(1.0, u.recoil + 0.38 + weapon.pellets * 0.05)
 	w.emit(&"shot", {unit = u.index, pos = u.pos, dir = dir, weapon = s.id, first = u.burst_left == u.burst_total - 1})
 	if s.ammo <= 0.0:
-		_after_shot(u)
+		_after_shot(w, u)
 
 
-static func _after_shot(u: SimUnit) -> void:
-	if not Arsenal.start_reload(u) and u.slot().reserve <= 0.0:
+static func _after_shot(w: SimWorld, u: SimUnit) -> void:
+	if Arsenal.start_reload(u):
+		w.emit(&"reload", {unit = u.index})
+	elif u.slot().reserve <= 0.0:
 		Arsenal.drop_empty(u)
 
 
