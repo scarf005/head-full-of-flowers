@@ -174,6 +174,7 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 		return true
 	if t.molotov:
 		add_zone(w, t.pos, t.owner, &"molotov")
+		w.hit_stop = maxf(w.hit_stop, Combat.BLAST_STOP[&"molotov"])
 	else:
 		Combat.explode(w, t.pos, BLAST_RADIUS, 0.0, t.owner, true, &"grenade")
 	return false

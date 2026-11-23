@@ -3,7 +3,7 @@ class_name Combat
 
 const AIM_ASSIST_RANGE := 24.0
 ## Seconds of hit stop for a blast, by the weapon that made it.
-const BLAST_STOP := {&"grenade": 0.022, &"grenade-launcher": 0.01, &"rocket-launcher": 0.016}
+const BLAST_STOP := {&"grenade": 0.022, &"grenade-launcher": 0.01, &"rocket-launcher": 0.016, &"molotov": 0.006}
 
 
 ## Fires the active weapon when the unit can fire. Returns true when a shot left the barrel.
