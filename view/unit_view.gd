@@ -26,19 +26,18 @@ var _feet: Array[MeshInstance3D] = []
 var _gun: MeshInstance3D
 var _bar: MeshInstance3D
 var _stride := 0.0
+## Materials of the figure that go white at a hit.
+var _lit: Array[StandardMaterial3D] = []
 
 
 func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	unit = sim_unit
 	color = team_color
 	material.roughness = 0.9
-	# On from the start: a later switch compiles a new shader in the middle of a fight.
-	material.emission_enabled = true
-	material.emission = Color.BLACK
-	var dark := StandardMaterial3D.new()
-	dark.albedo_color = Color(0.13, 0.13, 0.17)
-	var skin := StandardMaterial3D.new()
-	skin.albedo_color = color.lerp(Color(1.0, 0.9, 0.8), 0.6)
+	material.albedo_color = color
+	_lit.append(material)
+	var dark := _lit_material(Color(0.13, 0.13, 0.17))
+	var skin := _lit_material(color.lerp(Color(1.0, 0.9, 0.8), 0.6))
 	var plain := StandardMaterial3D.new()
 	plain.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	plain.albedo_color = color
@@ -64,14 +63,11 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	for n in 5:
 		var out := Vector3(cos(n * TAU / 5.0), 0.0, sin(n * TAU / 5.0)) * 0.22
 		_part(ball, out + Vector3(0, 1.1, 0), Vector3(0.34, 0.12, 0.34), material, _body)
-	var heart := StandardMaterial3D.new()
-	heart.albedo_color = Color(1.0, 0.82, 0.2)
+	var heart := _lit_material(Color(1.0, 0.82, 0.2))
 	_part(ball, Vector3(0, 1.14, 0), Vector3(0.22, 0.14, 0.22), heart, _body)
-	var steel := StandardMaterial3D.new()
-	steel.albedo_color = Color(0.36, 0.38, 0.46)
+	var steel := _lit_material(Color(0.36, 0.38, 0.46))
 	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, steel, _body)
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color(0.62, 0.42, 0.26)
+	var wood := _lit_material(Color(0.62, 0.42, 0.26))
 	# Stock: the rear third of the gun, a little wider, in wood.
 	_part(BoxMesh.new(), Vector3(0, -0.15, 0.36), Vector3(1.5, 1.3, 0.3), wood, _gun)
 	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, plain)
@@ -82,6 +78,14 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 		ring.outer_radius = 0.5
 		ring.ring_segments = 3
 		_part(ring, Vector3(0, 0.04, 0), Vector3(1, 0.2, 1), plain).cast_shadow = _bar.cast_shadow
+
+
+func _ready() -> void:
+	for lit in _lit:
+		# On from the start: a later switch compiles a new shader in the middle of a fight.
+		lit.emission_enabled = true
+		lit.emission = Color.BLACK
+		lit.emission_energy_multiplier = 3.0
 
 
 func _process(delta: float) -> void:
@@ -105,9 +109,17 @@ func _process(delta: float) -> void:
 	_gun.scale = size
 	# In front of the blossom, so the camera above sees where the unit aims.
 	_gun.position = Vector3(0.2, 0.55, -0.3 - size.z * 0.5 + unit.recoil * 0.18)
-	material.albedo_color = color.lerp(Color.WHITE, unit.hit_flash)
-	material.emission = Color.WHITE * unit.hit_flash
+	# The whole figure goes white at a hit.
+	for lit in _lit:
+		lit.emission = Color.WHITE * unit.hit_flash
 	_bar.scale = Vector3(maxf(0.02, unit.hp / unit.max_hp) * 0.9, 0.07, 0.07)
+
+
+func _lit_material(albedo: Color) -> StandardMaterial3D:
+	var lit := StandardMaterial3D.new()
+	lit.albedo_color = albedo
+	_lit.append(lit)
+	return lit
 
 
 func _part(mesh: Mesh, at: Vector3, size: Vector3, mat: Material, parent: Node3D = self) -> MeshInstance3D:
