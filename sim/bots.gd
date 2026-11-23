@@ -177,7 +177,7 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 	var advance := toward if u.ai_direct else _follow(w, u, target.pos)
 	# A bot with an explosive weapon makes room for its own blast and stops where it can fire.
 	if BLAST_SAFE.has(id) and d < BLAST_SAFE[id] + 1.5:
-		advance *= -1.0 if d < BLAST_SAFE[id] else 0.0
+		advance = -toward if d < BLAST_SAFE[id] else Vector2.ZERO
 	if not flee and not w.hard and u.ai_timer > 1.1:
 		# An easy bot only walks up for the first part of each decision. It does not aim or fire.
 		return advance * 0.42
