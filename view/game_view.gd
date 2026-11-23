@@ -143,7 +143,8 @@ func _process(delta: float) -> void:
 	# Look ahead in proportion to the distance of the pointer. A fixed distance along the aim swings the view by
 	# 4 m each time the pointer moves across the player.
 	var lead := player.aim * 2.0
-	if not _stick_aim and not autoplay:
+	# The aim does not follow the pointer in the intro and after the end, so the view does not either.
+	if not _stick_aim and not autoplay and not world.finished and intro <= 0.0:
 		lead = ((pointer() - player.pos) * 0.18).limit_length(2.5)
 	_focus = _focus.lerp(player.pos - player.vel * lag + lead, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
