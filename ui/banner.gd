@@ -14,6 +14,8 @@ var _streak := 0
 var _streak_at := -10.0
 var _leader := -1
 var _second := 11
+## True while the player stands outside the arena border.
+var _out := false
 
 
 func setup(view: GameView) -> void:
@@ -27,9 +29,7 @@ func setup(view: GameView) -> void:
 
 
 func say(text: String, color: Color, seconds: float) -> void:
-	# A call-out that repeats in each frame, for example out of bounds, stays at its size.
-	if text != _text or _ttl <= 0.0:
-		_age = 0.0
+	_age = 0.0
 	_text = text
 	_color = color
 	_ttl = seconds
@@ -54,6 +54,7 @@ func _process(delta: float) -> void:
 	_ttl -= 0.0 if get_tree().paused else delta
 	_age += delta
 	var w := game.world
+	_out = false
 	if game.autoplay or w.finished:
 		queue_redraw()
 		return
@@ -65,8 +66,7 @@ func _process(delta: float) -> void:
 		elif _leader == mine:
 			say(tr("Lead lost"), Color(1.0, 0.4, 0.4), 1.2)
 		_leader = top.team
-	if game.player.pos.length() > w.arena_radius - game.player.radius - 0.05:
-		say(tr("Out of bounds"), Color(1.0, 0.4, 0.4), 0.2)
+	_out = game.player.pos.length() > w.arena_radius - game.player.radius - 0.05
 	var second := ceili(w.time_left / Defs.GAME_SPEED)
 	if second <= 10 and second < _second:
 		_second = second
@@ -76,10 +76,16 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	if _ttl <= 0.0:
-		return
 	var font := get_theme_default_font()
 	var at := Vector2(0.0, size.y * 0.3)
+	if _out:
+		# A line of its own, below the call-outs: the last seconds stay in view.
+		var low := at + Vector2(0.0, 56.0)
+		var warning := tr("Out of bounds")
+		draw_string_outline(font, low, warning, HORIZONTAL_ALIGNMENT_CENTER, size.x, 32, 8, Color(0.05, 0.05, 0.08))
+		draw_string(font, low, warning, HORIZONTAL_ALIGNMENT_CENTER, size.x, 32, Color(1.0, 0.4, 0.4))
+	if _ttl <= 0.0:
+		return
 	# Steps of 16 px keep the pixel font sharp.
 	var px := 64 + 16 * ceili(3.0 * clampf(1.0 - _age / 0.12, 0.0, 1.0))
 	at.y += (px - 64) * 0.35
