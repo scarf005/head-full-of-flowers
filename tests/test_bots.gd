@@ -166,3 +166,12 @@ func test_hunter_keeps_its_goal_while_the_enemy_moves_behind_a_wall() -> void:
 	for n in 20:
 		Bots.think(w, a, DT)
 	assert_eq(a.ai_goal, Vector2(2, 0), "no new goal before the next decision")
+
+
+func test_hunt_goal_for_an_enemy_at_the_border_is_free_and_near_the_margin() -> void:
+	b.pos = Vector2(w.arena_radius - 1.0, 0)
+	var clamped := Vector2(w.arena_radius - Bots.EDGE_MARGIN, 0)
+	w.grid.set_cell(w.grid.cell_of(clamped), Defs.Mat.ROCK)
+	var goal := Bots._hunt_goal(w, b)
+	assert_false(w.grid.circle_hits(goal, 0.9), "goal is free")
+	assert_lt(goal.distance_to(clamped), 2.5)

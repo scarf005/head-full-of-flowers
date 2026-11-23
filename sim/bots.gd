@@ -125,10 +125,9 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 			u.ai_goal = _hunt_goal(w, w.units[u.ai_target])
 
 
-## Where a hunter walks: the place of the enemy, moved out of the border margin when that point is free.
+## Where a hunter walks: the place of the enemy, moved out of the border margin and then to the nearest free point.
 static func _hunt_goal(w: SimWorld, target: SimUnit) -> Vector2:
-	var inside := target.pos.limit_length(w.arena_radius - EDGE_MARGIN)
-	return target.pos if w.grid.circle_hits(inside, target.radius) else inside
+	return w._free_near(target.pos.limit_length(w.arena_radius - EDGE_MARGIN))
 
 
 ## True when a pickup is a perk the unit can still stack, or a weapon better than what it holds.

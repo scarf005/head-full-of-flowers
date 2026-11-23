@@ -40,7 +40,7 @@ var _shots: MultiMesh
 var _blobs: MultiMesh
 var _fires: MultiMesh
 var _flames: MultiMesh
-var _terrain := TerrainView.new()
+var _terrain: TerrainView
 var _pickups: Array[Sprite3D] = []
 var _arena: MeshInstance3D
 var _lights := 0
@@ -55,6 +55,7 @@ func setup(config: Dictionary) -> void:
 	var env := WorldEnvironment.new()
 	env.environment = Quality.environment()
 	add_child(env)
+	_terrain = TerrainView.new()
 	_terrain.setup(world)
 	add_child(_terrain)
 	var grass := GrassView.new()

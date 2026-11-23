@@ -37,6 +37,8 @@ func _ready() -> void:
 		var parts := arg.trim_prefix("--").split("=")
 		args[parts[0]] = parts[1] if parts.size() > 1 else "1"
 	_add_actions()
+	# No mouse event comes before the pointer moves, so read the place of the pointer one time.
+	GameView.mouse = get_viewport().get_mouse_position()
 	var container := SubViewportContainer.new()
 	container.set_anchors_preset(Control.PRESET_FULL_RECT)
 	container.stretch = true
