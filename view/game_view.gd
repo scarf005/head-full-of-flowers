@@ -299,8 +299,9 @@ func _number(at: Vector2, amount: float, color: Color) -> void:
 	label.text = str(int(amount))
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
-	label.pixel_size = 0.04
+	label.pixel_size = 0.06
 	label.font_size = 16
+	label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	label.outline_size = 6
 	label.modulate = color
 	label.position = Vector3(at.x + randf_range(-0.3, 0.3), 1.6, at.y)
