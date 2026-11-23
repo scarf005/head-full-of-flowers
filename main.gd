@@ -114,11 +114,16 @@ func _set_paused(paused: bool) -> void:
 func _process(_delta: float) -> void:
 	frame += 1
 	dither.set_shader_parameter("pattern_offset", game.camera.pattern_offset)
-	if args.has("capture") and frame == int(args.get("frames", "30")):
+	var first := int(args.get("frames", "30"))
+	var shots := int(args.get("burst", "1"))
+	if args.has("capture") and frame >= first and (frame - first) % 3 == 0:
+		var index := (frame - first) / 3
+		var path: String = args["capture"]
 		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png(args["capture"])
-		print("captured ", args["capture"], " ", RenderingServer.get_current_rendering_method())
-		get_tree().quit()
+		get_viewport().get_texture().get_image().save_png(path if shots == 1 else path + ".%03d.png" % index)
+		if index >= shots - 1:
+			print("captured ", path, " ", RenderingServer.get_current_rendering_method())
+			get_tree().quit()
 
 
 func _add_actions() -> void:

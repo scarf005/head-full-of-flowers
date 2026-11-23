@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the game off the desktop in headless gamescope with a private profile and save one frame.
-# usage: tools/capture.sh <out.png> [godot args...] [-- game args...]
+# usage: tools/capture.sh <out.png> [godot args...] [-- game args...]   (--burst=N saves N frames as <out.png>.NNN.png)
 set -euo pipefail
 export PATH="$HOME/opt/bin:/usr/local/bin:/usr/bin:$PATH"
 out=$(realpath -m "$1")
