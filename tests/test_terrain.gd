@@ -44,6 +44,15 @@ func test_shot_barrel_explodes_for_the_shooter_and_sets_off_the_barrel_next_to_i
 	assert_gt(w.flowers.score(0), 0, "the shooter's team scores the petals")
 
 
+func test_fire_does_not_burn_on_water() -> void:
+	w.map.tiles.fill(TerrainMap.Tile.WATER)
+	Shots.add_zone(w, Vector2(3, 0), 0, &"molotov")
+	assert_eq(w.zones.size(), 0)
+	w.map.tiles.fill(TerrainMap.Tile.GRASS)
+	Shots.add_zone(w, Vector2(3, 0), 0, &"molotov")
+	assert_eq(w.zones.size(), 1)
+
+
 func test_crate_breaks_on_the_third_rifle_hit() -> void:
 	var cell := _prop(&"crate", Vector2(3.5, 0.5))
 	for n in 2:

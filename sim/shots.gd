@@ -173,6 +173,9 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 
 ## Adds the fire of a weapon. A molotov fire is wide. The flame patch of other weapons is small and scorches flowers.
 static func add_zone(w: SimWorld, at: Vector2, source: int, weapon: StringName) -> void:
+	# Fire does not burn on water.
+	if w.map.tile_at(at) == TerrainMap.Tile.WATER:
+		return
 	var flame := weapon != &"molotov"
 	var zone := {pos = at, owner = source, flame = flame, radius = 1.12 if flame else 2.9, weapon = weapon}
 	zone.merge({life = 3.0 if flame else 2.2, every = 1.0 if flame else 0.22, tick = 0.0})
