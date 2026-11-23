@@ -55,3 +55,29 @@ func test_timed_shape_is_gone_after_its_life() -> void:
 	fx.step(0.06)
 	assert_eq(fx.multimesh.visible_instance_count, 0)
 	fx.free()
+
+
+func test_each_prop_of_a_generated_map_has_art_no_wider_than_its_footprint() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var image := PropArt.atlas().get_image()
+	for prop in MapGen.generate(rng).props:
+		var art := PropArt.rect(prop.kind, Vector2i(prop.width, prop.height))
+		assert_false(image.get_region(art).is_invisible(), "art of %s" % prop.kind)
+		assert_lte(art.size.x, prop.width * 20, "width of %s" % prop.kind)
+		assert_eq(art.size.x % 2, 0, "an even width keeps the middle of %s on a pixel border" % prop.kind)
+
+
+func test_art_of_a_crate_goes_away_when_a_hit_breaks_the_crate() -> void:
+	var world := SimWorld.new({seed = 1})
+	var view := TerrainView.new()
+	add_child_autofree(view)
+	view.setup(world)
+	view._process(0.0)
+	var shown := func() -> int:
+		return view.get_children().filter(func(node: Node) -> bool: return not node.is_queued_for_deletion()).size()
+	var before: int = shown.call()
+	var crate: Variant = world.map.props.filter(func(prop: Variant) -> bool: return prop.kind == &"crate")[0]
+	world.hit_cell(world.grid.cell_of(Vector2(crate.x, crate.y)), 100.0)
+	view._process(0.0)
+	assert_eq(shown.call(), before - 1)

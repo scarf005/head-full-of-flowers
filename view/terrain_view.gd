@@ -28,28 +28,6 @@ const CELL_LOOK := [
 	[Color("2f6b3a"), 0.9],
 	[Color("8b6a4c"), 0.7],
 ]
-## Per prop kind: [colour, height in metres].
-const PROP_LOOK := {
-	&"bed": [Color("c9d4ee"), 0.45],
-	&"table": [Color("a8794e"), 0.6],
-	&"chair": [Color("8a5f3c"), 0.5],
-	&"bookshelf": [Color("6e4a34"), 1.1],
-	&"shelf": [Color("8d8f96"), 1.0],
-	&"counter": [Color("d7d2c8"), 0.7],
-	&"desk": [Color("94704a"), 0.6],
-	&"workbench": [Color("70757d"), 0.7],
-	&"crate": [Color("c79a55"), 0.8],
-	&"barrel": [Color("b0483c"), 0.9],
-	&"rug": [Color("b3525e"), 0.03],
-	&"plant": [Color("3f9a4e"), 0.7],
-	&"planter": [Color("57a84e"), 0.45],
-	&"bench": [Color("9a7650"), 0.4],
-	&"flowerbed": [Color("e58fb1"), 0.35],
-	&"wheelbarrow": [Color("c0563e"), 0.5],
-	&"rocks": [Color("8a8d92"), 0.6],
-	&"reeds": [Color("9aa85a"), 0.75],
-	&"lilies": [Color("7fd0a0"), 0.05],
-}
 const WALL_COLORS := {
 	&"house": Color("e9dcc0"),
 	&"office": Color("c3ccd6"),
@@ -59,18 +37,12 @@ const WALL_COLORS := {
 	&"greenhouse": Color("d6e6d0"),
 }
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
-## Places for the boxes of loot boxes that appear in a match: 2 for each.
-const SPARE := 96
 const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
-const BLANKET := Color("6f8fd6")
 const BOOKS: Array[Color] = [Color("c9584a"), Color("e0b64f"), Color("4f8a6a"), Color("5873b8")]
-const SOIL := Color("6b4a33")
-const PAPER := Color("f1ead8")
 const DOOR_COLOR := Color("5a3d2a")
 ## Height in metres of the wall under a window.
 const SILL := 0.5
-const HIGH_TIER_COLOR := Color("f2f0e6")
 
 static var _warp: FastNoiseLite
 
@@ -83,12 +55,19 @@ var _walls := {}
 var _boxes_material := ShaderMaterial.new()
 ## For each box, the cell that it stands on, or -1 for a box that stays.
 var _owners := PackedInt32Array()
+## Cell index -> the pixel art of the prop, rock or loot box that stands on it.
+var _sprites := {}
+var _sprite_material := ShaderMaterial.new()
 
 
 func setup(world: SimWorld) -> void:
 	grid = world.grid
 	map = world.map
 	_boxes_material.shader = preload("res://shaders/box.gdshader")
+	_sprite_material.shader = preload("res://shaders/prop.gdshader")
+	_sprite_material.set_shader_parameter(&"atlas", PropArt.atlas())
+	# After the ink outline pass, as the units: the art has its own outline.
+	_sprite_material.render_priority = 1
 	add_child(_ground())
 	for building in map.buildings:
 		var rect: Rect2i = building.rect
@@ -114,6 +93,10 @@ func _process(_delta: float) -> void:
 			if _owners[n] >= 0 and grid.hp[_owners[n]] <= 0.0:
 				_owners[n] = -1
 				_boxes.set_instance_transform(n, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+		for cell: int in _sprites.keys():
+			if grid.hp[cell] <= 0.0:
+				_sprites[cell].queue_free()
+				_sprites.erase(cell)
 		return
 	var out := []
 	for i in grid.material.size():
@@ -125,14 +108,8 @@ func _process(_delta: float) -> void:
 		var centre := Vector2(cell) + Vector2(0.5 - grid.half, 0.5 - grid.half)
 		var look: Array = CELL_LOOK[mat]
 		if not THICK.has(mat):
-			var rock := float(mat == Defs.Mat.ROCK) * (0.5 + 0.5 * sin(i * 12.9898))
-			var size := Vector2(0.78, 0.78) + Vector2(0.3, -0.1) * rock
-			var tone: Color = HIGH_TIER_COLOR if grid.high_tier[i] else look[0]
-			_box(out, centre, size, look[1] * (1.0 - 0.4 * rock), tone.darkened(0.2 * float(mat == Defs.Mat.BOX)))
-			if mat == Defs.Mat.BOX:
-				_box(out, centre, Vector2(0.56, 0.56), look[1] + 0.05, tone)
-			if rock > 0.0:
-				out[-1][0] = out[-1][0].rotated_local(Vector3.UP, rock * 5.0)
+			var box: StringName = &"box_high" if grid.high_tier[i] else &"box"
+			_sprite(i, box if mat == Defs.Mat.BOX else &"rocks", centre, Vector2i.ONE)
 			continue
 		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
 		var thick: float = THICK[mat]
@@ -152,11 +129,7 @@ func _process(_delta: float) -> void:
 	for prop in map.props:
 		var i := grid.size * floori(prop.y + grid.half) + floori(prop.x + grid.half)
 		if grid.hp[i] > 0.0:
-			var look: Array = PROP_LOOK.get(prop.kind, CELL_LOOK[Defs.Mat.PROP])
-			var inset := 0.5 if prop.width * prop.height == 1 and not prop.solid else 0.2
-			var size := Vector2(prop.width - inset, prop.height - inset)
-			_prop(out, prop.kind, Vector2(prop.x, prop.y), size, look)
-			_claim(out, i)
+			_sprite(i, prop.kind, Vector2(prop.x, prop.y), Vector2i(prop.width, prop.height))
 	for building in map.buildings:
 		for door: Vector2i in building.doors:
 			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
@@ -168,9 +141,7 @@ func _process(_delta: float) -> void:
 			)
 			out.append([leaf, DOOR_COLOR])
 	_claim(out, -1)
-	# A change of the instance count erases all instances, so the boxes of a match need their places now.
-	_boxes.instance_count = out.size() + SPARE
-	_boxes.visible_instance_count = out.size()
+	_boxes.instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
 		_boxes.set_instance_color(n, out[n][1])
@@ -179,19 +150,7 @@ func _process(_delta: float) -> void:
 ## Draws a loot box that the match put on a free cell.
 func add_box(cell: Vector2i) -> void:
 	var i := cell.y * grid.size + cell.x
-	var tone: Color = HIGH_TIER_COLOR if grid.high_tier[i] else CELL_LOOK[Defs.Mat.BOX][0]
-	var top: float = CELL_LOOK[Defs.Mat.BOX][1]
-	var out := []
-	_box(out, grid.center_of(cell), Vector2(0.78, 0.78), top, tone.darkened(0.2))
-	_box(out, grid.center_of(cell), Vector2(0.56, 0.56), top + 0.05, tone)
-	for part: Array in out:
-		var n := _owners.size()
-		if n >= _boxes.instance_count:
-			return
-		_owners.append(i)
-		_boxes.set_instance_transform(n, part[0])
-		_boxes.set_instance_color(n, part[1])
-		_boxes.visible_instance_count = n + 1
+	_sprite(i, &"box_high" if grid.high_tier[i] else &"box", grid.center_of(cell), Vector2i.ONE)
 
 
 ## Records `cell` as the owner of the boxes added since the last call.
@@ -200,50 +159,21 @@ func _claim(out: Array, cell: int) -> void:
 		_owners.append(cell)
 
 
-## A piece of furniture: a darker base, a lighter top, and the parts that tell its kind.
-func _prop(out: Array, kind: StringName, at: Vector2, size: Vector2, look: Array) -> void:
-	var color: Color = look[0]
-	var top: float = look[1]
-	var long := Vector2.RIGHT if size.x >= size.y else Vector2.DOWN
-	var span := maxf(size.x, size.y)
-	_box(out, at, size, top, color.darkened(0.25))
-	_box(out, at, size - Vector2(0.14, 0.14), top + 0.05, color)
-	match kind:
-		&"bed":
-			_box(out, at + long * span * 0.2, size - long * span * 0.5 - Vector2(0.1, 0.1), top + 0.1, BLANKET)
-			_box(out, at - long * (span * 0.5 - 0.3), Vector2(0.45, 0.45), top + 0.12, Color.WHITE)
-		&"bookshelf", &"shelf":
-			for n in int(span * 2.0):
-				var book := at + long * (0.25 + n * 0.5 - span * 0.5)
-				_box(out, book, Vector2(0.3, 0.3), top + 0.12, BOOKS[n % BOOKS.size()])
-		&"crate":
-			_box(out, at, Vector2(size.x - 0.1, 0.12), top + 0.09, color.darkened(0.35))
-			_box(out, at, Vector2(0.12, size.y - 0.1), top + 0.09, color.darkened(0.35))
-		&"lilies":
-			# Two squares at 45 degrees make a round pad. A blossom sits on it.
-			out[-1][0] = out[-1][0].rotated_local(Vector3.UP, PI / 4.0)
-			_box(out, at + Vector2(0.08, -0.06), Vector2(0.16, 0.16), top + 0.12, Color("f4c6d8"))
-		&"reeds":
-			# Thin stalks of mixed height in place of one block.
-			out.resize(out.size() - 2)
-			for n in 4:
-				var stalk := at + Vector2.from_angle(n * 1.9 + at.x) * 0.18
-				_box(out, stalk, Vector2(0.08, 0.08), top * (0.7 + 0.15 * n), color.darkened(0.1 * (n % 2)))
-		&"barrel":
-			_box(out, at, size - Vector2(0.4, 0.4), top + 0.09, color.darkened(0.4))
-		&"plant", &"planter", &"flowerbed":
-			out[-1][1] = SOIL
-			var count := maxi(1, int(span * 2.0))
-			for n in count:
-				_box(out, at + long * ((n + 0.5) / count - 0.5) * span, Vector2(0.34, 0.34), top + 0.3, color)
-				out[-1][0] = out[-1][0].rotated_local(Vector3.UP, 0.8)
-		&"table", &"desk", &"workbench", &"counter":
-			_box(out, at + Vector2(0.18, -0.12) * minf(size.x, size.y), Vector2(0.3, 0.22), top + 0.09, PAPER)
-		&"rug":
-			_box(out, at, size - Vector2(0.5, 0.5), top + 0.06, color.lightened(0.25))
-		&"bench", &"chair":
-			var back := at - long.orthogonal() * (minf(size.x, size.y) * 0.5 - 0.08)
-			_box(out, back, long * span + Vector2(0.14, 0.14), top + 0.3, color.darkened(0.2))
+## Adds the pixel art of a prop, a rock or a loot box on `cell`. `at` is the middle of its footprint of `cells`.
+func _sprite(cell: int, kind: StringName, at: Vector2, cells: Vector2i) -> void:
+	var node := MeshInstance3D.new()
+	# 2 looks for rocks.
+	node.mesh = PropArt.mesh(&"rocks2" if kind == &"rocks" and cell % 2 == 1 else kind, cells)
+	node.material_override = _sprite_material
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Props and units are upright art on the ground: the one nearer to the camera draws last. A flat prop sorts by
+	# its north edge, so a unit on it draws over it.
+	node.sorting_use_aabb_center = false
+	var line := 0.2 if kind in PropArt.THIN else (-0.5 if kind in PropArt.FLAT else 0.5) * (cells.y - 0.1)
+	# On the pixel grid of the view, so each art pixel is one whole view pixel.
+	node.position = Vector3(at.x, 0.0, snappedf(at.y + line, 1.0 / (UnitView.PX_PER_M * sin(CameraRig.PITCH))))
+	add_child(node)
+	_sprites[cell] = node
 
 
 ## True when a wall, window, fence or hedge stands in `cell`.
