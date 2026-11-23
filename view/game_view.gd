@@ -146,7 +146,12 @@ func _process(delta: float) -> void:
 	lag = behind * Defs.TICK * Defs.GAME_SPEED * float(world.step > 0.0)
 	var shot_lag := behind * world.step
 	shake = maxf(0.0, shake - delta * 4.4)
-	_focus = _focus.lerp(player.pos - player.vel * lag + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
+	# Look ahead in proportion to the distance of the pointer. A fixed distance along the aim swings the view by
+	# 4 m each time the pointer moves across the player.
+	var lead := player.aim * 2.0
+	if not _stick_aim and not autoplay:
+		lead = ((pointer() - player.pos) * 0.18).limit_length(2.5)
+	_focus = _focus.lerp(player.pos - player.vel * lag + lead, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
 	var rest := camera.rest_size()
