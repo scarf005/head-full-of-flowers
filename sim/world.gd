@@ -195,6 +195,7 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		u.reload_cooldown -= dt
 		if u.reload_cooldown <= 0.0:
 			Arsenal.finish_reload(u)
+			emit(&"reloaded", {unit = u.index})
 	var wish := u.move.limit_length(1.0) * u.speed * TerrainMap.speed_mul(map.tile_at(u.pos))
 	var grip := (24.0 if wish != Vector2.ZERO else 18.0) if u.is_player or not bots_active else 16.0 if hard else 6.0
 	u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))

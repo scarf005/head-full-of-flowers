@@ -81,7 +81,7 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 	while w.projectiles.size() > Defs.PROJECTILE_CAPACITY:
 		w.projectiles.pop_front()
 	u.recoil = minf(1.0, u.recoil + 0.38 + weapon.pellets * 0.05)
-	w.emit(&"shot", {unit = u.index, pos = u.pos, dir = dir, weapon = s.id})
+	w.emit(&"shot", {unit = u.index, pos = u.pos, dir = dir, weapon = s.id, first = u.burst_left == u.burst_total - 1})
 	if s.ammo <= 0.0:
 		_after_shot(u)
 
