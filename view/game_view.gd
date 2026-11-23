@@ -66,9 +66,6 @@ func setup(config: Dictionary) -> void:
 	wall_material.shader = preload("res://shaders/arena_wall.gdshader")
 	_arena.material_override = wall_material
 	add_child(_arena)
-	var sound := Sound.new()
-	add_child(sound)
-	sound.setup(self)
 
 
 func _physics_process(_delta: float) -> void:

@@ -161,13 +161,15 @@ func _exit_tree() -> void:
 			p.stop()
 			p.stream = null
 	_streams.clear()
-	OS.delay_msec(40)
 
 
 func setup(game: GameView) -> void:
 	_game = game
 	game.event.connect(handle)
-	play_music()
+	_music_filter(20500.0)
+	_music.volume_db = MUSIC_DB
+	if not _music.playing:
+		play_music()
 
 
 ## Loops one random music track. The import setting makes it loop.

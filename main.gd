@@ -25,6 +25,7 @@ var dither: ShaderMaterial
 var game: GameView
 var hud := Hud.new()
 var menu := Menu.new()
+var sound := Sound.new()
 var frame := 0
 var args := {}
 
@@ -47,6 +48,7 @@ func _ready() -> void:
 	viewport = SubViewport.new()
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	container.add_child(viewport)
+	viewport.add_child(sound)
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hud)
@@ -79,6 +81,7 @@ func start_match(config: Dictionary, demo := false) -> void:
 	game.setup(config)
 	game.event.connect(_on_event)
 	hud.setup(game)
+	sound.setup(game)
 	hud.show()
 	menu.hide()
 	_set_paused(false)
