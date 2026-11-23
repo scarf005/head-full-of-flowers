@@ -28,7 +28,8 @@ func setup(world: SimWorld) -> void:
 func _process(_delta: float) -> void:
 	for i in field.dirty:
 		var seed := fposmod(sin(i * 12.9898) * 43758.5453, 1.0)
-		var basis := Basis(Vector3.UP, seed * TAU).scaled(Vector3.ONE * (0.45 + field.size[i] * 1.6))
+		var tilt := Basis(Vector3(cos(seed * 40.0), 0.0, sin(seed * 40.0)), 0.3)
+		var basis := (tilt * Basis(Vector3.UP, seed * TAU)).scaled(Vector3.ONE * (0.8 + field.size[i] * 2.2))
 		multimesh.set_instance_transform(i, Transform3D(basis, Vector3(field.pos[i].x, 0.0, field.pos[i].y)))
 		var color: Color = colors[field.owner[i]]
 		multimesh.set_instance_color(i, color.lerp(Color.from_hsv(seed, 0.5, 1.0), 0.12) * (0.85 + 0.3 * seed))

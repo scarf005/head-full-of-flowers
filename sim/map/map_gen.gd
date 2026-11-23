@@ -142,14 +142,20 @@ func _cells(r: Rect2i) -> Array[Vector2i]:
 	return out
 
 
-## Warped blobs of grass, clover, wild grass and dirt.
+## Warped blobs of grass, clover and wild grass, with one dirt blob in eight.
 func _ground() -> void:
 	var palette: Array[TerrainMap.Tile] = [
 		TerrainMap.Tile.GRASS, TerrainMap.Tile.CLOVER, TerrainMap.Tile.WILD_GRASS, TerrainMap.Tile.DIRT
 	]
 	var blobs := []
 	for i in 24:
-		blobs.append([Vector2(rng.randf(), rng.randf()) * size, size * rng.randf_range(0.08, 0.16), palette[i % 4]])
+		blobs.append(
+			[
+				Vector2(rng.randf(), rng.randf()) * size,
+				size * rng.randf_range(0.08, 0.16),
+				TerrainMap.Tile.GRASS if i % 8 == 3 else palette[i % 4]
+			]
+		)
 	var phase := rng.randf() * TAU
 	for y in size:
 		for x in size:

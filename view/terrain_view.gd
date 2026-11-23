@@ -131,6 +131,7 @@ func _ground(map: TerrainMap) -> MeshInstance3D:
 			var tile := map.tiles[y * map.size + x]
 			var shade := 0.92 + 0.16 * fposmod(sin(x * 12.9898 + y * 78.233) * 43758.5453, 1.0)
 			var color := TILE_COLORS[tile] * shade
+			color.a = float(tile <= TerrainMap.Tile.WILD_GRASS)
 			var corners := [Vector2(x, y), Vector2(x + 1, y), Vector2(x + 1, y + 1), Vector2(x, y + 1)]
 			for index: int in [0, 1, 2, 0, 2, 3]:
 				st.set_normal(Vector3.UP)

@@ -2,7 +2,7 @@ class_name GrassView
 extends MultiMeshInstance3D
 ## A field of grass tufts on the grass tiles inside the arena. The shader bends them in the wind and under units.
 
-const TALL := {TerrainMap.Tile.GRASS: 0.5, TerrainMap.Tile.CLOVER: 0.32, TerrainMap.Tile.WILD_GRASS: 0.8}
+const TALL := {TerrainMap.Tile.GRASS: 0.85, TerrainMap.Tile.CLOVER: 0.6, TerrainMap.Tile.WILD_GRASS: 1.1}
 
 var world: SimWorld
 var material := ShaderMaterial.new()
@@ -11,7 +11,7 @@ var material := ShaderMaterial.new()
 func setup(sim: SimWorld) -> void:
 	world = sim
 	var map := world.map
-	var per_tile := 9 if Quality.high() else 4
+	var per_tile := 14 if Quality.high() else 5
 	var reach := world.arena_start + 3.0
 	var buffer := PackedFloat32Array()
 	var rng := RandomNumberGenerator.new()
@@ -25,11 +25,9 @@ func setup(sim: SimWorld) -> void:
 			for n in per_tile:
 				var at := corner + Vector2(rng.randf(), rng.randf())
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(
-					Vector3(1.0, TALL[tile] * rng.randf_range(0.7, 1.3), 1.0)
+					Vector3(1.2, TALL[tile] * rng.randf_range(0.7, 1.3), 1.2)
 				)
-				var color := Color.from_hsv(
-					rng.randf_range(0.22, 0.31), rng.randf_range(0.5, 0.7), rng.randf_range(0.55, 0.8)
-				)
+				var color := Color.from_hsv(0.0, 0.0, rng.randf_range(0.9, 1.1))
 				for row in 3:
 					buffer.append_array([basis.x[row], basis.y[row], basis.z[row], [at.x, 0.0, at.y][row]])
 				buffer.append_array([color.r, color.g, color.b, 1.0])

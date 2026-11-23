@@ -10,12 +10,13 @@ uniform vec3 sheen_color : source_color = vec3(0.9, 0.98, 0.62);
 
 varying float sheen;
 varying float shade;
+varying vec3 tone;
 
 void vertex() {
 	vec3 root = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 	float g = gust(root.xz, TIME);
 	float h = UV.y * UV.y;
-	vec2 bend = WIND_DIR * (0.12 + g * 0.55) + vec2(sin(TIME * 4.0 + root.x * 3.0), cos(TIME * 3.3 + root.z * 3.0)) * 0.05 * g;
+	vec2 bend = WIND_DIR * (0.3 + g * 1.1) + vec2(sin(TIME * 4.0 + root.x * 3.0), cos(TIME * 3.3 + root.z * 3.0)) * 0.05 * g;
 	float flat_amount = 0.0;
 	for (int i = 0; i < 12; i++) {
 		vec2 away = root.xz - pushers[i].xz;
@@ -25,16 +26,17 @@ void vertex() {
 	}
 	vec3 world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2);
-	world.y *= 1.0 - 0.35 * g * h - 0.6 * flat_amount * h;
+	world.y *= 1.0 - 0.45 * g * h - 0.6 * flat_amount * h;
 	VERTEX = (inverse(MODEL_MATRIX) * vec4(world, 1.0)).xyz;
 	NORMAL = (inverse(MODEL_MATRIX) * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
-	sheen = smoothstep(0.5, 0.85, g) * (0.35 + 0.65 * UV.y);
+	sheen = smoothstep(0.45, 0.8, g) * (0.3 + 0.7 * UV.y);
 	shade = cloud(root.xz, TIME);
+	tone = meadow(root.xz, TIME);
 }
 
 void fragment() {
-	vec3 blade = COLOR.rgb * mix(0.6, 1.25, UV.y);
-	ALBEDO = mix(blade, sheen_color, sheen * 0.8) * shade;
+	vec3 blade = tone * mix(0.7, 1.3, UV.y) * COLOR.rgb;
+	ALBEDO = mix(blade, sheen_color, sheen * 0.7) * shade;
 	ROUGHNESS = 1.0;
 	ALPHA = 1.0;
 }
