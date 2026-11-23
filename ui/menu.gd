@@ -93,11 +93,28 @@ func show_results(w: SimWorld) -> void:
 	var header := _line()
 	header.add_child(_icon(&"trophy" if won else &"skull", "", 32.0))
 	_label("Victory" if won else "Defeat", 32).reparent(header)
+	var table := GridContainer.new()
+	table.columns = 4
+	table.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	table.add_theme_constant_override("h_separation", 12)
+	_box.add_child(table)
 	for place in rows.size():
-		var names := w.units.filter(func(u: SimUnit) -> bool: return u.team == rows[place].team).map(Hud.unit_name)
-		var share: float = 100.0 * rows[place].petals / maxf(1.0, total)
-		var line := _label("%d. %s   %d (%d%%)" % [place + 1, ", ".join(names), rows[place].petals, share], 16)
-		line.add_theme_color_override("font_color", w.team_color(rows[place].team))
+		var team: int = rows[place].team
+		var names := w.units.filter(func(u: SimUnit) -> bool: return u.team == team).map(Hud.unit_name)
+		var bar := ColorRect.new()
+		bar.color = w.team_color(team)
+		bar.custom_minimum_size = Vector2(140.0 * rows[place].petals / maxf(1.0, rows[0].petals), 12.0)
+		bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var share := "%d%%" % (100.0 * rows[place].petals / maxf(1.0, total))
+		for cell: Variant in ["%d" % (place + 1), ", ".join(names), bar, share]:
+			var node: Control = cell if cell is Control else _label(cell, 16)
+			if node is Label:
+				node.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				node.add_theme_color_override("font_color", bar.color if team != player.team else Color.WHITE)
+				node.reparent(table)
+			else:
+				table.add_child(node)
 	var accuracy := 100.0 * player.shots_hit / maxf(1.0, player.shots_fired)
 	var stats := _line()
 	for stat: Array in [[&"skull", "Kills", player.kills], [&"tombstone", "Deaths", player.deaths]]:

@@ -38,7 +38,7 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	var plain := StandardMaterial3D.new()
 	plain.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	plain.albedo_color = color
-	scale = Vector3.ONE * 1.3
+	scale = Vector3.ONE * 1.45
 	add_child(_legs)
 	add_child(_body)
 	for side: float in [-0.13, 0.13]:
@@ -58,11 +58,11 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	ball.rings = 3
 	_part(ball, Vector3(0, 0.88, 0), Vector3.ONE * 0.42, skin, _body)
 	for n in 5:
-		var out := Vector3(cos(n * TAU / 5.0), 0.0, sin(n * TAU / 5.0)) * 0.15
-		_part(ball, out + Vector3(0, 1.1, 0), Vector3(0.24, 0.12, 0.24), material, _body)
+		var out := Vector3(cos(n * TAU / 5.0), 0.0, sin(n * TAU / 5.0)) * 0.22
+		_part(ball, out + Vector3(0, 1.1, 0), Vector3(0.34, 0.12, 0.34), material, _body)
 	var heart := StandardMaterial3D.new()
 	heart.albedo_color = Color(1.0, 0.82, 0.2)
-	_part(ball, Vector3(0, 1.13, 0), Vector3(0.16, 0.14, 0.16), heart, _body)
+	_part(ball, Vector3(0, 1.14, 0), Vector3(0.22, 0.14, 0.22), heart, _body)
 	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, dark, _body)
 	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, plain)
 	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
