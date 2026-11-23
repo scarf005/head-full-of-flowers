@@ -38,6 +38,9 @@ func setup(config: Dictionary) -> void:
 	var terrain := TerrainView.new()
 	terrain.setup(world)
 	add_child(terrain)
+	var grass := GrassView.new()
+	grass.setup(world)
+	add_child(grass)
 	var flowers := FlowerView.new()
 	flowers.setup(world)
 	add_child(flowers)
@@ -45,11 +48,15 @@ func setup(config: Dictionary) -> void:
 		var view := UnitView.new()
 		view.setup(u, world.team_color(u.team))
 		add_child(view)
-	_shots = _multimesh(BoxMesh.new(), Defs.PROJECTILE_CAPACITY, true)
 	var ball := SphereMesh.new()
-	ball.radial_segments = 6
-	ball.rings = 3
+	ball.radial_segments = 8
+	ball.rings = 4
+	var shot_material := ShaderMaterial.new()
+	shot_material.shader = preload("res://shaders/shot.gdshader")
+	_shots = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
+	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
 	_blobs = _multimesh(ball, 96, true)
+	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
 	var disc := CylinderMesh.new()
 	disc.height = 0.06
 	disc.radial_segments = 10
@@ -103,18 +110,30 @@ func _process(delta: float) -> void:
 	_shots.visible_instance_count = world.projectiles.size()
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
-		var size := Vector3(p.radius * 0.4, p.radius * 0.4, maxf(p.radius, p.vel.length() * 0.025))
-		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)).scaled(size * (3.0 if p.kind == &"flame" else 1.0))
-		_shots.set_instance_transform(i, Transform3D(basis, Vector3(p.pos.x, 0.7, p.pos.y)))
-		_shots.set_instance_color(i, SHOT_COLORS[p.kind] * 2.5)
+		var progress: float = p.travelled / p.reach
+		var wide: float = p.radius * 1.7
+		var size := Vector3(wide, wide, wide * 2.6)
+		var color := Color(1.0, 0.8, 0.1) if p.team == world.units[0].team else Color(1.0, 0.22, 0.12)
+		match p.kind:
+			&"flame":
+				size = Vector3.ONE * (0.35 + progress * 1.1)
+				color = Color(1.0, 0.9, 0.3).lerp(Color(0.9, 0.2, 0.05), progress)
+			&"grenade":
+				size = Vector3.ONE * 0.6
+			&"rocket":
+				size = Vector3(0.5, 0.5, 1.3)
+		var pulse := 1.0 + 0.12 * sin(world.now * 40.0 + i)
+		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)).scaled(size * pulse)
+		_shots.set_instance_transform(i, Transform3D(basis, Vector3(p.pos.x, 0.75, p.pos.y)))
+		_shots.set_instance_color(i, color)
 	_blobs.visible_instance_count = world.throwables.size()
 	for i in world.throwables.size():
 		var t := world.throwables[i]
 		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
 		_blobs.set_instance_transform(
-			i, Transform3D(Basis.from_scale(Vector3.ONE * 0.5), Vector3(t.pos.x, height, t.pos.y))
+			i, Transform3D(Basis.from_scale(Vector3.ONE * 0.6), Vector3(t.pos.x, height, t.pos.y))
 		)
-		_blobs.set_instance_color(i, Color(1.0, 0.5, 0.2) if t.molotov else Color(0.3, 0.45, 0.3))
+		_blobs.set_instance_color(i, Color(1.0, 0.5, 0.2) if t.molotov else Color(0.35, 0.8, 0.35))
 	_fires.visible_instance_count = world.zones.size()
 	for i in world.zones.size():
 		var z := world.zones[i]
@@ -147,18 +166,21 @@ func _read_input() -> void:
 func _show(e: Dictionary) -> void:
 	match e.type:
 		&"shot":
-			var at: Vector2 = e.pos + e.dir * 0.6
+			var at: Vector2 = e.pos + e.dir * 0.7
 			_flash(Vector3(at.x, 0.8, at.y), Color(1.0, 0.8, 0.4), 2.5, 0.06)
+			_pop(at, Color(1.0, 0.95, 0.6), 0.9, 0.05)
 			if e.unit == 0:
 				shake = minf(1.0, shake + 0.12)
 		&"hit":
 			_puff(e.pos, world.team_color(e.team), 40 if e.kill else 8, 5.0 if e.kill else 3.0)
+			_pop(e.pos, Color.WHITE, 1.6 if e.kill else 1.0, 0.07)
 			if e.target == 0 or e.source == 0:
 				shake = minf(1.2, shake + (0.66 if e.target == 0 else 0.4) + (0.5 if e.kill else 0.0))
 				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == 0 else Color.WHITE)
 		&"cell":
 			var at := world.grid.center_of(e.cell)
 			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
+			_pop(at, Color.WHITE, 0.7, 0.05)
 		&"explosion":
 			_flash(Vector3(e.pos.x, 1.0, e.pos.y), Color(1.0, 0.6, 0.25), e.radius * 2.5, 0.35)
 			_burst(e.pos, e.radius)
@@ -182,6 +204,20 @@ func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
 			_lights -= 1
 			light.queue_free()
 	)
+
+
+## White-hot ball that shows for a few frames: muzzle flash or impact spark.
+func _pop(at: Vector2, color: Color, size: float, seconds: float) -> void:
+	var ball := MeshInstance3D.new()
+	ball.mesh = _shots.mesh
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = color * 1.8
+	ball.material_override = material
+	ball.position = Vector3(at.x, 0.8, at.y)
+	ball.scale = Vector3.ONE * size
+	add_child(ball)
+	get_tree().create_timer(seconds, false).timeout.connect(ball.queue_free)
 
 
 ## One-shot spray of small cubes.

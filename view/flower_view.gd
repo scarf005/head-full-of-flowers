@@ -28,8 +28,8 @@ func setup(world: SimWorld) -> void:
 func _process(_delta: float) -> void:
 	for i in field.dirty:
 		var seed := fposmod(sin(i * 12.9898) * 43758.5453, 1.0)
-		var basis := Basis(Vector3.UP, seed * TAU).scaled(Vector3.ONE * field.size[i] * 1.5)
-		multimesh.set_instance_transform(i, Transform3D(basis, Vector3(field.pos[i].x, 0.02, field.pos[i].y)))
+		var basis := Basis(Vector3.UP, seed * TAU).scaled(Vector3.ONE * (0.45 + field.size[i] * 1.6))
+		multimesh.set_instance_transform(i, Transform3D(basis, Vector3(field.pos[i].x, 0.0, field.pos[i].y)))
 		var color: Color = colors[field.owner[i]]
 		multimesh.set_instance_color(i, color.lerp(Color.from_hsv(seed, 0.5, 1.0), 0.12) * (0.85 + 0.3 * seed))
 		multimesh.set_instance_custom_data(i, Color(field.bloom_at[i], seed, 0.0, 0.0))
@@ -38,19 +38,29 @@ func _process(_delta: float) -> void:
 	multimesh.visible_instance_count = _used
 
 
-## Five raised petals round a dark centre.
+## A stem with five cupped petals round a yellow centre. UV.x marks the tinted parts, UV.y the brightness.
 func _flower_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top := Vector3(0, 0.75, 0)
+	for point: Vector3 in [Vector3(-0.04, 0, 0), Vector3(0.04, 0, 0), top]:
+		_vertex(st, point, Vector2(0.0, 0.0))
 	for petal in 5:
 		var a := TAU * petal / 5.0
-		var points := [Vector3(0, 0.03, 0), _rim(a - 0.5, 0.75), _rim(a, 1.0), _rim(a + 0.5, 0.75)]
+		var points := [top, _rim(a - 0.42, 0.75), _rim(a, 1.0), _rim(a + 0.42, 0.75)]
 		for index: int in [0, 1, 2, 0, 2, 3]:
-			st.set_normal(Vector3.UP)
-			st.set_color(Color(1.0, 0.8, 0.35) if index == 0 else Color.WHITE)
-			st.add_vertex(points[index])
+			_vertex(st, points[index], Vector2(1.0, 0.5 if index == 0 else 1.0))
+		var centre := [top + Vector3(0, 0.03, 0), _rim(a, 0.28), _rim(a + TAU / 5.0, 0.28)]
+		for point: Vector3 in centre:
+			_vertex(st, point + Vector3(0, 0.02, 0), Vector2(0.0, 1.0))
 	return st.commit()
 
 
+func _vertex(st: SurfaceTool, point: Vector3, uv: Vector2) -> void:
+	st.set_uv(uv)
+	st.set_color(Color.WHITE)
+	st.add_vertex(point)
+
+
 func _rim(angle: float, reach: float) -> Vector3:
-	return Vector3(cos(angle) * reach * 0.5, 0.07, sin(angle) * reach * 0.5)
+	return Vector3(cos(angle) * reach * 0.5, 0.75 + reach * 0.12, sin(angle) * reach * 0.5)

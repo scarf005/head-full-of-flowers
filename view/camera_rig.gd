@@ -2,7 +2,7 @@ class_name CameraRig
 extends Camera3D
 ## Orthographic follow camera. Moves in whole low-res pixels so the dither pattern can stay fixed on the ground.
 
-const VISIBLE_WIDTH_M := 30.0
+const VISIBLE_WIDTH_M := 25.0
 const PITCH := deg_to_rad(55.0)
 const DISTANCE := 60.0
 
