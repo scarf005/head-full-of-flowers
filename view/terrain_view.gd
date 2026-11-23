@@ -158,11 +158,11 @@ func _process(_delta: float) -> void:
 	for building in map.buildings:
 		for door: Vector2i in building.doors:
 			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
-			var hinge := Vector3(door.x - grid.half + 0.5, 0.55, door.y - grid.half + 0.5)
+			var hinge := Vector3(door.x - grid.half + 0.5, 0.3, door.y - grid.half + 0.5)
 			hinge -= Vector3(0.5, 0, 0) if along_x else Vector3(0, 0, 0.5)
-			var swing := Basis(Vector3.UP, (0.0 if along_x else -PI / 2.0) - 1.1)
+			var swing := Basis(Vector3.UP, (0.0 if along_x else -PI / 2.0) - 1.4)
 			var leaf := (
-				Transform3D(swing, hinge) * Transform3D(Basis.from_scale(Vector3(0.9, 1.1, 0.08)), Vector3(0.45, 0, 0))
+				Transform3D(swing, hinge) * Transform3D(Basis.from_scale(Vector3(0.9, 0.6, 0.1)), Vector3(0.45, 0, 0))
 			)
 			out.append([leaf, DOOR_COLOR])
 	_claim(out, -1)
