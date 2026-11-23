@@ -36,7 +36,7 @@ var settings := ConfigFile.new()
 var _box := VBoxContainer.new()
 var _mode := OptionButton.new()
 var _size := SpinBox.new()
-var _hard := CheckButton.new()
+var _hard := OptionButton.new()
 var _seed := LineEdit.new()
 var _config := {}
 var _typed_seed := ""
@@ -69,9 +69,11 @@ func show_title() -> void:
 	_size = SpinBox.new()
 	_fit_size(_mode.selected, settings.get_value("match", "size", 8))
 	_row(&"players", "Size", _size)
-	_hard = CheckButton.new()
-	_hard.button_pressed = settings.get_value("match", "hard", false)
-	_row(&"bots", "Hard bots", _hard)
+	_hard = OptionButton.new()
+	_hard.add_item(tr("Easy"))
+	_hard.add_item(tr("Hard"))
+	_hard.selected = int(settings.get_value("match", "hard", false))
+	_row(&"bots", "Bots", _hard)
 	_seed = LineEdit.new()
 	_seed.placeholder_text = tr("random")
 	_row(&"seed", "Map seed", _seed)
@@ -143,9 +145,9 @@ func show_results(w: SimWorld) -> void:
 func _start() -> void:
 	settings.set_value("match", "mode", _mode.selected)
 	settings.set_value("match", "size", int(_size.value))
-	settings.set_value("match", "hard", _hard.button_pressed)
+	settings.set_value("match", "hard", _hard.selected == 1)
 	settings.save("user://settings.cfg")
-	_config = {mode = MODES[_mode.selected], size = int(_size.value), hard = _hard.button_pressed}
+	_config = {mode = MODES[_mode.selected], size = int(_size.value), hard = _hard.selected == 1}
 	_typed_seed = _seed.text
 	_again()
 
@@ -176,7 +178,6 @@ func _volume(icon: StringName, text: String, bus: StringName) -> void:
 	slider.max_value = 1.0
 	slider.step = 0.05
 	slider.value = settings.get_value("audio", bus, 0.8)
-	slider.custom_minimum_size.x = 180.0
 	var apply := func(value: float) -> void:
 		var index := AudioServer.get_bus_index(bus)
 		if index >= 0:
@@ -219,6 +220,7 @@ func _row(icon: StringName, text: String, control: Control) -> void:
 	label.text = tr(text)
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
+	control.custom_minimum_size.x = 180.0
 	row.add_child(control)
 	_box.add_child(row)
 

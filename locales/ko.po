@@ -75,8 +75,14 @@ msgstr "모드"
 msgid "Size"
 msgstr "인원"
 
-msgid "Hard bots"
-msgstr "어려운 봇"
+msgid "Bots"
+msgstr "봇"
+
+msgid "Easy"
+msgstr "쉬움"
+
+msgid "Hard"
+msgstr "어려움"
 
 msgid "Map seed"
 msgstr "맵 시드"
