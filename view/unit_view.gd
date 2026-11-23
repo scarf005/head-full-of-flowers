@@ -4,15 +4,15 @@ extends Node3D
 
 ## Gun box size in metres (width, height, length) per weapon. Other weapons use RIFLE.
 const GUNS := {
-	&"pistol": Vector3(0.08, 0.1, 0.3),
-	&"shotgun": Vector3(0.12, 0.1, 0.6),
-	&"auto-shotgun": Vector3(0.14, 0.12, 0.6),
-	&"flamethrower": Vector3(0.17, 0.17, 0.55),
-	&"grenade-launcher": Vector3(0.19, 0.19, 0.5),
-	&"rocket-launcher": Vector3(0.22, 0.22, 0.95),
-	&"battle-rifle": Vector3(0.09, 0.1, 0.85),
+	&"pistol": Vector3(0.13, 0.14, 0.34),
+	&"shotgun": Vector3(0.18, 0.14, 0.65),
+	&"auto-shotgun": Vector3(0.2, 0.16, 0.65),
+	&"flamethrower": Vector3(0.24, 0.22, 0.6),
+	&"grenade-launcher": Vector3(0.26, 0.24, 0.55),
+	&"rocket-launcher": Vector3(0.3, 0.28, 1.0),
+	&"battle-rifle": Vector3(0.14, 0.14, 0.9),
 }
-const RIFLE := Vector3(0.09, 0.09, 0.65)
+const RIFLE := Vector3(0.14, 0.13, 0.7)
 
 var unit: SimUnit
 var color: Color
@@ -66,7 +66,9 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	var heart := StandardMaterial3D.new()
 	heart.albedo_color = Color(1.0, 0.82, 0.2)
 	_part(ball, Vector3(0, 1.14, 0), Vector3(0.22, 0.14, 0.22), heart, _body)
-	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, dark, _body)
+	var steel := StandardMaterial3D.new()
+	steel.albedo_color = Color(0.36, 0.38, 0.46)
+	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, steel, _body)
 	var wood := StandardMaterial3D.new()
 	wood.albedo_color = Color(0.62, 0.42, 0.26)
 	# Stock: the rear third of the gun, a little wider, in wood.
@@ -100,7 +102,8 @@ func _process(delta: float) -> void:
 	_body.rotation.x = unit.recoil * 0.2
 	var size: Vector3 = GUNS.get(unit.weapon_id(), RIFLE)
 	_gun.scale = size
-	_gun.position = Vector3(0.2, 0.5, -0.15 - size.z * 0.5 + unit.recoil * 0.18)
+	# In front of the blossom, so the camera above sees where the unit aims.
+	_gun.position = Vector3(0.2, 0.55, -0.3 - size.z * 0.5 + unit.recoil * 0.18)
 	material.albedo_color = color.lerp(Color.WHITE, unit.hit_flash)
 	material.emission = Color.WHITE * unit.hit_flash
 	_bar.scale = Vector3(maxf(0.02, unit.hp / unit.max_hp) * 0.9, 0.07, 0.07)
