@@ -134,7 +134,16 @@ static func damage(
 		w.hit_stop = maxf(w.hit_stop, 0.016)
 	w.emit(
 		&"hit",
-		{target = target.index, source = source, pos = hit, dir = dir, damage = dealt, kill = killed, team = team}
+		{
+			target = target.index,
+			source = source,
+			pos = hit,
+			dir = dir,
+			damage = dealt,
+			kill = killed,
+			team = team,
+			cause = cause
+		}
 	)
 	if not killed:
 		return

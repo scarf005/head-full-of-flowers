@@ -54,11 +54,13 @@ func _on_event(e: Dictionary) -> void:
 		return
 	var w := game.world
 	var victim := w.units[e.target]
-	var row := {killer = "", killer_color = Color.WHITE, victim = unit_name(victim), ttl = 4.0}
+	var row := {killer = "", killer_color = Color.WHITE, victim = unit_name(victim), ttl = 4.0, icon = &"skull"}
 	row.victim_color = w.team_color(victim.team)
 	if e.source >= 0 and e.source != e.target:
 		row.killer = unit_name(w.units[e.source])
 		row.killer_color = w.team_color(e.team)
+		# What killed: the weapon in the killer's hands for a shot, else the thrown thing.
+		row.icon = {&"blast": &"grenade", &"zone": &"molotov"}.get(e.cause, w.units[e.source].weapon_id())
 	feed.append(row)
 	if feed.size() > 5:
 		feed.pop_front()
@@ -135,14 +137,14 @@ func _draw() -> void:
 		draw_texture_rect_region(
 			Icons.get_icon(p.secondary), fill, Rect2(0.0, cut, 32.0, 32.0 - cut), Color(0.8, 0.55, 0.25)
 		)
-	# Kill feed, right aligned: killer, skull, victim.
+	# Kill feed, right aligned: killer, what killed, victim.
 	for i in feed.size():
 		var row: Dictionary = feed[i]
-		var base := 32.0 + i * 22.0
+		var base := 34.0 + i * 26.0
 		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
-		_icon(&"skull", Rect2(end - 20.0, base - 14.0, 16.0, 16.0), Color.WHITE)
-		var start := end - 24.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		_icon(row.icon, Rect2(end - 28.0, base - 18.0, 24.0, 24.0), Color.WHITE)
+		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
 	_draw_map(w)
 	# Crosshair.
