@@ -11,6 +11,8 @@ const vec2 CELL = vec2(36.0, 24.0);
 
 uniform sampler2D atlas : filter_nearest, repeat_disable;
 uniform float cells = 1.0;
+// Metres away from the camera for each metre of the shape above its middle: x above the middle, y below it.
+uniform vec2 lie = vec2(0.0);
 
 varying flat vec4 shape;
 varying flat vec2 size_px;
@@ -21,8 +23,11 @@ void vertex() {
 	vec4 centre = MODELVIEW_MATRIX * vec4(0.0, 0.0, 0.0, 1.0);
 	// On the pixel grid of the view, and toward the camera in depth so grass in front does not cover the shape.
 	centre.xy = round(centre.xy * PX_PER_M) / PX_PER_M;
-	centre.z += 0.9;
-	POSITION = PROJECTION_MATRIX * (centre + vec4(VERTEX.xy * size_px / PX_PER_M, 0.0, 0.0));
+	vec2 corner = VERTEX.xy * size_px / PX_PER_M;
+	// A shape that faces the camera goes into the ground below its middle, and the ground cuts a large shape there.
+	// So a ground shape lies on the ground, and an air shape leans toward the camera from its top to its bottom.
+	centre.z += 0.9 - corner.y * (corner.y > 0.0 ? lie.x : lie.y);
+	POSITION = PROJECTION_MATRIX * (centre + vec4(corner, 0.0, 0.0));
 }
 
 // Round head at the front and a straight taper to a point at the back. Below 0 inside.

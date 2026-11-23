@@ -35,6 +35,9 @@ func _init(priority: int) -> void:
 	material.render_priority = priority
 	material.set_shader_parameter(&"atlas", atlas())
 	material.set_shader_parameter(&"cells", float(_cells.size()))
+	# A ground shape lies on the ground. An air shape stands and leans only below its middle.
+	var slope := 1.0 / tan(CameraRig.PITCH)
+	material.set_shader_parameter(&"lie", Vector2(slope if priority == 0 else 0.0, slope))
 	material_override = material
 
 
