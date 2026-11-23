@@ -176,8 +176,9 @@ func _process(delta: float) -> void:
 		var color := Color(1.0, 0.8, 0.1) if p.team == world.units[0].team else Color(1.0, 0.22, 0.12)
 		match p.kind:
 			&"flame":
-				size = Vector3.ONE * (0.35 + progress * 1.1)
-				color = Color(1.0, 0.5, 0.08, 0.35).lerp(Color(0.8, 0.14, 0.03, 0.0), progress)
+				# A tongue along the flight: white-yellow at the muzzle, dark red at the end.
+				size = Vector3(1.0, 1.0, 1.8) * (0.3 + progress * 0.9)
+				color = Color(1.0, 0.75, 0.2, 0.8).lerp(Color(0.7, 0.12, 0.03, 0.0), progress)
 			&"grenade":
 				size = Vector3.ONE * 0.6
 			&"rocket":
