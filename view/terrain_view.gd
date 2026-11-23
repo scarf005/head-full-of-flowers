@@ -50,6 +50,7 @@ var grid: ObstacleGrid
 var map: TerrainMap
 var _boxes := MultiMesh.new()
 var _revision := -1
+var _built := false
 ## Cell index -> wall colour of the building that owns the cell.
 var _walls := {}
 var _boxes_material := ShaderMaterial.new()
@@ -87,7 +88,7 @@ func _process(_delta: float) -> void:
 	if grid == null or grid.revision == _revision:
 		return
 	_revision = grid.revision
-	if not _owners.is_empty():
+	if _built:
 		# A full rebuild takes more than 10 ms. Hide only the boxes of broken cells.
 		for n in _owners.size():
 			if _owners[n] >= 0 and grid.hp[_owners[n]] <= 0.0:
@@ -98,6 +99,7 @@ func _process(_delta: float) -> void:
 				_sprites[cell].queue_free()
 				_sprites.erase(cell)
 		return
+	_built = true
 	var out := []
 	for i in grid.material.size():
 		_claim(out, i - 1)
