@@ -30,6 +30,10 @@ const MAT_HP: Array[float] = [0.0, 3.0, 4.0, 8.0, 8.0, 2.0, 3.0, 1.0]
 const MAT_ARMOR: Array[float] = [0.0, 2.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0]
 ## Prop kinds with their own hit points. A barrel blows up at the first hit, a crate takes 3 rifle hits.
 const PROP_HP := {&"barrel": 1.0, &"crate": 9.0}
+## Prop kinds that shots and thrown grenades fly over. Units still walk around them.
+const LOW_PROPS: Array[StringName] = [
+	&"bed", &"table", &"chair", &"desk", &"counter", &"bench", &"planter", &"flowerbed", &"wheelbarrow", &"workbench"
+]
 
 const WEAPON_IDS: Array[StringName] = [
 	&"pistol",

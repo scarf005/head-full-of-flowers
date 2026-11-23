@@ -1,8 +1,11 @@
 class_name ObstacleGrid
 ## Destructible obstacles on a 1 m grid. Cell (x, y) covers world [x - half, x - half + 1).
 
+const LOW := 2
+
 var size: int
 var half: int
+## 1 blocks units and shots. LOW (a low prop) blocks units only.
 var solid: PackedByteArray
 var hp: PackedFloat32Array
 var material: PackedByteArray
@@ -103,25 +106,33 @@ func circle_hits(p: Vector2, radius: float) -> bool:
 	return false
 
 
-## First solid cell on a segment, or (-1, -1).
+## True when a cell stops a shot. Shots fly over low props.
+func stops_shot(cell: Vector2i) -> bool:
+	if not in_bounds(cell):
+		return false
+	var i := cell.y * size + cell.x
+	return solid[i] == 1
+
+
+## First cell on a segment that stops a shot, or (-1, -1). Bots use it for line of sight too.
 func ray_cell(from: Vector2, to: Vector2) -> Vector2i:
 	var d := to - from
 	var steps := maxi(1, ceili(maxf(absf(d.x), absf(d.y)) * 4.0))
 	for step in steps + 1:
 		var cell := cell_of(from.lerp(to, float(step) / steps))
-		if is_solid(cell):
+		if stops_shot(cell):
 			return cell
 	return Vector2i(-1, -1)
 
 
-## Where a move from `from` to `to` first enters a solid cell: {point, normal}, or {} when it does not.
+## Where a shot from `from` to `to` first enters a cell that stops it: {point, normal}, or {} when it does not.
 func ricochet_impact(from: Vector2, to: Vector2) -> Dictionary:
 	var move := to - from
 	var step := Vector2i(signi(int(signf(move.x))), signi(int(signf(move.y))))
 	if step == Vector2i.ZERO:
 		return {}
 	var cell := cell_of(from)
-	if is_solid(cell):
+	if stops_shot(cell):
 		return {}
 	var bound_x := float(cell.x - half + (1 if step.x > 0 else 0))
 	var bound_y := float(cell.y - half + (1 if step.y > 0 else 0))
@@ -134,7 +145,7 @@ func ricochet_impact(from: Vector2, to: Vector2) -> Dictionary:
 		var cross_x := absf(t_max_x - t) <= 0.0000001
 		var cross_y := absf(t_max_y - t) <= 0.0000001
 		var next := cell + Vector2i(step.x if cross_x else 0, step.y if cross_y else 0)
-		if is_solid(next):
+		if stops_shot(next):
 			var normal := Vector2(-step.x if cross_x else 0, -step.y if cross_y else 0).normalized()
 			return {point = from + move * t, normal = normal}
 		cell = next

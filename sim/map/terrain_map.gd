@@ -79,6 +79,8 @@ func build_grid() -> ObstacleGrid:
 				var i := y * size + x
 				grid.set_cell(Vector2i(x, y), Defs.Mat.PROP, false, prop.solid)
 				grid.hp[i] = Defs.PROP_HP.get(prop.kind, grid.hp[i])
+				if prop.solid and prop.kind in Defs.LOW_PROPS:
+					grid.solid[i] = ObstacleGrid.LOW
 				if prop.kind == &"barrel":
 					grid.barrels[i] = true
 				cells.append(i)
