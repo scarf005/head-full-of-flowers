@@ -62,11 +62,12 @@ func _init(config: Dictionary = {}, terrain: TerrainMap = null) -> void:
 	arena_radius = arena_start
 	var start := rng.randf() * TAU
 	for u in units:
-		# One place on the ring for each team. Team mates stand around it.
-		var at := Vector2.from_angle(start + TAU * u.team / team_count) * (arena_radius - 4.0)
+		# One place on the ring for each team, 8 m in from the border, so the view at the start shows the arena.
+		# Team mates stand around it.
+		var at := Vector2.from_angle(start + TAU * u.team / team_count) * (arena_radius - 8.0)
 		if per_team > 1:
 			at += Vector2.from_angle(start + TAU * (u.index % per_team) / per_team) * minf(2.5, 0.6 * per_team)
-		u.respawn(_free_near(at.limit_length(arena_radius - 3.0)))
+		u.respawn(_free_near(at.limit_length(arena_radius - 6.0)))
 	Loot.spawn_weapon(self, _free_near(Vector2.ZERO), 1.0, true)
 	var points := Array(map.pickup_points)
 	for n in mini(points.size(), rng.randi_range(2, 5)):
@@ -127,7 +128,7 @@ func respawn(u: SimUnit) -> void:
 	var best_score := -1.0
 	var start := rng.randf() * TAU
 	for ring in 6:
-		var radius := maxf(1.0, arena_radius - 2.9 - ring * 0.9)
+		var radius := maxf(1.0, arena_radius - 6.0 - ring * 0.9)
 		for sample in 96:
 			var at := Vector2.from_angle(start + TAU * (sample + 0.5 * (ring % 2)) / 96.0) * radius
 			if grid.circle_hits(at, 0.9):
