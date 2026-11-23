@@ -1,6 +1,7 @@
 class_name TerrainView
 extends Node3D
-## Ground tiles and obstacle cells of a match.
+## Ground and obstacles of a match, drawn like a floor plan: thin walls, door leaves and one box for each
+## piece of furniture.
 
 const TILE_COLORS: Array[Color] = [
 	Color("457a36"),
@@ -20,13 +21,13 @@ const TILE_COLORS: Array[Color] = [
 ## Per Defs.Mat: [colour, height in metres].
 const CELL_LOOK := [
 	[Color.BLACK, 0.0],
-	[Color("e4dccb"), 1.2],
-	[Color("b5745f"), 1.4],
+	[Color("8a6a4c"), 0.8],
+	[Color("b5745f"), 1.3],
 	[Color("7b7f86"), 0.9],
 	[Color("d9a441"), 0.8],
-	[Color("2f6b3a"), 1.1],
+	[Color("2f6b3a"), 0.9],
 	[Color("8b6a4c"), 0.7],
-	[Color("9fd8e8"), 1.2],
+	[Color("9fd8e8"), 1.3],
 ]
 ## Per prop kind: [colour, height in metres].
 const PROP_LOOK := {
@@ -40,15 +41,15 @@ const PROP_LOOK := {
 	&"workbench": [Color("70757d"), 0.7],
 	&"crate": [Color("c79a55"), 0.8],
 	&"barrel": [Color("b0483c"), 0.9],
-	&"rug": [Color("b3525e"), 0.2],
-	&"plant": [Color("3f9a4e"), 4.5],
-	&"planter": [Color("57a84e"), 3.0],
+	&"rug": [Color("b3525e"), 0.03],
+	&"plant": [Color("3f9a4e"), 0.7],
+	&"planter": [Color("57a84e"), 0.45],
 	&"bench": [Color("9a7650"), 0.4],
-	&"flowerbed": [Color("e58fb1"), 2.5],
+	&"flowerbed": [Color("e58fb1"), 0.35],
 	&"wheelbarrow": [Color("c0563e"), 0.5],
 	&"rocks": [Color("8a8d92"), 0.6],
-	&"reeds": [Color("9aa85a"), 5.0],
-	&"lilies": [Color("7fd0a0"), 0.5],
+	&"reeds": [Color("9aa85a"), 0.75],
+	&"lilies": [Color("7fd0a0"), 0.05],
 }
 const WALL_COLORS := {
 	&"house": Color("e9dcc0"),
@@ -58,88 +59,140 @@ const WALL_COLORS := {
 	&"garage": Color("9a8f86"),
 	&"greenhouse": Color("d6e6d0"),
 }
+## Wall thickness in metres per linear material. The other materials draw as boxes.
+const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.7}
+const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
+const DOOR_COLOR := Color("5a3d2a")
 const HIGH_TIER_COLOR := Color("f2f0e6")
 
 var grid: ObstacleGrid
-var _meshes: Array[MultiMeshInstance3D] = []
+var map: TerrainMap
+var _boxes := MultiMesh.new()
 var _revision := -1
-## Cell index -> [colour, height] that replaces the CELL_LOOK entry.
-var _props := {}
+## Cell index -> wall colour of the building that owns the cell.
+var _walls := {}
 
 
 func setup(world: SimWorld) -> void:
 	grid = world.grid
-	add_child(_ground(world.map))
-	for building in world.map.buildings:
+	map = world.map
+	add_child(_ground())
+	for building in map.buildings:
 		var rect: Rect2i = building.rect
 		for y in range(rect.position.y, rect.end.y):
 			for x in range(rect.position.x, rect.end.x):
-				if grid.material[y * grid.size + x] == Defs.Mat.WAREHOUSE:
-					_props[y * grid.size + x] = [WALL_COLORS[building.kind], CELL_LOOK[Defs.Mat.WAREHOUSE][1]]
-	for prop in world.map.props:
-		for cell: int in grid.prop_cells.get(grid.size * floori(prop.y + grid.half) + floori(prop.x + grid.half), []):
-			_props[cell] = PROP_LOOK.get(prop.kind, CELL_LOOK[Defs.Mat.PROP])
-	var box := BoxMesh.new()
-	for mat in CELL_LOOK.size():
-		var node := MultiMeshInstance3D.new()
-		node.multimesh = MultiMesh.new()
-		node.multimesh.transform_format = MultiMesh.TRANSFORM_3D
-		node.multimesh.use_colors = true
-		node.multimesh.mesh = box
-		var material := StandardMaterial3D.new()
-		material.vertex_color_use_as_albedo = true
-		material.roughness = 1.0
-		node.material_override = material
-		add_child(node)
-		_meshes.append(node)
+				_walls[y * grid.size + x] = WALL_COLORS[building.kind]
+	_boxes.transform_format = MultiMesh.TRANSFORM_3D
+	_boxes.use_colors = true
+	_boxes.mesh = BoxMesh.new()
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.roughness = 1.0
+	var node := MultiMeshInstance3D.new()
+	node.multimesh = _boxes
+	node.material_override = material
+	add_child(node)
 
 
 func _process(_delta: float) -> void:
 	if grid == null or grid.revision == _revision:
 		return
 	_revision = grid.revision
-	var cells: Array[PackedInt32Array] = []
-	cells.resize(CELL_LOOK.size())
+	var out := []
 	for i in grid.material.size():
 		var mat := grid.material[i]
-		if mat > 0 and grid.hp[i] > 0.0:
-			cells[mini(mat, CELL_LOOK.size() - 1)].append(i)
-	for mat in CELL_LOOK.size():
-		var mm := _meshes[mat].multimesh
-		mm.instance_count = cells[mat].size()
-		for n in cells[mat].size():
-			var i := cells[mat][n]
-			var look: Array = _props.get(i, CELL_LOOK[mat])
-			var built := mat in [Defs.Mat.WALL, Defs.Mat.WAREHOUSE, Defs.Mat.GLASS]
-			var jitter := 1.0 if built else 0.9 + 0.2 * fposmod(sin(i * 12.9898) * 43758.5453, 1.0)
-			var height: float = look[1] * (1.0 if grid.solid[i] else 0.15) * jitter
-			var cell := Vector2i(i % grid.size, i / grid.size)
-			var size := Vector3(1.0, height, 1.0) if grid.solid[i] else Vector3(0.9, height, 0.9)
-			if mat == Defs.Mat.GLASS:
-				size = Vector3(1.0, height, 0.3) if grid.is_solid(cell + Vector2i.LEFT) else Vector3(0.3, height, 1.0)
-			var at := Vector3(cell.x - grid.half + 0.5, height * 0.5, cell.y - grid.half + 0.5)
-			mm.set_instance_transform(n, Transform3D(Basis.from_scale(size), at))
-			mm.set_instance_color(n, (HIGH_TIER_COLOR if grid.high_tier[i] else look[0]) * jitter)
+		if grid.hp[i] <= 0.0 or mat == Defs.Mat.PROP or mat == Defs.Mat.NONE:
+			continue
+		var cell := Vector2i(i % grid.size, i / grid.size)
+		var centre := Vector2(cell) + Vector2(0.5 - grid.half, 0.5 - grid.half)
+		var look: Array = CELL_LOOK[mat]
+		if not THICK.has(mat):
+			_box(out, centre, Vector2(0.78, 0.78), look[1], HIGH_TIER_COLOR if grid.high_tier[i] else look[0])
+			continue
+		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
+		var thick: float = THICK[mat]
+		_box(out, centre, Vector2(thick, thick), look[1], color)
+		for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			if _joins(cell + side):
+				var arm := Vector2(side) * (0.25 + thick * 0.25)
+				_box(
+					out,
+					centre + arm,
+					Vector2(side).abs() * (0.5 - thick * 0.5) + Vector2(side.y, side.x).abs() * thick,
+					look[1],
+					color
+				)
+	for prop in map.props:
+		var i := grid.size * floori(prop.y + grid.half) + floori(prop.x + grid.half)
+		if grid.hp[i] > 0.0:
+			var look: Array = PROP_LOOK.get(prop.kind, CELL_LOOK[Defs.Mat.PROP])
+			var inset := 0.5 if prop.width * prop.height == 1 and not prop.solid else 0.2
+			_box(out, Vector2(prop.x, prop.y), Vector2(prop.width - inset, prop.height - inset), look[1], look[0])
+	for building in map.buildings:
+		for door: Vector2i in building.doors:
+			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
+			var hinge := Vector3(door.x - grid.half + 0.5, 0.55, door.y - grid.half + 0.5)
+			hinge -= Vector3(0.5, 0, 0) if along_x else Vector3(0, 0, 0.5)
+			var swing := Basis(Vector3.UP, (0.0 if along_x else -PI / 2.0) - 1.1)
+			var leaf := (
+				Transform3D(swing, hinge) * Transform3D(Basis.from_scale(Vector3(0.9, 1.1, 0.08)), Vector3(0.45, 0, 0))
+			)
+			out.append([leaf, DOOR_COLOR])
+	_boxes.instance_count = out.size()
+	for n in out.size():
+		_boxes.set_instance_transform(n, out[n][0])
+		_boxes.set_instance_color(n, out[n][1])
 
 
-func _ground(map: TerrainMap) -> MeshInstance3D:
+## True when a wall, window, fence or hedge stands in `cell`.
+func _joins(cell: Vector2i) -> bool:
+	return grid.is_solid(cell) and THICK.has(grid.material[cell.y * grid.size + cell.x])
+
+
+func _box(out: Array, centre: Vector2, size: Vector2, height: float, color: Color) -> void:
+	var basis := Basis.from_scale(Vector3(size.x, height, size.y))
+	out.append([Transform3D(basis, Vector3(centre.x, height * 0.5, centre.y)), color])
+
+
+## Ground mesh. Each corner takes the mean colour of the outdoor tiles round it, so outdoor ground blends
+## without tile edges. Floors keep their own colour up to the wall.
+func _ground() -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var half := map.size / 2.0
+	var corners := {}
 	for y in map.size:
 		for x in map.size:
 			var tile := map.tiles[y * map.size + x]
-			var shade := 0.92 + 0.16 * fposmod(sin(x * 12.9898 + y * 78.233) * 43758.5453, 1.0)
-			var color := TILE_COLORS[tile] * shade
-			color.a = float(tile <= TerrainMap.Tile.WILD_GRASS)
-			var corners := [Vector2(x, y), Vector2(x + 1, y), Vector2(x + 1, y + 1), Vector2(x, y + 1)]
 			for index: int in [0, 1, 2, 0, 2, 3]:
+				var corner: Vector2i = (
+					Vector2i(x, y) + [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN][index]
+				)
+				var color := TILE_COLORS[tile]
+				color.a = 0.0
+				if tile not in FLOORS:
+					if not corners.has(corner):
+						corners[corner] = _corner_color(corner)
+					color = corners[corner]
 				st.set_normal(Vector3.UP)
 				st.set_color(color)
-				st.add_vertex(Vector3(corners[index].x - half, 0.0, corners[index].y - half))
+				st.add_vertex(Vector3(corner.x - half, 0.0, corner.y - half))
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://shaders/ground.gdshader")
 	var node := MeshInstance3D.new()
 	node.mesh = st.commit()
 	node.material_override = material
 	return node
+
+
+## Mean colour of the outdoor tiles that touch a corner. Alpha is the share of grass tiles.
+func _corner_color(corner: Vector2i) -> Color:
+	var sum := Color(0, 0, 0, 0)
+	var count := 0
+	for offset: Vector2i in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i.ZERO]:
+		var cell := (corner + offset).clamp(Vector2i.ZERO, Vector2i(map.size - 1, map.size - 1))
+		var tile := map.tiles[cell.y * map.size + cell.x]
+		if tile not in FLOORS:
+			sum += Color(TILE_COLORS[tile], float(tile <= TerrainMap.Tile.WILD_GRASS))
+			count += 1
+	return sum / maxf(count, 1.0)
