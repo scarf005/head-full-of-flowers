@@ -42,3 +42,13 @@ func test_shot_barrel_explodes_for_the_shooter_and_sets_off_the_barrel_next_to_i
 	assert_eq(w.events.filter(func(e: Dictionary) -> bool: return e.type == &"explosion").size(), 2)
 	assert_lt(b.hp, 10.0)
 	assert_gt(w.flowers.score(0), 0, "the shooter's team scores the petals")
+
+
+func test_crate_breaks_on_the_third_rifle_hit() -> void:
+	var cell := _prop(&"crate", Vector2(3.5, 0.5))
+	for n in 2:
+		w.hit_cell(cell, 3.0, 0)
+	assert_true(w.grid.is_solid(cell))
+	w.hit_cell(cell, 3.0, 0)
+	assert_false(w.grid.is_solid(cell))
+	assert_false(w.events.any(func(e: Dictionary) -> bool: return e.type == &"explosion"))
