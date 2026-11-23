@@ -2,6 +2,8 @@ class_name Combat
 ## Firing, damage and explosions.
 
 const AIM_ASSIST_RANGE := 24.0
+## Seconds of hit stop for a blast, by the weapon that made it.
+const BLAST_STOP := {&"grenade": 0.022, &"grenade-launcher": 0.01, &"rocket-launcher": 0.016}
 
 
 ## Fires the active weapon when the unit can fire. Returns true when a shot left the barrel.
@@ -142,7 +144,7 @@ static func damage(
 		attacker.damage_dealt += dealt
 		attacker.shots_hit += 1 if cause == &"shot" else 0
 		if attacker.is_player:
-			w.hit_stop = maxf(w.hit_stop, 0.05 if killed else 0.012)
+			w.hit_stop = maxf(w.hit_stop, 0.012)
 	if target.is_player:
 		w.hit_stop = maxf(w.hit_stop, 0.016)
 	(
@@ -205,4 +207,5 @@ static func explode(
 			if distance <= radius and w.grid.is_damageable(cell):
 				w.hit_cell(cell, 2.5 + radius * 0.65 + (1.0 - distance / radius) * 1.1, source)
 	w.pickups = w.pickups.filter(func(p: Dictionary) -> bool: return p.pos.distance_to(at) > radius)
+	w.hit_stop = maxf(w.hit_stop, BLAST_STOP.get(weapon, 0.0))
 	w.emit(&"explosion", {pos = at, radius = radius, source = source})

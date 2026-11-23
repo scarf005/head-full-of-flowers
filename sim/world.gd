@@ -87,7 +87,7 @@ func emit(type: StringName, data: Dictionary) -> void:
 	events.append(data)
 
 
-## 0 at the start of the match, 1 from 10 s before the end.
+## Share of the match that is over, 0 to 1.
 func loot_progress() -> float:
 	return clampf((duration - time_left) / duration, 0.0, 1.0)
 
@@ -149,7 +149,8 @@ func respawn(u: SimUnit) -> void:
 		u.slots = []
 		Arsenal.equip(u, &"pistol", INF)
 		if rng.randf() > 0.54:
-			var id: StringName = Defs.LOOTABLE[rng.randi() % 2]
+			# The flamethrower comes in the second half of the match, as in the loot pool.
+			var id: StringName = Defs.LOOTABLE[rng.randi() % (3 if time_left <= duration * 0.5 else 2)]
 			Arsenal.equip(u, id, Defs.pickup_ammo(id))
 	emit(&"respawn", {unit = u.index, pos = best})
 

@@ -58,13 +58,17 @@ static func update(w: SimWorld, dt: float) -> void:
 	w.box_timer -= dt
 	if w.box_timer <= 0.0:
 		spawn_box(w)
-		w.box_timer = lerpf(BOX_INTERVAL.x, BOX_INTERVAL.y, w.loot_progress())
+		# Boxes come at the shortest interval from 10 s before the end.
+		var late := clampf((w.duration - w.time_left) / (w.duration - 10.0), 0.0, 1.0)
+		w.box_timer = lerpf(BOX_INTERVAL.x, BOX_INTERVAL.y, late)
 	w.weapon_timer -= dt
 	if w.weapon_timer <= 0.0:
 		w.weapon_timer = w.rng.randf_range(WEAPON_INTERVAL.x, WEAPON_INTERVAL.y)
-		var at := w.random_point(w.arena_radius * 0.5)
-		if not w.grid.circle_hits(at, 0.8):
-			spawn_weapon(w, at, w.high_tier_chance())
+		for attempt in 32:
+			var at := w.random_point(w.arena_radius * 0.5)
+			if not w.grid.circle_hits(at, 0.8):
+				spawn_weapon(w, at, w.high_tier_chance())
+				break
 	for i in range(w.pickups.size() - 1, -1, -1):
 		var p := w.pickups[i]
 		if p.pos.length() > w.arena_radius - Defs.PICKUP_RADIUS:

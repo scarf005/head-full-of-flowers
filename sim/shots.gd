@@ -56,7 +56,7 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 			continue
 		var near := Geometry2D.get_closest_point_to_segment(u.pos, from, p.pos)
 		var gap: float = near.distance_to(u.pos) - u.radius - p.radius
-		if explosive and gap <= (1.2 if p.kind == &"rocket" else 0.0) + p.fuse:
+		if explosive and gap <= (1.2 if p.kind == &"rocket" else 1.25) + p.fuse:
 			return _end(w, p, near)
 		if not explosive and gap <= 0.0:
 			Combat.damage(w, u, p.damage, p.owner, near, p.vel, &"shot", p.weapon)

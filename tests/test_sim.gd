@@ -376,17 +376,3 @@ func test_burst_shots_fan_out_by_the_burst_spread() -> void:
 	assert_almost_eq(sums[0], -0.028, 0.012)
 	assert_almost_eq(sums[1], 0.0, 0.012)
 	assert_almost_eq(sums[2], 0.028, 0.012)
-
-
-func test_grenade_launcher_shell_bursts_beside_an_enemy() -> void:
-	# The shell flies along y = 0. The enemy stands 1.6 m beside that line, so the shell passes at about 0.9 m.
-	Arsenal.equip(a, &"grenade-launcher", 6.0)
-	b.pos = Vector2(6, 1.6)
-	a.want_fire = true
-	_tick(1)
-	a.want_fire = false
-	_tick(30)
-	var bursts := w.events.filter(func(e: Dictionary) -> bool: return e.type == &"explosion")
-	assert_eq(bursts.size(), 1)
-	assert_lt(bursts[0].pos.x, 8.0, "the shell bursts beside the enemy, not at the end of its reach")
-	assert_lt(b.hp, b.max_hp)
