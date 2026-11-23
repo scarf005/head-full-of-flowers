@@ -106,13 +106,16 @@ func _physics_process(_delta: float) -> void:
 
 
 func _unhandled_input(input: InputEvent) -> void:
+	# In a match of bots only, a bot controls unit 0.
+	if player == null or autoplay:
+		return
 	if input is InputEventMouseMotion:
 		_stick_aim = false
-	if player and input.is_action_pressed(&"swap_next"):
+	if input.is_action_pressed(&"swap_next"):
 		player.want_swap = 1
-	elif player and input.is_action_pressed(&"swap_prev"):
+	elif input.is_action_pressed(&"swap_prev"):
 		player.want_swap = -1
-	elif player and input.is_action_pressed(&"reload"):
+	elif input.is_action_pressed(&"reload"):
 		player.want_reload = true
 
 
