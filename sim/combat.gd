@@ -211,7 +211,9 @@ static func explode(
 	for dy in range(-cells, cells + 1):
 		for dx in range(-cells, cells + 1):
 			var cell := centre + Vector2i(dx, dy)
-			var distance := w.grid.center_of(cell).distance_to(at)
+			# As in the original game: the distance to the nearest point of the cell.
+			var middle := w.grid.center_of(cell)
+			var distance := at.clamp(middle - Vector2(0.5, 0.5), middle + Vector2(0.5, 0.5)).distance_to(at)
 			if distance <= radius and w.grid.is_damageable(cell):
 				w.hit_cell(cell, 2.5 + radius * 0.65 + (1.0 - distance / radius) * 1.1, source)
 	w.pickups = w.pickups.filter(func(p: Dictionary) -> bool: return p.pos.distance_to(at) > radius)
