@@ -26,6 +26,8 @@ var tint := Color(0, 0, 0, 0)
 ## True from the last right stick aim until the mouse moves.
 var _stick_aim := false
 var _kick := Vector2.ZERO
+## Unit index -> the damage number that shows over it.
+var _numbers := {}
 var _bits := Bits.new()
 var _units: Array[UnitView] = []
 var _ring_mesh := TorusMesh.new()
@@ -284,7 +286,7 @@ func _show(e: Dictionary) -> void:
 				_ring(e.pos, color, 2.4, 0.3)
 			if e.target == me or e.source == me:
 				shake = minf(1.2, shake + (0.66 if e.target == me else 0.4) + (0.5 if e.kill else 0.0))
-				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
+				_number(e.target, e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
 			if e.target == me:
 				tint = Color(0.85, 0.05, 0.12, 0.55)
 				_kick += e.dir * 0.4
@@ -364,20 +366,33 @@ func _puff(at: Vector2, color: Color, amount: int, speed: float, dir := Vector2.
 
 
 ## Damage number that rises and fades.
-func _number(at: Vector2, amount: float, color: Color) -> void:
-	var label := Label3D.new()
-	label.text = str(int(amount))
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
-	label.pixel_size = 0.06
-	label.font_size = 16
-	label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	label.outline_size = 6
-	label.modulate = color
-	label.position = Vector3(at.x + randf_range(-0.3, 0.3), 1.6, at.y)
-	add_child(label)
+## Damage number over a unit. Hits on the same unit while its number shows add to that number.
+func _number(target: int, at: Vector2, amount: float, color: Color) -> void:
+	var label: Label3D = _numbers.get(target)
+	if not is_instance_valid(label):
+		label = Label3D.new()
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.pixel_size = 0.06
+		label.font_size = 16
+		label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		label.outline_size = 6
+		label.modulate = color
+		label.set_meta(&"total", 0.0)
+		add_child(label)
+		_numbers[target] = label
+	var total: float = label.get_meta(&"total") + amount
+	label.set_meta(&"total", total)
+	label.text = str(int(total))
+	# Above the health bar, which is at 2.7 m.
+	label.position = Vector3(at.x, 3.4, at.y)
+	label.scale = Vector3.ONE * 1.5
+	if label.has_meta(&"tween"):
+		label.get_meta(&"tween").kill()
 	var tween := create_tween()
-	tween.tween_property(label, "position:y", 2.8, 0.5)
+	label.set_meta(&"tween", tween)
+	tween.tween_property(label, "scale", Vector3.ONE, 0.12)
+	tween.parallel().tween_property(label, "position:y", 4.0, 0.6)
 	tween.tween_callback(label.queue_free)
 
 
