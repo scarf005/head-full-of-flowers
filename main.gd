@@ -46,7 +46,9 @@ func _ready() -> void:
 	container.stretch = true
 	container.stretch_shrink = PIXEL_SCALE
 	container.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The container sends a mouse event into its viewport only when it gets that event itself. With the filter
+	# IGNORE, the match gets no mouse wheel and no mouse motion.
+	container.mouse_filter = Control.MOUSE_FILTER_PASS
 	dither = ShaderMaterial.new()
 	dither.shader = preload("res://shaders/dither_post.gdshader")
 	container.material = dither
