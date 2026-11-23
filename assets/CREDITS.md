@@ -30,3 +30,52 @@ in code (`audio/sound.gd`).
 | sfx/player_death.ogg     | Angrycrazii         | [Sword swing.wav](https://freesound.org/s/277322/)                 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | sfx/reload.ogg           | GFL7                | [galil reload sound.mp3](https://freesound.org/s/276963/)          | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | sfx/grenade_throw.ogg    | ryanconway          | [Grenade Throw](https://freesound.org/s/161622/)                   | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)     |
+
+## Icons
+
+White on transparent SVG from [game-icons.net](https://game-icons.net/),
+imported at 32 px.
+
+| File                         | Author        | Source                                                                                                            | Licence                                                   |
+| ---------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| icons/assault.svg            | Skoll         | [ak47](https://game-icons.net/1x1/skoll/ak47.html)                                                                | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/auto-shotgun.svg       | Lorc          | [blunderbuss](https://game-icons.net/1x1/lorc/blunderbuss.html)                                                   | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/battle-rifle.svg       | Skoll         | [fn-fal](https://game-icons.net/1x1/skoll/fn-fal.html)                                                            | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/bots.svg               | Delapouite    | [robot-helmet](https://game-icons.net/1x1/delapouite/robot-helmet.html)                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/clock.svg              | Lorc          | [stopwatch](https://game-icons.net/1x1/lorc/stopwatch.html)                                                       | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/crosshair.svg          | Delapouite    | [crosshair](https://game-icons.net/1x1/delapouite/crosshair.html)                                                 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/exit.svg               | Delapouite    | [exit-door](https://game-icons.net/1x1/delapouite/exit-door.html)                                                 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/extra_heart.svg        | Zeromancer    | [heart-plus](https://game-icons.net/1x1/zeromancer/heart-plus.html)                                               | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/extra_stamina.svg      | Lorc          | [run](https://game-icons.net/1x1/lorc/run.html)                                                                   | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/fire.svg               | Lorc          | [gunshot](https://game-icons.net/1x1/lorc/gunshot.html)                                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/flamethrower.svg       | Delapouite    | [flamethrower](https://game-icons.net/1x1/delapouite/flamethrower.html)                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/grenade.svg            | Lorc          | [grenade](https://game-icons.net/1x1/lorc/grenade.html)                                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/grenade-launcher.svg   | Lorc          | [bolter-gun](https://game-icons.net/1x1/lorc/bolter-gun.html)                                                     | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/heart.svg              | Skoll         | [hearts](https://game-icons.net/1x1/skoll/hearts.html)                                                            | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/heavy_pellets.svg      | Delapouite    | [shotgun-rounds](https://game-icons.net/1x1/delapouite/shotgun-rounds.html)                                       | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/kevlar_vest.svg        | Skoll         | [kevlar-vest](https://game-icons.net/1x1/skoll/kevlar-vest.html)                                                  | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/kill_reload.svg        | Lorc          | [syringe](https://game-icons.net/1x1/lorc/syringe.html)                                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/language.svg           | Delapouite    | [wireframe-globe](https://game-icons.net/1x1/delapouite/wireframe-globe.html)                                     | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/laser_sight.svg        | Lorc          | [laser-precision](https://game-icons.net/1x1/lorc/laser-precision.html)                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/mode.svg               | Lorc          | [crossed-swords](https://game-icons.net/1x1/lorc/crossed-swords.html)                                             | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/molotov.svg            | Lorc          | [molotov](https://game-icons.net/1x1/lorc/molotov.html)                                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/mouse.svg              | Delapouite    | [mouse](https://game-icons.net/1x1/delapouite/mouse.html)                                                         | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/move.svg               | Delapouite    | [move](https://game-icons.net/1x1/delapouite/move.html)                                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/music.svg              | Delapouite    | [musical-notes](https://game-icons.net/1x1/delapouite/musical-notes.html)                                         | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/pause.svg              | Guard13007    | [pause-button](https://game-icons.net/1x1/guard13007/pause-button.html)                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/petal.svg              | Delapouite    | [flower-emblem](https://game-icons.net/1x1/delapouite/flower-emblem.html)                                         | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/pistol.svg             | John Colburn  | [pistol-gun](https://game-icons.net/1x1/john-colburn/pistol-gun.html)                                             | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/play.svg               | Guard13007    | [play-button](https://game-icons.net/1x1/guard13007/play-button.html)                                             | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/players.svg            | Delapouite    | [meeple-group](https://game-icons.net/1x1/delapouite/meeple-group.html)                                           | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/proximity_grenades.svg | Skoll         | [teller-mine](https://game-icons.net/1x1/skoll/teller-mine.html)                                                  | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/rapid_reload.svg       | Delapouite    | [reload-gun-barrel](https://game-icons.net/1x1/delapouite/reload-gun-barrel.html)                                 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/restart.svg            | Delapouite    | [anticlockwise-rotation](https://game-icons.net/1x1/delapouite/anticlockwise-rotation.html)                       | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/ricochet_shells.svg    | Caro Asercion | [ricochet](https://game-icons.net/1x1/caro-asercion/ricochet.html)                                                | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/rocket-launcher.svg    | Delapouite    | [panzerfaust](https://game-icons.net/1x1/delapouite/panzerfaust.html)                                             | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/seed.svg               | Delapouite    | [perspective-dice-six-faces-random](https://game-icons.net/1x1/delapouite/perspective-dice-six-faces-random.html) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/shotgun.svg            | Delapouite    | [sawed-off-shotgun](https://game-icons.net/1x1/delapouite/sawed-off-shotgun.html)                                 | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/skull.svg              | Sbed          | [death-skull](https://game-icons.net/1x1/sbed/death-skull.html)                                                   | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/sound.svg              | Delapouite    | [sound-on](https://game-icons.net/1x1/delapouite/sound-on.html)                                                   | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/swap.svg               | Delapouite    | [switch-weapon](https://game-icons.net/1x1/delapouite/switch-weapon.html)                                         | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/tombstone.svg          | Lorc          | [tombstone](https://game-icons.net/1x1/lorc/tombstone.html)                                                       | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
+| icons/trophy.svg             | Lorc          | [trophy](https://game-icons.net/1x1/lorc/trophy.html)                                                             | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) |
