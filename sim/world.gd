@@ -113,11 +113,15 @@ func standings() -> Array[Dictionary]:
 	return rows
 
 
-func hit_cell(cell: Vector2i, amount: float) -> void:
+## Damages an obstacle cell. `source` is the unit index that the hit counts for, or -1.
+func hit_cell(cell: Vector2i, amount: float, source := -1) -> void:
 	var result := grid.damage_cell(cell, amount)
 	if not result.damaged:
 		return
 	emit(&"cell", {cell = cell, destroyed = result.destroyed, material = result.material, cells = result.cells})
+	if result.barrel:
+		# A barrel blows up like a hand grenade of the unit that hit it. Its blast sets off other barrels.
+		Combat.explode(self, grid.center_of(cell), Shots.BLAST_RADIUS, 0.0, source, true, &"grenade")
 	if result.destroyed and result.material == Defs.Mat.BOX:
 		Loot.spawn_weapon(self, grid.center_of(cell), 1.0 if result.high_tier else 0.0, true)
 

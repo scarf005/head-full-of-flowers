@@ -38,7 +38,7 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 	var cell := w.grid.ray_cell(from - back, p.pos)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
-		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage))
+		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage), p.owner)
 		var impact := w.grid.ricochet_impact(from - back, p.pos)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
@@ -143,7 +143,7 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 	var landed: bool = t.ttl <= 0.0 or t.pos.length() > w.arena_radius - radius
 	var cell := w.grid.ray_cell(from, t.pos)
 	if cell.x >= 0:
-		w.hit_cell(cell, 1.5 if t.molotov else 3.0)
+		w.hit_cell(cell, 1.5 if t.molotov else 3.0, t.owner)
 		var impact := w.grid.ricochet_impact(from, t.pos)
 		var normal: Vector2 = impact.get("normal", -t.vel.normalized())
 		t.pos = impact.get("point", from) + normal * 0.01

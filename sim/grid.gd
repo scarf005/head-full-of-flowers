@@ -9,6 +9,8 @@ var material: PackedByteArray
 var high_tier: PackedByteArray
 ## Cell index -> all cell indices of the prop that owns it. A prop breaks as one piece.
 var prop_cells := {}
+## Cell index -> true for each barrel that has not blown up yet.
+var barrels := {}
 ## Bumped when a cell is added or removed.
 var revision := 0
 
@@ -53,7 +55,7 @@ func set_cell(cell: Vector2i, mat: int, is_high_tier := false, is_solid_cell := 
 	revision += 1
 
 
-## Returns {damaged, destroyed, dealt, material, high_tier, cells}.
+## Returns {damaged, destroyed, dealt, material, high_tier, barrel, cells}. barrel is true when a barrel broke.
 func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 	if not is_damageable(cell):
 		return {damaged = false, destroyed = false, dealt = 0.0, material = Defs.Mat.NONE, cells = []}
@@ -63,6 +65,7 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 	var after := maxf(0.0, hp[i] - dealt)
 	var destroyed := after <= 0.0
 	var was_high_tier := high_tier[i] > 0
+	var was_barrel: bool = barrels.has(i)
 	var affected: Array = prop_cells.get(i, [i])
 	for c: int in affected:
 		hp[c] = after
@@ -71,6 +74,7 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 			material[c] = Defs.Mat.NONE
 			high_tier[c] = 0
 			prop_cells.erase(c)
+			barrels.erase(c)
 	if destroyed:
 		revision += 1
 	return {
@@ -79,6 +83,7 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 		dealt = dealt,
 		material = mat,
 		high_tier = destroyed and was_high_tier,
+		barrel = destroyed and was_barrel,
 		cells = affected if destroyed else [],
 	}
 

@@ -76,8 +76,12 @@ func build_grid() -> ObstacleGrid:
 		var cells := []
 		for y in range(top, top + prop.height):
 			for x in range(left, left + prop.width):
+				var i := y * size + x
 				grid.set_cell(Vector2i(x, y), Defs.Mat.PROP, false, prop.solid)
-				cells.append(y * size + x)
+				grid.hp[i] = Defs.PROP_HP.get(prop.kind, grid.hp[i])
+				if prop.kind == &"barrel":
+					grid.barrels[i] = true
+				cells.append(i)
 		for cell: int in cells:
 			grid.prop_cells[cell] = cells
 	return grid

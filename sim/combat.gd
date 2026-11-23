@@ -180,15 +180,15 @@ static func damage(
 
 
 ## Blast at a point. With `falloff` the damage is 3 at the rim and 8 at the centre.
-## `weapon` is the id that the hit events name.
+## `source` is the unit that the blast counts for, or -1. `weapon` is the id that the hit events name.
 static func explode(
 	w: SimWorld, at: Vector2, radius: float, amount: float, source: int, falloff: bool, weapon: StringName
 ) -> void:
-	var owner: SimUnit = w.units[source]
+	var owner: SimUnit = w.units[source] if source >= 0 else null
 	for u in w.units:
 		var to := u.pos - at
 		var reach := radius + u.radius
-		if to.length() > reach or (u != owner and u.team == owner.team):
+		if to.length() > reach or (owner and u != owner and u.team == owner.team):
 			continue
 		var closeness := 1.0 - clampf(to.length() / reach, 0.0, 1.0)
 		var push := (6.5 + radius * 2.4) * (0.25 + closeness * 0.75)
@@ -202,6 +202,6 @@ static func explode(
 			var cell := centre + Vector2i(dx, dy)
 			var distance := w.grid.center_of(cell).distance_to(at)
 			if distance <= radius and w.grid.is_damageable(cell):
-				w.hit_cell(cell, 2.5 + radius * 0.65 + (1.0 - distance / radius) * 1.1)
+				w.hit_cell(cell, 2.5 + radius * 0.65 + (1.0 - distance / radius) * 1.1, source)
 	w.pickups = w.pickups.filter(func(p: Dictionary) -> bool: return p.pos.distance_to(at) > radius)
 	w.emit(&"explosion", {pos = at, radius = radius, source = source})
