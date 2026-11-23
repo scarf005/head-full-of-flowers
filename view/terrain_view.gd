@@ -111,8 +111,12 @@ func _process(_delta: float) -> void:
 		if not THICK.has(mat):
 			var rock := float(mat == Defs.Mat.ROCK) * (0.5 + 0.5 * sin(i * 12.9898))
 			var size := Vector2(0.78, 0.78) + Vector2(0.3, -0.1) * rock
-			_box(out, centre, size, look[1] * (1.0 - 0.4 * rock), HIGH_TIER_COLOR if grid.high_tier[i] else look[0])
-			out[-1][0] = out[-1][0].rotated_local(Vector3.UP, rock * 5.0)
+			var tone: Color = HIGH_TIER_COLOR if grid.high_tier[i] else look[0]
+			_box(out, centre, size, look[1] * (1.0 - 0.4 * rock), tone.darkened(0.2 * float(mat == Defs.Mat.BOX)))
+			if mat == Defs.Mat.BOX:
+				_box(out, centre, Vector2(0.56, 0.56), look[1] + 0.05, tone)
+			if rock > 0.0:
+				out[-1][0] = out[-1][0].rotated_local(Vector3.UP, rock * 5.0)
 			continue
 		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
 		var thick: float = THICK[mat]
@@ -132,7 +136,9 @@ func _process(_delta: float) -> void:
 		if grid.hp[i] > 0.0:
 			var look: Array = PROP_LOOK.get(prop.kind, CELL_LOOK[Defs.Mat.PROP])
 			var inset := 0.5 if prop.width * prop.height == 1 and not prop.solid else 0.2
-			_box(out, Vector2(prop.x, prop.y), Vector2(prop.width - inset, prop.height - inset), look[1], look[0])
+			var size := Vector2(prop.width - inset, prop.height - inset)
+			_box(out, Vector2(prop.x, prop.y), size, look[1], look[0].darkened(0.25))
+			_box(out, Vector2(prop.x, prop.y), size - Vector2(0.14, 0.14), look[1] + 0.05, look[0])
 	for building in map.buildings:
 		for door: Vector2i in building.doors:
 			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
