@@ -103,7 +103,7 @@ func test_props_never_cover_walls_or_doors() -> void:
 			for door: Vector2i in b.doors:
 				blocked[door] = &"door"
 		for o in map.obstacles:
-			if o.kind in [&"house", &"warehouse", &"window"]:
+			if o.kind in [&"house", &"warehouse"]:
 				var left := floori(o.x - o.width / 2.0) + map.size / 2
 				var top := floori(o.y - o.height / 2.0) + map.size / 2
 				for y in o.height:
@@ -158,16 +158,6 @@ func test_open_lanes_cross_the_arena() -> void:
 			lanes.x += int(span.all(func(j: int) -> bool: return not grid.is_solid(Vector2i(i, j))))
 			lanes.y += int(span.all(func(j: int) -> bool: return not grid.is_solid(Vector2i(j, i))))
 		assert_true(lanes.x >= 5 and lanes.y >= 5, "seed %d: lanes %s" % [s, lanes])
-
-
-func test_windows_break_like_glass() -> void:
-	var map := _maps[0]
-	var windows := map.obstacles.filter(func(o: Dictionary) -> bool: return o.kind == &"window")
-	assert_gt(windows.size(), 0)
-	var grid := map.build_grid()
-	var cell := grid.cell_of(Vector2(windows[0].x, windows[0].y))
-	assert_eq(grid.material[cell.y * map.size + cell.x], Defs.Mat.GLASS)
-	assert_true(grid.damage_cell(cell, 1.0).destroyed)
 
 
 func test_ascii_dump_draws_one_line_per_row() -> void:

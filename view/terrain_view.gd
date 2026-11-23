@@ -27,7 +27,6 @@ const CELL_LOOK := [
 	[Color("d9a441"), 0.8],
 	[Color("2f6b3a"), 0.9],
 	[Color("8b6a4c"), 0.7],
-	[Color("9fd8e8"), 1.3],
 ]
 ## Per prop kind: [colour, height in metres].
 const PROP_LOOK := {
@@ -62,13 +61,15 @@ const WALL_COLORS := {
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
 ## Places for the boxes of loot boxes that appear in a match: 2 for each.
 const SPARE := 96
-const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.55}
+const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
 const BLANKET := Color("6f8fd6")
 const BOOKS: Array[Color] = [Color("c9584a"), Color("e0b64f"), Color("4f8a6a"), Color("5873b8")]
 const SOIL := Color("6b4a33")
 const PAPER := Color("f1ead8")
 const DOOR_COLOR := Color("5a3d2a")
+## Height in metres of the wall under a window.
+const SILL := 0.5
 const HIGH_TIER_COLOR := Color("f2f0e6")
 
 static var _warp: FastNoiseLite
@@ -135,7 +136,8 @@ func _process(_delta: float) -> void:
 			continue
 		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
 		var thick: float = THICK[mat]
-		_box(out, centre, Vector2(thick, thick), look[1], color)
+		var height: float = SILL if grid.solid[i] == ObstacleGrid.LOW else look[1]
+		_box(out, centre, Vector2(thick, thick), height, color)
 		for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 			if _joins(cell + side):
 				var arm := Vector2(side) * (0.25 + thick * 0.25)
@@ -143,7 +145,7 @@ func _process(_delta: float) -> void:
 					out,
 					centre + arm,
 					Vector2(side).abs() * (0.5 - thick * 0.5) + Vector2(side.y, side.x).abs() * thick,
-					look[1],
+					height,
 					color
 				)
 	_claim(out, grid.material.size() - 1)

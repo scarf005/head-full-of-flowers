@@ -21,9 +21,9 @@ enum Tile {
 var size := Defs.MAP_SIZE
 ## Row-major: tiles[y * size + x].
 var tiles: PackedByteArray
-## Each: {kind, x, y, width, height, tiles}. kind is &"warehouse", &"house", &"hedge", &"wall", &"window", &"box"
-## or &"high-tier-box". x, y is the world centre. tiles is an Array of PackedByteArray rows (1 = solid cell); it is
-## used for warehouse, house and hedge and may be empty for the other kinds.
+## Each: {kind, x, y, width, height, tiles}. kind is &"warehouse", &"house", &"hedge", &"wall", &"box" or
+## &"high-tier-box". x, y is the world centre. tiles is an Array of PackedByteArray rows (1 = solid cell,
+## ObstacleGrid.LOW = window); it is used for warehouse, house and hedge and may be empty for the other kinds.
 var obstacles: Array[Dictionary] = []
 ## Each: {kind, x, y, width, height, solid}. kind is a StringName such as &"bench". width and height are whole
 ## cells.
@@ -66,6 +66,7 @@ func build_grid() -> ObstacleGrid:
 				for col in o.tiles[row].size():
 					if o.tiles[row][col]:
 						grid.set_cell(Vector2i(left + col, top + row), mat)
+						grid.solid[(top + row) * size + left + col] = o.tiles[row][col]
 			continue
 		for row in maxi(1, floori(o.height)):
 			for col in maxi(1, floori(o.width)):
@@ -97,7 +98,5 @@ static func _material(kind: StringName) -> Defs.Mat:
 			return Defs.Mat.WAREHOUSE
 		&"hedge":
 			return Defs.Mat.HEDGE
-		&"window":
-			return Defs.Mat.GLASS
 		_:
 			return Defs.Mat.BOX

@@ -101,14 +101,16 @@ static func ascii(terrain: TerrainMap, area := Rect2i()) -> String:
 	for b in terrain.buildings:
 		for door: Vector2i in b.doors:
 			doors[door] = true
-	var marks := {Defs.Mat.GLASS: "=", Defs.Mat.PROP: "o", Defs.Mat.BOX: "$"}
+	var marks := {Defs.Mat.PROP: "o", Defs.Mat.BOX: "$"}
 	var lines := PackedStringArray()
 	for y in range(area.position.y, area.end.y):
 		var line := ""
 		for x in range(area.position.x, area.end.x):
 			var i := y * terrain.size + x
 			var tile := terrain.tiles[i]
-			if grid.solid[i]:
+			if grid.solid[i] == ObstacleGrid.LOW and grid.material[i] == Defs.Mat.WAREHOUSE:
+				line += "="
+			elif grid.solid[i]:
 				line += marks.get(grid.material[i], "#")
 			elif doors.has(Vector2i(x, y)):
 				line += "+"
@@ -292,11 +294,9 @@ func _stamp(plan: Dictionary, origin: Vector2i, purpose: StringName) -> void:
 			if code == MapBuilding.OUT:
 				continue
 			_set_tile(p, MapBuilding.floor_tile(rooms[code].kind) if code >= 0 else base)
-			if code == MapBuilding.WALL:
-				row[x] = 1
+			if code in [MapBuilding.WALL, MapBuilding.WINDOW]:
+				row[x] = 1 if code == MapBuilding.WALL else ObstacleGrid.LOW
 				state[p.y * size + p.x] = SOLID
-			elif code == MapBuilding.WINDOW:
-				_add_obstacle(&"window", Rect2i(p, Vector2i.ONE))
 			elif code == MapBuilding.DOOR:
 				building.doors.append(p)
 				state[p.y * size + p.x] = CLEAR

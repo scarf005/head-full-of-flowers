@@ -162,7 +162,7 @@ static func _split(
 	_split(rng, cells, w, band(r, not vertical, k + 1, length - k - 1), rooms)
 
 
-## Opens doors between rooms and to the outside, then glazes some outer walls. Returns the exits.
+## Opens doors between rooms and to the outside, then puts windows in some outer walls. Returns the exits.
 static func _doors(
 	rng: RandomNumberGenerator, cells: PackedInt32Array, size: Vector2i, count: int, purpose: StringName
 ) -> Array:
