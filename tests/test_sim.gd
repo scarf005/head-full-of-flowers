@@ -230,3 +230,47 @@ func test_team_modes_build_rosters() -> void:
 	assert_eq(tdm.units.map(func(u: SimUnit) -> int: return u.team), [0, 0, 0, 1, 1, 1])
 	var squad := SimWorld.new({mode = &"squad", size = 3}, TerrainMap.new())
 	assert_eq(squad.units.size(), 12)
+
+
+func test_shot_leaves_a_shooter_who_touches_a_wall_behind() -> void:
+	a.pos = Vector2(a.radius, 0.5)
+	b.pos = Vector2(5, 0.5)
+	w.grid.set_cell(w.grid.cell_of(Vector2(-0.5, 0.5)), Defs.Mat.ROCK)
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	_tick(20)
+	assert_lt(b.hp, 10.0, "the wall behind the shooter does not take the shot")
+
+
+func test_ricochet_shot_leaves_the_wall_it_hit() -> void:
+	Arsenal.apply_perk(a, &"ricochet_shells")
+	b.pos = Vector2(0, 20)
+	var cell := w.grid.cell_of(Vector2(2.5, 0.0))
+	w.grid.set_cell(cell, Defs.Mat.ROCK)
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	_tick(12)
+	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.ROCK] - 2.0, "one hit on the wall")
+	assert_eq(w.projectiles.size(), 1, "the shot is still in flight")
+
+
+func test_shot_passes_over_a_prop_that_units_walk_through() -> void:
+	w.grid.set_cell(w.grid.cell_of(Vector2(2.5, 0.0)), Defs.Mat.PROP, false, false)
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	_tick(20)
+	assert_lt(b.hp, 10.0)
+
+
+func test_projectile_count_stays_at_capacity_after_a_shotgun_blast() -> void:
+	Arsenal.equip(a, &"shotgun", 12.0)
+	Combat.fire(w, a)
+	var pellet := w.projectiles[0]
+	while w.projectiles.size() < Defs.PROJECTILE_CAPACITY:
+		w.projectiles.append(pellet.duplicate())
+	a.shoot_cooldown = 0.0
+	Combat.fire(w, a)
+	assert_eq(w.projectiles.size(), Defs.PROJECTILE_CAPACITY)
