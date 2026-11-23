@@ -6,6 +6,8 @@ const MAP_PX := 150.0
 const INK := Color(0.05, 0.05, 0.08)
 const PLATE := Color(0.05, 0.05, 0.08, 0.88)
 const RED := Color(0.95, 0.3, 0.35)
+## Pixels from the screen border to the arrows of units out of view, and from an arrow to a corner.
+const EDGE := 32.0
 ## Offsets that stamp an ink rim around each icon.
 const RIM: Array[Vector2] = [
 	Vector2(-2, 0),
@@ -33,6 +35,19 @@ func setup(view: GameView) -> void:
 	_map_revision = -1
 	if not game.event.is_connected(_on_event):
 		game.event.connect(_on_event)
+
+
+## Where the arrow for a unit at the screen point `at` goes: on the border of `area`, on the line from the middle of
+## the screen to the unit, and not nearer than EDGE to a corner. As in the original game.
+static func edge_point(at: Vector2, area: Rect2) -> Vector2:
+	var centre := area.get_center()
+	var to := at - centre
+	var inner := area.grow(-EDGE)
+	if absf(to.x) * area.size.y >= absf(to.y) * area.size.x:
+		var x := area.end.x if to.x >= 0.0 else area.position.x
+		return Vector2(x, clampf(centre.y + to.y * (x - centre.x) / to.x, inner.position.y, inner.end.y))
+	var y := area.end.y if to.y >= 0.0 else area.position.y
+	return Vector2(clampf(centre.x + to.x * (y - centre.y) / to.y, inner.position.x, inner.end.x), y)
 
 
 static func unit_name(u: SimUnit) -> String:
@@ -161,6 +176,7 @@ func _draw() -> void:
 	# Crosshair.
 	if get_tree().paused or w.finished:
 		return
+	_draw_arrows(w, font)
 	var mouse := game.crosshair()
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
 		draw_line(mouse + arm * 5.0, mouse + arm * 17.0, INK, 7.0)
@@ -176,6 +192,32 @@ func _draw() -> void:
 		var turn := TAU * (1.0 - p.reload_cooldown / p.reload_cooldown_max)
 		draw_arc(mouse, 22.0, -PI / 2.0, -PI / 2.0 + TAU, 32, INK, 6.0)
 		draw_arc(mouse, 22.0, -PI / 2.0, -PI / 2.0 + turn, 32, Color.WHITE, 3.0)
+
+
+## An arrow in the team colour at the screen border for each unit that is not fully in view, with its distance in
+## metres. As in the original game.
+func _draw_arrows(w: SimWorld, font: Font) -> void:
+	var screen := Rect2(Vector2.ZERO, size)
+	var to_hud := size / Vector2(game.get_viewport().get_visible_rect().size)
+	for u in w.units:
+		# The middle of the body. The body is 20 pixels wide on each side of it.
+		var at := game.camera.unproject_position(Vector3(u.pos.x, 0.6, u.pos.y)) * to_hud
+		if u == game.player or screen.grow(-20.0).has_point(at):
+			continue
+		# Under the score bar at the top.
+		var area := screen.grow_individual(-EDGE, -60.0, -EDGE, -EDGE)
+		var spot := edge_point(at, area)
+		# Beside the map, not on it.
+		if spot.x < 16.0 + MAP_PX and spot.y < 16.0 + MAP_PX + 20.0:
+			spot.x = 16.0 + MAP_PX + 24.0
+		var dir := (at - area.get_center()).normalized()
+		var side := dir.orthogonal()
+		var back := spot - dir * 4.0
+		draw_colored_polygon([spot + dir * 22.0, back + side * 14.0, back - side * 14.0], INK)
+		draw_colored_polygon([spot + dir * 16.0, spot + side * 9.0, spot - side * 9.0], w.team_color(u.team))
+		var label := "%dm" % roundi(u.pos.distance_to(game.player.pos))
+		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		_text(font, spot - dir * 26.0 + Vector2(-width * 0.5, 6.0), label, Color.WHITE, 16)
 
 
 func _draw_map(w: SimWorld) -> void:

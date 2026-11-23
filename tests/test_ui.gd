@@ -67,6 +67,14 @@ func test_kill_feed_shows_the_weapon_of_the_hit_and_a_skull_without_one() -> voi
 	assert_eq(hud.feed.map(func(row: Dictionary) -> StringName: return row.icon), [&"shotgun", &"skull"])
 
 
+func test_arrow_for_a_unit_out_of_view_is_on_the_screen_border_toward_the_unit() -> void:
+	var area := Rect2(32.0, 32.0, 1216.0, 656.0)
+	assert_eq(Hud.edge_point(Vector2(3000.0, 360.0), area), Vector2(1248.0, 360.0), "a unit to the right")
+	assert_eq(Hud.edge_point(Vector2(640.0, -500.0), area), Vector2(640.0, 32.0), "a unit to the north")
+	# The line to this unit leaves the border 2 pixels from the corner. The arrow stays 32 pixels from it.
+	assert_eq(Hud.edge_point(Vector2(5000.0, 2700.0), area), Vector2(1248.0, 656.0), "a unit toward a corner")
+
+
 func test_damage_number_adds_hits_and_shows_again_after_it_is_gone() -> void:
 	var view: GameView = autofree(GameView.new())
 	# A match of bots reads no input actions. Only main.gd adds those.
