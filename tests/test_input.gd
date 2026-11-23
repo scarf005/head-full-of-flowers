@@ -61,3 +61,10 @@ func test_mouse_wheel_does_not_change_the_weapon_of_unit_0_in_the_match_of_bots_
 	# No await: the next tick takes the wish away.
 	_send(_wheel(MOUSE_BUTTON_WHEEL_DOWN), Vector2(100, 100))
 	assert_eq(main.game.player.want_swap, 0)
+
+
+func test_mouse_wheel_down_and_up_before_one_tick_keep_the_weapon() -> void:
+	# No await: the 2 events come before the same tick.
+	_send(_wheel(MOUSE_BUTTON_WHEEL_DOWN))
+	await _send(_wheel(MOUSE_BUTTON_WHEEL_UP))
+	assert_eq(player.slot_index, 0)
