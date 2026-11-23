@@ -23,14 +23,15 @@ func test_generated_sounds_are_short_and_not_empty() -> void:
 
 func test_every_event_type_plays_without_error() -> void:
 	var events: Array[Dictionary] = [
-		{type = &"shot", unit = 0, pos = Vector2.ZERO, dir = Vector2.RIGHT, weapon = &"assault"},
-		{type = &"shot", unit = 1, pos = Vector2(5, 0), dir = Vector2.RIGHT, weapon = &"flamethrower"},
+		{type = &"shot", unit = 0, pos = Vector2.ZERO, dir = Vector2.RIGHT, weapon = &"assault", first = true},
+		{type = &"shot", unit = 1, pos = Vector2(5, 0), dir = Vector2.RIGHT, weapon = &"flamethrower", first = true},
 		{type = &"hit", target = 0, source = 1, pos = Vector2.ZERO, damage = 1.0, kill = false, team = 1},
 		{type = &"hit", target = 0, source = 1, pos = Vector2.ZERO, damage = 1.0, kill = true, team = 1},
 		{type = &"hit", target = 1, source = 0, pos = Vector2.ZERO, damage = 1.0, kill = true, team = 0},
 		{type = &"explosion", pos = Vector2(3, 3), radius = 4.0, source = 1},
 		{type = &"throw", unit = 0, molotov = true},
 		{type = &"reload", unit = 1},
+		{type = &"reload", unit = 0},
 		{type = &"pickup", unit = 0, kind = &"perk", id = &"x", pos = Vector2.ZERO},
 		{type = &"pickup", unit = 1, kind = &"weapon", id = &"pistol", pos = Vector2.ZERO},
 		{type = &"cell", cell = Vector2i(1, 1), destroyed = true, material = 1, cells = []},
@@ -58,3 +59,25 @@ func test_same_sound_does_not_restart_within_30_ms() -> void:
 func test_ensure_buses_creates_music_and_sfx() -> void:
 	assert_ne(AudioServer.get_bus_index(Sound.MUSIC), -1)
 	assert_ne(AudioServer.get_bus_index(Sound.SFX), -1)
+
+
+func test_pistol_shot_is_quieter_than_shotgun_shot() -> void:
+	var shot := {type = &"shot", unit = 0, pos = Vector2.ZERO, dir = Vector2.RIGHT, first = true}
+	sound.handle(shot.merged({weapon = &"pistol"}))
+	var pistol_db := (sound._flat.back() as AudioStreamPlayer).volume_db
+	sound._last.clear()
+	sound.handle(shot.merged({weapon = &"shotgun"}))
+	assert_lt(pistol_db, (sound._flat.back() as AudioStreamPlayer).volume_db)
+
+
+func test_second_burst_shot_of_a_bot_makes_no_sound() -> void:
+	sound.handle({type = &"shot", unit = 1, pos = Vector2.ZERO, weapon = &"assault", first = false})
+	for p in sound._spatial:
+		assert_false(p.playing)
+
+
+func test_reload_end_plays_the_end_slice() -> void:
+	sound.handle({type = &"reloaded", unit = 0})
+	var p := sound._flat.back() as AudioStreamPlayer
+	assert_true(p.playing)
+	assert_almost_eq(p.get_playback_position(), 2.168, 0.1)

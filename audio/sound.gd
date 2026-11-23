@@ -10,6 +10,7 @@ const RATE := 22050
 const SPATIAL_POOL := 24
 const FLAT_POOL := 6
 const MIN_GAP_MS := 30
+const BOT_SHOT_CHANCE := 0.18
 const FLAME_TAIL_MS := 150
 const MUSIC_DB := -10.0
 const OPEN_HZ := 20500.0
@@ -30,6 +31,16 @@ const FILES: Array[StringName] = [
 	&"kill_confirm",
 	&"player_death",
 ]
+const WEAPON_GAIN := {
+	&"pistol": 0.1,
+	&"assault": 0.25,
+	&"shotgun": 0.8,
+	&"flamethrower": 0.25,
+	&"auto-shotgun": 0.52,
+	&"battle-rifle": 0.5,
+	&"grenade-launcher": 0.65,
+	&"rocket-launcher": 0.65
+}
 const WEAPON_SOUNDS := {
 	&"pistol": &"pistol",
 	&"assault": &"assault",
@@ -44,7 +55,6 @@ const WEAPON_SOUNDS := {
 ## decay: envelope steepness. attack: fade-in in seconds. gain: peak level.
 const SYNTH := {
 	&"bounce": {secs = 0.09, f0 = 520.0, f1 = 300.0, tone = 1.0, noise = 0.15, lp = 0.5, decay = 7.0, gain = 0.3},
-	&"cell": {secs = 0.14, noise = 1.0, lp = 0.25, decay = 6.0, gain = 0.45},
 	&"wall_break": {secs = 0.38, f0 = 90.0, f1 = 45.0, tone = 0.8, noise = 1.0, lp = 0.12, decay = 5.0, gain = 0.6},
 	&"box": {secs = 0.2, f0 = 150.0, f1 = 70.0, tone = 1.0, noise = 0.3, lp = 0.2, decay = 6.0, gain = 0.5},
 	&"fire": {secs = 0.38, noise = 1.0, lp = 0.08, decay = 3.0, attack = 0.12, gain = 0.45},
@@ -52,7 +62,8 @@ const SYNTH := {
 	&"respawn": {secs = 0.34, f0 = 220.0, f1 = 620.0, tone = 1.0, noise = 0.1, lp = 0.1, decay = 4.0, gain = 0.35},
 	&"finish": {secs = 0.39, f0 = 440.0, f1 = 220.0, tone = 1.0, decay = 4.0, gain = 0.4},
 	&"empty": {secs = 0.05, f0 = 180.0, f1 = 140.0, tone = 0.6, noise = 0.8, lp = 0.6, decay = 8.0, gain = 0.3},
-	&"hit": {secs = 0.07, f0 = 980.0, f1 = 520.0, tone = 1.0, noise = 0.4, lp = 0.5, decay = 8.0, gain = 0.4},
+	&"hit": {secs = 0.11, f0 = 340.0, f1 = 100.0, tone = 1.0, decay = 6.0, gain = 0.52},
+	&"die": {secs = 0.28, f0 = 420.0, f1 = 44.0, tone = 1.0, decay = 4.0, gain = 0.86},
 	&"click": {secs = 0.04, f0 = 1100.0, f1 = 900.0, tone = 1.0, decay = 7.0, gain = 0.25},
 }
 
@@ -66,6 +77,7 @@ var _flame := AudioStreamPlayer3D.new()
 var _music := AudioStreamPlayer.new()
 var _last: Dictionary = {}
 var _flame_until := 0
+var _cut: Dictionary = {}
 
 
 ## All sounds by name: files and generated ones. Built once.
@@ -182,6 +194,10 @@ func play_music() -> void:
 func _process(_delta: float) -> void:
 	if _game and _game.player:
 		_listener.position = Vector3(_game.player.pos.x, 0.0, _game.player.pos.y)
+	for p in _cut.keys():
+		if Time.get_ticks_msec() >= _cut[p]:
+			p.stop()
+			_cut.erase(p)
 	if _flame.playing and Time.get_ticks_msec() > _flame_until:
 		_flame.stop()
 
@@ -190,25 +206,42 @@ func _process(_delta: float) -> void:
 func handle(e: Dictionary) -> void:
 	match e.type:
 		&"shot":
+			var gain: float = WEAPON_GAIN[e.weapon]
+			if e.unit != _me():
+				# Other units are heard at the first shot of a burst, one time in five, and only when near.
+				if not e.first or randf() > BOT_SHOT_CHANCE:
+					return
+				var from := Vector2(_listener.position.x, _listener.position.z)
+				gain *= clampf(1.0 - e.pos.distance_to(from) / 40.0, 0.0, 1.0)
 			if e.weapon == &"flamethrower":
-				_burn(_at(e.unit, e.pos))
+				_burn(_at(e.unit, e.pos), gain)
 			else:
-				_play(WEAPON_SOUNDS[e.weapon], _at(e.unit, e.pos))
+				_play(WEAPON_SOUNDS[e.weapon], _at(e.unit, e.pos), gain)
 		&"hit":
-			if e.target == _me():
-				_play(&"player_death" if e.kill else &"damage")
-			elif e.source == _me():
-				_play(&"kill_confirm" if e.kill else &"hit")
+			var mine: bool = e.target == _me() or e.source == _me()
+			if e.kill:
+				if e.target == _me():
+					_play(&"player_death")
+				elif mine:
+					_play(&"kill_confirm", null, 0.8, 0.2)
+				else:
+					_play(&"die", e.pos)
+			else:
+				_play(&"damage", null if mine else e.pos, 0.72 if mine else 0.2)
 		&"explosion":
-			_play(&"explosion", e.pos)
+			_play(&"explosion", e.pos, 0.25)
 		&"throw":
 			_play(&"grenade_throw", _at(e.unit, _unit_pos(e.unit)))
 		&"reload":
-			_play(&"reload", _at(e.unit, _unit_pos(e.unit)))
+			if e.unit == _me():
+				_play(&"reload", null, 0.74, 1.1, 0.4)
+		&"reloaded":
+			if e.unit == _me():
+				_play(&"reload", null, 0.8, 2.168, 0.532)
 		&"pickup":
 			_play(&"perk" if e.kind == &"perk" else &"item_acquire", _at(e.unit, e.pos))
 		&"cell":
-			_play(&"wall_break" if e.destroyed else &"cell", _cell_pos(e.cell))
+			_play(&"wall_break" if e.destroyed else &"hit", _cell_pos(e.cell))
 		&"bounce":
 			_play(&"bounce", e.pos)
 		&"zone":
@@ -219,10 +252,6 @@ func handle(e: Dictionary) -> void:
 			_play(&"box", _cell_pos(e.cell))
 		&"respawn":
 			_play(&"respawn", _at(e.unit, e.pos))
-		&"tick":
-			_play(&"click")
-		&"go":
-			_play(&"perk")
 		&"finish":
 			_play(&"finish")
 			_music_filter(1500.0)
@@ -259,7 +288,8 @@ func _tune(p: AudioStreamPlayer3D) -> void:
 
 
 ## Starts the flame loop. It stops 0.15 s after the last flame shot.
-func _burn(at: Variant) -> void:
+func _burn(at: Variant, gain: float) -> void:
+	_flame.volume_db = linear_to_db(gain)
 	_flame_until = Time.get_ticks_msec() + FLAME_TAIL_MS
 	_flame.position = _listener.position if at == null else Vector3(at.x, 0.0, at.y)
 	if not _flame.playing:
@@ -267,7 +297,8 @@ func _burn(at: Variant) -> void:
 
 
 ## Plays a sound at a sim position, or flat when at is null. The same sound never starts twice within 30 ms.
-func _play(key: StringName, at: Variant = null) -> void:
+## from and secs cut a slice of the sample. A secs of 0 plays to the end.
+func _play(key: StringName, at: Variant = null, gain := 1.0, from := 0.0, secs := 0.0) -> void:
 	var now := Time.get_ticks_msec()
 	if now - _last.get(key, -MIN_GAP_MS) < MIN_GAP_MS:
 		return
@@ -279,4 +310,8 @@ func _play(key: StringName, at: Variant = null) -> void:
 		p.position = Vector3(at.x, 0.0, at.y)
 	p.stream = streams()[key]
 	p.pitch_scale = randf_range(0.94, 1.06)
-	p.play()
+	p.volume_db = linear_to_db(gain)
+	p.play(from)
+	_cut.erase(p)
+	if secs > 0.0:
+		_cut[p] = now + int(secs / p.pitch_scale * 1000.0)
