@@ -53,15 +53,15 @@ func test_play_again_on_results_starts_a_match_with_the_last_settings() -> void:
 	assert_eq(get_signal_parameters(menu, "start")[0].size, 4)
 
 
-func test_kill_feed_shows_the_weapon_of_the_killer() -> void:
+func test_kill_feed_shows_the_weapon_of_the_hit_and_a_skull_without_one() -> void:
 	var view: GameView = autofree(GameView.new())
 	var w := SimWorld.new({seed = 1, size = 2})
 	view.world = w
 	var hud: Hud = autofree(Hud.new())
 	hud.setup(view)
-	Arsenal.equip(w.units[0], &"shotgun", 8.0)
-	Combat.damage(w, w.units[1], 99.0, 0, w.units[1].pos, Vector2.RIGHT, &"shot")
-	Combat.damage(w, w.units[0], 99.0, 1, w.units[0].pos, Vector2.RIGHT, &"blast")
+	# The killer holds a pistol. The feed shows the weapon of the hit event, not the weapon in the hands.
+	Combat.damage(w, w.units[1], 99.0, 0, w.units[1].pos, Vector2.RIGHT, &"shot", &"shotgun")
+	Combat.damage(w, w.units[0], 99.0, -1, w.units[0].pos, Vector2.RIGHT, &"arena")
 	for e in w.events:
 		view.event.emit(e)
-	assert_eq(hud.feed.map(func(row: Dictionary) -> StringName: return row.icon), [&"shotgun", &"grenade"])
+	assert_eq(hud.feed.map(func(row: Dictionary) -> StringName: return row.icon), [&"shotgun", &"skull"])

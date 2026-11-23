@@ -51,7 +51,7 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		if explosive and gap <= (1.2 if p.kind == &"rocket" else 0.0) + p.fuse:
 			return _end(w, p, near)
 		if not explosive and gap <= 0.0:
-			Combat.damage(w, u, p.damage, p.owner, near, p.vel, &"shot")
+			Combat.damage(w, u, p.damage, p.owner, near, p.vel, &"shot", p.weapon)
 			return false
 	return true
 
@@ -90,11 +90,11 @@ static func _bounce(w: SimWorld, p: Dictionary, normal: Vector2) -> bool:
 static func _end(w: SimWorld, p: Dictionary, at: Vector2) -> bool:
 	match p.kind:
 		&"grenade":
-			Combat.explode(w, at, BLAST_RADIUS, p.damage, p.owner, false)
+			Combat.explode(w, at, BLAST_RADIUS, p.damage, p.owner, false, p.weapon)
 		&"rocket":
-			Combat.explode(w, at, BLAST_RADIUS * 1.4, p.damage, p.owner, false)
+			Combat.explode(w, at, BLAST_RADIUS * 1.4, p.damage, p.owner, false, p.weapon)
 		&"flame":
-			add_zone(w, at, p.owner, true)
+			add_zone(w, at, p.owner, p.weapon)
 	return false
 
 
@@ -160,20 +160,21 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 			continue
 		var gap: float = u.pos.distance_to(t.pos) - u.radius - radius
 		if gap <= 0.0 and not t.molotov:
-			Combat.damage(w, u, 20.0, t.owner, t.pos, t.vel, &"shot")
+			Combat.damage(w, u, 20.0, t.owner, t.pos, t.vel, &"shot", &"grenade")
 		landed = landed or gap <= (1.25 if t.fuse else 0.0)
 	if not landed:
 		return true
 	if t.molotov:
-		add_zone(w, t.pos, t.owner, false)
+		add_zone(w, t.pos, t.owner, &"molotov")
 	else:
-		Combat.explode(w, t.pos, BLAST_RADIUS, 0.0, t.owner, true)
+		Combat.explode(w, t.pos, BLAST_RADIUS, 0.0, t.owner, true, &"grenade")
 	return false
 
 
-## Adds a fire. A flame patch is small and scorches flowers. A molotov fire is wide.
-static func add_zone(w: SimWorld, at: Vector2, source: int, flame: bool) -> void:
-	var zone := {pos = at, owner = source, flame = flame, radius = 1.12 if flame else 2.9}
+## Adds the fire of a weapon. A molotov fire is wide. The flame patch of other weapons is small and scorches flowers.
+static func add_zone(w: SimWorld, at: Vector2, source: int, weapon: StringName) -> void:
+	var flame := weapon != &"molotov"
+	var zone := {pos = at, owner = source, flame = flame, radius = 1.12 if flame else 2.9, weapon = weapon}
 	zone.merge({life = 3.0 if flame else 2.2, every = 1.0 if flame else 0.22, tick = 0.0})
 	w.zones.append(zone)
 	if w.zones.size() > 36:
@@ -193,5 +194,5 @@ static func update_zones(w: SimWorld, dt: float) -> void:
 		var owner: SimUnit = w.units[z.owner]
 		for u in w.units:
 			if (u == owner or u.team != owner.team) and u.pos.distance_to(z.pos) <= z.radius + u.radius:
-				Combat.damage(w, u, 1.0, z.owner, u.pos, u.pos - z.pos, &"zone")
+				Combat.damage(w, u, 1.0, z.owner, u.pos, u.pos - z.pos, &"zone", z.weapon)
 	w.zones = w.zones.filter(func(z: Dictionary) -> bool: return z.life > 0.0)

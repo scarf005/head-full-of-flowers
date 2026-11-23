@@ -52,7 +52,7 @@ func test_kill_heals_killer_and_respawns_target() -> void:
 
 
 func test_own_blast_kills() -> void:
-	Combat.explode(w, a.pos, 3.8, 20.0, 0, true)
+	Combat.explode(w, a.pos, 3.8, 20.0, 0, true, &"grenade")
 	assert_eq(a.deaths, 1)
 	assert_gt(w.flowers.score(Defs.BURNT), 0)
 
@@ -313,3 +313,32 @@ func test_squad_starts_together_and_away_from_the_other_squads() -> void:
 					assert_lt(gap, 8.0, "team mates %d and %d" % [a.index, b.index])
 				else:
 					assert_gt(gap, 15.0, "enemies %d and %d" % [a.index, b.index])
+
+
+func _kill_weapon() -> StringName:
+	var kills := w.events.filter(func(e: Dictionary) -> bool: return e.type == &"hit" and e.kill and e.target == 1)
+	return kills[0].weapon if not kills.is_empty() else &"none"
+
+
+func test_rocket_kill_names_the_launcher_after_the_shooter_swaps_to_a_pistol() -> void:
+	Arsenal.equip(a, &"rocket-launcher", 4.0)
+	b.hp = 1.0
+	Combat.fire(w, a)
+	Arsenal.swap(a, 1)
+	assert_eq(a.weapon_id(), &"pistol")
+	_tick(40)
+	assert_eq(_kill_weapon(), &"rocket-launcher")
+
+
+func test_thrown_grenade_kill_names_the_grenade() -> void:
+	b.hp = 1.0
+	Shots.throw_secondary(w, a)
+	_tick(40)
+	assert_eq(_kill_weapon(), &"grenade")
+
+
+func test_flame_patch_kill_names_the_flamethrower() -> void:
+	b.hp = 1.0
+	Shots.add_zone(w, b.pos, 0, &"flamethrower")
+	_tick(80)
+	assert_eq(_kill_weapon(), &"flamethrower")

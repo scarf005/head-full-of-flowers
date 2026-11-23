@@ -59,8 +59,7 @@ func _on_event(e: Dictionary) -> void:
 	if e.source >= 0 and e.source != e.target:
 		row.killer = unit_name(w.units[e.source])
 		row.killer_color = w.team_color(e.team)
-		# What killed: the weapon in the killer's hands for a shot, else the thrown thing.
-		row.icon = {&"blast": &"grenade", &"zone": &"molotov"}.get(e.cause, w.units[e.source].weapon_id())
+		row.icon = e.weapon if e.weapon != &"" else &"skull"
 	feed.append(row)
 	if feed.size() > 5:
 		feed.pop_front()

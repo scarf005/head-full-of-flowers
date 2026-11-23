@@ -104,7 +104,14 @@ static func _assisted_aim(w: SimWorld, u: SimUnit) -> Vector2:
 
 ## Hurts a unit and plants flowers. `source` is a unit index, or -1 for the arena border.
 static func damage(
-	w: SimWorld, target: SimUnit, amount: float, source: int, hit: Vector2, impact: Vector2, cause: StringName
+	w: SimWorld,
+	target: SimUnit,
+	amount: float,
+	source: int,
+	hit: Vector2,
+	impact: Vector2,
+	cause: StringName,
+	weapon := &""
 ) -> void:
 	var attacker: SimUnit = w.units[source] if source >= 0 else null
 	var is_self := attacker == target
@@ -132,18 +139,21 @@ static func damage(
 			w.hit_stop = maxf(w.hit_stop, 0.05 if killed else 0.012)
 	if target.is_player:
 		w.hit_stop = maxf(w.hit_stop, 0.016)
-	w.emit(
-		&"hit",
-		{
-			target = target.index,
-			source = source,
-			pos = hit,
-			dir = dir,
-			damage = dealt,
-			kill = killed,
-			team = team,
-			cause = cause
-		}
+	(
+		w
+		. emit(
+			&"hit",
+			{
+				target = target.index,
+				source = source,
+				pos = hit,
+				dir = dir,
+				damage = dealt,
+				kill = killed,
+				team = team,
+				weapon = weapon,
+			}
+		)
 	)
 	if not killed:
 		return
@@ -165,7 +175,10 @@ static func damage(
 
 
 ## Blast at a point. With `falloff` the damage is 3 at the rim and 8 at the centre.
-static func explode(w: SimWorld, at: Vector2, radius: float, amount: float, source: int, falloff: bool) -> void:
+## `weapon` is the id that the hit events name.
+static func explode(
+	w: SimWorld, at: Vector2, radius: float, amount: float, source: int, falloff: bool, weapon: StringName
+) -> void:
 	var owner: SimUnit = w.units[source]
 	for u in w.units:
 		var to := u.pos - at
@@ -176,7 +189,7 @@ static func explode(w: SimWorld, at: Vector2, radius: float, amount: float, sour
 		var push := (6.5 + radius * 2.4) * (0.25 + closeness * 0.75)
 		var dir := to.normalized() if to.length_squared() > 0.0001 else Vector2.RIGHT
 		u.vel += dir * push
-		damage(w, u, 3.0 + 5.0 * closeness if falloff else amount, source, u.pos, dir * push * 6.0, &"blast")
+		damage(w, u, 3.0 + 5.0 * closeness if falloff else amount, source, u.pos, dir * push * 6.0, &"blast", weapon)
 	var cells := ceili(radius)
 	var centre := w.grid.cell_of(at)
 	for dy in range(-cells, cells + 1):
