@@ -14,6 +14,9 @@ const SHOT_COLORS := {
 
 ## Game seconds from the drawn frame to the last tick. The sim ticks at 60 Hz and screens draw faster.
 static var lag := 0.0
+## Mouse pointer in root canvas units, from the last mouse event. A query of the pointer in each frame is a round
+## trip to the display server.
+static var mouse := Vector2.ZERO
 
 var world: SimWorld
 var camera := CameraRig.new()
@@ -197,7 +200,7 @@ func _process(delta: float) -> void:
 func pointer() -> Vector2:
 	var root := get_tree().root
 	var scale := Vector2(get_viewport().get_visible_rect().size) / root.get_visible_rect().size
-	return camera.ground_point(root.get_mouse_position() * scale, SHOT_HEIGHT)
+	return camera.ground_point(mouse * scale, SHOT_HEIGHT)
 
 
 ## Where the HUD draws the crosshair, in root canvas units: the mouse pointer, or a point ahead of the player while
@@ -205,7 +208,7 @@ func pointer() -> Vector2:
 func crosshair() -> Vector2:
 	var root := get_tree().root
 	if not _stick_aim:
-		return root.get_mouse_position()
+		return mouse
 	var ahead := player.pos + player.aim * 5.0
 	var scale := root.get_visible_rect().size / Vector2(get_viewport().get_visible_rect().size)
 	return camera.unproject_position(Vector3(ahead.x, SHOT_HEIGHT, ahead.y)) * scale

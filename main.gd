@@ -116,6 +116,11 @@ func _on_event(e: Dictionary) -> void:
 			menu.show_results(game.world)
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouse:
+		GameView.mouse = event.position
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause") and _live():
 		_set_paused(not get_tree().paused)
