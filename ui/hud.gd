@@ -114,7 +114,7 @@ func _draw() -> void:
 	# Weapon slots, ammo, reload and secondary.
 	var right := size.x - 16.0
 	var slot := p.slot()
-	var ammo_x := right - 136.0
+	var ammo_x := right - 164.0
 	_icon(slot.id, Rect2(ammo_x - 72.0, size.y - 80.0, 64.0, 64.0), Color.WHITE)
 	for i in p.slots.size():
 		if i != p.slot_index:
@@ -123,7 +123,7 @@ func _draw() -> void:
 	var ammo := str(int(slot.ammo))
 	_text(font, Vector2(ammo_x, size.y - 30.0), ammo, Color.WHITE, 32)
 	var reserve_x := ammo_x + 4.0 + font.get_string_size(ammo, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
-	_text(font, Vector2(reserve_x, size.y - 30.0), "/ " + reserve, Color(0.75, 0.75, 0.75), 16)
+	_text(font, Vector2(reserve_x, size.y - 30.0), "/ " + reserve, Color(0.75, 0.75, 0.75), 24)
 	if p.reload_cooldown > 0.0:
 		var part := 1.0 - p.reload_cooldown / p.reload_cooldown_max
 		draw_rect(Rect2(ammo_x, size.y - 22.0, 88.0, 6.0), INK)
