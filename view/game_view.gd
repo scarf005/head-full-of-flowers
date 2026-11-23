@@ -4,7 +4,8 @@ extends Node3D
 
 signal event(data: Dictionary)
 
-const SHOT_HEIGHT := 0.75
+## Shots fly at the height of the drawn gun.
+const SHOT_HEIGHT := UnitView.HAND / UnitView.PX_PER_M / cos(CameraRig.PITCH)
 ## Smoke puffs of a rocket for each second of the match.
 const SMOKE_RATE := 30.0
 const FLAMES_PER_M2 := 0.6
