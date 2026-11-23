@@ -50,6 +50,15 @@ static func edge_point(at: Vector2, area: Rect2) -> Vector2:
 	return Vector2(clampf(centre.x + to.x * (y - centre.y) / to.y, inner.position.x, inner.end.x), y)
 
 
+## Moves the arrow at `spot` off each plate of the HUD, to the side of the plate that is toward the middle of a
+## screen of this width.
+static func beside(spot: Vector2, plates: Array[Rect2], width: float) -> Vector2:
+	for plate in plates:
+		if plate.grow(20.0).has_point(spot):
+			spot.x = plate.end.x + 24.0 if plate.get_center().x < width * 0.5 else plate.position.x - 24.0
+	return spot
+
+
 static func unit_name(u: SimUnit) -> String:
 	return TranslationServer.translate("You") if u.is_player else TranslationServer.translate("Bot %d") % u.index
 
@@ -108,9 +117,12 @@ func _draw() -> void:
 		draw_rect(own.grow(1.0), Color.WHITE, false, 2.0)
 	var mark := clampf(own.get_center().x - 8.0, bar.position.x, bar.end.x - 64.0)
 	var count := "%d" % w.flowers.score(p.team)
-	draw_rect(
-		Rect2(mark - 4.0, 30.0, 30.0 + font.get_string_size(count, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x, 20.0), PLATE
+	# The plates of the HUD, with the map first. The arrows of units out of view stay off them.
+	var plates: Array[Rect2] = [Rect2(16.0, 16.0, MAP_PX, MAP_PX)]
+	plates.append(
+		Rect2(mark - 4.0, 30.0, 30.0 + font.get_string_size(count, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x, 20.0)
 	)
+	draw_rect(plates[-1], PLATE)
 	_icon(&"petal", Rect2(mark, 32.0, 16.0, 16.0), w.team_color(p.team))
 	_text(font, Vector2(mark + 22.0, 46.0), count, w.team_color(p.team), 16)
 	# Timer: red in the last 10 s, with a pulse on each second.
@@ -124,6 +136,8 @@ func _draw() -> void:
 	_text(font, Vector2(bar.end.x + 50.0, 28.0), clock, clock_color, 24)
 	# Hearts, one per hit point, on a dark plate like the map and the feed.
 	draw_rect(Rect2(8.0, size.y - 40.0, 12.0 + p.max_hp * 20.0, 32.0), PLATE)
+	# The hearts with the perks above them.
+	plates.append(Rect2(8.0, size.y - 72.0, maxf(12.0 + p.max_hp * 20.0, 8.0 + p.perks.size() * 40.0), 64.0))
 	for pip in int(p.max_hp):
 		var full := pip < ceili(p.hp)
 		_icon(&"heart", Rect2(16.0 + pip * 20.0, size.y - 32.0, 16.0, 16.0), RED if full else Color(0.3, 0.3, 0.34))
@@ -138,7 +152,8 @@ func _draw() -> void:
 	var right := size.x - 16.0
 	var slot := p.slot()
 	var ammo_x := right - 164.0
-	draw_rect(Rect2(ammo_x - 120.0, size.y - 88.0, right - ammo_x + 128.0, 80.0), PLATE)
+	plates.append(Rect2(ammo_x - 120.0, size.y - 88.0, right - ammo_x + 128.0, 80.0))
+	draw_rect(plates[-1], PLATE)
 	_icon(slot.id, Rect2(ammo_x - 72.0, size.y - 80.0, 64.0, 64.0), Color.WHITE)
 	for i in p.slots.size():
 		if i != p.slot_index:
@@ -168,7 +183,8 @@ func _draw() -> void:
 		var base := 34.0 + i * 26.0
 		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		draw_rect(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0), PLATE)
+		plates.append(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0))
+		draw_rect(plates[-1], PLATE)
 		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
 		_icon(row.icon, Rect2(end - 28.0, base - 18.0, 24.0, 24.0), Color.WHITE)
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
@@ -176,7 +192,7 @@ func _draw() -> void:
 	# Crosshair.
 	if get_tree().paused or w.finished:
 		return
-	_draw_arrows(w, font)
+	_draw_arrows(w, font, plates)
 	var mouse := game.crosshair()
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
 		draw_line(mouse + arm * 5.0, mouse + arm * 17.0, INK, 7.0)
@@ -196,7 +212,7 @@ func _draw() -> void:
 
 ## An arrow in the team colour at the screen border for each unit that is not fully in view, with its distance in
 ## metres. As in the original game.
-func _draw_arrows(w: SimWorld, font: Font) -> void:
+func _draw_arrows(w: SimWorld, font: Font, plates: Array[Rect2]) -> void:
 	var screen := Rect2(Vector2.ZERO, size)
 	var to_hud := size / Vector2(game.get_viewport().get_visible_rect().size)
 	for u in w.units:
@@ -206,10 +222,7 @@ func _draw_arrows(w: SimWorld, font: Font) -> void:
 			continue
 		# Under the score bar at the top.
 		var area := screen.grow_individual(-EDGE, -60.0, -EDGE, -EDGE)
-		var spot := edge_point(at, area)
-		# Beside the map, not on it.
-		if spot.x < 16.0 + MAP_PX and spot.y < 16.0 + MAP_PX + 20.0:
-			spot.x = 16.0 + MAP_PX + 24.0
+		var spot := beside(edge_point(at, area), plates, size.x)
 		var dir := (at - area.get_center()).normalized()
 		var side := dir.orthogonal()
 		var back := spot - dir * 4.0
