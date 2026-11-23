@@ -86,6 +86,6 @@ void fragment() {
 	if (length(p) > arena_radius) {
 		color = mix(color, vec3(0.25, 0.1, 0.14), fract((p.x + p.y) * 1.5) < 0.3 ? 0.75 : 0.5);
 	}
-	ALBEDO = screen(color * cloud(ground, TIME));
+	ALBEDO = lit_screen(color * cloud(ground, TIME));
 	ROUGHNESS = 1.0;
 }

@@ -22,3 +22,8 @@ float cloud(vec2 p, float t) {
 vec3 screen(vec3 c) {
 	return CURRENT_RENDERER == RENDERER_COMPATIBILITY ? pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)) : c;
 }
+
+// The same for a lit surface: the web renderer lights it brighter, so go half the way. Matches Quality.raw().
+vec3 lit_screen(vec3 c) {
+	return mix(c, screen(c), 0.5);
+}
