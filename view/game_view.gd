@@ -25,6 +25,8 @@ var shake := 0.0
 var intro := 0.0
 ## Screen tint for the post pass. Alpha is the strength and fades out.
 var tint := Color(0, 0, 0, 0)
+## True from the last right stick aim until the mouse moves.
+var _stick_aim := false
 var _kick := Vector2.ZERO
 var _bits := Bits.new()
 var _units: Array[UnitView] = []
@@ -113,6 +115,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _unhandled_input(input: InputEvent) -> void:
+	if input is InputEventMouseMotion:
+		_stick_aim = false
 	if player and input.is_action_pressed(&"swap_next"):
 		player.want_swap = 1
 	elif player and input.is_action_pressed(&"swap_prev"):
@@ -132,6 +136,8 @@ func _process(delta: float) -> void:
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
 	camera.size = lerpf(camera.size, CameraRig.VISIBLE_WIDTH_M, clampf(delta * 6.0, 0.0, 1.0))
+	if absf(camera.size - CameraRig.VISIBLE_WIDTH_M) < 0.02:
+		camera.size = CameraRig.VISIBLE_WIDTH_M
 	if intro > 0.0:
 		camera.size = CameraRig.VISIBLE_WIDTH_M + intro * intro * 14.0
 	camera.target = _focus + _kick + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
@@ -190,13 +196,25 @@ func pointer() -> Vector2:
 	return camera.ground_point(root.get_mouse_position() * scale, SHOT_HEIGHT)
 
 
+## Where the HUD draws the crosshair, in root canvas units: the mouse pointer, or a point ahead of the player while
+## the right stick aims.
+func crosshair() -> Vector2:
+	var root := get_tree().root
+	if not _stick_aim:
+		return root.get_mouse_position()
+	var ahead := player.pos + player.aim * 5.0
+	var scale := root.get_visible_rect().size / Vector2(get_viewport().get_visible_rect().size)
+	return camera.unproject_position(Vector3(ahead.x, SHOT_HEIGHT, ahead.y)) * scale
+
+
 func _read_input() -> void:
 	player.move = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var stick := Input.get_vector(&"aim_left", &"aim_right", &"aim_up", &"aim_down")
 	var to_pointer := pointer() - player.pos
 	if stick.length() > 0.3:
 		player.aim = stick.normalized()
-	elif to_pointer.length() > 0.05:
+		_stick_aim = true
+	elif not _stick_aim and to_pointer.length() > 0.05:
 		player.aim = to_pointer.normalized()
 	player.want_fire = Input.is_action_pressed(&"fire")
 	player.want_throw = Input.is_action_pressed(&"throw")

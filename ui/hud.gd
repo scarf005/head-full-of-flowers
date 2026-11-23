@@ -148,7 +148,7 @@ func _draw() -> void:
 	# Crosshair.
 	if get_tree().paused or w.finished:
 		return
-	var mouse := get_local_mouse_position()
+	var mouse := game.crosshair()
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
 		draw_line(mouse + arm * 5.0, mouse + arm * 17.0, INK, 7.0)
 	draw_rect(Rect2(mouse - Vector2(3.0, 3.0), Vector2(6.0, 6.0)), INK)

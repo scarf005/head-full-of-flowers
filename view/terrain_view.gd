@@ -78,6 +78,8 @@ var _revision := -1
 ## Cell index -> wall colour of the building that owns the cell.
 var _walls := {}
 var _boxes_material := ShaderMaterial.new()
+## For each box, the cell that it stands on, or -1 for a box that stays.
+var _owners := PackedInt32Array()
 
 
 func setup(world: SimWorld) -> void:
@@ -103,8 +105,16 @@ func _process(_delta: float) -> void:
 	if grid == null or grid.revision == _revision:
 		return
 	_revision = grid.revision
+	if not _owners.is_empty():
+		# A full rebuild takes more than 10 ms. Hide only the boxes of broken cells.
+		for n in _owners.size():
+			if _owners[n] >= 0 and grid.hp[_owners[n]] <= 0.0:
+				_owners[n] = -1
+				_boxes.set_instance_transform(n, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+		return
 	var out := []
 	for i in grid.material.size():
+		_claim(out, i - 1)
 		var mat := grid.material[i]
 		if grid.hp[i] <= 0.0 or mat == Defs.Mat.PROP or mat == Defs.Mat.NONE:
 			continue
@@ -134,6 +144,7 @@ func _process(_delta: float) -> void:
 					look[1],
 					color
 				)
+	_claim(out, grid.material.size() - 1)
 	for prop in map.props:
 		var i := grid.size * floori(prop.y + grid.half) + floori(prop.x + grid.half)
 		if grid.hp[i] > 0.0:
@@ -141,6 +152,7 @@ func _process(_delta: float) -> void:
 			var inset := 0.5 if prop.width * prop.height == 1 and not prop.solid else 0.2
 			var size := Vector2(prop.width - inset, prop.height - inset)
 			_prop(out, prop.kind, Vector2(prop.x, prop.y), size, look)
+			_claim(out, i)
 	for building in map.buildings:
 		for door: Vector2i in building.doors:
 			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
@@ -151,10 +163,17 @@ func _process(_delta: float) -> void:
 				Transform3D(swing, hinge) * Transform3D(Basis.from_scale(Vector3(0.9, 1.1, 0.08)), Vector3(0.45, 0, 0))
 			)
 			out.append([leaf, DOOR_COLOR])
+	_claim(out, -1)
 	_boxes.instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
 		_boxes.set_instance_color(n, Quality.raw(out[n][1]))
+
+
+## Records `cell` as the owner of the boxes added since the last call.
+func _claim(out: Array, cell: int) -> void:
+	while _owners.size() < out.size():
+		_owners.append(cell)
 
 
 ## A piece of furniture: a darker base, a lighter top, and the parts that tell its kind.

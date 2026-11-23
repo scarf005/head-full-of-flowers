@@ -16,7 +16,7 @@ const ACTIONS := {
 	&"throw": [[KEY_G], [MOUSE_BUTTON_RIGHT], [], [JOY_AXIS_TRIGGER_LEFT, 1]],
 	&"reload": [[KEY_R], [], [JOY_BUTTON_X], []],
 	&"swap_next": [[KEY_Q], [MOUSE_BUTTON_WHEEL_DOWN], [JOY_BUTTON_Y], []],
-	&"swap_prev": [[], [MOUSE_BUTTON_WHEEL_UP], [], []],
+	&"swap_prev": [[], [MOUSE_BUTTON_WHEEL_UP], [JOY_BUTTON_LEFT_SHOULDER], []],
 	&"pause": [[KEY_ESCAPE], [], [JOY_BUTTON_START], []],
 }
 

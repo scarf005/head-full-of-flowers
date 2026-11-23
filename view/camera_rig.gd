@@ -41,7 +41,9 @@ func pixels_per_meter() -> Vector2:
 func apply() -> void:
 	var ppm := pixels_per_meter()
 	var snapped_px := Vector2(roundf(target.x * ppm.x), roundf(target.y * ppm.y))
-	pattern_offset = snapped_px
+	# During a zoom the pixels per metre change, and a moving offset makes the whole pattern flicker.
+	if is_equal_approx(size, VISIBLE_WIDTH_M):
+		pattern_offset = snapped_px
 	var ground := Vector3(snapped_px.x / ppm.x, 0.0, snapped_px.y / ppm.y)
 	position = ground + Vector3(0.0, sin(PITCH), cos(PITCH)) * DISTANCE
 
