@@ -76,6 +76,7 @@ func start_match(config: Dictionary, demo := false) -> void:
 		game.queue_free()
 	game = GameView.new()
 	game.autoplay = demo
+	game.intro = 0.0 if demo else 1.2
 	game.process_mode = Node.PROCESS_MODE_PAUSABLE
 	viewport.add_child(game)
 	game.setup(config)
@@ -114,6 +115,10 @@ func _set_paused(paused: bool) -> void:
 func _process(_delta: float) -> void:
 	frame += 1
 	dither.set_shader_parameter("pattern_offset", game.camera.pattern_offset)
+	var tint := game.tint
+	if game.player.hp <= 3.0 and tint.a < 0.3 and not game.autoplay:
+		tint = Color(0.85, 0.05, 0.12, 0.22 + 0.08 * sin(Time.get_ticks_msec() * 0.008))
+	dither.set_shader_parameter("tint", tint)
 	var first := int(args.get("frames", "30"))
 	var shots := int(args.get("burst", "1"))
 	if args.has("capture") and frame >= first and (frame - first) % 3 == 0:

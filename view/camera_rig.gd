@@ -34,7 +34,7 @@ func _ready() -> void:
 
 func pixels_per_meter() -> Vector2:
 	var width := float(get_viewport().get_visible_rect().size.x)
-	var ppm := width / VISIBLE_WIDTH_M
+	var ppm := width / size
 	return Vector2(ppm, ppm * sin(PITCH))
 
 

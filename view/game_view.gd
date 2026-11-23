@@ -17,6 +17,14 @@ var player: SimUnit
 ## Bots drive the player unit too. Used for demos and captures.
 var autoplay := false
 var shake := 0.0
+## Seconds left of the opening, in which the camera closes in and the match waits.
+var intro := 0.0
+## Screen tint for the post pass. Alpha is the strength and fades out.
+var tint := Color(0, 0, 0, 0)
+var _kick := Vector2.ZERO
+var _bits := Bits.new()
+var _units: Array[UnitView] = []
+var _ring_mesh := TorusMesh.new()
 var _focus := Vector2.ZERO
 var _shots: MultiMesh
 var _blobs: MultiMesh
@@ -48,6 +56,12 @@ func setup(config: Dictionary) -> void:
 		var view := UnitView.new()
 		view.setup(u, world.team_color(u.team))
 		add_child(view)
+		_units.append(view)
+	add_child(_bits)
+	_ring_mesh.inner_radius = 0.86
+	_ring_mesh.outer_radius = 1.0
+	_ring_mesh.ring_segments = 3
+	_ring_mesh.rings = 32
 	var ball := SphereMesh.new()
 	ball.radial_segments = 8
 	ball.rings = 4
@@ -75,8 +89,13 @@ func setup(config: Dictionary) -> void:
 	add_child(_arena)
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if world == null or world.finished:
+		return
+	if intro > 0.0:
+		intro -= delta
+		if intro <= 0.0:
+			event.emit({type = &"go"})
 		return
 	if autoplay:
 		Bots.think(world, player, Defs.TICK * Defs.GAME_SPEED)
@@ -104,7 +123,12 @@ func _process(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
 	shake = maxf(0.0, shake - delta * 4.4)
 	_focus = _focus.lerp(player.pos + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
-	camera.target = _focus + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
+	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
+	tint.a = maxf(0.0, tint.a - delta * 2.5)
+	camera.size = lerpf(camera.size, CameraRig.VISIBLE_WIDTH_M, clampf(delta * 6.0, 0.0, 1.0))
+	if intro > 0.0:
+		camera.size = CameraRig.VISIBLE_WIDTH_M + intro * intro * 14.0
+	camera.target = _focus + _kick + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
 	camera.apply()
 	_arena.scale = Vector3(world.arena_radius * 2.0, 1.0, world.arena_radius * 2.0)
 	_shots.visible_instance_count = world.projectiles.size()
@@ -169,14 +193,29 @@ func _show(e: Dictionary) -> void:
 			var at: Vector2 = e.pos + e.dir * 0.7
 			_flash(Vector3(at.x, 0.8, at.y), Color(1.0, 0.8, 0.4), 2.5, 0.06)
 			_pop(at, Color(1.0, 0.95, 0.6), 0.9, 0.05)
+			if e.weapon != &"flamethrower":
+				var side: Vector2 = e.dir.orthogonal() * randf_range(1.5, 3.0)
+				_bits.add(
+					Vector3(e.pos.x, 0.7, e.pos.y), Vector3(side.x, 3.5, side.y), Color(0.95, 0.75, 0.25), 0.07, 0.9
+				)
 			if e.unit == 0:
 				shake = minf(1.0, shake + 0.12)
+				_kick -= e.dir * 0.2
 		&"hit":
-			_puff(e.pos, world.team_color(e.team), 40 if e.kill else 8, 5.0 if e.kill else 3.0)
+			var color := world.team_color(e.team)
+			_puff(e.pos, color, 40 if e.kill else 8, 7.0 if e.kill else 4.5, e.dir)
 			_pop(e.pos, Color.WHITE, 1.6 if e.kill else 1.0, 0.07)
+			if e.kill:
+				_ring(e.pos, color, 2.4, 0.3)
 			if e.target == 0 or e.source == 0:
 				shake = minf(1.2, shake + (0.66 if e.target == 0 else 0.4) + (0.5 if e.kill else 0.0))
 				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == 0 else Color.WHITE)
+			if e.target == 0:
+				tint = Color(0.85, 0.05, 0.12, 0.7)
+				_kick += e.dir * 0.4
+			elif e.source == 0 and e.kill:
+				tint = Color(1.0, 1.0, 1.0, 0.35)
+				camera.size = CameraRig.VISIBLE_WIDTH_M - 1.6
 		&"cell":
 			var at := world.grid.center_of(e.cell)
 			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
@@ -184,7 +223,31 @@ func _show(e: Dictionary) -> void:
 		&"explosion":
 			_flash(Vector3(e.pos.x, 1.0, e.pos.y), Color(1.0, 0.6, 0.25), e.radius * 2.5, 0.35)
 			_burst(e.pos, e.radius)
+			_ring(e.pos, Color(1.0, 0.8, 0.4), e.radius * 1.2, 0.25)
+			_puff(e.pos, Color(0.22, 0.2, 0.2), 18, 8.0)
 			shake = minf(1.5, shake + 6.0 / maxf(4.0, e.pos.distance_to(player.pos)))
+		&"respawn":
+			_units[e.unit].grow = 0.2
+			_ring(e.pos, world.team_color(world.units[e.unit].team), 1.3, 0.25)
+		&"pickup":
+			_ring(e.pos, Color(1.0, 0.9, 0.4), 1.1, 0.2)
+
+
+## Flat ring on the ground that widens to `radius` and goes away.
+func _ring(at: Vector2, color: Color, radius: float, seconds: float) -> void:
+	var ring := MeshInstance3D.new()
+	ring.mesh = _ring_mesh
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = color
+	ring.material_override = material
+	ring.position = Vector3(at.x, 0.2, at.y)
+	ring.scale = Vector3(0.3, 0.2, 0.3)
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ring)
+	var tween := create_tween()
+	tween.tween_property(ring, "scale", Vector3(radius, 0.2, radius), seconds).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(ring.queue_free)
 
 
 func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
@@ -220,27 +283,14 @@ func _pop(at: Vector2, color: Color, size: float, seconds: float) -> void:
 	get_tree().create_timer(seconds, false).timeout.connect(ball.queue_free)
 
 
-## One-shot spray of small cubes.
-func _puff(at: Vector2, color: Color, amount: int, speed: float) -> void:
-	var puff := CPUParticles3D.new()
-	puff.position = Vector3(at.x, 0.6, at.y)
-	puff.one_shot = true
-	puff.explosiveness = 1.0
-	puff.amount = amount
-	puff.lifetime = 0.6
-	puff.direction = Vector3.UP
-	puff.spread = 70.0
-	puff.initial_velocity_min = speed * 0.4
-	puff.initial_velocity_max = speed
-	puff.scale_amount_min = 0.08
-	puff.scale_amount_max = 0.18
-	puff.mesh = BoxMesh.new()
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	puff.material_override = material
-	puff.emitting = true
-	add_child(puff)
-	get_tree().create_timer(1.0, false).timeout.connect(puff.queue_free)
+## Spray of small cubes that fall and bounce. `dir` pushes the spray one way.
+func _puff(at: Vector2, color: Color, amount: int, speed: float, dir := Vector2.ZERO) -> void:
+	for n in amount:
+		var out := (dir + Vector2.from_angle(randf() * TAU) * 0.7) * speed * randf_range(0.3, 1.0)
+		var up := randf_range(1.5, 5.5)
+		_bits.add(
+			Vector3(at.x, 0.7, at.y), Vector3(out.x, up, out.y), color, randf_range(0.07, 0.17), randf_range(0.5, 1.1)
+		)
 
 
 ## Damage number that rises and fades.
