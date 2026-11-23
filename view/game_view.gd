@@ -368,8 +368,9 @@ func _puff(at: Vector2, color: Color, amount: int, speed: float, dir := Vector2.
 ## Damage number that rises and fades.
 ## Damage number over a unit. Hits on the same unit while its number shows add to that number.
 func _number(target: int, at: Vector2, amount: float, color: Color) -> void:
-	var label: Label3D = _numbers.get(target)
-	if not is_instance_valid(label):
+	# A typed variable cannot take a freed object, so test the stored value first.
+	var label: Label3D = _numbers[target] if is_instance_valid(_numbers.get(target)) else null
+	if label == null:
 		label = Label3D.new()
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.no_depth_test = true
