@@ -21,14 +21,18 @@ enum Tile {
 var size := Defs.MAP_SIZE
 ## Row-major: tiles[y * size + x].
 var tiles: PackedByteArray
-## Each: {kind, x, y, width, height, tiles}. kind is &"warehouse", &"house", &"hedge", &"wall", &"box" or
-## &"high-tier-box". x, y is the world centre. tiles is an Array of PackedByteArray rows (1 = solid cell); it is
+## Each: {kind, x, y, width, height, tiles}. kind is &"warehouse", &"house", &"hedge", &"wall", &"window", &"box"
+## or &"high-tier-box". x, y is the world centre. tiles is an Array of PackedByteArray rows (1 = solid cell); it is
 ## used for warehouse, house and hedge and may be empty for the other kinds.
 var obstacles: Array[Dictionary] = []
 ## Each: {kind, x, y, width, height, solid}. kind is a StringName such as &"bench". width and height are whole
 ## cells.
 var props: Array[Dictionary] = []
 var pickup_points: PackedVector2Array = []
+## Each: {kind, rect, rooms, doors} in grid cells. kind is the purpose (&"house", &"office", &"shop",
+## &"warehouse", &"garage" or &"greenhouse"). rooms is an Array of {rect: Rect2i, kind: StringName}. doors is an
+## Array[Vector2i] of open wall cells.
+var buildings: Array[Dictionary] = []
 
 
 func _init(map_size: int = Defs.MAP_SIZE) -> void:
@@ -87,5 +91,7 @@ static func _material(kind: StringName) -> Defs.Mat:
 			return Defs.Mat.WAREHOUSE
 		&"hedge":
 			return Defs.Mat.HEDGE
+		&"window":
+			return Defs.Mat.GLASS
 		_:
 			return Defs.Mat.BOX

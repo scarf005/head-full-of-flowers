@@ -1,7 +1,7 @@
 class_name Defs
 ## Tuning numbers. Lengths in metres, times in seconds.
 
-enum Mat { NONE, WALL, WAREHOUSE, ROCK, BOX, HEDGE, PROP }
+enum Mat { NONE, WALL, WAREHOUSE, ROCK, BOX, HEDGE, PROP, GLASS }
 
 const TICK := 1.0 / 60.0
 const GAME_SPEED := 0.75
@@ -26,8 +26,8 @@ const BURNT := -1
 const GRENADE_COOLDOWN := 2.8
 const MOLOTOV_COOLDOWN := 4.4
 
-const MAT_HP: Array[float] = [0.0, 3.0, 4.0, 8.0, 8.0, 2.0, 3.0]
-const MAT_ARMOR: Array[float] = [0.0, 2.0, 2.0, 0.0, 0.0, 1.0, 0.0]
+const MAT_HP: Array[float] = [0.0, 3.0, 4.0, 8.0, 8.0, 2.0, 3.0, 1.0]
+const MAT_ARMOR: Array[float] = [0.0, 2.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0]
 
 const WEAPON_IDS: Array[StringName] = [
 	&"pistol",
