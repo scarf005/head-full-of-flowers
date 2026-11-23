@@ -83,12 +83,14 @@ func _draw() -> void:
 	var x := bar.position.x
 	var own := Rect2()
 	for team in w.team_count:
-		# Before the first petal, every team has an equal share.
-		var share := w.flowers.score(team) / float(total) if total > 0 else 1.0 / w.team_count
+		# Before the first petal, the bar is empty.
+		var share := w.flowers.score(team) / float(maxi(total, 1))
 		var segment := Rect2(x, bar.position.y, bar.size.x * share, bar.size.y)
 		draw_rect(segment, w.team_color(team))
 		own = segment if team == p.team else own
 		x += segment.size.x
+	if own.size.x > 0.0:
+		draw_rect(own.grow(1.0), Color.WHITE, false, 2.0)
 	var mark := clampf(own.get_center().x - 8.0, bar.position.x, bar.end.x - 64.0)
 	_icon(&"petal", Rect2(mark, 32.0, 16.0, 16.0), w.team_color(p.team))
 	_text(font, Vector2(mark + 22.0, 46.0), "%d" % w.flowers.score(p.team), w.team_color(p.team), 16)
