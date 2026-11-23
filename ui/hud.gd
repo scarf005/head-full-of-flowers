@@ -4,7 +4,7 @@ extends Control
 
 const MAP_PX := 150.0
 const INK := Color(0.05, 0.05, 0.08)
-const PLATE := Color(0.05, 0.05, 0.08, 0.7)
+const PLATE := Color(0.05, 0.05, 0.08, 0.88)
 const RED := Color(0.95, 0.3, 0.35)
 ## Offsets that stamp an ink rim around each icon.
 const RIM: Array[Vector2] = [

@@ -73,14 +73,21 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	var wood := _lit_material(Color(0.62, 0.42, 0.26))
 	# Stock: the rear third of the gun, a little wider, in wood.
 	_part(BoxMesh.new(), Vector3(0, -0.15, 0.36), Vector3(1.5, 1.3, 0.3), wood, _gun)
-	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, plain)
+	# The bar and the ring of the player are white in each mode: team mates have the same colour as the player.
+	var mark := plain
+	if unit.is_player:
+		mark = plain.duplicate()
+		mark.albedo_color = Color(1.0, 1.0, 0.92)
+	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, mark)
 	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if unit.is_player:
 		var ring := TorusMesh.new()
 		ring.inner_radius = 0.42
-		ring.outer_radius = 0.5
+		ring.outer_radius = 0.54
 		ring.ring_segments = 3
-		_part(ring, Vector3(0, 0.04, 0), Vector3(1, 0.2, 1), plain).cast_shadow = _bar.cast_shadow
+		# Above the flowers in tall grass.
+		var at := Vector3(0, GrassView.TOP + 0.06, 0)
+		_part(ring, at, Vector3(1, 0.2, 1), mark).cast_shadow = _bar.cast_shadow
 
 
 func _ready() -> void:
