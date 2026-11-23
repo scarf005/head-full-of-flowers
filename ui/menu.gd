@@ -178,6 +178,7 @@ func _volume(icon: StringName, text: String, bus: StringName) -> void:
 	slider.max_value = 1.0
 	slider.step = 0.05
 	slider.value = settings.get_value("audio", bus, 0.8)
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var apply := func(value: float) -> void:
 		var index := AudioServer.get_bus_index(bus)
 		if index >= 0:

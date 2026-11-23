@@ -404,7 +404,7 @@ func _burst(at: Vector2, radius: float) -> void:
 		var color := (
 			Color(1.0, randf_range(0.55, 0.9), 0.25) * 1.6
 			if fire
-			else Color.from_hsv(0.08, 0.1, randf_range(0.55, 0.8))
+			else Color.from_hsv(0.08, 0.08, randf_range(0.8, 1.0))
 		)
 		var ball := _ball(Vector3(at.x + out.x, 0.6, at.y + out.y), color, not fire)
 		ball.scale = Vector3.ONE * 0.2
