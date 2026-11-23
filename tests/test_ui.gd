@@ -75,6 +75,14 @@ func test_arrow_for_a_unit_out_of_view_is_on_the_screen_border_toward_the_unit()
 	assert_eq(Hud.edge_point(Vector2(5000.0, 2700.0), area), Vector2(1248.0, 656.0), "a unit toward a corner")
 
 
+func test_arrow_on_a_plate_of_the_hud_moves_beside_it_toward_the_middle_of_the_screen() -> void:
+	# The map and the ammo plate.
+	var plates: Array[Rect2] = [Rect2(16.0, 16.0, 150.0, 150.0), Rect2(980.0, 632.0, 292.0, 80.0)]
+	assert_eq(Hud.beside(Vector2(1100.0, 688.0), plates, 1280.0), Vector2(956.0, 688.0), "on the ammo plate")
+	assert_eq(Hud.beside(Vector2(32.0, 100.0), plates, 1280.0), Vector2(190.0, 100.0), "on the map")
+	assert_eq(Hud.beside(Vector2(640.0, 688.0), plates, 1280.0), Vector2(640.0, 688.0), "on no plate")
+
+
 func test_damage_number_adds_hits_and_shows_again_after_it_is_gone() -> void:
 	var view: GameView = autofree(GameView.new())
 	# A match of bots reads no input actions. Only main.gd adds those.

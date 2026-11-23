@@ -181,6 +181,26 @@ func test_rifle_shot_hits_a_unit_in_front_of_a_hedge_or_a_wall_with_its_whole_da
 		assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], cover, "the shot does not reach the cell")
 
 
+func test_rifle_shot_hits_the_nearer_of_2_units_on_one_step() -> void:
+	var world := SimWorld.new({seed = 7, size = 3}, TerrainMap.new())
+	world.bots_active = false
+	Arsenal.equip(world.units[0], &"assault", 60.0)
+	world.units[0].want_fire = true
+	world.tick()
+	# The far unit is the first one in the list of units.
+	var far := world.units[1]
+	var near := world.units[2]
+	far.pos = Vector2(2.9, 3.5)
+	near.pos = Vector2(2.3, 3.5)
+	var health := [far.hp, near.hp]
+	# One step from (1.5, 3.5) to (2.7, 3.5) goes through the near unit and 0.2 m into the far unit.
+	var p := world.projectiles[0]
+	p.pos = Vector2(1.5, 3.5)
+	p.vel = Vector2(60, 0)
+	Shots._step_projectile(world, p, 0.02)
+	assert_eq([far.hp, near.hp], [health[0], health[1] - p.damage])
+
+
 func test_fire_bottle_that_lands_stops_the_match_for_a_moment() -> void:
 	a.secondary = &"molotov"
 	a.want_throw = true
