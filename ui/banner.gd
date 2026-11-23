@@ -8,6 +8,8 @@ var game: GameView
 var _text := ""
 var _color := Color.WHITE
 var _ttl := 0.0
+## Seconds since the call-out came. It starts large and shrinks to its size in 0.12 s.
+var _age := 0.0
 var _streak := 0
 var _streak_at := -10.0
 var _leader := -1
@@ -25,6 +27,9 @@ func setup(view: GameView) -> void:
 
 
 func say(text: String, color: Color, seconds: float) -> void:
+	# A call-out that repeats in each frame, for example out of bounds, stays at its size.
+	if text != _text or _ttl <= 0.0:
+		_age = 0.0
 	_text = text
 	_color = color
 	_ttl = seconds
@@ -47,6 +52,7 @@ func _on_event(e: Dictionary) -> void:
 
 func _process(delta: float) -> void:
 	_ttl -= 0.0 if get_tree().paused else delta
+	_age += delta
 	var w := game.world
 	if game.autoplay or w.finished:
 		queue_redraw()
@@ -74,5 +80,8 @@ func _draw() -> void:
 		return
 	var font := get_theme_default_font()
 	var at := Vector2(0.0, size.y * 0.3)
-	draw_string_outline(font, at, _text, HORIZONTAL_ALIGNMENT_CENTER, size.x, 64, 12, Color(0.05, 0.05, 0.08))
-	draw_string(font, at, _text, HORIZONTAL_ALIGNMENT_CENTER, size.x, 64, _color)
+	# Steps of 16 px keep the pixel font sharp.
+	var px := 64 + 16 * ceili(3.0 * clampf(1.0 - _age / 0.12, 0.0, 1.0))
+	at.y += (px - 64) * 0.35
+	draw_string_outline(font, at, _text, HORIZONTAL_ALIGNMENT_CENTER, size.x, px, 12, Color(0.05, 0.05, 0.08))
+	draw_string(font, at, _text, HORIZONTAL_ALIGNMENT_CENTER, size.x, px, _color)

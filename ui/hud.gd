@@ -4,6 +4,7 @@ extends Control
 
 const MAP_PX := 150.0
 const INK := Color(0.05, 0.05, 0.08)
+const PLATE := Color(0.05, 0.05, 0.08, 0.7)
 const RED := Color(0.95, 0.3, 0.35)
 ## Offsets that stamp an ink rim around each icon.
 const RIM: Array[Vector2] = [
@@ -100,7 +101,8 @@ func _draw() -> void:
 	_icon(&"clock", Rect2(bar.end.x + 12.0, 3.0, 32.0, 32.0), clock_color)
 	var clock := "%d:%02d" % [int(left) / 60, int(left) % 60]
 	_text(font, Vector2(bar.end.x + 50.0, 28.0), clock, clock_color, 24)
-	# Hearts, one per hit point.
+	# Hearts, one per hit point, on a dark plate like the map and the feed.
+	draw_rect(Rect2(8.0, size.y - 40.0, 12.0 + p.max_hp * 20.0, 32.0), PLATE)
 	for pip in int(p.max_hp):
 		var full := pip < ceili(p.hp)
 		_icon(&"heart", Rect2(16.0 + pip * 20.0, size.y - 32.0, 16.0, 16.0), RED if full else Color(0.3, 0.3, 0.34))
@@ -115,6 +117,7 @@ func _draw() -> void:
 	var right := size.x - 16.0
 	var slot := p.slot()
 	var ammo_x := right - 164.0
+	draw_rect(Rect2(ammo_x - 120.0, size.y - 88.0, right - ammo_x + 128.0, 80.0), PLATE)
 	_icon(slot.id, Rect2(ammo_x - 72.0, size.y - 80.0, 64.0, 64.0), Color.WHITE)
 	for i in p.slots.size():
 		if i != p.slot_index:
@@ -144,7 +147,7 @@ func _draw() -> void:
 		var base := 34.0 + i * 26.0
 		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		draw_rect(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0), Color(0.05, 0.05, 0.08, 0.7))
+		draw_rect(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0), PLATE)
 		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
 		_icon(row.icon, Rect2(end - 28.0, base - 18.0, 24.0, 24.0), Color.WHITE)
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
@@ -180,7 +183,7 @@ func _draw_map(w: SimWorld) -> void:
 	var origin := Vector2(16.0, 16.0)
 	var scale := MAP_PX / (w.arena_start * 2.0)
 	var centre := origin + Vector2.ONE * MAP_PX * 0.5
-	draw_rect(Rect2(origin, Vector2.ONE * MAP_PX), Color(0.05, 0.05, 0.08, 0.7))
+	draw_rect(Rect2(origin, Vector2.ONE * MAP_PX), PLATE)
 	var shown := Rect2(Vector2.ONE * (w.grid.size * 0.5 - w.arena_start), Vector2.ONE * w.arena_start * 2.0)
 	draw_texture_rect_region(_map, Rect2(origin, Vector2.ONE * MAP_PX), shown)
 	draw_arc(centre, w.arena_radius * scale, 0.0, TAU, 48, Color(1.0, 0.4, 0.35), 2.0)
