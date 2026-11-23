@@ -130,7 +130,8 @@ static func damage(
 	target.vel += dir * 2.7
 	var killed := target.hp <= 0.0
 	var team := Defs.BURNT if is_self or attacker == null else attacker.team
-	var opts := {arena_radius = w.arena_radius, now = w.now, stagger = 0.25 if cause == &"shot" else 0.05}
+	var opts := {arena_radius = w.arena_radius, now = w.now, grid = w.grid}
+	opts.stagger = 0.25 if cause == &"shot" else 0.05
 	var plan := FlowerField.burst_for(w.rng, dealt, impact.length())
 	if killed:
 		plan.amount *= 2

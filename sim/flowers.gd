@@ -48,7 +48,7 @@ static func burst_for(rng: RandomNumberGenerator, damage: float, speed: float) -
 	}
 
 
-## Plants `amount` flowers in a cone along `dir`, inside the arena.
+## Plants `amount` flowers in a cone along `dir`, inside the arena and not in a solid cell of `opts.grid`.
 func burst(
 	rng: RandomNumberGenerator, team: int, origin: Vector2, dir: Vector2, amount: int, scale: float, opts: Dictionary
 ) -> void:
@@ -67,6 +67,14 @@ func burst(
 				break
 			p += heading * 0.34
 		p = p.limit_length(limit)
+		# A flower that would land in a wall or on furniture comes back toward the hit.
+		var grid: ObstacleGrid = opts.get("grid")
+		for attempt in 3:
+			if grid == null or not grid.is_solid(grid.cell_of(p)):
+				break
+			p = origin.lerp(p, 0.5)
+		if grid and grid.is_solid(grid.cell_of(p)):
+			continue
 		_plant(team, p, flower_size, weight, opts.now + rng.randf_range(0.0, opts.get("stagger", 0.0)))
 
 
