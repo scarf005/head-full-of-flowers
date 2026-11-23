@@ -154,7 +154,7 @@ func _process(_delta: float) -> void:
 	frame += 1
 	dither.set_shader_parameter("pattern_offset", game.camera.pattern_offset)
 	var tint := game.tint
-	if game.player.hp <= 3.0 and tint.a < 0.3 and not game.autoplay:
+	if game.player.hp <= 3.0 and tint.a < 0.3 and _live():
 		tint = Color(0.85, 0.05, 0.12, 0.22 + 0.08 * sin(Time.get_ticks_msec() * 0.008))
 	dither.set_shader_parameter("tint", tint)
 	var first := int(args.get("frames", "30"))
