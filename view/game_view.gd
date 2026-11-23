@@ -216,7 +216,7 @@ func _process(delta: float) -> void:
 		var ring := Transform3D(Basis.from_scale(Vector3(reach, 0.1, reach)), under)
 		_warns.set_instance_transform(i, ring)
 		_warns.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else Color(0.6, 0.1, 0.1))
-		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.16, 0.3, 0.16)
+		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.1, 0.13, 0.1)
 		_blobs.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else shell)
 	_fires.visible_instance_count = world.zones.size()
 	var flames := 0
