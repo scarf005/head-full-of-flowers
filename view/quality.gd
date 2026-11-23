@@ -26,7 +26,7 @@ static func environment() -> Environment:
 
 static func sun() -> DirectionalLight3D:
 	var light := DirectionalLight3D.new()
-	light.rotation = Vector3(deg_to_rad(-48.0), deg_to_rad(-38.0), 0.0)
+	light.rotation = Vector3(deg_to_rad(-62.0), deg_to_rad(-38.0), 0.0)
 	light.light_color = Color(1.0, 0.94, 0.82)
 	light.light_energy = 0.85 if high() else 0.48
 	light.shadow_enabled = true
