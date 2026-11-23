@@ -367,7 +367,7 @@ func _fits(r: Rect2i, solid: bool, outdoor: bool) -> bool:
 		if not _inside(p) or state[p.y * size + p.x] != FREE:
 			return false
 		var tile := _tile(p)
-		if outdoor and (tile in ROADS or tile in FLOORS or tile in WET and solid):
+		if outdoor and (tile in ROADS or tile in FLOORS or tile in WET):
 			return false
 		for d in MapBuilding.SIDES:
 			if not outdoor and _inside(p + d) and state[(p + d).y * size + p.x + d.x] == CLEAR:
