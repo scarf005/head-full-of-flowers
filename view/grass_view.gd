@@ -18,6 +18,16 @@ func setup(sim: SimWorld) -> void:
 	var buffer := PackedFloat32Array()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
+	# Squares of half a metre on and around each prop that lies on the ground. A tuft beside such a prop leans over
+	# it and hides it, so these squares get no tufts.
+	var bare := {}
+	for prop: Dictionary in map.props:
+		if prop.kind not in PropArt.FLAT:
+			continue
+		var first := Vector2i(Vector2(prop.x * 2 - prop.width, prop.y * 2 - prop.height).round()) - Vector2i.ONE
+		for dy in prop.height * 2 + 2:
+			for dx in prop.width * 2 + 2:
+				bare[first + Vector2i(dx, dy)] = true
 	for y in map.size:
 		for x in map.size:
 			var corner := Vector2(x - map.size / 2.0, y - map.size / 2.0)
@@ -26,7 +36,7 @@ func setup(sim: SimWorld) -> void:
 			for n in per_tile:
 				var at := corner + Vector2(rng.randf(), rng.randf())
 				var tile := TerrainView.tile(map, at)
-				if not TALL.has(tile):
+				if not TALL.has(tile) or bare.has(Vector2i((at * 2.0).floor())):
 					continue
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(
 					Vector3(1.6, TALL[tile] * rng.randf_range(0.85, 1.15), 1.6)
