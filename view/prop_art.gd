@@ -441,7 +441,8 @@ static func _furniture(kind: StringName, w: int, d: int, y: int) -> void:
 			var bed := kind == &"flowerbed"
 			_box(0, y, w, d, 3 if bed else 4, "c" if bed else "T", "b" if bed else "Q", "d" if bed else "t")
 			_fill(2, y + 2, w - 4, d - 5, "d")
-			var count := (w if long else d) / 6
+			# The last plant ends 2 pixels before the rim.
+			var count := ((w if long else d) - 4) / 6
 			for n in count:
 				var along := 3 + n * 6
 				var across := 2 + (n * 3) % ((d if long else w) - 9)
