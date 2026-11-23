@@ -73,7 +73,11 @@ func burst(
 			if grid == null or not grid.is_solid(grid.cell_of(p)):
 				break
 			p = origin.lerp(p, 0.5)
-		if grid and grid.is_solid(grid.cell_of(p)):
+			# The way back can end in a full cell. Skip the flower then, as for a wall.
+			if _weight[_cell(p)] + weight > CELL_WEIGHT_CAP:
+				p = Vector2.INF
+				break
+		if p == Vector2.INF or grid and grid.is_solid(grid.cell_of(p)):
 			continue
 		_plant(team, p, flower_size, weight, opts.now + rng.randf_range(0.0, opts.get("stagger", 0.0)))
 

@@ -209,8 +209,10 @@ func _process(delta: float) -> void:
 		)
 		var blink := fmod(world.now, 0.24) < 0.08
 		# No ring for a fire bottle: it burns where it lands, and that place is not known yet.
-		var reach := 0.0 if t.molotov else Shots.BLAST_RADIUS
-		var ring := Transform3D(Basis.from_scale(Vector3(reach, 0.1, reach)), Vector3(t.pos.x, 0.12, t.pos.y))
+		# The blast hits a unit whose edge is in reach, so the ring is wider by the radius of a unit.
+		var reach := 0.0 if t.molotov else Shots.BLAST_RADIUS + Defs.PLAYER_RADIUS
+		var under := Vector3(t.pos.x - t.vel.x * shot_lag, 0.12, t.pos.y - t.vel.y * shot_lag)
+		var ring := Transform3D(Basis.from_scale(Vector3(reach, 0.1, reach)), under)
 		_warns.set_instance_transform(i, ring)
 		_warns.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else Color(0.6, 0.1, 0.1))
 		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.16, 0.3, 0.16)
