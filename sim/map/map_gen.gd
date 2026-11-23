@@ -246,11 +246,11 @@ func _lots(block_lot: Rect2i) -> void:
 	var along_x := lot.size.x < lot.size.y
 	var long := maxi(lot.size.x, lot.size.y)
 	if long < 18 or rng.randf() < 0.55:
-		_lot(lot, &"", rng.randf() < 0.7)
+		_lot(lot, &"", rng.randf() < 0.2)
 		return
 	var cut := long / 2 + rng.randi_range(-1, 1)
-	_lot(MapBuilding.band(lot, along_x, 0, cut), &"", rng.randf() < 0.7)
-	_lot(MapBuilding.band(lot, along_x, cut + 1, long - cut - 1), &"", rng.randf() < 0.7)
+	_lot(MapBuilding.band(lot, along_x, 0, cut), &"", rng.randf() < 0.2)
+	_lot(MapBuilding.band(lot, along_x, cut + 1, long - cut - 1), &"", rng.randf() < 0.2)
 
 
 func _lot(lot: Rect2i, purpose: StringName, fenced: bool) -> void:
@@ -463,7 +463,7 @@ func _fence(r: Rect2i, kind: StringName, gates: int) -> void:
 				run_start = -1
 
 
-## An irregular pond: water with a sand rim, or a marsh with a small open pool. Hedges ring it.
+## An irregular pond: water with a sand rim, or a marsh with a small open pool.
 func _pond(block: Rect2i, marsh: bool) -> void:
 	var centre := Vector2(block.position) + Vector2(block.size) / 2.0
 	var radius := Vector2(block.size) * Vector2(rng.randf_range(0.3, 0.38), rng.randf_range(0.3, 0.38))
@@ -486,7 +486,6 @@ func _pond(block: Rect2i, marsh: bool) -> void:
 			_put_small(&"lilies", p)
 		elif tile in WET and wet < 4 and rng.randf() < 0.35:
 			_put_small(&"reeds", p)
-	_fence(block.grow(-1), &"hedge", 2)
 	for kind in [&"bench", &"bench", &"flowerbed", &"flowerbed", &"rocks"]:
 		place(kind, block.grow(-2), &"any")
 

@@ -28,7 +28,7 @@ const SHAPES := {
 	&"greenhouse": [&"rect", &"t", &"u"],
 }
 const WINDOW_CHANCE := {
-	&"house": 0.3, &"office": 0.45, &"shop": 0.35, &"warehouse": 0.1, &"garage": 0.1, &"greenhouse": 0.9
+	&"house": 0.6, &"office": 0.7, &"shop": 0.6, &"warehouse": 0.4, &"garage": 0.4, &"greenhouse": 0.9
 }
 const TILE_FLOOR_ROOMS: Array[StringName] = [&"kitchen", &"bath", &"shop", &"growing", &"meeting"]
 const CONCRETE_ROOMS: Array[StringName] = [&"hall", &"storage", &"bay", &"workshop"]

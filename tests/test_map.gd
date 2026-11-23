@@ -160,6 +160,24 @@ func test_open_lanes_cross_the_arena() -> void:
 		assert_true(lanes.x >= 5 and lanes.y >= 5, "seed %d: lanes %s" % [s, lanes])
 
 
+## Casts 400 shots of 12 m from free points within 32 m of the origin on seeds 1 to 6. Expects 55 % or more to
+## meet no cell that stops a shot over all seeds, and 45 % or more on each seed.
+func test_most_12_m_shots_in_the_arena_meet_nothing() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	var shares := []
+	for s in range(1, 7):
+		var clear := 0
+		for n in 400:
+			var from := Vector2.from_angle(rng.randf() * TAU) * sqrt(rng.randf()) * 32.0
+			while _grids[s].is_solid(_grids[s].cell_of(from)):
+				from = Vector2.from_angle(rng.randf() * TAU) * sqrt(rng.randf()) * 32.0
+			clear += int(_grids[s].ray_cell(from, from + Vector2.from_angle(rng.randf() * TAU) * 12.0).x < 0)
+		shares.append(clear / 400.0)
+	assert_gte(shares.reduce(func(a: float, b: float) -> float: return a + b) / 6.0, 0.55, str(shares))
+	assert_gte(shares.min(), 0.45, str(shares))
+
+
 func test_ascii_dump_draws_one_line_per_row() -> void:
 	var lines := MapGen.ascii(_maps[0]).split("\n")
 	assert_eq(lines.size(), _maps[0].size)
