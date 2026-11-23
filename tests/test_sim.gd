@@ -344,3 +344,23 @@ func test_flame_patch_kill_names_the_flamethrower() -> void:
 	Shots.add_zone(w, b.pos, 0, &"flamethrower")
 	_tick(80)
 	assert_eq(_kill_weapon(), &"flamethrower")
+
+
+func test_burst_shots_fan_out_by_the_burst_spread() -> void:
+	Arsenal.equip(a, &"battle-rifle", 300.0)
+	b.pos = Vector2(0, 30)
+	var sums := [0.0, 0.0, 0.0]
+	for burst in 400:
+		w.projectiles.clear()
+		a.shoot_cooldown = 0.0
+		a.reload_cooldown = 0.0
+		a.slot().ammo = 9.0
+		Combat.fire(w, a)
+		for n in 2:
+			Combat.update_burst(w, a, 1.0)
+		for n in 3:
+			sums[n] += w.projectiles[n].vel.angle() / 400.0
+	# The random spread of each shot adds to the fan, so compare the means of 400 bursts.
+	assert_almost_eq(sums[0], -0.028, 0.012)
+	assert_almost_eq(sums[1], 0.0, 0.012)
+	assert_almost_eq(sums[2], 0.028, 0.012)

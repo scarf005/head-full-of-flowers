@@ -17,6 +17,7 @@ static func fire(w: SimWorld, u: SimUnit) -> bool:
 	var interval: float = weapon.get("burst_interval", 0.0) / u.fire_rate_mul
 	u.shoot_cooldown = (interval * (shots - 1)) + maxf(0.0, weapon.cooldown / u.fire_rate_mul - interval * (shots - 1))
 	u.burst_left = shots - 1
+	u.burst_total = shots
 	u.burst_timer = interval
 	u.burst_weapon = s.id
 	shoot(w, u)
@@ -43,6 +44,9 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 	s.ammo -= 1.0
 	u.shots_fired += 1
 	var dir := _assisted_aim(w, u)
+	# The shots of a burst fan out around the aim.
+	var fan: float = u.burst_total - 1 - u.burst_left - (u.burst_total - 1) * 0.5
+	dir = dir.rotated(fan * weapon.get("burst_spread", 0.0))
 	var spread: float = weapon.spread * (0.7 if u.has_perk(&"laser_sight") else 1.0)
 	var ricochets: int = weapon.get("ricochets", 0) if u.has_perk(&"ricochet_shells") else 0
 	for pellet in weapon.pellets:
