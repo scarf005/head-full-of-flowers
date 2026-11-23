@@ -24,6 +24,7 @@ var viewport: SubViewport
 var dither: ShaderMaterial
 var game: GameView
 var hud := Hud.new()
+var banner := Banner.new()
 var menu := Menu.new()
 var sound := Sound.new()
 var frame := 0
@@ -52,14 +53,17 @@ func _ready() -> void:
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hud)
+	banner.set_anchors_preset(Control.PRESET_FULL_RECT)
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(banner)
 	add_child(menu)
 	menu.process_mode = Node.PROCESS_MODE_ALWAYS
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	menu.start.connect(start_match)
 	menu.resume.connect(_set_paused.bind(false))
 	menu.quit_to_title.connect(show_title)
-	if args.has("autoplay"):
-		start_match({seed = int(args.get("seed", "1")), size = int(args.get("size", "8"))}, true)
+	if args.has("autoplay") or args.has("match"):
+		start_match({seed = int(args.get("seed", "1")), size = int(args.get("size", "8"))}, args.has("autoplay"))
 	else:
 		show_title()
 
@@ -82,6 +86,7 @@ func start_match(config: Dictionary, demo := false) -> void:
 	game.setup(config)
 	game.event.connect(_on_event)
 	hud.setup(game)
+	banner.setup(game)
 	sound.setup(game)
 	hud.show()
 	menu.hide()
@@ -94,8 +99,11 @@ func _on_event(e: Dictionary) -> void:
 	if menu.visible:
 		show_title()
 	elif not args.has("autoplay"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		menu.show_results(game.world)
+		var ended := game
+		await get_tree().create_timer(1.5).timeout
+		if game == ended:
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			menu.show_results(game.world)
 
 
 func _unhandled_input(event: InputEvent) -> void:
