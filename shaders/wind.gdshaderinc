@@ -27,3 +27,12 @@ vec3 screen(vec3 c) {
 vec3 lit_screen(vec3 c) {
 	return mix(c, screen(c), 0.5);
 }
+
+// Output for pixel art. The screen shows `c` with its brightest channel moved to the nearest level of the dither
+// pass, so a flat colour stays flat.
+vec3 flat_color(vec3 c) {
+	float top = max(c.r, max(c.g, c.b));
+	c *= round(top * 5.0) / 5.0 / max(top, 0.001);
+	vec3 decoded = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+	return CURRENT_RENDERER == RENDERER_COMPATIBILITY ? c : decoded;
+}

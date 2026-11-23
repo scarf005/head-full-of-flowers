@@ -278,9 +278,7 @@ func _show(e: Dictionary) -> void:
 	var me := -1 if autoplay else 0
 	match e.type:
 		&"shot":
-			# The tip of the gun that the figure holds at its right side.
-			var reach: float = (0.3 + UnitView.GUNS.get(e.weapon, UnitView.RIFLE).z) * UnitView.SCALE
-			var at: Vector2 = e.pos + e.dir * reach - e.dir.orthogonal() * 0.2 * UnitView.SCALE
+			var at: Vector2 = e.pos + UnitView.muzzle(e.dir, e.weapon)
 			_flash(Vector3(at.x, 0.8, at.y), Color(1.0, 0.8, 0.4), 2.5, 0.06)
 			_pop(at, Color(1.0, 0.95, 0.6), 0.9, 0.05)
 			if e.weapon != &"flamethrower":

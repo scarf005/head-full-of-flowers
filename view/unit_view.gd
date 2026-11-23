@@ -1,145 +1,137 @@
 class_name UnitView
-extends Node3D
-## Low-poly figure of one unit: feet, body, head with a blossom, gun and a health bar.
+extends MeshInstance3D
+## Pixel art of one unit: a fox-ear girl in the team colour, her gun, a health bar and, for the player, ammo rings.
 
-## Gun box size in metres (width, height, length) per weapon. Other weapons use RIFLE.
-const GUNS := {
-	&"pistol": Vector3(0.13, 0.14, 0.34),
-	&"shotgun": Vector3(0.18, 0.14, 0.65),
-	&"auto-shotgun": Vector3(0.2, 0.16, 0.65),
-	&"flamethrower": Vector3(0.24, 0.22, 0.6),
-	&"grenade-launcher": Vector3(0.26, 0.24, 0.55),
-	&"rocket-launcher": Vector3(0.3, 0.28, 1.0),
-	&"battle-rifle": Vector3(0.14, 0.14, 0.9),
-}
-const RIFLE := Vector3(0.14, 0.13, 0.7)
-const SCALE := 1.45
+## Art pixels per metre. The low-res view shows 20 pixels per metre, so one art pixel is one view pixel.
+const PX_PER_M := 20.0
+## Size of the mesh in pixels and the place of the feet in it, as in the shader.
+const CANVAS := Vector2(64.0, 64.0)
+const FEET := Vector2(32.0, 20.0)
+## Pixels from the feet up to the hand, and from the body out to the centre of the gun.
+const HAND := 7.0
+const REACH := 9.0
+
+static var _mesh: ArrayMesh
+## [weapon id, unloaded] -> [texture, pixels from the centre of the art to the muzzle].
+static var _guns := {}
 
 var unit: SimUnit
-var color: Color
 ## Scale of the figure. Set below 1 to make it pop up, for example at a respawn.
 var grow := 1.0
-var material := StandardMaterial3D.new()
 ## Ground of the match, to find water under the unit.
 var map: TerrainMap
-var _body := Node3D.new()
-var _legs := Node3D.new()
-var _feet: Array[MeshInstance3D] = []
-var _gun: MeshInstance3D
-var _bar: MeshInstance3D
+var _material := ShaderMaterial.new()
 var _stride := 0.0
-## Materials of the figure that go white at a hit.
-var _lit: Array[StandardMaterial3D] = []
+var _back := false
+var _left := false
+var _sink := 0.0
 
 
 func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	unit = sim_unit
-	color = team_color
-	material.roughness = 0.9
-	material.albedo_color = color
-	_lit.append(material)
-	var dark := _lit_material(Color(0.13, 0.13, 0.17))
-	var skin := _lit_material(color.lerp(Color(1.0, 0.9, 0.8), 0.6))
-	var plain := StandardMaterial3D.new()
-	plain.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	plain.albedo_color = color
-	scale = Vector3.ONE * SCALE
-	add_child(_legs)
-	add_child(_body)
-	for side: float in [-0.13, 0.13]:
-		_feet.append(_part(BoxMesh.new(), Vector3(side, 0.06, 0), Vector3(0.14, 0.12, 0.24), dark, _legs))
-	var torso := CylinderMesh.new()
-	torso.bottom_radius = 0.27
-	torso.top_radius = 0.2
-	torso.height = 0.5
-	torso.radial_segments = 6
-	torso.rings = 1
-	# The body is darker than the flowers of its team, so it shows on its own flower field.
-	_part(torso, Vector3(0, 0.45, 0), Vector3.ONE, _lit_material(color.darkened(0.4)), _body)
-	_part(BoxMesh.new(), Vector3(0, 0.5, 0.25), Vector3(0.32, 0.3, 0.14), dark, _body)
-	var ball := SphereMesh.new()
-	ball.radius = 0.5
-	ball.height = 1.0
-	ball.radial_segments = 6
-	ball.rings = 3
-	_part(ball, Vector3(0, 0.88, 0), Vector3.ONE * 0.42, skin, _body)
-	for n in 5:
-		var out := Vector3(cos(n * TAU / 5.0), 0.0, sin(n * TAU / 5.0)) * 0.22
-		_part(ball, out + Vector3(0, 1.1, 0), Vector3(0.34, 0.12, 0.34), material, _body)
-	var heart := _lit_material(Color(1.0, 0.82, 0.2))
-	_part(ball, Vector3(0, 1.14, 0), Vector3(0.22, 0.14, 0.22), heart, _body)
-	var steel := _lit_material(Color(0.36, 0.38, 0.46))
-	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, steel, _body)
-	var wood := _lit_material(Color(0.62, 0.42, 0.26))
-	# Stock: the rear third of the gun, a little wider, in wood.
-	_part(BoxMesh.new(), Vector3(0, -0.15, 0.36), Vector3(1.5, 1.3, 0.3), wood, _gun)
-	# The bar and the ring of the player are white in each mode: team mates have the same colour as the player.
-	var mark := plain
-	if unit.is_player:
-		mark = plain.duplicate()
-		mark.albedo_color = Color(1.0, 1.0, 0.92)
-	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, mark)
-	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	if unit.is_player:
-		var ring := TorusMesh.new()
-		ring.inner_radius = 0.42
-		ring.outer_radius = 0.54
-		ring.ring_segments = 3
-		# Above the flowers in tall grass.
-		var at := Vector3(0, GrassView.TOP + 0.06, 0)
-		_part(ring, at, Vector3(1, 0.2, 1), mark).cast_shadow = _bar.cast_shadow
-
-
-func _ready() -> void:
-	for lit in _lit:
-		# On from the start: a later switch compiles a new shader in the middle of a fight.
-		lit.emission_enabled = true
-		lit.emission = Color.BLACK
-		lit.emission_energy_multiplier = 3.0
+	mesh = _canvas()
+	_material.shader = preload("res://shaders/unit.gdshader")
+	# After the ink outline pass: the art has its own outline.
+	_material.render_priority = 1
+	_material.set_shader_parameter(&"sheet", SpriteArt.sheet())
+	_material.set_shader_parameter(&"team", Vector3(team_color.r, team_color.g, team_color.b))
+	# The bar of the player is white in each mode: team mates have the same colour as the player.
+	var bar := Color(1.0, 1.0, 0.92) if unit.is_player else team_color
+	_material.set_shader_parameter(&"bar_color", Vector3(bar.r, bar.g, bar.b))
+	material_override = _material
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# Units and props are upright art on the ground: the one nearer to the camera draws last.
+	sorting_use_aabb_center = false
 
 
 func _process(delta: float) -> void:
 	var at := unit.pos - unit.vel * GameView.lag
-	position = Vector3(at.x, 0.0, at.y)
-	# A unit in drawn water stands knee-deep. The ring and the health bar stay in place.
-	var deep := -0.3 if map and TerrainView.tile(map, at) == TerrainMap.Tile.WATER else 0.0
-	_legs.position.y = lerpf(_legs.position.y, deep, clampf(delta * 10.0, 0.0, 1.0))
-	var speed := unit.vel.length()
-	_stride += speed * delta * 1.5
-	if speed > 0.5:
-		_legs.rotation.y = atan2(-unit.vel.x, -unit.vel.y)
-	for n in 2:
-		var swing := _stride + n * PI
-		_feet[n].position.z = sin(swing) * 0.18 * minf(1.0, speed / 4.0)
-		_feet[n].position.y = 0.06 + maxf(0.0, cos(swing)) * 0.1 * minf(1.0, speed / 4.0)
+	var ppm := (get_viewport().get_camera_3d() as CameraRig).pixels_per_meter()
+	# On the pixel grid of the view, so each art pixel is one whole view pixel.
+	position = Vector3(snappedf(at.x, 1.0 / ppm.x), 0.0, snappedf(at.y, 1.0 / ppm.y))
 	grow = move_toward(grow, 1.0, delta * 5.0)
-	var squash := unit.hit_flash * 0.25
-	_body.scale = Vector3(1.0 + squash, 1.0 - squash, 1.0 + squash) * grow
-	_body.position.y = _legs.position.y + absf(sin(_stride)) * 0.05
-	_body.rotation.y = atan2(-unit.aim.x, -unit.aim.y)
-	_body.rotation.x = unit.recoil * 0.2
-	var size: Vector3 = GUNS.get(unit.weapon_id(), RIFLE)
-	_gun.scale = size
-	# In front of the blossom, so the camera above sees where the unit aims.
-	_gun.position = Vector3(0.2, 0.55, -0.3 - size.z * 0.5 + unit.recoil * 0.18)
-	# The whole figure goes white at a hit.
-	for lit in _lit:
-		lit.emission = Color.WHITE * unit.hit_flash
-	_bar.scale = Vector3(maxf(0.02, unit.hp / unit.max_hp) * 0.9, 0.07, 0.07)
+	scale = Vector3.ONE * grow
+	if absf(unit.aim.y) > 0.15:
+		_back = unit.aim.y < 0.0
+	if absf(unit.aim.x) > 0.1:
+		_left = unit.aim.x < 0.0
+	var speed := unit.vel.length()
+	_stride += maxf(speed, 1.2) * delta
+	var frame := 2 + int(_stride * 1.6) % 4 if speed > 0.8 else int(_stride * 1.2) % 2
+	# A unit in drawn water stands knee-deep.
+	var deep := 4.0 if map and TerrainView.tile(map, at) == TerrainMap.Tile.WATER else 0.0
+	_sink = move_toward(_sink, deep, delta * 30.0)
+	var reloading := unit.reload_cooldown > 0.0
+	var gun := gun_art(unit.weapon_id(), reloading)
+	var texture: Texture2D = gun[0]
+	var dir := view_dir(unit.aim)
+	# A gun in a reload points 35 degrees down.
+	var turn := dir.angle() + (0.6 if _left else -0.6) * float(reloading)
+	_material.set_shader_parameter(&"frame", SpriteArt.frame_uv(_back, frame))
+	_material.set_shader_parameter(&"mirror", float(_left))
+	_material.set_shader_parameter(&"gun", texture)
+	_material.set_shader_parameter(&"gun_px", texture.get_size())
+	_material.set_shader_parameter(&"hand", Vector2(0.0, HAND) + dir * (REACH - unit.recoil * 4.0))
+	_material.set_shader_parameter(&"angle", turn)
+	_material.set_shader_parameter(&"gun_front", float(not _back))
+	_material.set_shader_parameter(&"sink", roundf(_sink))
+	_material.set_shader_parameter(&"hp", unit.hp / unit.max_hp)
+	_material.set_shader_parameter(&"flash", unit.hit_flash)
+	if unit.is_player:
+		_material.set_shader_parameter(&"rings", _rings(reloading))
 
 
-func _lit_material(albedo: Color) -> StandardMaterial3D:
-	var lit := StandardMaterial3D.new()
-	lit.albedo_color = albedo
-	_lit.append(lit)
-	return lit
+## The aim as a direction in view pixels, x to the right and y up. The camera looks down, so north and south are
+## shorter.
+static func view_dir(aim: Vector2) -> Vector2:
+	return Vector2(aim.x, -aim.y * sin(CameraRig.PITCH))
 
 
-func _part(mesh: Mesh, at: Vector3, size: Vector3, mat: Material, parent: Node3D = self) -> MeshInstance3D:
-	var node := MeshInstance3D.new()
-	node.mesh = mesh
-	node.position = at
-	node.scale = size
-	node.material_override = mat
-	parent.add_child(node)
-	return node
+## Where the muzzle of the drawn gun is, as a sim offset from the unit at the height of HAND.
+static func muzzle(aim: Vector2, weapon: StringName) -> Vector2:
+	var tip: float = gun_art(weapon, false)[1]
+	return aim * (REACH + tip / view_dir(aim).length()) / PX_PER_M
+
+
+## [texture, pixels from the centre of the art to the muzzle] of a weapon. Only some weapons have unloaded art.
+static func gun_art(weapon: StringName, unloaded: bool) -> Array:
+	var key := [weapon, unloaded]
+	if not _guns.has(key):
+		var path := "res://assets/sprites/%s-unloaded.png" % weapon
+		if not unloaded or not ResourceLoader.exists(path):
+			path = "res://assets/sprites/%s.png" % weapon
+		var texture: Texture2D = load(path)
+		_guns[key] = [texture, texture.get_image().get_used_rect().end.x - texture.get_width() * 0.5]
+	return _guns[key]
+
+
+## Fill of the magazine ring and of the grenade ring, then 1 during a reload.
+func _rings(reloading: bool) -> Vector3:
+	var slot := unit.slot()
+	var mag: float = Defs.WEAPONS[slot.id].mag
+	var primary := 1.0 if is_inf(slot.ammo) else clampf(slot.ammo / mag, 0.0, 1.0)
+	if reloading:
+		primary = 1.0 - unit.reload_cooldown / unit.reload_cooldown_max
+	var secondary := 1.0
+	if unit.secondary_cooldown > 0.0 and unit.secondary_cooldown_max > 0.0:
+		secondary = 1.0 - unit.secondary_cooldown / unit.secondary_cooldown_max
+	return Vector3(primary, secondary, float(reloading))
+
+
+## The pixels above the feet stand upright and the pixels below lie on the ground toward the camera. Both parts
+## show one art pixel in each view pixel.
+static func _canvas() -> ArrayMesh:
+	if _mesh == null:
+		var half := CANVAS.x * 0.5 / PX_PER_M
+		var front := FEET.y / PX_PER_M / sin(CameraRig.PITCH)
+		var top := (CANVAS.y - FEET.y) / PX_PER_M / cos(CameraRig.PITCH)
+		var tool := SurfaceTool.new()
+		tool.begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+		var split := 1.0 - FEET.y / CANVAS.y
+		# Each row: [height, distance toward the camera, v of the art].
+		for row: Array in [[0.0, front, 1.0], [0.0, 0.0, split], [top, 0.0, 0.0]]:
+			for side: float in [-1.0, 1.0]:
+				tool.set_uv(Vector2(side * 0.5 + 0.5, row[2]))
+				tool.add_vertex(Vector3(side * half, row[0], row[1]))
+		_mesh = tool.commit()
+	return _mesh
