@@ -65,6 +65,8 @@ var ai_sight := false
 var ai_sense_timer := 0.0
 ## Where a loot or box goal is.
 var ai_goal := Vector2.ZERO
+## True while the bot walks away from the arena border.
+var ai_edge := false
 
 
 func has_perk(id: StringName) -> bool:

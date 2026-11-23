@@ -57,15 +57,23 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 			move = _follow(w, u, u.ai_goal) * pursuit
 			_turn(u, move, dt)
 		&"hunt":
-			move = _follow(w, u, target.pos) * pursuit
-			_turn(u, target.pos - u.pos, dt)
+			# Walk to where the enemy was at the last decision. A goal that follows the enemy flips the route from one
+			# side of a wall to the other, and two bots then dance on the two sides of it.
+			if decide or u.pos.distance_to(u.ai_goal) < 1.5:
+				u.ai_goal = target.pos.limit_length(w.arena_radius - EDGE_MARGIN)
+			move = _follow(w, u, u.ai_goal) * pursuit
+			_turn(u, move, dt)
 		_:
 			if u.pos.distance_to(u.ai_move) < 2.0:
 				u.ai_move = w.random_point(w.arena_radius * 0.7)
 			move = _follow(w, u, u.ai_move) * wander
 			_turn(u, move, dt)
 	# Survival comes first: leave the arena edge, then move away from fires and explosives.
-	if u.pos.length() > w.arena_radius - EDGE_MARGIN:
+	# Start at 1.5 m from the border and go on until the margin is back. One limit for both makes a bot whose
+	# goal is in the margin step in and out without end.
+	var from_border := w.arena_radius - u.pos.length()
+	u.ai_edge = from_border < 1.5 or (u.ai_edge and from_border < EDGE_MARGIN)
+	if u.ai_edge:
 		move = -u.pos.normalized()
 	var push := _avoid(w, u)
 	if push != Vector2.ZERO:
@@ -93,9 +101,11 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 		u.ai_target = enemies[0].index
 	var state := &"fight" if u.ai_sight else &"hunt" if u.ai_target >= 0 else &"wander"
 	if not u.ai_sight:
+		# Goals in the border margin are not worth the border damage.
+		var safe := w.arena_radius - EDGE_MARGIN
 		var best := LOOT_RANGE
 		for p in w.pickups:
-			if p.vel == Vector2.ZERO and p.pos.distance_to(u.pos) < best and _wants(u, p):
+			if p.vel == Vector2.ZERO and p.pos.distance_to(u.pos) < best and p.pos.length() < safe and _wants(u, p):
 				best = p.pos.distance_to(u.pos)
 				state = &"loot"
 				u.ai_goal = p.pos
@@ -103,13 +113,15 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 			best = BOX_RANGE
 			for cell: Vector2i in w.nav.boxes:
 				var at := w.grid.center_of(cell)
-				if at.distance_to(u.pos) < best:
+				if at.distance_to(u.pos) < best and at.length() < safe:
 					best = at.distance_to(u.pos)
 					state = &"box"
 					u.ai_goal = at
 	if state != u.ai_state:
 		u.ai_state = state
 		u.ai_path_timer = 0.0
+		if state == &"hunt":
+			u.ai_goal = w.units[u.ai_target].pos.limit_length(w.arena_radius - EDGE_MARGIN)
 
 
 ## True when a pickup is a perk the unit can still stack, or a weapon better than what it holds.
