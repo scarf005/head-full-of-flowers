@@ -1,9 +1,9 @@
 # Head Full of Flowers
 
-A 3D low-poly, dithered remake of [head-full-of-flowers](https://github.com/scarf005/head-full-of-flowers) in
-Godot 4.7.
+A dithered remake of [head-full-of-flowers](https://github.com/scarf005/head-full-of-flowers) in Godot 4.7: pixel-art
+fox-ear girls fight on a 3D field of grass and flowers.
 
-![A fighter with a flower for a head shoots across a pond covered in pale flowers](docs/screenshot.webp)
+![A white-haired fox-ear girl with a pistol stands in blue and pink flowers next to a fire and a house](docs/screenshot.webp)
 
 Each hit plants flowers of your colour behind the target. A match lasts 90 seconds, and the arena shrinks all the
 time. The side with the most petals on the ground at the end wins.
