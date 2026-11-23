@@ -52,6 +52,7 @@ const SYNTH := {
 	&"respawn": {secs = 0.34, f0 = 220.0, f1 = 620.0, tone = 1.0, noise = 0.1, lp = 0.1, decay = 4.0, gain = 0.35},
 	&"finish": {secs = 0.39, f0 = 440.0, f1 = 220.0, tone = 1.0, decay = 4.0, gain = 0.4},
 	&"empty": {secs = 0.05, f0 = 180.0, f1 = 140.0, tone = 0.6, noise = 0.8, lp = 0.6, decay = 8.0, gain = 0.3},
+	&"hit": {secs = 0.07, f0 = 980.0, f1 = 520.0, tone = 1.0, noise = 0.4, lp = 0.5, decay = 8.0, gain = 0.4},
 	&"click": {secs = 0.04, f0 = 1100.0, f1 = 900.0, tone = 1.0, decay = 7.0, gain = 0.25},
 }
 
@@ -196,8 +197,8 @@ func handle(e: Dictionary) -> void:
 		&"hit":
 			if e.target == PLAYER:
 				_play(&"player_death" if e.kill else &"damage")
-			elif e.source == PLAYER and e.kill:
-				_play(&"kill_confirm")
+			elif e.source == PLAYER:
+				_play(&"kill_confirm" if e.kill else &"hit")
 		&"explosion":
 			_play(&"explosion", e.pos)
 		&"throw":
@@ -216,6 +217,10 @@ func handle(e: Dictionary) -> void:
 			_play(&"box", _cell_pos(e.cell))
 		&"respawn":
 			_play(&"respawn", _at(e.unit, e.pos))
+		&"tick":
+			_play(&"click")
+		&"go":
+			_play(&"perk")
 		&"finish":
 			_play(&"finish")
 			_music_filter(1500.0)

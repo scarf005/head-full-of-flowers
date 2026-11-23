@@ -59,6 +59,7 @@ func _process(delta: float) -> void:
 	if second <= 10 and second < _second:
 		_second = second
 		say(str(second), Color.WHITE, 0.6)
+		game.event.emit({type = &"tick"})
 	queue_redraw()
 
 
