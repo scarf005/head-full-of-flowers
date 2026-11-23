@@ -1,8 +1,6 @@
 class_name Banner
 extends Control
-## Short centred call-outs: match start, kill streaks, lead changes, the last seconds and the match end.
-
-const STREAKS := ["Double kill", "Triple kill", "Rampage"]
+## Short centred call-outs: match start, the last seconds and the match end.
 
 var game: GameView
 var _text := ""
@@ -10,9 +8,6 @@ var _color := Color.WHITE
 var _ttl := 0.0
 ## Seconds since the call-out came. It starts large and shrinks to its size in 0.12 s.
 var _age := 0.0
-var _streak := 0
-var _streak_at := -10.0
-var _leader := -1
 var _second := 11
 ## True while the player stands outside the arena border.
 var _out := false
@@ -21,9 +16,6 @@ var _out := false
 func setup(view: GameView) -> void:
 	game = view
 	_ttl = 0.0
-	_streak = 0
-	_streak_at = -10.0
-	_leader = -1
 	_second = 11
 	game.event.connect(_on_event)
 
@@ -43,11 +35,6 @@ func _on_event(e: Dictionary) -> void:
 	elif e.type == &"finish":
 		# The results panel opens after 1.5 s and covers this place.
 		say(tr("TIME"), Color.WHITE, 1.4)
-	elif e.type == &"hit" and e.kill and e.source == 0 and e.target != 0:
-		_streak = _streak + 1 if game.world.now - _streak_at < 4.0 else 1
-		_streak_at = game.world.now
-		if _streak > 1:
-			say(tr(STREAKS[mini(_streak, 4) - 2]), Color(1.0, 0.85, 0.3), 1.2)
 
 
 func _process(delta: float) -> void:
@@ -58,14 +45,6 @@ func _process(delta: float) -> void:
 	if game.autoplay or w.finished:
 		queue_redraw()
 		return
-	var top: Dictionary = w.standings()[0]
-	var mine := game.player.team
-	if top.petals > 0 and top.team != _leader:
-		if top.team == mine and _leader != -1:
-			say(tr("Lead taken"), w.team_color(mine), 1.2)
-		elif _leader == mine:
-			say(tr("Lead lost"), Color(1.0, 0.4, 0.4), 1.2)
-		_leader = top.team
 	_out = game.player.pos.length() > w.arena_radius - game.player.radius - 0.05
 	var second := ceili(w.time_left / Defs.GAME_SPEED)
 	if second <= 10 and second < _second:

@@ -2,7 +2,7 @@ class_name CameraRig
 extends Camera3D
 ## Orthographic follow camera. Moves in whole low-res pixels so the dither pattern can stay fixed on the ground.
 
-const VISIBLE_WIDTH_M := 25.0
+const VISIBLE_WIDTH_M := 32.0
 const PITCH := deg_to_rad(55.0)
 const DISTANCE := 60.0
 
@@ -32,7 +32,7 @@ func _ready() -> void:
 	apply()
 
 
-## Metres of ground across the view when no zoom runs: 25 at 16:9 and narrower. A wider window sees more to the
+## Metres of ground across the view when no zoom runs: 32 at 16:9 and narrower. A wider window sees more to the
 ## sides, not less above and below.
 func rest_size() -> float:
 	var view := get_viewport().get_visible_rect().size

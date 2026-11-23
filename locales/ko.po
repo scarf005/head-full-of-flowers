@@ -147,21 +147,6 @@ msgstr "시작"
 msgid "TIME"
 msgstr "종료"
 
-msgid "Double kill"
-msgstr "더블 킬"
-
-msgid "Triple kill"
-msgstr "트리플 킬"
-
-msgid "Rampage"
-msgstr "학살"
-
-msgid "Lead taken"
-msgstr "선두 탈환"
-
-msgid "Lead lost"
-msgstr "선두 내줌"
-
 msgid "Out of bounds"
 msgstr "구역 이탈"
 
