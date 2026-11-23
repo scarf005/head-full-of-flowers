@@ -81,3 +81,17 @@ func test_reload_end_plays_the_end_slice() -> void:
 	var p := sound._flat.back() as AudioStreamPlayer
 	assert_true(p.playing)
 	assert_almost_eq(p.get_playback_position(), 2.168, 0.1)
+
+
+func test_match_of_a_person_starts_the_match_track_after_the_menu_track_of_the_title() -> void:
+	var title: GameView = autofree(GameView.new())
+	title.autoplay = true
+	sound.setup(title)
+	# As in the original game: "linear & gestalt" in the menu, "MY DIVINE PERVERSIONS" in a match.
+	assert_eq(sound._music.stream.resource_path, "res://assets/music/track2.ogg", "title")
+	var game: GameView = autofree(GameView.new())
+	sound.setup(game)
+	assert_eq(sound._music.stream.resource_path, "res://assets/music/track1.ogg", "match")
+	assert_true(sound._music.playing)
+	sound.setup(autofree(GameView.new()))
+	assert_eq(sound._music.stream.resource_path, "res://assets/music/track1.ogg", "next match keeps the track")
