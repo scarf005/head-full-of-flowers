@@ -167,6 +167,14 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 	var d := maxf(to.length(), 0.001)
 	var toward := to / d
 	var away := -toward * (1.15 if w.hard else 0.8)
+	if flee:
+		# From 5 m to 3.5 m before the arena border, a bot that runs away turns along the border. A bot that goes
+		# into the margin of the border and comes back steps in and out without end.
+		var out := u.pos.normalized()
+		var side := out.orthogonal() * (1.0 if away.dot(out.orthogonal()) >= 0.0 else -1.0)
+		var room := clampf((w.arena_radius - u.pos.length() - EDGE_MARGIN - 0.5) / 1.5, 0.0, 1.0)
+		var push := maxf(0.0, away.dot(out)) * (1.0 - room)
+		away = (away + (side - out) * push).normalized() * away.length()
 	if not u.ai_sight:
 		var path := away if flee else _follow(w, u, target.pos) * pursuit
 		_turn(u, toward if flee else path, dt)
