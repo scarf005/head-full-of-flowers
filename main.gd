@@ -94,7 +94,7 @@ func start_match(config: Dictionary, demo := false) -> void:
 		game.queue_free()
 	game = GameView.new()
 	game.autoplay = demo
-	game.intro = 0.0 if demo else 1.2
+	game.intro = 0.0 if demo else 0.8
 	game.process_mode = Node.PROCESS_MODE_PAUSABLE
 	viewport.add_child(game)
 	game.setup(config)
@@ -118,7 +118,7 @@ func _on_event(e: Dictionary) -> void:
 		hud.hide()
 	elif not args.has("autoplay"):
 		var ended := game
-		await get_tree().create_timer(1.5).timeout
+		await get_tree().create_timer(0.5).timeout
 		if game == ended:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 			menu.show_results(game.world)

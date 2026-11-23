@@ -6,6 +6,10 @@ signal event(data: Dictionary)
 
 const SHOT_HEIGHT := 0.75
 const FLAMES_PER_M2 := 1.6
+## Camera shake of a blast by weapon: x is the amount, y is the most that the shake reaches.
+const BLAST_SHAKE := {
+	&"grenade": Vector2(0.55, 1.4), &"grenade-launcher": Vector2(0.24, 1.6), &"rocket-launcher": Vector2(0.42, 2.4)
+}
 
 ## Game seconds from the drawn frame to the last tick. The sim ticks at 60 Hz and screens draw faster.
 static var lag := 0.0
@@ -19,13 +23,14 @@ var player: SimUnit
 ## Bots drive the player unit too. Used for demos and captures.
 var autoplay := false
 var shake := 0.0
-## Seconds left of the opening, in which the camera closes in and the match waits.
+## Seconds left of the opening, in which the camera closes in.
 var intro := 0.0
 ## Screen tint for the post pass. Alpha is the strength and fades out.
 var tint := Color(0, 0, 0, 0)
 ## True from the last right stick aim until the mouse moves.
 var _stick_aim := false
 var _kick := Vector2.ZERO
+var _jitter := Vector2.ZERO
 ## Unit index -> the damage number that shows over it.
 var _numbers := {}
 var _bits := Bits.new()
@@ -99,13 +104,15 @@ func setup(config: Dictionary) -> void:
 	_flames = _multimesh(tongue, 1000, true)
 
 
-func _physics_process(delta: float) -> void:
-	if world == null or world.finished:
+func _physics_process(_delta: float) -> void:
+	if world == null:
 		return
-	if intro > 0.0:
-		intro -= delta
-		if intro <= 0.0:
-			event.emit({type = &"go"})
+	# The shake is a new random offset each tick. It fades in game time, so it also fades after the end.
+	var real := Defs.TICK * Defs.GAME_SPEED
+	shake = maxf(0.0, shake - real * 4.4)
+	_jitter = Vector2(randf_range(-0.34, 0.34), randf_range(-0.28, 0.28)) * pow(minf(shake, 4.2), 1.08)
+	_kick *= maxf(0.0, 1.0 - real * 8.5)
+	if world.finished:
 		return
 	if autoplay:
 		Bots.think(world, player, Defs.TICK * Defs.GAME_SPEED)
@@ -137,15 +144,9 @@ func _process(delta: float) -> void:
 	var behind := 1.0 - Engine.get_physics_interpolation_fraction()
 	lag = behind * Defs.TICK * Defs.GAME_SPEED * float(world.step > 0.0)
 	var shot_lag := behind * world.step
-	shake = maxf(0.0, shake - delta * 4.4)
-	# Look ahead in proportion to the distance of the pointer. A fixed distance along the aim swings the view by
-	# 4 m each time the pointer moves across the player.
-	var lead := player.aim * 2.0
-	# The aim does not follow the pointer in the intro and after the end, so the view does not either.
-	if not _stick_aim and not autoplay and not world.finished and intro <= 0.0:
-		lead = ((pointer() - player.pos) * 0.18).limit_length(2.5)
-	_focus = _focus.lerp(player.pos - player.vel * lag + lead, clampf(delta * 8.0, 0.0, 1.0))
-	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
+	# The view follows the player only. A view that also follows the pointer moves the ground under a still pointer.
+	_focus = _focus.lerp(player.pos - player.vel * lag, clampf(delta * 8.0, 0.0, 1.0))
+	intro = maxf(0.0, intro - delta)
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
 	var rest := camera.rest_size()
 	camera.size = lerpf(camera.size, rest, clampf(delta * 6.0, 0.0, 1.0))
@@ -153,7 +154,7 @@ func _process(delta: float) -> void:
 		camera.size = rest
 	if intro > 0.0:
 		camera.size = rest + intro * intro * 14.0
-	camera.target = _focus + _kick + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
+	camera.target = _focus + _kick + _jitter
 	camera.apply()
 	_shots.visible_instance_count = world.projectiles.size()
 	_trails.visible_instance_count = world.projectiles.size()
@@ -288,25 +289,26 @@ func _show(e: Dictionary) -> void:
 					Vector3(e.pos.x, 0.7, e.pos.y), Vector3(side.x, 3.5, side.y), Color(0.95, 0.75, 0.25), 0.07, 0.9
 				)
 			if e.unit == me:
-				var weapon: Dictionary = Defs.WEAPONS[e.weapon]
-				var punch: float = 0.5 + 0.12 * weapon.pellets + 0.06 * weapon.damage
-				shake = minf(1.0, shake + 0.12 * punch)
-				_kick -= e.dir * 0.22 * punch
+				shake = minf(1.3, shake + 0.1)
+		&"throw":
+			if e.unit == me:
+				shake = minf(1.2, shake + 0.15)
 		&"hit":
 			var color := world.team_color(e.team)
 			_puff(e.pos, color, 40 if e.kill else 8, 7.0 if e.kill else 4.5, e.dir)
 			_pop(e.pos, Color.WHITE, 1.6 if e.kill else 1.0, 0.07)
 			if e.kill:
 				_ring(e.pos, color, 2.4, 0.3)
-			if e.target == me or e.source == me:
-				shake = minf(1.2, shake + (0.66 if e.target == me else 0.4) + (0.5 if e.kill else 0.0))
+			if not autoplay:
 				_number(e.target, e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
+			# A kill by the player shakes the view 5 times as hard as a hit.
 			if e.target == me:
+				shake = minf(3.0, shake + 0.66)
 				tint = Color(0.85, 0.05, 0.12, 0.55)
-				_kick += e.dir * 0.4
-			elif e.source == me and e.kill:
-				tint = Color(1.0, 1.0, 1.0, 0.35)
-				camera.size = camera.rest_size() - 1.6
+				_kick -= e.dir.normalized() * 0.14
+			elif e.source == me:
+				shake = minf(2.8, shake + (2.4 if e.kill else 0.48))
+				_kick += e.dir.normalized() * 0.1
 		&"cell":
 			var at := world.grid.center_of(e.cell)
 			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
@@ -316,7 +318,10 @@ func _show(e: Dictionary) -> void:
 			_burst(e.pos, e.radius)
 			_ring(e.pos, Color(1.0, 0.8, 0.4), e.radius * 1.2, 0.25)
 			_puff(e.pos, Color(0.22, 0.2, 0.2), 18, 8.0)
-			shake = minf(1.5, shake + 6.0 / maxf(4.0, e.pos.distance_to(player.pos)))
+			# Full shake within 10 m of the player, none from 34 m.
+			var near := clampf((34.0 - e.pos.distance_to(player.pos)) / 24.0, 0.0, 1.0)
+			var blast: Vector2 = BLAST_SHAKE.get(e.weapon, BLAST_SHAKE[&"grenade"])
+			shake = minf(maxf(shake, blast.y), shake + blast.x * near)
 		&"box":
 			_terrain.add_box(e.cell)
 		&"respawn":

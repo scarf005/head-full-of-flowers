@@ -131,6 +131,7 @@ static func throw_secondary(w: SimWorld, u: SimUnit) -> void:
 	)
 	u.secondary_cooldown = Defs.MOLOTOV_COOLDOWN if molotov else Defs.GRENADE_COOLDOWN
 	u.secondary_cooldown_max = u.secondary_cooldown
+	u.recoil = minf(1.0, u.recoil + 0.5)
 	w.emit(&"throw", {unit = u.index, molotov = molotov})
 
 

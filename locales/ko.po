@@ -141,9 +141,6 @@ msgstr "우클릭"
 msgid "Wheel"
 msgstr "휠"
 
-msgid "GO"
-msgstr "시작"
-
 msgid "TIME"
 msgstr "종료"
 
