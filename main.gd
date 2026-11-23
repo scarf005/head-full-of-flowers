@@ -27,6 +27,8 @@ var game: GameView
 var hud := Hud.new()
 var banner := Banner.new()
 var menu := Menu.new()
+## Darkens the match behind the pause and results menus.
+var dim := ColorRect.new()
 var sound := Sound.new()
 var frame := 0
 var args := {}
@@ -61,6 +63,10 @@ func _ready() -> void:
 	banner.set_anchors_preset(Control.PRESET_FULL_RECT)
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(banner)
+	dim.color = Color(0.05, 0.05, 0.08, 0.5)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim)
 	add_child(menu)
 	menu.process_mode = Node.PROCESS_MODE_ALWAYS
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -152,6 +158,7 @@ func _set_paused(paused: bool) -> void:
 
 func _process(_delta: float) -> void:
 	frame += 1
+	dim.visible = menu.visible and not game.autoplay
 	dither.set_shader_parameter("pattern_offset", game.camera.pattern_offset)
 	var tint := game.tint
 	if game.player.hp <= 3.0 and tint.a < 0.3 and _live():
