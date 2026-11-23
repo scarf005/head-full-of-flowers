@@ -92,8 +92,12 @@ func _draw() -> void:
 	if own.size.x > 0.0:
 		draw_rect(own.grow(1.0), Color.WHITE, false, 2.0)
 	var mark := clampf(own.get_center().x - 8.0, bar.position.x, bar.end.x - 64.0)
+	var count := "%d" % w.flowers.score(p.team)
+	draw_rect(
+		Rect2(mark - 4.0, 30.0, 30.0 + font.get_string_size(count, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x, 20.0), PLATE
+	)
 	_icon(&"petal", Rect2(mark, 32.0, 16.0, 16.0), w.team_color(p.team))
-	_text(font, Vector2(mark + 22.0, 46.0), "%d" % w.flowers.score(p.team), w.team_color(p.team), 16)
+	_text(font, Vector2(mark + 22.0, 46.0), count, w.team_color(p.team), 16)
 	# Timer: red in the last 10 s, with a pulse on each second.
 	var clock_color := Color.WHITE
 	# The sim clock runs at GAME_SPEED. Show wall-clock seconds.

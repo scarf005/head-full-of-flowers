@@ -65,10 +65,10 @@ void fragment() {
 		color *= 1.0 - 0.14 * max(step(0.96, fract(p.x * 0.5)), step(0.96, fract(p.y * 0.5)));
 		color *= 1.0 - 0.08 * step(0.95, grain);
 	} else if (kind == 6) {
-		// Gravel: one stone in each 0.4 m cell, on dirt.
+		// Gravel: stones of mixed size on dirt, out of line, with gaps.
 		vec2 id = floor(p * 2.5);
-		vec2 centre = id + 0.5 + (vec2(hash(id), hash(id + 7.3)) - 0.5) * 0.3;
-		bool stone = length(p * 2.5 - centre) < 0.22 + 0.13 * hash(id + 3.1);
+		vec2 centre = id + 0.5 + (vec2(hash(id), hash(id + 7.3)) - 0.5) * 0.6;
+		bool stone = hash(id + 5.9) > 0.3 && length(p * 2.5 - centre) < 0.1 + 0.2 * hash(id + 3.1);
 		color = stone ? color * (0.92 + 0.3 * hash(id + 1.7)) : mix(color, palette[3], 0.55) * 0.82;
 	} else if (kind > 2) {
 		color *= 0.95 + 0.08 * tone;
@@ -92,7 +92,7 @@ void fragment() {
 		color = mix(color, vec3(0.25, 0.1, 0.14), fract((p.x + p.y) * 1.5) < 0.3 ? 0.75 : 0.5);
 	}
 	color *= cloud(ground, TIME);
-	// A red line marks the border. The wall of dashes above it is thin where the camera sees it from the side.
+	// A red line marks the border.
 	if (abs(past) < 0.12) {
 		color = vec3(0.95, 0.22, 0.25);
 	}

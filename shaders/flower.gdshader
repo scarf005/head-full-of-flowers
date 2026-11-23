@@ -3,7 +3,7 @@ render_mode cull_disabled, unshaded;
 
 #include "wind.gdshaderinc"
 
-// One flat flower seen from above: five round petals with an ink rim and a yellow centre.
+// One flat flower seen from above: five round petals with a thin dark rim and a yellow centre.
 // INSTANCE_CUSTOM.x is the match time at which it blooms.
 global uniform float match_time;
 
@@ -23,6 +23,6 @@ void fragment() {
 	if (petal > 0.0) {
 		discard;
 	}
-	vec3 color = mix(COLOR.rgb, COLOR.rgb * 0.3, step(-0.1, petal));
+	vec3 color = mix(COLOR.rgb, COLOR.rgb * 0.45, step(-0.07, petal));
 	ALBEDO = screen(mix(color, vec3(1.0, 0.82, 0.3), step(length(p), 0.2)));
 }
