@@ -15,9 +15,12 @@ seen=0
 for a in "$@"; do
 	if [ "$a" = "--" ]; then seen=1; elif [ $seen = 0 ]; then godot_args+=("$a"); else game_args+=("$a"); fi
 done
-exec env -u WAYLAND_DISPLAY -u DISPLAY HOME="$profile" XDG_CONFIG_HOME="$profile/config" XDG_DATA_HOME="$profile/data" \
+# Fail on a shader that does not compile: the game still runs, but the frame is wrong.
+log=$(mktemp)
+env -u WAYLAND_DISPLAY -u DISPLAY HOME="$profile" XDG_CONFIG_HOME="$profile/config" XDG_DATA_HOME="$profile/data" \
 	XDG_CACHE_HOME="$profile/cache" PULSE_SINK=agent_mute \
 	timeout "${CAPTURE_TIMEOUT:-120}" gamescope --backend headless -W "${CAPTURE_W:-1280}" -H "${CAPTURE_H:-720}" \
 	-w "${CAPTURE_W:-1280}" -h "${CAPTURE_H:-720}" -- \
 	godot --path "$root" --resolution "${CAPTURE_W:-1280}x${CAPTURE_H:-720}" "${godot_args[@]}" -- \
-	--capture="$out" "${game_args[@]}"
+	--capture="$out" "${game_args[@]}" 2>&1 | tee "$log"
+! rg -q "SHADER ERROR" "$log"
