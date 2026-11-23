@@ -243,17 +243,18 @@ func test_shot_leaves_a_shooter_who_touches_a_wall_behind() -> void:
 	assert_lt(b.hp, 10.0, "the wall behind the shooter does not take the shot")
 
 
-func test_ricochet_shot_leaves_the_wall_it_hit() -> void:
+func test_ricochet_pellet_bounces_once_off_a_wall() -> void:
 	Arsenal.apply_perk(a, &"ricochet_shells")
+	Arsenal.equip(a, &"shotgun", 12.0)
 	b.pos = Vector2(0, 20)
-	var cell := w.grid.cell_of(Vector2(2.5, 0.0))
-	w.grid.set_cell(cell, Defs.Mat.ROCK)
+	for y in range(-4, 5):
+		w.grid.set_cell(w.grid.cell_of(Vector2(2.5, y)), Defs.Mat.ROCK)
 	a.want_fire = true
 	_tick(1)
 	a.want_fire = false
-	_tick(12)
-	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.ROCK] - 2.0, "one hit on the wall")
-	assert_eq(w.projectiles.size(), 1, "the shot is still in flight")
+	_tick(8)
+	assert_eq(w.projectiles.size(), 8)
+	assert_true(w.projectiles.all(func(p: Dictionary) -> bool: return p.ricochets >= 4), "4 of 5 bounces are left")
 
 
 func test_shot_passes_over_a_prop_that_units_walk_through() -> void:
