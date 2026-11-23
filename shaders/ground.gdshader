@@ -2,15 +2,16 @@ shader_type spatial;
 
 #include "wind.gdshaderinc"
 
-// Ground tiles under moving cloud shadows. COLOR.a is 1 on grass tiles, which take the grass root colour.
+// Ground under moving cloud shadows. The texture alpha is 1 on grass, which takes the grass root colour.
+uniform sampler2D tiles : filter_linear;
 varying vec2 ground;
 
 void vertex() {
-	ground = VERTEX.xz;
+	ground = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
 
 void fragment() {
-	vec3 grass = vec3(0.27, 0.54, 0.23);
-	ALBEDO = mix(COLOR.rgb, grass, COLOR.a) * cloud(ground, TIME);
+	vec4 kind = texture(tiles, UV);
+	ALBEDO = mix(kind.rgb, vec3(0.2, 0.47, 0.2), kind.a) * cloud(ground, TIME);
 	ROUGHNESS = 1.0;
 }

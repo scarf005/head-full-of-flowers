@@ -20,12 +20,14 @@ func setup(sim: SimWorld) -> void:
 	rng.seed = 5
 	for y in map.size:
 		for x in map.size:
-			var tile := map.tiles[y * map.size + x]
 			var corner := Vector2(x - map.size / 2.0, y - map.size / 2.0)
-			if not TALL.has(tile) or corner.length() > reach or world.grid.hp[y * map.size + x] > 0.0:
+			if corner.length() > reach or world.grid.hp[y * map.size + x] > 0.0:
 				continue
 			for n in per_tile:
 				var at := corner + Vector2(rng.randf(), rng.randf())
+				var tile := TerrainView.tile(map, at)
+				if not TALL.has(tile):
+					continue
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(
 					Vector3(1.6, TALL[tile] * rng.randf_range(0.85, 1.15), 1.6)
 				)

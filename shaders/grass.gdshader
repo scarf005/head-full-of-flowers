@@ -8,7 +8,7 @@ render_mode cull_disabled, depth_draw_always, unshaded;
 uniform vec3 pushers[12];
 uniform vec3 sheen_color : source_color = vec3(0.9, 0.98, 0.62);
 
-varying float sheen;
+varying float wave;
 varying float shade;
 
 void vertex() {
@@ -27,12 +27,13 @@ void vertex() {
 	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2);
 	world.y *= 1.0 - 0.45 * g * h - 0.6 * flat_amount * h;
 	VERTEX = (inverse(MODEL_MATRIX) * vec4(world, 1.0)).xyz;
-	sheen = smoothstep(0.45, 0.8, g) * (0.3 + 0.7 * UV.y);
+	wave = smoothstep(0.3, 0.8, g);
 	shade = cloud(root.xz, TIME);
 }
 
 void fragment() {
-	vec3 blade = mix(vec3(0.24, 0.5, 0.22), vec3(0.45, 0.72, 0.28), UV.y) * COLOR.rgb;
-	ALBEDO = mix(blade, sheen_color, sheen * 0.85) * shade;
+	// One colour for each blade, so the field reads as a surface and the gusts read as bands of light.
+	vec3 blade = mix(vec3(0.2, 0.47, 0.2), vec3(0.5, 0.76, 0.3), wave) * mix(0.85, 1.0, UV.y) * COLOR.rgb;
+	ALBEDO = mix(blade, sheen_color, smoothstep(0.75, 1.0, wave) * UV.y * 0.6) * shade;
 	ALPHA = 1.0;
 }

@@ -33,7 +33,7 @@ func _process(_delta: float) -> void:
 	for i in field.dirty:
 		var seed := fposmod(sin(i * 12.9898) * 43758.5453, 1.0)
 		var basis := Basis(Vector3.UP, seed * TAU).scaled(Vector3.ONE * maxf(0.12, field.size[i] * 1.8))
-		var lift := GrassView.TOP if GrassView.TALL.has(map.tile_at(field.pos[i])) else 0.03
+		var lift := GrassView.TOP if GrassView.TALL.has(TerrainView.tile(map, field.pos[i])) else 0.03
 		var at := Vector3(field.pos[i].x, lift + seed * 0.08, field.pos[i].y)
 		multimesh.set_instance_transform(i, Transform3D(basis, at))
 		var color: Color = colors[field.owner[i]]

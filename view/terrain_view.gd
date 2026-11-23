@@ -60,10 +60,12 @@ const WALL_COLORS := {
 	&"greenhouse": Color("d6e6d0"),
 }
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
-const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.7}
+const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
 const DOOR_COLOR := Color("5a3d2a")
 const HIGH_TIER_COLOR := Color("f2f0e6")
+
+static var _warp: FastNoiseLite
 
 var grid: ObstacleGrid
 var map: TerrainMap
@@ -71,11 +73,14 @@ var _boxes := MultiMesh.new()
 var _revision := -1
 ## Cell index -> wall colour of the building that owns the cell.
 var _walls := {}
+var _boxes_material := StandardMaterial3D.new()
 
 
 func setup(world: SimWorld) -> void:
 	grid = world.grid
 	map = world.map
+	_boxes_material.vertex_color_use_as_albedo = true
+	_boxes_material.roughness = 1.0
 	add_child(_ground())
 	for building in map.buildings:
 		var rect: Rect2i = building.rect
@@ -85,12 +90,9 @@ func setup(world: SimWorld) -> void:
 	_boxes.transform_format = MultiMesh.TRANSFORM_3D
 	_boxes.use_colors = true
 	_boxes.mesh = BoxMesh.new()
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	material.roughness = 1.0
 	var node := MultiMeshInstance3D.new()
 	node.multimesh = _boxes
-	node.material_override = material
+	node.material_override = _boxes_material
 	add_child(node)
 
 
@@ -107,7 +109,10 @@ func _process(_delta: float) -> void:
 		var centre := Vector2(cell) + Vector2(0.5 - grid.half, 0.5 - grid.half)
 		var look: Array = CELL_LOOK[mat]
 		if not THICK.has(mat):
-			_box(out, centre, Vector2(0.78, 0.78), look[1], HIGH_TIER_COLOR if grid.high_tier[i] else look[0])
+			var rock := float(mat == Defs.Mat.ROCK) * (0.5 + 0.5 * sin(i * 12.9898))
+			var size := Vector2(0.78, 0.78) + Vector2(0.3, -0.1) * rock
+			_box(out, centre, size, look[1] * (1.0 - 0.4 * rock), HIGH_TIER_COLOR if grid.high_tier[i] else look[0])
+			out[-1][0] = out[-1][0].rotated_local(Vector3.UP, rock * 5.0)
 			continue
 		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
 		var thick: float = THICK[mat]
@@ -154,45 +159,58 @@ func _box(out: Array, centre: Vector2, size: Vector2, height: float, color: Colo
 	out.append([Transform3D(basis, Vector3(centre.x, height * 0.5, centre.y)), color])
 
 
-## Ground mesh. Each corner takes the mean colour of the outdoor tiles round it, so outdoor ground blends
-## without tile edges. Floors keep their own colour up to the wall.
-func _ground() -> MeshInstance3D:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+## Ground kind at a world point. Borders between outdoor kinds wander off the tile grid. Floors keep their tile.
+static func tile(map: TerrainMap, p: Vector2) -> TerrainMap.Tile:
+	if _warp == null:
+		_warp = FastNoiseLite.new()
+		_warp.frequency = 0.2
+		_warp.fractal_octaves = 2
+	var raw := map.tile_at(p)
+	if raw in FLOORS:
+		return raw
+	var push := Vector2(_warp.get_noise_2d(p.x, p.y), _warp.get_noise_2d(p.x + 71.0, p.y - 37.0))
+	var moved := map.tile_at(p + push * 2.2)
+	return raw if moved in FLOORS else moved
+
+
+## One plane with a ground texture of 4 pixels for each metre, and hard-edged quads for the floors.
+func _ground() -> Node3D:
+	var side := map.size * 4
 	var half := map.size / 2.0
-	var corners := {}
-	for y in map.size:
-		for x in map.size:
-			var tile := map.tiles[y * map.size + x]
-			for index: int in [0, 1, 2, 0, 2, 3]:
-				var corner: Vector2i = (
-					Vector2i(x, y) + [Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.DOWN][index]
-				)
-				var color := TILE_COLORS[tile]
-				color.a = 0.0
-				if tile not in FLOORS:
-					if not corners.has(corner):
-						corners[corner] = _corner_color(corner)
-					color = corners[corner]
-				st.set_normal(Vector3.UP)
-				st.set_color(color)
-				st.add_vertex(Vector3(corner.x - half, 0.0, corner.y - half))
+	var data := PackedByteArray()
+	data.resize(side * side * 4)
+	for y in side:
+		for x in side:
+			var kind := tile(map, Vector2(x + 0.5, y + 0.5) / 4.0 - Vector2(half, half))
+			var color := TILE_COLORS[TerrainMap.Tile.DIRT if kind in FLOORS else kind]
+			var at := (y * side + x) * 4
+			data[at] = color.r8
+			data[at + 1] = color.g8
+			data[at + 2] = color.b8
+			data[at + 3] = 255 if kind <= TerrainMap.Tile.WILD_GRASS else 0
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://shaders/ground.gdshader")
+	var image := Image.create_from_data(side, side, false, Image.FORMAT_RGBA8, data)
+	material.set_shader_parameter("tiles", ImageTexture.create_from_image(image))
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(map.size, map.size)
 	var node := MeshInstance3D.new()
-	node.mesh = st.commit()
+	node.mesh = plane
 	node.material_override = material
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for y in map.size:
+		for x in map.size:
+			var kind := map.tiles[y * map.size + x]
+			for corner: Vector2i in [
+				Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.ZERO, Vector2i.ONE, Vector2i.DOWN
+			]:
+				if kind in FLOORS:
+					st.set_normal(Vector3.UP)
+					st.set_color(TILE_COLORS[kind])
+					st.add_vertex(Vector3(x + corner.x - half, 0.02, y + corner.y - half))
+	var floors := MeshInstance3D.new()
+	floors.mesh = st.commit()
+	floors.material_override = _boxes_material
+	node.add_child(floors)
 	return node
-
-
-## Mean colour of the outdoor tiles that touch a corner. Alpha is the share of grass tiles.
-func _corner_color(corner: Vector2i) -> Color:
-	var sum := Color(0, 0, 0, 0)
-	var count := 0
-	for offset: Vector2i in [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(-1, 0), Vector2i.ZERO]:
-		var cell := (corner + offset).clamp(Vector2i.ZERO, Vector2i(map.size - 1, map.size - 1))
-		var tile := map.tiles[cell.y * map.size + cell.x]
-		if tile not in FLOORS:
-			sum += Color(TILE_COLORS[tile], float(tile <= TerrainMap.Tile.WILD_GRASS))
-			count += 1
-	return sum / maxf(count, 1.0)
