@@ -93,9 +93,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var at := unit.pos - unit.vel * GameView.lag
-	# A unit in water stands knee-deep.
-	var floor_y := -0.3 if map and map.tile_at(at) == TerrainMap.Tile.WATER else 0.0
-	position = Vector3(at.x, lerpf(position.y, floor_y, clampf(delta * 10.0, 0.0, 1.0)), at.y)
+	position = Vector3(at.x, 0.0, at.y)
+	# A unit in drawn water stands knee-deep. The ring and the health bar stay in place.
+	var deep := -0.3 if map and TerrainView.tile(map, at) == TerrainMap.Tile.WATER else 0.0
+	_legs.position.y = lerpf(_legs.position.y, deep, clampf(delta * 10.0, 0.0, 1.0))
 	var speed := unit.vel.length()
 	_stride += speed * delta * 1.5
 	if speed > 0.5:
@@ -107,7 +108,7 @@ func _process(delta: float) -> void:
 	grow = move_toward(grow, 1.0, delta * 5.0)
 	var squash := unit.hit_flash * 0.25
 	_body.scale = Vector3(1.0 + squash, 1.0 - squash, 1.0 + squash) * grow
-	_body.position.y = absf(sin(_stride)) * 0.05
+	_body.position.y = _legs.position.y + absf(sin(_stride)) * 0.05
 	_body.rotation.y = atan2(-unit.aim.x, -unit.aim.y)
 	_body.rotation.x = unit.recoil * 0.2
 	var size: Vector3 = GUNS.get(unit.weapon_id(), RIFLE)
