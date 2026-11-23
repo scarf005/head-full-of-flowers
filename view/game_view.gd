@@ -33,6 +33,8 @@ var _units: Array[UnitView] = []
 var _ring_mesh := TorusMesh.new()
 var _focus := Vector2.ZERO
 var _shots: MultiMesh
+## Thin streak behind each bullet and rocket.
+var _trails: MultiMesh
 var _blobs: MultiMesh
 ## Red ring on the ground under each thrown grenade: the reach of its blast.
 var _warns: MultiMesh
@@ -77,6 +79,7 @@ func setup(config: Dictionary) -> void:
 	ball.rings = 4
 	var shot_material := ShaderMaterial.new()
 	shot_material.shader = preload("res://shaders/shot.gdshader")
+	_trails = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
 	_shots = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
 	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
 	# Thrown grenades are solid objects, not glowing shots.
@@ -164,6 +167,7 @@ func _process(delta: float) -> void:
 	camera.apply()
 	_arena.scale = Vector3(world.arena_radius * 2.0, 1.0, world.arena_radius * 2.0)
 	_shots.visible_instance_count = world.projectiles.size()
+	_trails.visible_instance_count = world.projectiles.size()
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
 		var progress: float = p.travelled / p.reach
@@ -185,6 +189,12 @@ func _process(delta: float) -> void:
 			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * shot_lag, SHOT_HEIGHT, p.pos.y - p.vel.y * shot_lag))
 		)
 		_shots.set_instance_color(i, color)
+		# The streak is 3 bullets long and starts at the bullet. A flame puff has none.
+		var tail := Vector3(wide * 0.5, wide * 0.5, 0.0 if p.kind == &"flame" else size.z * 3.0)
+		var back: Vector2 = p.vel.normalized() * tail.z * 0.5 + p.vel * shot_lag
+		var trail := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(tail)
+		_trails.set_instance_transform(i, Transform3D(trail, Vector3(p.pos.x - back.x, SHOT_HEIGHT, p.pos.y - back.y)))
+		_trails.set_instance_color(i, Color(color.r, color.g, color.b) * 0.8)
 	_blobs.visible_instance_count = world.throwables.size()
 	_warns.visible_instance_count = world.throwables.size()
 	for i in world.throwables.size():
