@@ -72,6 +72,7 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 					bounces = 2,
 					accel = weapon.get("accel", 0.0),
 					fuse = u.proximity_bonus,
+					hedged = false,
 				}
 			)
 		)

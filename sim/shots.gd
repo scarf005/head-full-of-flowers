@@ -35,14 +35,22 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		var inward: Vector2 = -p.pos.normalized()
 		p.pos = p.pos.limit_length(w.arena_radius - 0.05)
 		return _bounce(w, p, inward) or _end(w, p, p.pos)
-	var cell := w.grid.ray_cell(from - back, p.pos)
+	var ballistic: bool = p.kind == &"ballistic"
+	var cell := w.grid.ray_cell(from - back, p.pos, ballistic)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
 		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage), p.owner)
-		var impact := w.grid.ricochet_impact(from - back, p.pos)
+		var impact := w.grid.ricochet_impact(from - back, p.pos, ballistic)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
 		return _bounce(w, p, normal) or _end(w, p, p.pos)
+	# A bullet goes through a hedge, hurts it and keeps half its damage. It loses damage at the first hedge only.
+	var leaf := w.grid.cell_of(p.pos)
+	if ballistic and not p.hedged and w.grid.is_solid(leaf):
+		if w.grid.material[leaf.y * w.grid.size + leaf.x] == Defs.Mat.HEDGE:
+			w.hit_cell(leaf, p.damage, p.owner)
+			p.damage *= 0.5
+			p.hedged = true
 	for u in w.units:
 		if u.index == p.owner or u.team == p.team:
 			continue

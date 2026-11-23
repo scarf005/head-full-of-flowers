@@ -82,6 +82,18 @@ func test_bookshelf_blocks_shots_and_sight() -> void:
 	assert_eq(b.hp, 10.0)
 
 
+func test_rifle_shot_passes_a_thick_hedge_at_half_damage_once() -> void:
+	Arsenal.equip(a, &"assault", 60.0)
+	for x in [2.5, 3.5]:
+		w.grid.set_cell(w.grid.cell_of(Vector2(x, 0.5)), Defs.Mat.HEDGE)
+	assert_gt(w.grid.ray_cell(a.pos, b.pos).x, 0, "a bot does not see through the hedge")
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	_tick(20)
+	assert_eq(b.hp, 8.5, "3 damage, halved once")
+
+
 func test_crate_breaks_on_the_third_rifle_hit() -> void:
 	var cell := _prop(&"crate", Vector2(3.5, 0.5))
 	for n in 2:
