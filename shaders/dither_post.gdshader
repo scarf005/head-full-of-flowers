@@ -20,7 +20,7 @@ float bayer8(vec2 a) {
 
 void fragment() {
 	vec3 color = texture(TEXTURE, UV).rgb;
-	color = mix(color, tint.rgb, tint.a * mix(0.05, 1.0, smoothstep(0.3, 0.8, distance(UV, vec2(0.5)))));
+	color = mix(color, tint.rgb, tint.a * smoothstep(0.38, 0.8, distance(UV, vec2(0.5)))));
 	vec2 pixel = floor(UV / TEXTURE_PIXEL_SIZE) + pattern_offset;
 	float threshold = bayer8(pixel);
 	float steps = max(levels - 1.0, 1.0);

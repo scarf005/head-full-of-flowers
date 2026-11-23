@@ -21,6 +21,9 @@ var game: GameView
 var feed: Array[Dictionary] = []
 var _map := ImageTexture.new()
 var _map_revision := -1
+## Seconds left of the hit marker at the crosshair.
+var _marker := 0.0
+var _marker_color := Color.WHITE
 
 
 func setup(view: GameView) -> void:
@@ -38,11 +41,15 @@ static func unit_name(u: SimUnit) -> String:
 func _process(delta: float) -> void:
 	for row in feed:
 		row.ttl -= delta
+	_marker -= delta
 	feed = feed.filter(func(row: Dictionary) -> bool: return row.ttl > 0.0)
 	queue_redraw()
 
 
 func _on_event(e: Dictionary) -> void:
+	if e.type == &"hit" and e.source == 0 and e.target != 0:
+		_marker = 0.3 if e.kill else 0.15
+		_marker_color = RED if e.kill else Color.WHITE
 	if e.type != &"hit" or not e.kill:
 		return
 	var w := game.world
@@ -139,6 +146,14 @@ func _draw() -> void:
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
 		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, INK, 4.0)
 		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, Color.WHITE, 2.0)
+		if _marker > 0.0:
+			var slant := arm.rotated(PI / 4.0)
+			draw_line(mouse + slant * 8.0, mouse + slant * 18.0, INK, 6.0)
+			draw_line(mouse + slant * 8.0, mouse + slant * 18.0, _marker_color, 3.0)
+	if p.reload_cooldown > 0.0:
+		var turn := TAU * (1.0 - p.reload_cooldown / p.reload_cooldown_max)
+		draw_arc(mouse, 22.0, -PI / 2.0, -PI / 2.0 + TAU, 32, INK, 6.0)
+		draw_arc(mouse, 22.0, -PI / 2.0, -PI / 2.0 + turn, 32, Color.WHITE, 3.0)
 
 
 func _draw_map(w: SimWorld) -> void:
@@ -153,8 +168,8 @@ func _draw_map(w: SimWorld) -> void:
 	var scale := MAP_PX / (w.arena_start * 2.0)
 	var centre := origin + Vector2.ONE * MAP_PX * 0.5
 	draw_rect(Rect2(origin, Vector2.ONE * MAP_PX), Color(0.05, 0.05, 0.08, 0.7))
-	var half := w.grid.size * 0.5 * scale
-	draw_texture_rect(_map, Rect2(centre - Vector2.ONE * half, Vector2.ONE * half * 2.0), false)
+	var shown := Rect2(Vector2.ONE * (w.grid.size * 0.5 - w.arena_start), Vector2.ONE * w.arena_start * 2.0)
+	draw_texture_rect_region(_map, Rect2(origin, Vector2.ONE * MAP_PX), shown)
 	draw_arc(centre, w.arena_radius * scale, 0.0, TAU, 48, Color(1.0, 0.4, 0.35), 2.0)
 	for pickup in w.pickups:
 		draw_rect(Rect2(centre + pickup.pos * scale - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color(1.0, 0.85, 0.3))

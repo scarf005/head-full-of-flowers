@@ -36,6 +36,10 @@ func _ready() -> void:
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	grow_vertical = Control.GROW_DIRECTION_BOTH
 	_box.custom_minimum_size.x = 360.0
+	var back := StyleBoxFlat.new()
+	back.bg_color = Color(0.05, 0.05, 0.08, 0.88)
+	back.set_content_margin_all(12.0)
+	add_theme_stylebox_override("panel", back)
 	add_child(_box)
 	show_title()
 

@@ -29,7 +29,7 @@ var _focus := Vector2.ZERO
 var _shots: MultiMesh
 var _blobs: MultiMesh
 var _fires: MultiMesh
-var _pickups: Array[Node3D] = []
+var _pickups: Array[Sprite3D] = []
 var _arena: MeshInstance3D
 var _lights := 0
 
@@ -213,7 +213,7 @@ func _show(e: Dictionary) -> void:
 				shake = minf(1.2, shake + (0.66 if e.target == 0 else 0.4) + (0.5 if e.kill else 0.0))
 				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == 0 else Color.WHITE)
 			if e.target == 0:
-				tint = Color(0.85, 0.05, 0.12, 0.7)
+				tint = Color(0.85, 0.05, 0.12, 0.55)
 				_kick += e.dir * 0.4
 			elif e.source == 0 and e.kill:
 				tint = Color(1.0, 1.0, 1.0, 0.35)
@@ -334,18 +334,17 @@ func _burst(at: Vector2, radius: float) -> void:
 
 func _draw_pickups() -> void:
 	while _pickups.size() < world.pickups.size():
-		var node := Label3D.new()
+		var node := Sprite3D.new()
 		node.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		node.pixel_size = 0.03
-		node.font_size = 16
-		node.outline_size = 6
+		node.pixel_size = 0.035
+		node.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		node.no_depth_test = true
-		var crate := MeshInstance3D.new()
-		crate.mesh = BoxMesh.new()
-		crate.scale = Vector3.ONE * 0.5
-		crate.position.y = -0.7
-		crate.material_override = StandardMaterial3D.new()
-		node.add_child(crate)
+		node.render_priority = 1
+		var rim := node.duplicate() as Sprite3D
+		rim.render_priority = 0
+		rim.scale = Vector3.ONE * 1.3
+		rim.modulate = Color(0.05, 0.05, 0.08)
+		node.add_child(rim)
 		add_child(node)
 		_pickups.append(node)
 	for i in _pickups.size():
@@ -355,13 +354,10 @@ func _draw_pickups() -> void:
 			continue
 		var p := world.pickups[i]
 		var perk: bool = p.kind == &"perk"
-		node.position = Vector3(p.pos.x, 1.2 + sin(world.now * 3.0 + p.order) * 0.1, p.pos.y)
-		node.text = tr(Defs.PERKS[p.id].name if perk else Defs.WEAPONS[p.id].name)
-		var color := Color(0.6, 1.0, 0.9) if perk else Color(1.0, 0.8, 0.3) if p.high_tier else Color(0.95, 0.95, 0.95)
-		node.modulate = color
-		var crate: MeshInstance3D = node.get_child(0)
-		crate.rotation.y = world.now * 2.0
-		(crate.material_override as StandardMaterial3D).albedo_color = color
+		node.position = Vector3(p.pos.x, 0.9 + sin(world.now * 3.0 + p.order) * 0.12, p.pos.y)
+		node.texture = Icons.get_icon(p.id)
+		(node.get_child(0) as Sprite3D).texture = node.texture
+		node.modulate = Color(0.6, 1.0, 0.9) if perk else Color(1.0, 0.8, 0.3) if p.high_tier else Color.WHITE
 
 
 func _multimesh(mesh: Mesh, count: int, glow: bool) -> MultiMesh:
