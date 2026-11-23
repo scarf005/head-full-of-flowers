@@ -1,0 +1,5 @@
+.godot/
+addons/gut/
+build/
+.screenshots/
+*.translation
