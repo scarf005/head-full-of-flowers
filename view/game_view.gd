@@ -170,7 +170,7 @@ func _process(delta: float) -> void:
 		match p.kind:
 			&"flame":
 				size = Vector3.ONE * (0.35 + progress * 1.1)
-				color = Color(1.0, 0.8, 0.25, 0.0).lerp(Color(0.9, 0.2, 0.05, 0.0), progress)
+				color = Color(1.0, 0.5, 0.08, 0.35).lerp(Color(0.8, 0.14, 0.03, 0.0), progress)
 			&"grenade":
 				size = Vector3.ONE * 0.6
 			&"rocket":
@@ -403,11 +403,11 @@ func _burst(at: Vector2, radius: float) -> void:
 		var color := (
 			Color(1.0, randf_range(0.55, 0.9), 0.25) * 1.6
 			if fire
-			else Color.from_hsv(0.08, 0.12, randf_range(0.3, 0.5))
+			else Color.from_hsv(0.08, 0.1, randf_range(0.55, 0.8))
 		)
 		var ball := _ball(Vector3(at.x + out.x, 0.6, at.y + out.y), color, not fire)
 		ball.scale = Vector3.ONE * 0.2
-		var life := randf_range(0.12, 0.22) if fire else randf_range(0.5, 0.9)
+		var life := randf_range(0.12, 0.22) if fire else randf_range(0.35, 0.6)
 		var tween := create_tween()
 		tween.tween_property(ball, "scale", Vector3.ONE * radius * randf_range(0.3, 0.5), life * 0.35)
 		tween.tween_property(ball, "scale", Vector3.ZERO, life * 0.65)
