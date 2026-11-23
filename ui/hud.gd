@@ -3,6 +3,19 @@ extends Control
 ## In-match overlay: score bar, timer, health, ammo, kill feed, minimap and crosshair.
 
 const MAP_PX := 150.0
+const INK := Color(0.05, 0.05, 0.08)
+const RED := Color(0.95, 0.3, 0.35)
+## Offsets that stamp an ink rim around each icon.
+const RIM: Array[Vector2] = [
+	Vector2(-2, 0),
+	Vector2(2, 0),
+	Vector2(0, -2),
+	Vector2(0, 2),
+	Vector2(-2, -2),
+	Vector2(2, -2),
+	Vector2(-2, 2),
+	Vector2(2, 2)
+]
 
 var game: GameView
 var feed: Array[Dictionary] = []
@@ -33,10 +46,13 @@ func _on_event(e: Dictionary) -> void:
 	if e.type != &"hit" or not e.kill:
 		return
 	var w := game.world
-	var victim := unit_name(w.units[e.target])
-	var killer := unit_name(w.units[e.source]) if e.source >= 0 and e.source != e.target else ""
-	var text := "%s > %s" % [killer, victim] if killer else "x %s" % victim
-	feed.append({text = text, color = w.team_color(e.team), ttl = 4.0})
+	var victim := w.units[e.target]
+	var row := {killer = "", killer_color = Color.WHITE, victim = unit_name(victim), ttl = 4.0}
+	row.victim_color = w.team_color(victim.team)
+	if e.source >= 0 and e.source != e.target:
+		row.killer = unit_name(w.units[e.source])
+		row.killer_color = w.team_color(e.team)
+	feed.append(row)
 	if feed.size() > 5:
 		feed.pop_front()
 
@@ -47,51 +63,81 @@ func _draw() -> void:
 	var w := game.world
 	var p := game.player
 	var font := get_theme_default_font()
-	var ink := Color(0.05, 0.05, 0.08)
-	# Score bar: one segment per team, sized by its petals.
+	# Score bar: one segment per team, sized by its petals. A petal and the score mark the player's team.
 	var total := 0
 	for row in w.standings():
 		total += row.petals
 	var bar := Rect2(size.x * 0.25, 12.0, size.x * 0.5, 14.0)
-	draw_rect(bar.grow(2.0), ink)
+	draw_rect(bar.grow(2.0), INK)
 	var x := bar.position.x
+	var own := Rect2()
 	for team in w.team_count:
-		var width := bar.size.x * w.flowers.score(team) / maxf(1.0, total)
-		draw_rect(Rect2(x, bar.position.y, width, bar.size.y), w.team_color(team))
-		x += width
+		var segment := Rect2(x, bar.position.y, bar.size.x * w.flowers.score(team) / maxf(1.0, total), bar.size.y)
+		draw_rect(segment, w.team_color(team))
+		own = segment if team == p.team else own
+		x += segment.size.x
+	var mark := clampf(own.get_center().x - 8.0, bar.position.x, bar.end.x - 64.0)
+	_icon(&"petal", Rect2(mark, 32.0, 16.0, 16.0), w.team_color(p.team))
+	_text(font, Vector2(mark + 22.0, 46.0), "%d" % w.flowers.score(p.team), w.team_color(p.team), 16)
+	# Timer: red in the last 10 s, with a pulse on each second.
+	var clock_color := Color.WHITE
+	if w.time_left < 10.0:
+		clock_color = Color(1.0, 0.25, 0.25).lerp(Color(0.5, 0.05, 0.05), 1.0 - fposmod(w.time_left, 1.0))
+	_icon(&"clock", Rect2(bar.end.x + 12.0, 3.0, 32.0, 32.0), clock_color)
 	var clock := "%d:%02d" % [int(w.time_left) / 60, int(w.time_left) % 60]
-	_text(font, Vector2(size.x * 0.5 - 24.0, 52.0), clock, Color.WHITE, 24)
-	_text(font, Vector2(bar.position.x, 46.0), "%d" % w.flowers.score(p.team), w.team_color(p.team), 16)
-	# Health pips.
+	_text(font, Vector2(bar.end.x + 50.0, 28.0), clock, clock_color, 24)
+	# Hearts, one per hit point.
 	for pip in int(p.max_hp):
-		var at := Rect2(16.0 + pip * 14.0, size.y - 34.0, 12.0, 18.0)
-		draw_rect(at.grow(2.0), ink)
-		if pip < ceili(p.hp):
-			draw_rect(at, Color(0.95, 0.3, 0.35))
-	# Weapon, ammo, reload and secondary.
-	var slot := p.slot()
-	var reserve := "--" if is_inf(slot.reserve) else str(int(slot.reserve))
-	var right := size.x - 16.0
-	_text(font, Vector2(right - 220.0, size.y - 44.0), tr(Defs.WEAPONS[slot.id].name), Color.WHITE, 16)
-	_text(font, Vector2(right - 220.0, size.y - 18.0), "%d / %s" % [slot.ammo, reserve], Color.WHITE, 24)
-	if p.reload_cooldown > 0.0:
-		var part := 1.0 - p.reload_cooldown / p.reload_cooldown_max
-		draw_rect(Rect2(right - 220.0, size.y - 12.0, 204.0 * part, 4.0), Color.WHITE)
-	var ready := 1.0 - p.secondary_cooldown / maxf(0.01, p.secondary_cooldown_max)
-	var label := tr("Molotov") if p.secondary == &"molotov" else tr("Grenade")
-	_text(font, Vector2(right - 90.0, size.y - 44.0), label, Color.WHITE if ready >= 1.0 else Color(0.6, 0.6, 0.6), 16)
-	draw_rect(Rect2(right - 90.0, size.y - 38.0, 74.0 * clampf(ready, 0.0, 1.0), 4.0), Color(1.0, 0.7, 0.3))
+		var full := pip < ceili(p.hp)
+		_icon(&"heart", Rect2(16.0 + pip * 20.0, size.y - 32.0, 16.0, 16.0), RED if full else Color(0.3, 0.3, 0.34))
+	# Perks with a stack count.
 	var perk_x := 16.0
 	for id: StringName in p.perks:
-		_text(font, Vector2(perk_x, size.y - 46.0), tr(Defs.PERKS[id].name), Color(0.6, 1.0, 0.9), 16)
-		perk_x += font.get_string_size(tr(Defs.PERKS[id].name), HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 12.0
+		_icon(id, Rect2(perk_x, size.y - 72.0, 32.0, 32.0), Color(0.6, 1.0, 0.9))
+		if p.perks[id] > 1:
+			_text(font, Vector2(perk_x + 24.0, size.y - 40.0), str(p.perks[id]), Color.WHITE, 16)
+		perk_x += 40.0
+	# Weapon slots, ammo, reload and secondary.
+	var right := size.x - 16.0
+	var slot := p.slot()
+	var ammo_x := right - 136.0
+	_icon(slot.id, Rect2(ammo_x - 72.0, size.y - 80.0, 64.0, 64.0), Color.WHITE)
+	for i in p.slots.size():
+		if i != p.slot_index:
+			_icon(p.slots[i].id, Rect2(ammo_x - 112.0, size.y - 64.0, 32.0, 32.0), Color(0.6, 0.6, 0.65))
+	var reserve := "--" if is_inf(slot.reserve) else str(int(slot.reserve))
+	var ammo := str(int(slot.ammo))
+	_text(font, Vector2(ammo_x, size.y - 30.0), ammo, Color.WHITE, 32)
+	var reserve_x := ammo_x + 4.0 + font.get_string_size(ammo, HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x
+	_text(font, Vector2(reserve_x, size.y - 30.0), "/ " + reserve, Color(0.75, 0.75, 0.75), 16)
+	if p.reload_cooldown > 0.0:
+		var part := 1.0 - p.reload_cooldown / p.reload_cooldown_max
+		draw_rect(Rect2(ammo_x, size.y - 22.0, 88.0, 6.0), INK)
+		draw_rect(Rect2(ammo_x + 1.0, size.y - 21.0, 86.0 * part, 4.0), Color.WHITE)
+	# Secondary: dim while it recharges, refilled from the bottom up.
+	var ready := clampf(1.0 - p.secondary_cooldown / maxf(0.01, p.secondary_cooldown_max), 0.0, 1.0)
+	var at := Rect2(right - 32.0, size.y - 64.0, 32.0, 32.0)
+	_icon(p.secondary, at, Color(0.35, 0.35, 0.38) if ready < 1.0 else Color(1.0, 0.7, 0.3))
+	if ready < 1.0:
+		var cut := roundf(32.0 * (1.0 - ready))
+		var fill := Rect2(at.position.x, at.position.y + cut, 32.0, 32.0 - cut)
+		draw_texture_rect_region(
+			Icons.get_icon(p.secondary), fill, Rect2(0.0, cut, 32.0, 32.0 - cut), Color(0.8, 0.55, 0.25)
+		)
+	# Kill feed, right aligned: killer, skull, victim.
 	for i in feed.size():
-		_text(font, Vector2(right - 200.0, 30.0 + i * 20.0), feed[i].text, feed[i].color, 16)
+		var row: Dictionary = feed[i]
+		var base := 32.0 + i * 22.0
+		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
+		_icon(&"skull", Rect2(end - 20.0, base - 14.0, 16.0, 16.0), Color.WHITE)
+		var start := end - 24.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
 	_draw_map(w)
 	# Crosshair.
 	var mouse := get_local_mouse_position()
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
-		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, ink, 4.0)
+		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, INK, 4.0)
 		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, Color.WHITE, 2.0)
 
 
@@ -117,6 +163,13 @@ func _draw_map(w: SimWorld) -> void:
 	draw_arc(centre + w.units[0].pos * scale, 6.0, 0.0, TAU, 12, Color.WHITE, 1.0)
 
 
+func _icon(id: StringName, at: Rect2, color: Color) -> void:
+	var texture := Icons.get_icon(id)
+	for offset in RIM:
+		draw_texture_rect(texture, Rect2(at.position + offset, at.size), false, Color(INK, color.a))
+	draw_texture_rect(texture, at, false, color)
+
+
 func _text(font: Font, at: Vector2, text: String, color: Color, px: int) -> void:
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 6, Color(0.05, 0.05, 0.08))
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, 6, INK)
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, color)
