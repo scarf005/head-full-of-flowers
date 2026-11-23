@@ -83,9 +83,15 @@ void fragment() {
 		color = kind == 8 ? vec3(0.8, 0.93, 0.95) : color * 0.7;
 	}
 	// Outside the arena: dark, with diagonal hatching.
-	if (length(p) > arena_radius) {
+	float past = length(p) - arena_radius;
+	if (past > 0.0) {
 		color = mix(color, vec3(0.25, 0.1, 0.14), fract((p.x + p.y) * 1.5) < 0.3 ? 0.75 : 0.5);
 	}
-	ALBEDO = lit_screen(color * cloud(ground, TIME));
+	color *= cloud(ground, TIME);
+	// A red line marks the border. The wall of dashes above it is thin where the camera sees it from the side.
+	if (abs(past) < 0.12) {
+		color = vec3(0.95, 0.22, 0.25);
+	}
+	ALBEDO = lit_screen(color);
 	ROUGHNESS = 1.0;
 }
