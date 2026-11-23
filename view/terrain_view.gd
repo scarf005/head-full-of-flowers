@@ -77,14 +77,13 @@ var _boxes := MultiMesh.new()
 var _revision := -1
 ## Cell index -> wall colour of the building that owns the cell.
 var _walls := {}
-var _boxes_material := StandardMaterial3D.new()
+var _boxes_material := ShaderMaterial.new()
 
 
 func setup(world: SimWorld) -> void:
 	grid = world.grid
 	map = world.map
-	_boxes_material.vertex_color_use_as_albedo = true
-	_boxes_material.roughness = 1.0
+	_boxes_material.shader = preload("res://shaders/box.gdshader")
 	add_child(_ground())
 	for building in map.buildings:
 		var rect: Rect2i = building.rect

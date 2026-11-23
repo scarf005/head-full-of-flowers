@@ -48,6 +48,8 @@ func _ready() -> void:
 	add_child(container)
 	viewport = SubViewport.new()
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
+	# The camera and its listener are in this viewport. Without this, each positional sound is silent.
+	viewport.audio_listener_enable_3d = true
 	container.add_child(viewport)
 	viewport.add_child(sound)
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -96,8 +98,12 @@ func start_match(config: Dictionary, demo := false) -> void:
 func _on_event(e: Dictionary) -> void:
 	if e.type != &"finish":
 		return
-	if menu.visible:
-		show_title()
+	if game.autoplay:
+		# Restart only the demo: a new title menu would erase what the player typed.
+		var shown := menu.visible
+		start_match({seed = randi(), size = 8}, true)
+		menu.visible = shown
+		hud.hide()
 	elif not args.has("autoplay"):
 		var ended := game
 		await get_tree().create_timer(1.5).timeout
@@ -107,13 +113,23 @@ func _on_event(e: Dictionary) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"pause") and not game.autoplay and not game.world.finished:
+	if event.is_action_pressed(&"pause") and _live():
 		_set_paused(not get_tree().paused)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and game and _live() and not args.has("capture"):
+		_set_paused(true)
+
+
+## True while a person plays a match that has not ended.
+func _live() -> bool:
+	return not game.autoplay and not game.world.finished
 
 
 func _set_paused(paused: bool) -> void:
 	get_tree().paused = paused
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused or game.autoplay else Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused or game.autoplay else Input.MOUSE_MODE_CONFINED_HIDDEN
 	if paused:
 		menu.show_pause()
 	else:

@@ -46,7 +46,8 @@ func test_play_again_on_results_starts_a_match_with_the_last_settings() -> void:
 	# The title widgets are freed at the end of the frame.
 	await wait_process_frames(2)
 	watch_signals(menu)
-	var again: Button = menu.find_children("*", "Button", true, false).filter(func(b: Button) -> bool: return b.text == tr("Play again"))[0]
+	var named := func(b: Button) -> bool: return b.text == tr("Play again")
+	var again: Button = menu.find_children("*", "Button", true, false).filter(named)[0]
 	again.pressed.emit()
 	assert_signal_emitted(menu, "start")
 	assert_eq(get_signal_parameters(menu, "start")[0].size, 4)

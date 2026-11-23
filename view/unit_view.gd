@@ -31,6 +31,9 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	unit = sim_unit
 	color = team_color
 	material.roughness = 0.9
+	# On from the start: a later switch compiles a new shader in the middle of a fight.
+	material.emission_enabled = true
+	material.emission = Color.BLACK
 	var dark := StandardMaterial3D.new()
 	dark.albedo_color = Color(0.13, 0.13, 0.17)
 	var skin := StandardMaterial3D.new()
@@ -64,6 +67,10 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	heart.albedo_color = Color(1.0, 0.82, 0.2)
 	_part(ball, Vector3(0, 1.14, 0), Vector3(0.22, 0.14, 0.22), heart, _body)
 	_gun = _part(BoxMesh.new(), Vector3.ZERO, Vector3.ONE, dark, _body)
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.62, 0.42, 0.26)
+	# Stock: the rear third of the gun, a little wider, in wood.
+	_part(BoxMesh.new(), Vector3(0, -0.15, 0.36), Vector3(1.5, 1.3, 0.3), wood, _gun)
 	_bar = _part(BoxMesh.new(), Vector3(0, 1.85, 0), Vector3.ONE, plain)
 	_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if unit.is_player:
@@ -75,7 +82,8 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 
 
 func _process(delta: float) -> void:
-	position = Vector3(unit.pos.x, 0.0, unit.pos.y)
+	var at := unit.pos - unit.vel * GameView.lag
+	position = Vector3(at.x, 0.0, at.y)
 	var speed := unit.vel.length()
 	_stride += speed * delta * 1.5
 	if speed > 0.5:
@@ -94,7 +102,6 @@ func _process(delta: float) -> void:
 	_gun.scale = size
 	_gun.position = Vector3(0.2, 0.5, -0.15 - size.z * 0.5 + unit.recoil * 0.18)
 	material.albedo_color = color.lerp(Color.WHITE, unit.hit_flash)
-	material.emission_enabled = unit.hit_flash > 0.0
 	material.emission = Color.WHITE * unit.hit_flash
 	_bar.scale = Vector3(maxf(0.02, unit.hp / unit.max_hp) * 0.9, 0.07, 0.07)
 

@@ -158,3 +158,6 @@ msgstr "선두 내줌"
 
 msgid "Out of bounds"
 msgstr "구역 이탈"
+
+msgid "Bot %d"
+msgstr "봇 %d"

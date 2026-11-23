@@ -18,6 +18,7 @@ func setup(view: GameView) -> void:
 	game = view
 	_ttl = 0.0
 	_streak = 0
+	_streak_at = -10.0
 	_leader = -1
 	_second = 11
 	game.event.connect(_on_event)
@@ -57,7 +58,7 @@ func _process(delta: float) -> void:
 		_leader = top.team
 	if game.player.pos.length() > w.arena_radius - game.player.radius - 0.05:
 		say(tr("Out of bounds"), Color(1.0, 0.4, 0.4), 0.2)
-	var second := ceili(w.time_left)
+	var second := ceili(w.time_left / Defs.GAME_SPEED)
 	if second <= 10 and second < _second:
 		_second = second
 		say(str(second), Color.WHITE, 0.6)

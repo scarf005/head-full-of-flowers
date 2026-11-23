@@ -27,6 +27,8 @@ var _mode := OptionButton.new()
 var _size := SpinBox.new()
 var _hard := CheckButton.new()
 var _seed := LineEdit.new()
+var _config := {}
+var _typed_seed := ""
 
 
 func _ready() -> void:
@@ -122,7 +124,7 @@ func show_results(w: SimWorld) -> void:
 		_label(str(stat[2]), 16).reparent(stats)
 	stats.add_child(_icon(&"crosshair", "Hit rate", 32.0))
 	_label("%d%%" % accuracy, 16).reparent(stats)
-	_button(&"restart", "Play again", _start).grab_focus()
+	_button(&"restart", "Play again", _again).grab_focus()
 	_button(&"exit", "Leave match", quit_to_title.emit)
 	show()
 
@@ -132,8 +134,16 @@ func _start() -> void:
 	settings.set_value("match", "size", int(_size.value))
 	settings.set_value("match", "hard", _hard.button_pressed)
 	settings.save("user://settings.cfg")
-	var seed := _seed.text.hash() if _seed.text else randi()
-	start.emit({mode = MODES[_mode.selected], size = int(_size.value), hard = _hard.button_pressed, seed = seed})
+	_config = {mode = MODES[_mode.selected], size = int(_size.value), hard = _hard.button_pressed}
+	_typed_seed = _seed.text
+	_again()
+
+
+## Start a match with the last settings. The results screen has no setting widgets.
+func _again() -> void:
+	var config := _config.duplicate()
+	config.seed = _typed_seed.hash() if _typed_seed else randi()
+	start.emit(config)
 
 
 func _fit_size(mode: int, value: int) -> void:
@@ -161,9 +171,9 @@ func _volume(icon: StringName, text: String, bus: StringName) -> void:
 		if index >= 0:
 			AudioServer.set_bus_volume_db(index, linear_to_db(maxf(value, 0.0001)))
 		settings.set_value("audio", bus, value)
-	slider.value_changed.connect(apply)
-	slider.drag_ended.connect(func(_changed: bool) -> void: settings.save("user://settings.cfg"))
 	apply.call(slider.value)
+	slider.value_changed.connect(apply)
+	slider.value_changed.connect(func(_value: float) -> void: settings.save("user://settings.cfg"))
 	_row(icon, text, slider)
 
 

@@ -11,6 +11,8 @@ var flowers: FlowerField
 var nav: NavGrid
 var units: Array[SimUnit] = []
 var team_count := 0
+## Game seconds that the last tick moved the match on. Views use it to draw between ticks.
+var step := 0.0
 var mode := &"ffa"
 var hard := false
 var projectiles: Array[Dictionary] = []
@@ -144,10 +146,12 @@ func respawn(u: SimUnit) -> void:
 
 
 func tick() -> void:
+	step = 0.0
 	if finished:
 		return
 	var real := Defs.TICK * Defs.GAME_SPEED
 	var dt := real * 0.12 if hit_stop > 0.0 else real
+	step = dt
 	hit_stop = maxf(0.0, hit_stop - real)
 	now += dt
 	time_left -= real

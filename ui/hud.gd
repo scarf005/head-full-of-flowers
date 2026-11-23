@@ -35,7 +35,7 @@ func setup(view: GameView) -> void:
 
 
 static func unit_name(u: SimUnit) -> String:
-	return TranslationServer.translate("You") if u.is_player else "Bot %d" % u.index
+	return TranslationServer.translate("You") if u.is_player else TranslationServer.translate("Bot %d") % u.index
 
 
 func _process(delta: float) -> void:
@@ -79,7 +79,9 @@ func _draw() -> void:
 	var x := bar.position.x
 	var own := Rect2()
 	for team in w.team_count:
-		var segment := Rect2(x, bar.position.y, bar.size.x * w.flowers.score(team) / maxf(1.0, total), bar.size.y)
+		# Before the first petal, every team has an equal share.
+		var share := w.flowers.score(team) / float(total) if total > 0 else 1.0 / w.team_count
+		var segment := Rect2(x, bar.position.y, bar.size.x * share, bar.size.y)
 		draw_rect(segment, w.team_color(team))
 		own = segment if team == p.team else own
 		x += segment.size.x
@@ -88,10 +90,12 @@ func _draw() -> void:
 	_text(font, Vector2(mark + 22.0, 46.0), "%d" % w.flowers.score(p.team), w.team_color(p.team), 16)
 	# Timer: red in the last 10 s, with a pulse on each second.
 	var clock_color := Color.WHITE
-	if w.time_left < 10.0:
-		clock_color = Color(1.0, 0.25, 0.25).lerp(Color(0.5, 0.05, 0.05), 1.0 - fposmod(w.time_left, 1.0))
+	# The sim clock runs at GAME_SPEED. Show wall-clock seconds.
+	var left := w.time_left / Defs.GAME_SPEED
+	if left < 10.0:
+		clock_color = Color(1.0, 0.25, 0.25).lerp(Color(0.5, 0.05, 0.05), 1.0 - fposmod(left, 1.0))
 	_icon(&"clock", Rect2(bar.end.x + 12.0, 3.0, 32.0, 32.0), clock_color)
-	var clock := "%d:%02d" % [int(w.time_left) / 60, int(w.time_left) % 60]
+	var clock := "%d:%02d" % [int(left) / 60, int(left) % 60]
 	_text(font, Vector2(bar.end.x + 50.0, 28.0), clock, clock_color, 24)
 	# Hearts, one per hit point.
 	for pip in int(p.max_hp):
@@ -142,10 +146,15 @@ func _draw() -> void:
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
 	_draw_map(w)
 	# Crosshair.
+	if get_tree().paused or w.finished:
+		return
 	var mouse := get_local_mouse_position()
 	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
-		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, INK, 4.0)
-		draw_line(mouse + arm * 5.0, mouse + arm * 12.0, Color.WHITE, 2.0)
+		draw_line(mouse + arm * 5.0, mouse + arm * 17.0, INK, 7.0)
+	draw_rect(Rect2(mouse - Vector2(3.0, 3.0), Vector2(6.0, 6.0)), INK)
+	draw_rect(Rect2(mouse - Vector2(1.0, 1.0), Vector2(2.0, 2.0)), Color.WHITE)
+	for arm: Vector2 in [Vector2.RIGHT, Vector2.LEFT, Vector2.UP, Vector2.DOWN]:
+		draw_line(mouse + arm * 7.0, mouse + arm * 15.0, Color.WHITE, 3.0)
 		if _marker > 0.0:
 			var slant := arm.rotated(PI / 4.0)
 			draw_line(mouse + slant * 8.0, mouse + slant * 18.0, INK, 6.0)

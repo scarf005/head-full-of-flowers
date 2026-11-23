@@ -4,12 +4,16 @@ extends Node3D
 
 signal event(data: Dictionary)
 
+const SHOT_HEIGHT := 0.75
 const SHOT_COLORS := {
 	&"ballistic": Color(1.0, 0.9, 0.5),
 	&"flame": Color(1.0, 0.45, 0.1),
 	&"grenade": Color(0.5, 0.9, 0.4),
 	&"rocket": Color(1.0, 0.6, 0.3),
 }
+
+## Game seconds from the drawn frame to the last tick. The sim ticks at 60 Hz and screens draw faster.
+static var lag := 0.0
 
 var world: SimWorld
 var camera := CameraRig.new()
@@ -69,8 +73,8 @@ func setup(config: Dictionary) -> void:
 	shot_material.shader = preload("res://shaders/shot.gdshader")
 	_shots = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
 	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
-	_blobs = _multimesh(ball, 96, true)
-	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
+	# Thrown grenades are solid objects, not glowing shots.
+	_blobs = _multimesh(ball, 96, false)
 	var disc := CylinderMesh.new()
 	disc.height = 0.06
 	disc.radial_segments = 10
@@ -122,8 +126,9 @@ func _process(delta: float) -> void:
 		return
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
 	RenderingServer.global_shader_parameter_set(&"arena_radius", world.arena_radius)
+	lag = (1.0 - Engine.get_physics_interpolation_fraction()) * world.step
 	shake = maxf(0.0, shake - delta * 4.4)
-	_focus = _focus.lerp(player.pos + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
+	_focus = _focus.lerp(player.pos - player.vel * lag + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
 	camera.size = lerpf(camera.size, CameraRig.VISIBLE_WIDTH_M, clampf(delta * 6.0, 0.0, 1.0))
@@ -148,17 +153,25 @@ func _process(delta: float) -> void:
 			&"rocket":
 				size = Vector3(0.5, 0.5, 1.3)
 		var pulse := 1.0 + 0.12 * sin(world.now * 40.0 + i)
-		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)).scaled(size * pulse)
-		_shots.set_instance_transform(i, Transform3D(basis, Vector3(p.pos.x, 0.75, p.pos.y)))
+		# Scale first, then turn: Basis.scaled() would stretch along the world axes.
+		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(size * pulse)
+		_shots.set_instance_transform(
+			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * lag, SHOT_HEIGHT, p.pos.y - p.vel.y * lag))
+		)
 		_shots.set_instance_color(i, color)
 	_blobs.visible_instance_count = world.throwables.size()
 	for i in world.throwables.size():
 		var t := world.throwables[i]
 		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
 		_blobs.set_instance_transform(
-			i, Transform3D(Basis.from_scale(Vector3.ONE * 0.6), Vector3(t.pos.x, height, t.pos.y))
+			i,
+			Transform3D(
+				Basis.from_scale(Vector3.ONE * 0.45), Vector3(t.pos.x - t.vel.x * lag, height, t.pos.y - t.vel.y * lag)
+			)
 		)
-		_blobs.set_instance_color(i, Color(1.0, 0.5, 0.2) if t.molotov else Color(0.35, 0.8, 0.35))
+		var blink := fmod(world.now, 0.24) < 0.08
+		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.16, 0.3, 0.16)
+		_blobs.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else shell)
 	_fires.visible_instance_count = world.zones.size()
 	for i in world.zones.size():
 		var z := world.zones[i]
@@ -169,11 +182,12 @@ func _process(delta: float) -> void:
 	_draw_pickups()
 
 
-## Sim position under the mouse pointer.
+## Sim position under the mouse pointer, at the height where shots fly, so that a pointer on the body of a unit
+## aims at that unit.
 func pointer() -> Vector2:
 	var root := get_tree().root
 	var scale := Vector2(get_viewport().get_visible_rect().size) / root.get_visible_rect().size
-	return camera.ground_point(root.get_mouse_position() * scale)
+	return camera.ground_point(root.get_mouse_position() * scale, SHOT_HEIGHT)
 
 
 func _read_input() -> void:
@@ -274,15 +288,8 @@ func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
 
 ## White-hot ball that shows for a few frames: muzzle flash or impact spark.
 func _pop(at: Vector2, color: Color, size: float, seconds: float) -> void:
-	var ball := MeshInstance3D.new()
-	ball.mesh = _shots.mesh
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color * 1.8
-	ball.material_override = material
-	ball.position = Vector3(at.x, 0.8, at.y)
+	var ball := _ball(Vector3(at.x, 0.8, at.y), color * 1.8, false)
 	ball.scale = Vector3.ONE * size
-	add_child(ball)
 	get_tree().create_timer(seconds, false).timeout.connect(ball.queue_free)
 
 
@@ -315,22 +322,36 @@ func _number(at: Vector2, amount: float, color: Color) -> void:
 
 
 func _burst(at: Vector2, radius: float) -> void:
+	for n in 12:
+		var fire := n < 6
+		var out := Vector2.from_angle(randf() * TAU) * randf() * radius * 0.45
+		var color := (
+			Color(1.0, randf_range(0.55, 0.9), 0.25) * 1.6
+			if fire
+			else Color.from_hsv(0.0, 0.0, randf_range(0.18, 0.34))
+		)
+		var ball := _ball(Vector3(at.x + out.x, 0.6, at.y + out.y), color, not fire)
+		ball.scale = Vector3.ONE * 0.2
+		var life := randf_range(0.12, 0.22) if fire else randf_range(0.5, 0.9)
+		var tween := create_tween()
+		tween.tween_property(ball, "scale", Vector3.ONE * radius * randf_range(0.3, 0.5), life * 0.35)
+		tween.tween_property(ball, "scale", Vector3.ZERO, life * 0.65)
+		tween.parallel().tween_property(ball, "position:y", 0.6 if fire else randf_range(1.4, 2.4), life * 0.65)
+		tween.tween_callback(ball.queue_free)
+
+
+## A low-poly ball of one colour that the caller animates and frees.
+func _ball(at: Vector3, color: Color, lit: bool) -> MeshInstance3D:
 	var ball := MeshInstance3D.new()
-	var mesh := SphereMesh.new()
-	mesh.radial_segments = 8
-	mesh.rings = 4
-	ball.mesh = mesh
+	ball.mesh = _shots.mesh
 	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color(1.0, 0.75, 0.35) * 2.0
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL if lit else BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = color
 	ball.material_override = material
-	ball.position = Vector3(at.x, 0.5, at.y)
-	ball.scale = Vector3.ONE * 0.5
+	ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ball.position = at
 	add_child(ball)
-	var tween := create_tween()
-	tween.tween_property(ball, "scale", Vector3.ONE * radius * 1.6, 0.12)
-	tween.tween_property(ball, "scale", Vector3.ZERO, 0.18)
-	tween.tween_callback(ball.queue_free)
+	return ball
 
 
 func _draw_pickups() -> void:

@@ -46,10 +46,10 @@ func apply() -> void:
 	position = ground + Vector3(0.0, sin(PITCH), cos(PITCH)) * DISTANCE
 
 
-## Sim position under a point of the 3D viewport.
-func ground_point(viewport_pos: Vector2) -> Vector2:
+## Sim position under a point of the 3D viewport, on the plane at `height` metres.
+func ground_point(viewport_pos: Vector2, height := 0.0) -> Vector2:
 	var origin := project_ray_origin(viewport_pos)
 	var dir := project_ray_normal(viewport_pos)
-	var t := -origin.y / dir.y
+	var t := (height - origin.y) / dir.y
 	var hit := origin + dir * t
 	return Vector2(hit.x, hit.z)
