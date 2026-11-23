@@ -34,6 +34,8 @@ var _ring_mesh := TorusMesh.new()
 var _focus := Vector2.ZERO
 var _shots: MultiMesh
 var _blobs: MultiMesh
+## Red ring on the ground under each thrown grenade: the reach of its blast.
+var _warns: MultiMesh
 var _fires: MultiMesh
 var _flames: MultiMesh
 var _terrain: TerrainView
@@ -79,6 +81,7 @@ func setup(config: Dictionary) -> void:
 	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
 	# Thrown grenades are solid objects, not glowing shots.
 	_blobs = _multimesh(ball, 96, false)
+	_warns = _multimesh(_ring_mesh, 96, true)
 	var disc := CylinderMesh.new()
 	disc.height = 0.06
 	disc.radial_segments = 24
@@ -183,17 +186,23 @@ func _process(delta: float) -> void:
 		)
 		_shots.set_instance_color(i, color)
 	_blobs.visible_instance_count = world.throwables.size()
+	_warns.visible_instance_count = world.throwables.size()
 	for i in world.throwables.size():
 		var t := world.throwables[i]
 		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
 		_blobs.set_instance_transform(
 			i,
 			Transform3D(
-				Basis.from_scale(Vector3.ONE * 0.45),
+				Basis.from_scale(Vector3.ONE * 0.6),
 				Vector3(t.pos.x - t.vel.x * shot_lag, height, t.pos.y - t.vel.y * shot_lag)
 			)
 		)
 		var blink := fmod(world.now, 0.24) < 0.08
+		# No ring for a fire bottle: it burns where it lands, and that place is not known yet.
+		var reach := 0.0 if t.molotov else Shots.BLAST_RADIUS
+		var ring := Transform3D(Basis.from_scale(Vector3(reach, 0.1, reach)), Vector3(t.pos.x, 0.12, t.pos.y))
+		_warns.set_instance_transform(i, ring)
+		_warns.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else Color(0.6, 0.1, 0.1))
 		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.16, 0.3, 0.16)
 		_blobs.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else shell)
 	_fires.visible_instance_count = world.zones.size()
