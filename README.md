@@ -3,7 +3,7 @@
 A 3D low-poly, dithered remake of [head-full-of-flowers](https://github.com/scarf005/head-full-of-flowers) in
 Godot 4.7.
 
-![A fight between two flower-headed fighters next to a house, with patches of flowers on the grass](docs/screenshot.webp)
+![A fighter with a flower for a head shoots across a pond covered in pale flowers](docs/screenshot.webp)
 
 Each hit plants flowers of your colour behind the target. A match lasts 90 seconds, and the arena shrinks all the
 time. The side with the most petals on the ground at the end wins.
