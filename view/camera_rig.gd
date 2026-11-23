@@ -15,7 +15,6 @@ var pattern_offset := Vector2.ZERO
 func _ready() -> void:
 	projection = PROJECTION_ORTHOGONAL
 	keep_aspect = KEEP_WIDTH
-	size = VISIBLE_WIDTH_M
 	near = 1.0
 	far = 200.0
 	rotation = Vector3(-PITCH, 0.0, 0.0)
@@ -29,7 +28,15 @@ func _ready() -> void:
 	material.shader = preload("res://shaders/outline.gdshader")
 	quad.material_override = material
 	add_child(quad)
+	size = rest_size()
 	apply()
+
+
+## Metres of ground across the view when no zoom runs: 25 at 16:9 and narrower. A wider window sees more to the
+## sides, not less above and below.
+func rest_size() -> float:
+	var view := get_viewport().get_visible_rect().size
+	return VISIBLE_WIDTH_M * maxf(1.0, view.x / view.y * 9.0 / 16.0)
 
 
 func pixels_per_meter() -> Vector2:
@@ -42,7 +49,7 @@ func apply() -> void:
 	var ppm := pixels_per_meter()
 	var snapped_px := Vector2(roundf(target.x * ppm.x), roundf(target.y * ppm.y))
 	# During a zoom the pixels per metre change, and a moving offset makes the whole pattern flicker.
-	if is_equal_approx(size, VISIBLE_WIDTH_M):
+	if is_equal_approx(size, rest_size()):
 		pattern_offset = snapped_px
 	var ground := Vector3(snapped_px.x / ppm.x, 0.0, snapped_px.y / ppm.y)
 	position = ground + Vector3(0.0, sin(PITCH), cos(PITCH)) * DISTANCE

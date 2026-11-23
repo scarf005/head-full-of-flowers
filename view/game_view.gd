@@ -137,11 +137,12 @@ func _process(delta: float) -> void:
 	_focus = _focus.lerp(player.pos - player.vel * lag + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
-	camera.size = lerpf(camera.size, CameraRig.VISIBLE_WIDTH_M, clampf(delta * 6.0, 0.0, 1.0))
-	if absf(camera.size - CameraRig.VISIBLE_WIDTH_M) < 0.02:
-		camera.size = CameraRig.VISIBLE_WIDTH_M
+	var rest := camera.rest_size()
+	camera.size = lerpf(camera.size, rest, clampf(delta * 6.0, 0.0, 1.0))
+	if absf(camera.size - rest) < 0.02:
+		camera.size = rest
 	if intro > 0.0:
-		camera.size = CameraRig.VISIBLE_WIDTH_M + intro * intro * 14.0
+		camera.size = rest + intro * intro * 14.0
 	camera.target = _focus + _kick + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
 	camera.apply()
 	_arena.scale = Vector3(world.arena_radius * 2.0, 1.0, world.arena_radius * 2.0)
@@ -253,7 +254,7 @@ func _show(e: Dictionary) -> void:
 				_kick += e.dir * 0.4
 			elif e.source == 0 and e.kill:
 				tint = Color(1.0, 1.0, 1.0, 0.35)
-				camera.size = CameraRig.VISIBLE_WIDTH_M - 1.6
+				camera.size = camera.rest_size() - 1.6
 		&"cell":
 			var at := world.grid.center_of(e.cell)
 			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
@@ -349,7 +350,7 @@ func _burst(at: Vector2, radius: float) -> void:
 		var color := (
 			Color(1.0, randf_range(0.55, 0.9), 0.25) * 1.6
 			if fire
-			else Color.from_hsv(0.0, 0.0, randf_range(0.18, 0.34))
+			else Color.from_hsv(0.08, 0.12, randf_range(0.3, 0.5))
 		)
 		var ball := _ball(Vector3(at.x + out.x, 0.6, at.y + out.y), color, not fire)
 		ball.scale = Vector3.ONE * 0.2
