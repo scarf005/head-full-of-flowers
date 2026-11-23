@@ -71,9 +71,28 @@ func test_pistol_shot_is_quieter_than_shotgun_shot() -> void:
 
 
 func test_second_burst_shot_of_a_bot_makes_no_sound() -> void:
-	sound.handle({type = &"shot", unit = 1, pos = Vector2.ZERO, weapon = &"assault", first = false})
+	# 200 shots: without the rule, about 36 of them pass the 1 in 5 chance.
+	for n in 200:
+		sound.handle({type = &"shot", unit = 1, pos = Vector2.ZERO, weapon = &"assault", first = false})
 	for p in sound._spatial:
 		assert_false(p.playing)
+
+
+func test_shot_of_a_bot_20_m_away_gets_quieter_by_its_distance_one_time() -> void:
+	for n in 200:
+		sound.handle({type = &"shot", unit = 1, pos = Vector2(20, 0), weapon = &"shotgun", first = true})
+	var p := sound._spatial.back() as AudioStreamPlayer3D
+	assert_true(p.playing)
+	# The 3D player lowers the sound by the distance. The level that the shot sets has no distance in it.
+	assert_almost_eq(p.volume_db, linear_to_db(Sound.WEAPON_GAIN[&"shotgun"]), 0.01)
+
+
+func test_flame_of_a_bot_does_not_move_the_flame_sound_of_the_player() -> void:
+	sound.handle({type = &"shot", unit = 0, pos = Vector2.ZERO, weapon = &"flamethrower", first = true})
+	var level := sound._flame.volume_db
+	sound._burn(Vector2(30, 0), 0.01)
+	assert_eq(sound._flame.position, sound._listener.position)
+	assert_eq(sound._flame.volume_db, level)
 
 
 func test_reload_end_plays_the_end_slice() -> void:

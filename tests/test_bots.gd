@@ -202,3 +202,48 @@ func test_hunt_goal_for_an_enemy_at_the_border_is_free_and_near_the_margin() -> 
 	var goal := Bots._hunt_goal(w, b)
 	assert_false(w.grid.circle_hits(goal, 0.9), "goal is free")
 	assert_lt(goal.distance_to(clamped), 2.5)
+
+
+func test_bot_with_only_a_grenade_launcher_makes_room_for_its_blast_and_then_fires() -> void:
+	w.hard = true
+	Arsenal.equip(a, &"grenade-launcher", 6.0)
+	a.slots.remove_at(0)
+	a.slot_index = 0
+	_run(240)
+	assert_gt(a.pos.distance_to(b.pos), Bots.BLAST_SAFE[&"grenade-launcher"], "the bot started 4 m away")
+	assert_gt(a.shots_fired, 0)
+
+
+func test_bot_takes_its_pistol_when_the_enemy_is_too_near_for_its_grenade_launcher() -> void:
+	w.hard = true
+	Arsenal.equip(a, &"grenade-launcher", 6.0)
+	_run(240)
+	assert_eq(a.weapon_id(), &"pistol", "the enemy is 4 m away and the blast reaches 3.8 m")
+
+
+func test_bot_that_sees_the_enemy_through_a_window_walks_around_the_wall() -> void:
+	# The window is at the end of a gap of 1 m between 2 wall cells, so a bot that presses at it cannot slide away.
+	w.hard = true
+	_wall(0, -4, 4)
+	for y in [-0.5, 1.5]:
+		w.grid.set_cell(w.grid.cell_of(Vector2(-0.5, y)), Defs.Mat.ROCK)
+	var window := w.grid.cell_of(Vector2(0.5, 0.5))
+	w.grid.solid[window.y * w.grid.size + window.x] = ObstacleGrid.LOW
+	a.pos = Vector2(-6, 0.5)
+	b.pos = Vector2(6, 0.5)
+	b.hp = 100000.0
+	var east := -INF
+	for n in 420:
+		_run(1)
+		east = maxf(east, a.pos.x)
+	assert_gt(east, 1.0, "the bot comes to the side of the enemy")
+
+
+func test_bot_with_3_of_10_health_runs_from_the_enemy_and_still_fires() -> void:
+	w.hard = true
+	a.hp = 3.0
+	a.pos = Vector2(-3, 0)
+	b.pos = Vector2(3, 0)
+	_run(60)
+	assert_gt(a.pos.distance_to(b.pos), 8.0, "the bot started 6 m away")
+	assert_gt(a.shots_fired, 0)

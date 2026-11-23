@@ -115,3 +115,61 @@ func test_crate_breaks_on_the_third_rifle_hit() -> void:
 	w.hit_cell(cell, 3.0, 0)
 	assert_false(w.grid.is_solid(cell))
 	assert_false(w.events.any(func(e: Dictionary) -> bool: return e.type == &"explosion"))
+
+
+func test_unit_that_shoots_a_barrel_3_m_away_is_hurt_but_does_not_die() -> void:
+	_prop(&"barrel", Vector2(3.5, 0.5))
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	_tick(30)
+	assert_lt(a.hp, 10.0, "the blast reaches 3.8 m")
+	assert_eq(a.deaths, 0, "only the unit's own grenade, shell or rocket kills it at once")
+
+
+func test_loot_box_does_not_land_on_a_rug() -> void:
+	w.map.props.append({kind = &"rug", x = 0.0, y = 0.0, width = 12, height = 12, solid = false})
+	w.grid = w.map.build_grid()
+	for n in 40:
+		Loot.spawn_box(w)
+	var boxes := w.events.filter(func(e: Dictionary) -> bool: return e.type == &"box")
+	assert_gt(boxes.size(), 20)
+	for e: Dictionary in boxes:
+		var at := w.grid.center_of(e.cell)
+		assert_gt(maxf(absf(at.x), absf(at.y)), 6.0, "box at %s" % at)
+
+
+func test_blast_reaches_a_barrel_by_its_near_edge() -> void:
+	# The middle of the barrel is 4.1 m from the blast and its near edge is 3.6 m from it. The blast reaches 3.8 m.
+	var barrel := _prop(&"barrel", Vector2(4.5, 0.5))
+	Combat.explode(w, Vector2(0.4, 0.5), Shots.BLAST_RADIUS, 0.0, -1, true, &"grenade")
+	assert_false(w.grid.is_solid(barrel))
+
+
+func test_rifle_shot_that_clips_the_corner_of_a_hedge_loses_half_its_damage() -> void:
+	Arsenal.equip(a, &"assault", 60.0)
+	a.want_fire = true
+	_tick(1)
+	var hedge := w.grid.cell_of(Vector2(3.5, 3.5))
+	w.grid.set_cell(hedge, Defs.Mat.HEDGE)
+	# One step from (2.9, 3.3) to (3.3, 2.9): both ends are out of the hedge cell and the middle is in its corner.
+	var p := w.projectiles[0]
+	var damage: float = p.damage
+	p.pos = Vector2(2.9, 3.3)
+	p.vel = Vector2(40, -40)
+	Shots._step_projectile(w, p, 0.01)
+	assert_eq(p.damage, damage * 0.5)
+
+
+func test_fire_bottle_that_lands_stops_the_match_for_a_moment() -> void:
+	a.secondary = &"molotov"
+	a.want_throw = true
+	# Out of the fire: a hit on a unit stops the match for longer.
+	b.pos = Vector2(0, 20)
+	var stop := 0.0
+	for n in 80:
+		w.tick()
+		a.want_throw = false
+		stop = maxf(stop, w.hit_stop)
+	assert_eq(w.zones.size(), 1)
+	assert_almost_eq(stop, 0.006, 0.001, "as in the original game")

@@ -29,3 +29,12 @@ func test_grenade_launcher_shell_bursts_beside_an_enemy() -> void:
 	assert_eq(bursts.size(), 1)
 	assert_lt(bursts[0].pos.x, 8.0, "the shell bursts beside the enemy, not at the end of its reach")
 	assert_eq(b.deaths, 1, "the blast kills the enemy")
+
+
+func test_last_round_of_a_magazine_starts_a_reload_with_its_event() -> void:
+	Arsenal.equip(a, &"assault", 60.0)
+	a.slot().ammo = 1.0
+	a.want_fire = true
+	w.tick()
+	assert_gt(a.reload_cooldown, 0.0)
+	assert_true(w.events.any(func(e: Dictionary) -> bool: return e.type == &"reload" and e.unit == 0))
