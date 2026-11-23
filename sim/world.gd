@@ -7,6 +7,8 @@ var rng := RandomNumberGenerator.new()
 var map: TerrainMap
 var grid: ObstacleGrid
 var flowers: FlowerField
+## Path grid shared by the bots. The bot brain creates it on first use.
+var nav: NavGrid
 var units: Array[SimUnit] = []
 var team_count := 0
 var mode := &"ffa"
