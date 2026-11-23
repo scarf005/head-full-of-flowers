@@ -36,16 +36,17 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		p.pos = p.pos.limit_length(w.arena_radius - 0.05)
 		return _bounce(w, p, inward) or _end(w, p, p.pos)
 	var ballistic: bool = p.kind == &"ballistic"
-	# The shot stops at the first unit on its step. Cover behind that unit takes no hit and no damage away.
+	# The shot stops at the nearest unit on its step. Cover behind that unit takes no hit and no damage away.
 	var reach: float = ((1.2 if p.kind == &"rocket" else 1.25) + p.fuse) if explosive else 0.0
 	var hit: SimUnit = null
 	var stop: Vector2 = p.pos
 	for u in w.units:
 		var near := Geometry2D.get_closest_point_to_segment(u.pos, from, p.pos)
-		if u.index != p.owner and u.team != p.team and near.distance_to(u.pos) - u.radius - p.radius <= reach:
+		var touch: bool = near.distance_to(u.pos) - u.radius - p.radius <= reach
+		var nearer := from.distance_squared_to(near) <= from.distance_squared_to(stop)
+		if u.index != p.owner and u.team != p.team and touch and nearer:
 			hit = u
 			stop = near
-			break
 	var cell := w.grid.ray_cell(from - back, stop, ballistic)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
