@@ -47,6 +47,9 @@ static func spawn_box(w: SimWorld) -> void:
 	for attempt in 32:
 		var at := w.random_point(w.arena_radius * 0.8)
 		var cell := w.grid.cell_of(at)
+		# A rug or a plant does not stop a unit, but its cell is not free.
+		if w.grid.material[cell.y * w.grid.size + cell.x] != Defs.Mat.NONE:
+			continue
 		if w.grid.circle_hits(w.grid.center_of(cell), 1.2) or w.unit_near(w.grid.center_of(cell), 1.5):
 			continue
 		w.grid.set_cell(cell, Defs.Mat.BOX, true)
