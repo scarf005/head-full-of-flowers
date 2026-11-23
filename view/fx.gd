@@ -81,7 +81,8 @@ func add(at: Vector3, size: Vector2, shape: Shape, color: Color, turn := 0.0, z 
 	var scale := Vector3(roundf(size.x * 0.5) * 2.0, roundf(size.y * 0.5) * 2.0, 1.0) / UnitView.PX_PER_M
 	multimesh.set_instance_transform(_count, Transform3D(Basis.from_scale(scale.max(Vector3.ONE * 0.001)), at))
 	multimesh.set_instance_color(_count, color)
-	multimesh.set_instance_custom_data(_count, Color(shape, turn, z, w))
+	# The web build keeps these numbers with 11 bits, so a turn of many rounds would go in steps.
+	multimesh.set_instance_custom_data(_count, Color(shape, fposmod(turn, TAU), z, w))
 	_count += 1
 
 
