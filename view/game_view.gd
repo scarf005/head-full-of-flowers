@@ -152,8 +152,13 @@ func _show(e: Dictionary) -> void:
 			if e.unit == 0:
 				shake = minf(1.0, shake + 0.12)
 		&"hit":
+			_puff(e.pos, world.team_color(e.team), 40 if e.kill else 8, 5.0 if e.kill else 3.0)
 			if e.target == 0 or e.source == 0:
 				shake = minf(1.2, shake + (0.66 if e.target == 0 else 0.4) + (0.5 if e.kill else 0.0))
+				_number(e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == 0 else Color.WHITE)
+		&"cell":
+			var at := world.grid.center_of(e.cell)
+			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
 		&"explosion":
 			_flash(Vector3(e.pos.x, 1.0, e.pos.y), Color(1.0, 0.6, 0.25), e.radius * 2.5, 0.35)
 			_burst(e.pos, e.radius)
@@ -177,6 +182,46 @@ func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
 			_lights -= 1
 			light.queue_free()
 	)
+
+
+## One-shot spray of small cubes.
+func _puff(at: Vector2, color: Color, amount: int, speed: float) -> void:
+	var puff := CPUParticles3D.new()
+	puff.position = Vector3(at.x, 0.6, at.y)
+	puff.one_shot = true
+	puff.explosiveness = 1.0
+	puff.amount = amount
+	puff.lifetime = 0.6
+	puff.direction = Vector3.UP
+	puff.spread = 70.0
+	puff.initial_velocity_min = speed * 0.4
+	puff.initial_velocity_max = speed
+	puff.scale_amount_min = 0.08
+	puff.scale_amount_max = 0.18
+	puff.mesh = BoxMesh.new()
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	puff.material_override = material
+	puff.emitting = true
+	add_child(puff)
+	get_tree().create_timer(1.0, false).timeout.connect(puff.queue_free)
+
+
+## Damage number that rises and fades.
+func _number(at: Vector2, amount: float, color: Color) -> void:
+	var label := Label3D.new()
+	label.text = str(int(amount))
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.pixel_size = 0.04
+	label.font_size = 16
+	label.outline_size = 6
+	label.modulate = color
+	label.position = Vector3(at.x + randf_range(-0.3, 0.3), 1.6, at.y)
+	add_child(label)
+	var tween := create_tween()
+	tween.tween_property(label, "position:y", 2.8, 0.5)
+	tween.tween_callback(label.queue_free)
 
 
 func _burst(at: Vector2, radius: float) -> void:
