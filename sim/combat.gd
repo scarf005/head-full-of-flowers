@@ -62,6 +62,7 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 					damage = maxf(1.0, weapon.damage + u.damage_bonus),
 					reach = weapon.reach * u.range_mul,
 					travelled = 0.0,
+					free = 0.0,
 					ttl = maxf(0.3, weapon.reach / weapon.speed * 1.6),
 					ricochets = ricochets,
 					bounces = 2,
@@ -70,7 +71,7 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 				}
 			)
 		)
-	if w.projectiles.size() > Defs.PROJECTILE_CAPACITY:
+	while w.projectiles.size() > Defs.PROJECTILE_CAPACITY:
 		w.projectiles.pop_front()
 	u.recoil = minf(1.0, u.recoil + 0.38 + weapon.pellets * 0.05)
 	w.emit(&"shot", {unit = u.index, pos = u.pos, dir = dir, weapon = s.id})

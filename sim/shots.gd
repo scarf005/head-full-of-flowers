@@ -19,6 +19,9 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 	if p.kind == &"rocket":
 		_home(w, p, dt)
 	var from: Vector2 = p.pos
+	# Start the wall check a little behind the shot, but never behind its muzzle or its last bounce.
+	var back: Vector2 = p.vel.normalized() * minf(minf(0.9, p.vel.length() * 0.018), p.free)
+	p.free += p.vel.length() * dt
 	p.pos += p.vel * dt
 	p.travelled += p.vel.length() * dt
 	p.ttl -= dt
@@ -32,14 +35,14 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		var inward: Vector2 = -p.pos.normalized()
 		p.pos = p.pos.limit_length(w.arena_radius - 0.05)
 		return _bounce(w, p, inward) or _end(w, p, p.pos)
-	var back: Vector2 = p.vel.normalized() * minf(0.9, p.vel.length() * 0.018)
 	var cell := w.grid.ray_cell(from - back, p.pos)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
 		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage))
 		var impact := w.grid.ricochet_impact(from - back, p.pos)
-		p.pos = impact.get("point", from)
-		return _bounce(w, p, impact.get("normal", -p.vel.normalized())) or _end(w, p, p.pos)
+		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
+		p.pos = impact.get("point", from) + normal * 0.01
+		return _bounce(w, p, normal) or _end(w, p, p.pos)
 	for u in w.units:
 		if u.index == p.owner or u.team == p.team:
 			continue
@@ -78,6 +81,7 @@ static func _bounce(w: SimWorld, p: Dictionary, normal: Vector2) -> bool:
 		p.damage *= 0.8
 	else:
 		return false
+	p.free = 0.0
 	w.emit(&"bounce", {pos = p.pos})
 	return true
 
@@ -138,15 +142,16 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 	t.ttl -= dt
 	var landed: bool = t.ttl <= 0.0 or t.pos.length() > w.arena_radius - radius
 	var cell := w.grid.ray_cell(from, t.pos)
-	if cell.x >= 0 and w.grid.is_solid(cell):
+	if cell.x >= 0:
 		w.hit_cell(cell, 1.5 if t.molotov else 3.0)
 		var impact := w.grid.ricochet_impact(from, t.pos)
-		t.pos = impact.get("point", from)
+		var normal: Vector2 = impact.get("normal", -t.vel.normalized())
+		t.pos = impact.get("point", from) + normal * 0.01
 		if t.molotov or t.bounces <= 0:
 			landed = true
 		else:
 			t.bounces -= 1
-			t.vel = t.vel.bounce(impact.get("normal", -t.vel.normalized())) * 0.58
+			t.vel = t.vel.bounce(normal) * 0.58
 	for u in w.units:
 		if u.team == t.team:
 			continue

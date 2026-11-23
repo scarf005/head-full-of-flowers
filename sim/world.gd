@@ -251,6 +251,6 @@ func _keep_in_arena(u: SimUnit, dt: float) -> void:
 func _free_near(at: Vector2) -> Vector2:
 	for step in 200:
 		var p := at + Vector2.from_angle(step * 2.4) * step * 0.15
-		if not grid.circle_hits(p, 0.9):
+		if not grid.circle_hits(p, 0.9) and p.length() < arena_radius - 0.9:
 			return p
 	return at

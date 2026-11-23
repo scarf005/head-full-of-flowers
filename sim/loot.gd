@@ -70,7 +70,11 @@ static func update(w: SimWorld, dt: float) -> void:
 			continue
 		p.pos = next
 		for u in w.units:
-			if p.thrower >= 0 and u.index != p.thrower and u.pos.distance_to(p.pos) <= Defs.PICKUP_RADIUS + u.radius:
+			if (
+				p.thrower >= 0
+				and u.team != w.units[p.thrower].team
+				and u.pos.distance_to(p.pos) <= Defs.PICKUP_RADIUS + u.radius
+			):
 				Combat.damage(w, u, 1.0, p.thrower, u.pos, p.vel, &"pickup")
 				p.vel = Vector2.ZERO
 				break

@@ -98,13 +98,13 @@ func circle_hits(p: Vector2, radius: float) -> bool:
 	return false
 
 
-## First damageable cell on a segment, or (-1, -1).
+## First solid cell on a segment, or (-1, -1).
 func ray_cell(from: Vector2, to: Vector2) -> Vector2i:
 	var d := to - from
 	var steps := maxi(1, ceili(maxf(absf(d.x), absf(d.y)) * 4.0))
 	for step in steps + 1:
 		var cell := cell_of(from.lerp(to, float(step) / steps))
-		if is_damageable(cell):
+		if is_solid(cell):
 			return cell
 	return Vector2i(-1, -1)
 
