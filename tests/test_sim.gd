@@ -300,3 +300,16 @@ func test_timed_box_holds_a_high_tier_weapon() -> void:
 	var boxes := range(w.grid.material.size()).filter(func(i: int) -> bool: return w.grid.material[i] == Defs.Mat.BOX)
 	assert_eq(boxes.size(), 1)
 	assert_eq(w.grid.high_tier[boxes[0]], 1)
+
+
+func test_squad_starts_together_and_away_from_the_other_squads() -> void:
+	for sd in [1, 2, 3]:
+		var squads := SimWorld.new({seed = sd, mode = &"squad", size = 3})
+		for a in squads.units:
+			assert_false(squads.grid.circle_hits(a.pos, a.radius), "unit %d stands free" % a.index)
+			for b in squads.units:
+				var gap := a.pos.distance_to(b.pos)
+				if a.team == b.team:
+					assert_lt(gap, 8.0, "team mates %d and %d" % [a.index, b.index])
+				else:
+					assert_gt(gap, 15.0, "enemies %d and %d" % [a.index, b.index])

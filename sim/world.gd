@@ -62,8 +62,11 @@ func _init(config: Dictionary = {}, terrain: TerrainMap = null) -> void:
 	arena_radius = arena_start
 	var start := rng.randf() * TAU
 	for u in units:
-		u.respawn(Vector2.from_angle(start + TAU * u.index / units.size()) * (arena_radius - 3.0))
-		u.pos = _free_near(u.pos)
+		# One place on the ring for each team. Team mates stand around it.
+		var at := Vector2.from_angle(start + TAU * u.team / team_count) * (arena_radius - 4.0)
+		if per_team > 1:
+			at += Vector2.from_angle(start + TAU * (u.index % per_team) / per_team) * minf(2.5, 0.6 * per_team)
+		u.respawn(_free_near(at.limit_length(arena_radius - 3.0)))
 	Loot.spawn_weapon(self, _free_near(Vector2.ZERO), 1.0, true)
 	var points := Array(map.pickup_points)
 	for n in mini(points.size(), rng.randi_range(2, 5)):
@@ -118,7 +121,7 @@ func hit_cell(cell: Vector2i, amount: float) -> void:
 		Loot.spawn_weapon(self, grid.center_of(cell), 1.0 if result.high_tier else 0.0, true)
 
 
-## Puts a dead unit back at the free point that is farthest from the other units.
+## Puts a dead unit back at the free point that is farthest from its enemies.
 func respawn(u: SimUnit) -> void:
 	var best := Vector2.ZERO
 	var best_score := -1.0
@@ -131,7 +134,7 @@ func respawn(u: SimUnit) -> void:
 				continue
 			var nearest := INF
 			for other in units:
-				if other != u:
+				if other.team != u.team:
 					nearest = minf(nearest, other.pos.distance_squared_to(at))
 			if nearest > best_score:
 				best_score = nearest

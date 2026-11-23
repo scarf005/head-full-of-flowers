@@ -66,7 +66,10 @@ func _ready() -> void:
 	menu.resume.connect(_set_paused.bind(false))
 	menu.quit_to_title.connect(show_title)
 	if args.has("autoplay") or args.has("match"):
-		start_match({seed = int(args.get("seed", "1")), size = int(args.get("size", "8"))}, args.has("autoplay"))
+		var config := {seed = int(args.get("seed", "1")), size = int(args.get("size", "8"))}
+		config.mode = StringName(args.get("mode", "ffa"))
+		config.hard = args.has("hard")
+		start_match(config, args.has("autoplay"))
 	else:
 		show_title()
 
