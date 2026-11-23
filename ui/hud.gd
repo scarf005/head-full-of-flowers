@@ -189,7 +189,8 @@ func _draw_map(w: SimWorld) -> void:
 	var origin := Vector2(16.0, 16.0)
 	var scale := MAP_PX / (w.arena_start * 2.0)
 	var centre := origin + Vector2.ONE * MAP_PX * 0.5
-	draw_rect(Rect2(origin, Vector2.ONE * MAP_PX), PLATE)
+	# Thinner than the other plates: units walk under the map.
+	draw_rect(Rect2(origin, Vector2.ONE * MAP_PX), Color(PLATE, 0.45))
 	var shown := Rect2(Vector2.ONE * (w.grid.size * 0.5 - w.arena_start), Vector2.ONE * w.arena_start * 2.0)
 	draw_texture_rect_region(_map, Rect2(origin, Vector2.ONE * MAP_PX), shown)
 	draw_arc(centre, w.arena_radius * scale, 0.0, TAU, 48, Color(1.0, 0.4, 0.35), 2.0)

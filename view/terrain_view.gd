@@ -217,6 +217,16 @@ func _prop(out: Array, kind: StringName, at: Vector2, size: Vector2, look: Array
 		&"crate":
 			_box(out, at, Vector2(size.x - 0.1, 0.12), top + 0.09, color.darkened(0.35))
 			_box(out, at, Vector2(0.12, size.y - 0.1), top + 0.09, color.darkened(0.35))
+		&"lilies":
+			# Two squares at 45 degrees make a round pad. A blossom sits on it.
+			out[-1][0] = out[-1][0].rotated_local(Vector3.UP, PI / 4.0)
+			_box(out, at + Vector2(0.08, -0.06), Vector2(0.16, 0.16), top + 0.12, Color("f4c6d8"))
+		&"reeds":
+			# Thin stalks of mixed height in place of one block.
+			out.resize(out.size() - 2)
+			for n in 4:
+				var stalk := at + Vector2.from_angle(n * 1.9 + at.x) * 0.18
+				_box(out, stalk, Vector2(0.08, 0.08), top * (0.7 + 0.15 * n), color.darkened(0.1 * (n % 2)))
 		&"barrel":
 			_box(out, at, size - Vector2(0.4, 0.4), top + 0.09, color.darkened(0.4))
 		&"plant", &"planter", &"flowerbed":

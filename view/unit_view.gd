@@ -20,6 +20,8 @@ var color: Color
 ## Scale of the figure. Set below 1 to make it pop up, for example at a respawn.
 var grow := 1.0
 var material := StandardMaterial3D.new()
+## Ground of the match, to find water under the unit.
+var map: TerrainMap
 var _body := Node3D.new()
 var _legs := Node3D.new()
 var _feet: Array[MeshInstance3D] = []
@@ -52,7 +54,8 @@ func setup(sim_unit: SimUnit, team_color: Color) -> void:
 	torso.height = 0.5
 	torso.radial_segments = 6
 	torso.rings = 1
-	_part(torso, Vector3(0, 0.45, 0), Vector3.ONE, material, _body)
+	# The body is darker than the flowers of its team, so it shows on its own flower field.
+	_part(torso, Vector3(0, 0.45, 0), Vector3.ONE, _lit_material(color.darkened(0.4)), _body)
 	_part(BoxMesh.new(), Vector3(0, 0.5, 0.25), Vector3(0.32, 0.3, 0.14), dark, _body)
 	var ball := SphereMesh.new()
 	ball.radius = 0.5
@@ -90,7 +93,9 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var at := unit.pos - unit.vel * GameView.lag
-	position = Vector3(at.x, 0.0, at.y)
+	# A unit in water stands knee-deep.
+	var floor_y := -0.3 if map and map.tile_at(at) == TerrainMap.Tile.WATER else 0.0
+	position = Vector3(at.x, lerpf(position.y, floor_y, clampf(delta * 10.0, 0.0, 1.0)), at.y)
 	var speed := unit.vel.length()
 	_stride += speed * delta * 1.5
 	if speed > 0.5:
