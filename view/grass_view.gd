@@ -2,7 +2,9 @@ class_name GrassView
 extends MultiMeshInstance3D
 ## A field of grass tufts on the grass tiles inside the arena. The shader bends them in the wind and under units.
 
-const TALL := {TerrainMap.Tile.GRASS: 0.85, TerrainMap.Tile.CLOVER: 0.6, TerrainMap.Tile.WILD_GRASS: 1.1}
+## Height in metres at which flowers lie, level with the bent grass tips.
+const TOP := 0.5
+const TALL := {TerrainMap.Tile.GRASS: 0.6, TerrainMap.Tile.CLOVER: 0.5, TerrainMap.Tile.WILD_GRASS: 0.7}
 
 var world: SimWorld
 var material := ShaderMaterial.new()
@@ -25,9 +27,9 @@ func setup(sim: SimWorld) -> void:
 			for n in per_tile:
 				var at := corner + Vector2(rng.randf(), rng.randf())
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(
-					Vector3(1.2, TALL[tile] * rng.randf_range(0.7, 1.3), 1.2)
+					Vector3(1.6, TALL[tile] * rng.randf_range(0.85, 1.15), 1.6)
 				)
-				var color := Color.from_hsv(0.0, 0.0, rng.randf_range(0.9, 1.1))
+				var color := Color.from_hsv(0.0, 0.0, rng.randf_range(0.96, 1.04))
 				for row in 3:
 					buffer.append_array([basis.x[row], basis.y[row], basis.z[row], [at.x, 0.0, at.y][row]])
 				buffer.append_array([color.r, color.g, color.b, 1.0])

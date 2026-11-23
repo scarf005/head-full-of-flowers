@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode cull_disabled, depth_draw_always;
+render_mode cull_disabled, depth_draw_always, unshaded;
 
 #include "wind.gdshaderinc"
 
@@ -10,7 +10,6 @@ uniform vec3 sheen_color : source_color = vec3(0.9, 0.98, 0.62);
 
 varying float sheen;
 varying float shade;
-varying vec3 tone;
 
 void vertex() {
 	vec3 root = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -28,15 +27,12 @@ void vertex() {
 	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2);
 	world.y *= 1.0 - 0.45 * g * h - 0.6 * flat_amount * h;
 	VERTEX = (inverse(MODEL_MATRIX) * vec4(world, 1.0)).xyz;
-	NORMAL = (inverse(MODEL_MATRIX) * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
 	sheen = smoothstep(0.45, 0.8, g) * (0.3 + 0.7 * UV.y);
 	shade = cloud(root.xz, TIME);
-	tone = meadow(root.xz, TIME);
 }
 
 void fragment() {
-	vec3 blade = tone * mix(0.7, 1.3, UV.y) * COLOR.rgb;
-	ALBEDO = mix(blade, sheen_color, sheen * 0.7) * shade;
-	ROUGHNESS = 1.0;
+	vec3 blade = mix(vec3(0.24, 0.5, 0.22), vec3(0.45, 0.72, 0.28), UV.y) * COLOR.rgb;
+	ALBEDO = mix(blade, sheen_color, sheen * 0.85) * shade;
 	ALPHA = 1.0;
 }
