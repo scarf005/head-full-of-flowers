@@ -37,3 +37,16 @@ func test_results_show_trophy_on_victory_and_skull_on_defeat() -> void:
 	menu.show_results(w)
 	assert_does_not_have(_textures(), Icons.get_icon(&"trophy"))
 	assert_has(_textures(), Icons.get_icon(&"skull"))
+
+
+func test_play_again_on_results_starts_a_match_with_the_last_settings() -> void:
+	menu._size.value = 4
+	menu._start()
+	menu.show_results(SimWorld.new({seed = 7, size = 2}, TerrainMap.new()))
+	# The title widgets are freed at the end of the frame.
+	await wait_process_frames(2)
+	watch_signals(menu)
+	var again: Button = menu.find_children("*", "Button", true, false).filter(func(b: Button) -> bool: return b.text == tr("Play again"))[0]
+	again.pressed.emit()
+	assert_signal_emitted(menu, "start")
+	assert_eq(get_signal_parameters(menu, "start")[0].size, 4)
