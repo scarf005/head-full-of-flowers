@@ -6,12 +6,6 @@ signal event(data: Dictionary)
 
 const SHOT_HEIGHT := 0.75
 const FLAMES_PER_M2 := 1.6
-const SHOT_COLORS := {
-	&"ballistic": Color(1.0, 0.9, 0.5),
-	&"flame": Color(1.0, 0.45, 0.1),
-	&"grenade": Color(0.5, 0.9, 0.4),
-	&"rocket": Color(1.0, 0.6, 0.3),
-}
 
 ## Game seconds from the drawn frame to the last tick. The sim ticks at 60 Hz and screens draw faster.
 static var lag := 0.0
@@ -173,7 +167,7 @@ func _process(delta: float) -> void:
 		match p.kind:
 			&"flame":
 				size = Vector3.ONE * (0.35 + progress * 1.1)
-				color = Color(1.0, 0.9, 0.3).lerp(Color(0.9, 0.2, 0.05), progress)
+				color = Color(1.0, 0.8, 0.25, 0.0).lerp(Color(0.9, 0.2, 0.05, 0.0), progress)
 			&"grenade":
 				size = Vector3.ONE * 0.6
 			&"rocket":
