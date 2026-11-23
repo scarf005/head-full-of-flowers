@@ -18,6 +18,7 @@ const ACTIONS := {
 	&"swap_next": [[KEY_Q], [MOUSE_BUTTON_WHEEL_DOWN], [JOY_BUTTON_Y], []],
 	&"swap_prev": [[], [MOUSE_BUTTON_WHEEL_UP], [JOY_BUTTON_LEFT_SHOULDER], []],
 	&"pause": [[KEY_ESCAPE], [], [JOY_BUTTON_START], []],
+	&"fullscreen": [[KEY_F11], [], [], []],
 }
 
 var viewport: SubViewport
@@ -115,6 +116,9 @@ func _on_event(e: Dictionary) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause") and _live():
 		_set_paused(not get_tree().paused)
+	elif event.is_action_pressed(&"fullscreen"):
+		var full := get_window().mode == Window.MODE_FULLSCREEN
+		get_window().mode = Window.MODE_WINDOWED if full else Window.MODE_FULLSCREEN
 
 
 func _notification(what: int) -> void:

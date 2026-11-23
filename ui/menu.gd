@@ -19,6 +19,17 @@ const LEGEND := [
 	[["R"], &"rapid_reload"],
 	[["Q", "Wheel"], &"swap"],
 	[["Esc"], &"pause"],
+	[["F11"], &"fullscreen"],
+]
+## The same for a gamepad. Shown while one is connected.
+const PAD_LEGEND := [
+	[["LS"], &"move"],
+	[["RS"], &"crosshair"],
+	[["RT"], &"fire"],
+	[["LT"], &"grenade"],
+	[["X"], &"rapid_reload"],
+	[["Y", "LB"], &"swap"],
+	[["Start"], &"pause"],
 ]
 
 var settings := ConfigFile.new()
@@ -240,7 +251,7 @@ func _legend() -> void:
 	cap.set_border_width_all(2)
 	cap.border_color = Color(0.75, 0.75, 0.8)
 	cap.set_content_margin_all(4.0)
-	for entry: Array in LEGEND:
+	for entry: Array in LEGEND if Input.get_connected_joypads().is_empty() else PAD_LEGEND:
 		var line := HBoxContainer.new()
 		for key: Variant in entry[0]:
 			if key is StringName:
