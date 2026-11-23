@@ -34,7 +34,8 @@ func _on_event(e: Dictionary) -> void:
 	if e.type == &"go":
 		say(tr("GO"), Color.WHITE, 0.8)
 	elif e.type == &"finish":
-		say(tr("TIME"), Color.WHITE, 3.0)
+		# The results panel opens after 1.5 s and covers this place.
+		say(tr("TIME"), Color.WHITE, 1.4)
 	elif e.type == &"hit" and e.kill and e.source == 0 and e.target != 0:
 		_streak = _streak + 1 if game.world.now - _streak_at < 4.0 else 1
 		_streak_at = game.world.now
