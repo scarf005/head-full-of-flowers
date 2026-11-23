@@ -170,7 +170,7 @@ func _ground() -> void:
 			_set_tile(Vector2i(x, y), tile)
 
 
-## Paints 3-cell streets with sidewalks and returns the blocks between them.
+## Paints footpaths, 1 to 3 cells wide, and returns the blocks between them.
 func _streets() -> Array[Rect2i]:
 	var lines: Array[PackedInt32Array] = []
 	for axis in 2:
@@ -187,10 +187,11 @@ func _streets() -> Array[Rect2i]:
 				gaps.y = mini(gaps.y, absi(y - c))
 			if gaps.x <= 1 and gaps.y <= 1:
 				_set_tile(Vector2i(x, y), TerrainMap.Tile.GRAVEL)
-			elif mini(gaps.x, gaps.y) <= 1:
+			elif mini(gaps.x, gaps.y) == 0:
 				_set_tile(Vector2i(x, y), TerrainMap.Tile.DIRT_ROAD)
-			elif mini(gaps.x, gaps.y) == 2 and rng.randf() < 0.6:
-				_set_tile(Vector2i(x, y), TerrainMap.Tile.ROAD_EDGE)
+			elif mini(gaps.x, gaps.y) == 1 and rng.randf() < 0.6:
+				# A ragged side: the meadow comes up to the path.
+				_set_tile(Vector2i(x, y), TerrainMap.Tile.ROAD_EDGE if rng.randf() < 0.5 else TerrainMap.Tile.DIRT_ROAD)
 	var spans: Array[Array] = []
 	for centres in lines:
 		var span := [Vector2i(0, centres[0] - 2)]
