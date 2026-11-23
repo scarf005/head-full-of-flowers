@@ -39,11 +39,11 @@ static func unit_name(u: SimUnit) -> String:
 
 
 func _process(delta: float) -> void:
-	if get_tree().paused:
-		return
+	# A pause stops the timers, but the HUD draws again so that the crosshair goes away.
+	var step := 0.0 if get_tree().paused else delta
 	for row in feed:
-		row.ttl -= delta
-	_marker -= delta
+		row.ttl -= step
+	_marker -= step
 	feed = feed.filter(func(row: Dictionary) -> bool: return row.ttl > 0.0)
 	queue_redraw()
 
