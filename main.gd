@@ -23,6 +23,8 @@ const ACTIONS := {
 var viewport: SubViewport
 var dither: ShaderMaterial
 var game: GameView
+var hud := Hud.new()
+var menu := Menu.new()
 var frame := 0
 var args := {}
 
@@ -45,16 +47,65 @@ func _ready() -> void:
 	viewport = SubViewport.new()
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	container.add_child(viewport)
-	start_match({seed = int(args.get("seed", str(randi()))), size = int(args.get("size", "8"))})
+	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hud)
+	add_child(menu)
+	menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	menu.start.connect(start_match)
+	menu.resume.connect(_set_paused.bind(false))
+	menu.quit_to_title.connect(show_title)
+	if args.has("autoplay"):
+		start_match({seed = int(args.get("seed", "1")), size = int(args.get("size", "8"))}, true)
+	else:
+		show_title()
 
 
-func start_match(config: Dictionary) -> void:
+## The title screen shows a bot match behind the menu.
+func show_title() -> void:
+	start_match({seed = randi(), size = 8}, true)
+	menu.show_title()
+	hud.hide()
+
+
+func start_match(config: Dictionary, demo := false) -> void:
 	if game:
 		game.queue_free()
 	game = GameView.new()
-	game.autoplay = args.has("autoplay")
+	game.autoplay = demo
+	game.process_mode = Node.PROCESS_MODE_PAUSABLE
 	viewport.add_child(game)
 	game.setup(config)
+	game.event.connect(_on_event)
+	hud.setup(game)
+	hud.show()
+	menu.hide()
+	_set_paused(false)
+
+
+func _on_event(e: Dictionary) -> void:
+	if e.type != &"finish":
+		return
+	if menu.visible:
+		show_title()
+	elif not args.has("autoplay"):
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		menu.show_results(game.world)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"pause") and not game.autoplay and not game.world.finished:
+		_set_paused(not get_tree().paused)
+
+
+func _set_paused(paused: bool) -> void:
+	get_tree().paused = paused
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused or game.autoplay else Input.MOUSE_MODE_HIDDEN
+	if paused:
+		menu.show_pause()
+	else:
+		menu.hide()
 
 
 func _process(_delta: float) -> void:

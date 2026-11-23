@@ -28,3 +28,12 @@ match_time={
 "type": "float",
 "value": 0.0
 }
+
+[gui]
+
+theme/custom_font="res://assets/fonts/neodgm.woff2"
+theme/default_font_antialiasing=0
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://locales/ko.po")

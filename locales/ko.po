@@ -1,0 +1,133 @@
+msgid ""
+msgstr ""
+"Language: ko\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "You"
+msgstr "나"
+
+msgid "Pistol"
+msgstr "권총"
+
+msgid "Assault Rifle"
+msgstr "돌격소총"
+
+msgid "Shotgun"
+msgstr "산탄총"
+
+msgid "Flamethrower"
+msgstr "화염방사기"
+
+msgid "Auto Shotgun"
+msgstr "자동 산탄총"
+
+msgid "Battle Rifle"
+msgstr "전투소총"
+
+msgid "Grenade Launcher"
+msgstr "유탄발사기"
+
+msgid "Rocket Launcher"
+msgstr "로켓발사기"
+
+msgid "Laser Sight"
+msgstr "레이저 조준기"
+
+msgid "Ricochet Shells"
+msgstr "도탄 산탄"
+
+msgid "Proximity Grenades"
+msgstr "근접 신관 수류탄"
+
+msgid "Rapid Reload"
+msgstr "빠른 재장전"
+
+msgid "Adrenal Reload"
+msgstr "처치 재장전"
+
+msgid "Heavy Pellets"
+msgstr "대구경 탄"
+
+msgid "Extra Heart"
+msgstr "추가 체력"
+
+msgid "Extra Stamina"
+msgstr "추가 지구력"
+
+msgid "Kevlar Vest"
+msgstr "방탄조끼"
+
+msgid "Grenade"
+msgstr "수류탄"
+
+msgid "Molotov"
+msgstr "화염병"
+
+msgid "Free for All"
+msgstr "개인전"
+
+msgid "Team Deathmatch"
+msgstr "팀 데스매치"
+
+msgid "Duos"
+msgstr "2인조"
+
+msgid "Squads"
+msgstr "분대전"
+
+msgid "Mode"
+msgstr "모드"
+
+msgid "Size"
+msgstr "인원"
+
+msgid "Hard bots"
+msgstr "어려운 봇"
+
+msgid "Map seed"
+msgstr "맵 시드"
+
+msgid "random"
+msgstr "무작위"
+
+msgid "Start"
+msgstr "시작"
+
+msgid "Sound"
+msgstr "효과음"
+
+msgid "Music"
+msgstr "음악"
+
+msgid "Quit"
+msgstr "종료"
+
+msgid "Paused"
+msgstr "일시정지"
+
+msgid "Resume"
+msgstr "계속하기"
+
+msgid "Leave match"
+msgstr "나가기"
+
+msgid "Victory"
+msgstr "승리"
+
+msgid "Defeat"
+msgstr "패배"
+
+msgid "Kills"
+msgstr "처치"
+
+msgid "Deaths"
+msgstr "사망"
+
+msgid "Hit rate"
+msgstr "명중률"
+
+msgid "Play again"
+msgstr "다시 하기"
+
+msgid "Head Full of Flowers"
+msgstr "머릿속이 꽃밭"
