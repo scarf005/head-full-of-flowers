@@ -65,7 +65,11 @@ void fragment() {
 		color *= 1.0 - 0.14 * max(step(0.96, fract(p.x * 0.5)), step(0.96, fract(p.y * 0.5)));
 		color *= 1.0 - 0.08 * step(0.95, grain);
 	} else if (kind == 6) {
-		color *= grain > 0.72 ? 1.14 : grain < 0.22 ? 0.84 : 1.0;
+		// Gravel: one stone in each 0.4 m cell, on dirt.
+		vec2 id = floor(p * 2.5);
+		vec2 centre = id + 0.5 + (vec2(hash(id), hash(id + 7.3)) - 0.5) * 0.3;
+		bool stone = length(p * 2.5 - centre) < 0.22 + 0.13 * hash(id + 3.1);
+		color = stone ? color * (0.92 + 0.3 * hash(id + 1.7)) : mix(color, palette[3], 0.55) * 0.82;
 	} else if (kind > 2) {
 		color *= 0.95 + 0.08 * tone;
 		color *= grain > 0.94 ? 0.8 : grain < 0.03 ? 1.12 : 1.0;
