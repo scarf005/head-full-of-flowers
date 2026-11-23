@@ -5,6 +5,8 @@ const THROW_SPEED := 24.0
 const THROW_DRAG := 3.1
 const THROW_STOP_SPEED := 2.2
 const BOX_INTERVAL := Vector2(14.0, 3.0)
+## Seconds between the weapons that appear in the inner half of the arena.
+const WEAPON_INTERVAL := Vector2(8.0, 12.0)
 const HIGH_TIER_CHANCE := Vector2(0.07, 0.5)
 
 
@@ -47,7 +49,7 @@ static func spawn_box(w: SimWorld) -> void:
 		var cell := w.grid.cell_of(at)
 		if w.grid.circle_hits(w.grid.center_of(cell), 1.2) or w.unit_near(w.grid.center_of(cell), 1.5):
 			continue
-		w.grid.set_cell(cell, Defs.Mat.BOX, w.rng.randf() < w.high_tier_chance())
+		w.grid.set_cell(cell, Defs.Mat.BOX, true)
 		w.emit(&"box", {cell = cell})
 		return
 
@@ -57,6 +59,12 @@ static func update(w: SimWorld, dt: float) -> void:
 	if w.box_timer <= 0.0:
 		spawn_box(w)
 		w.box_timer = lerpf(BOX_INTERVAL.x, BOX_INTERVAL.y, w.loot_progress())
+	w.weapon_timer -= dt
+	if w.weapon_timer <= 0.0:
+		w.weapon_timer = w.rng.randf_range(WEAPON_INTERVAL.x, WEAPON_INTERVAL.y)
+		var at := w.random_point(w.arena_radius * 0.5)
+		if not w.grid.circle_hits(at, 0.8):
+			spawn_weapon(w, at, w.high_tier_chance())
 	for i in range(w.pickups.size() - 1, -1, -1):
 		var p := w.pickups[i]
 		if p.pos.length() > w.arena_radius - Defs.PICKUP_RADIUS:

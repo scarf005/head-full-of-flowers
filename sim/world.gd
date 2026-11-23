@@ -21,6 +21,7 @@ var zones: Array[Dictionary] = []
 var pickups: Array[Dictionary] = []
 var pickup_seq := 0
 var box_timer := Loot.BOX_INTERVAL.x
+var weapon_timer := Loot.WEAPON_INTERVAL.x
 var duration := Defs.MATCH_SECONDS
 var time_left := Defs.MATCH_SECONDS
 var now := 0.0
@@ -84,7 +85,7 @@ func emit(type: StringName, data: Dictionary) -> void:
 
 ## 0 at the start of the match, 1 from 10 s before the end.
 func loot_progress() -> float:
-	return clampf((duration - time_left) / (duration - 10.0), 0.0, 1.0)
+	return clampf((duration - time_left) / duration, 0.0, 1.0)
 
 
 func high_tier_chance() -> float:
@@ -162,9 +163,10 @@ func tick() -> void:
 		return
 	arena_radius = lerpf(arena_start, arena_end, 1.0 - time_left / duration)
 	for u in units:
+		# Hit stop slows shots, fires and loot only. Units keep their speed, so the controls never drag.
 		if bots_active and not u.is_player:
-			Bots.think(self, u, dt)
-		_update_unit(u, dt)
+			Bots.think(self, u, real)
+		_update_unit(u, real)
 	_separate_units()
 	for u in units:
 		_push_out_of_cells(u)
@@ -185,7 +187,8 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		if u.reload_cooldown <= 0.0:
 			Arsenal.finish_reload(u)
 	var wish := u.move.limit_length(1.0) * u.speed * TerrainMap.speed_mul(map.tile_at(u.pos))
-	u.vel = u.vel.lerp(wish, clampf(dt * (24.0 if wish != Vector2.ZERO else 18.0), 0.0, 1.0))
+	var grip := (24.0 if wish != Vector2.ZERO else 18.0) if u.is_player or not bots_active else 16.0 if hard else 6.0
+	u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))
 	u.pos += u.vel * dt
 	if u.want_swap != 0:
 		Arsenal.swap(u, u.want_swap)
@@ -236,7 +239,10 @@ func _push_out_of_cells(u: SimUnit) -> void:
 					gap = Vector2(signf(off.x), 0.0) if absf(off.x) > absf(off.y) else Vector2(0.0, signf(off.y))
 					u.pos = centre + gap * (0.5 + u.radius)
 				else:
-					u.pos = nearest + gap.normalized() * u.radius
+					var push := nearest + gap.normalized() * u.radius - u.pos
+					u.pos += push
+					# Take the speed into the wall away, so the unit slides along it.
+					u.vel += push * 2.0
 
 
 func _keep_in_arena(u: SimUnit, dt: float) -> void:

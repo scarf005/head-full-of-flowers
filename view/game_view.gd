@@ -130,7 +130,9 @@ func _process(delta: float) -> void:
 		return
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
 	RenderingServer.global_shader_parameter_set(&"arena_radius", world.arena_radius)
-	lag = (1.0 - Engine.get_physics_interpolation_fraction()) * world.step
+	var behind := 1.0 - Engine.get_physics_interpolation_fraction()
+	lag = behind * Defs.TICK * Defs.GAME_SPEED * float(world.step > 0.0)
+	var shot_lag := behind * world.step
 	shake = maxf(0.0, shake - delta * 4.4)
 	_focus = _focus.lerp(player.pos - player.vel * lag + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
@@ -162,7 +164,7 @@ func _process(delta: float) -> void:
 		# Scale first, then turn: Basis.scaled() would stretch along the world axes.
 		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(size * pulse)
 		_shots.set_instance_transform(
-			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * lag, SHOT_HEIGHT, p.pos.y - p.vel.y * lag))
+			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * shot_lag, SHOT_HEIGHT, p.pos.y - p.vel.y * shot_lag))
 		)
 		_shots.set_instance_color(i, color)
 	_blobs.visible_instance_count = world.throwables.size()
@@ -172,7 +174,8 @@ func _process(delta: float) -> void:
 		_blobs.set_instance_transform(
 			i,
 			Transform3D(
-				Basis.from_scale(Vector3.ONE * 0.45), Vector3(t.pos.x - t.vel.x * lag, height, t.pos.y - t.vel.y * lag)
+				Basis.from_scale(Vector3.ONE * 0.45),
+				Vector3(t.pos.x - t.vel.x * shot_lag, height, t.pos.y - t.vel.y * shot_lag)
 			)
 		)
 		var blink := fmod(world.now, 0.24) < 0.08

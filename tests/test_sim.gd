@@ -275,3 +275,28 @@ func test_projectile_count_stays_at_capacity_after_a_shotgun_blast() -> void:
 	a.shoot_cooldown = 0.0
 	Combat.fire(w, a)
 	assert_eq(w.projectiles.size(), Defs.PROJECTILE_CAPACITY)
+
+
+func test_hit_stop_slows_shots_but_not_units() -> void:
+	a.move = Vector2.DOWN
+	_tick(30)
+	var before := a.pos.y
+	w.hit_stop = 1.0
+	Combat.fire(w, a)
+	var shot_x: float = w.projectiles[0].pos.x
+	_tick(10)
+	assert_almost_eq(a.pos.y - before, a.speed * 10 * Defs.TICK * Defs.GAME_SPEED, 0.05)
+	assert_lt(w.projectiles[0].pos.x - shot_x, 1.0, "the shot moves at 12% speed")
+
+
+func test_weapon_appears_in_the_inner_half_every_8_to_12_seconds() -> void:
+	_tick(roundi(12.5 / (Defs.TICK * Defs.GAME_SPEED)))
+	assert_gt(w.pickups.size(), 0)
+	assert_true(w.pickups.all(func(p: Dictionary) -> bool: return p.pos.length() <= w.arena_start * 0.5))
+
+
+func test_timed_box_holds_a_high_tier_weapon() -> void:
+	Loot.spawn_box(w)
+	var boxes := range(w.grid.material.size()).filter(func(i: int) -> bool: return w.grid.material[i] == Defs.Mat.BOX)
+	assert_eq(boxes.size(), 1)
+	assert_eq(w.grid.high_tier[boxes[0]], 1)

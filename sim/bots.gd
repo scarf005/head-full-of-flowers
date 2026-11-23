@@ -34,9 +34,6 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 	u.ai_timer -= dt
 	u.ai_path_timer -= dt
 	u.ai_sense_timer -= dt
-	u.ai_react -= dt
-	var max_error := 0.03 if w.hard else 0.12
-	u.ai_aim_error = clampf(u.ai_aim_error + w.rng.randf_range(-1.0, 1.0) * dt * max_error * 4.0, -max_error, max_error)
 	var decide := u.ai_timer <= 0.0
 	if decide:
 		u.ai_timer = w.rng.randf_range(0.4, 1.4) if w.hard else w.rng.randf_range(1.4, 3.0)
@@ -83,7 +80,6 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 	enemies.sort_custom(
 		func(p: SimUnit, q: SimUnit) -> bool: return p.pos.distance_squared_to(u.pos) < q.pos.distance_squared_to(u.pos)
 	)
-	var previous := u.ai_target if u.ai_sight else -1
 	u.ai_target = -1
 	u.ai_sight = false
 	for other: SimUnit in enemies:
@@ -95,9 +91,6 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 			break
 	if not u.ai_sight and not enemies.is_empty() and enemies[0].pos.distance_to(u.pos) < HUNT_RANGE:
 		u.ai_target = enemies[0].index
-	if u.ai_sight and u.ai_target != previous:
-		# Easy bots wait a moment before they open fire on a new target.
-		u.ai_react = 0.0 if w.hard else 0.34
 	var state := &"fight" if u.ai_sight else &"hunt" if u.ai_target >= 0 else &"wander"
 	if not u.ai_sight:
 		var best := LOOT_RANGE
@@ -142,24 +135,33 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 	var to := target.pos - u.pos
 	var d := maxf(to.length(), 0.001)
 	var toward := to / d
-	# Lead the target by the flight time of the shot. A second pass uses the distance to the led point.
-	var speed: float = weapon.speed
-	var lead := target.pos + target.vel * (d / speed)
-	lead = target.pos + target.vel * (u.pos.distance_to(lead) / speed)
-	var shot_dir := (lead - u.pos).normalized()
+	if not w.hard and u.ai_timer > 1.1:
+		# An easy bot only walks up for the first part of each decision. It does not aim or fire.
+		return toward * 0.42
+	# Aim at where the target is, with a sway that grows with range, own speed and panic. A target that strafes
+	# is hard to hit.
 	var far := clampf((d - 8.0) / 24.0, 0.0, 1.0)
-	_turn(u, shot_dir.rotated(u.ai_aim_error), dt, far)
-	var need := lerpf(0.8, 0.91, far) + (0.06 if w.hard else 0.0)
+	var panic := 0.0 if w.hard else 1.2
+	var moving := clampf(u.vel.length() / u.speed, 0.0, 1.0)
+	var sway := sin(w.now * 6.0 + u.index * 1.91) * (0.02 + far * 0.1 + moving * 0.035 + panic * 0.05)
+	sway += cos(w.now * 3.0 + u.index * 0.67) * (0.015 + far * 0.07 + panic * 0.02)
+	u.aim = u.aim.lerp(toward.rotated(sway), clampf(dt * (11.0 - far * 6.0 - panic * 1.6), 0.1, 0.95)).normalized()
+	var need := lerpf(0.8, 0.91, far) + (0.0 if w.hard else 0.12)
+	var hesitation := minf(0.98, lerpf(0.02, 0.16, far) + (0.0 if w.hard else 0.34))
 	var fire_range := minf(32.0 if w.hard else 19.0, weapon.reach * u.range_mul * 0.95)
+	# A shot at a wall that it cannot break is wasted.
+	var cover := w.grid.ray_cell(u.pos, target.pos)
+	var clear: bool = cover.x < 0 or Defs.MAT_ARMOR[w.grid.material[cover.y * w.grid.size + cover.x]] < weapon.damage
 	if (
-		u.ai_react <= 0.0
+		clear
 		and d < fire_range
 		and d > BLAST_SAFE.get(id, 0.0)
-		and u.aim.dot(shot_dir) > need
-		and w.rng.randf() > lerpf(0.02, 0.16, far)
+		and u.aim.dot(toward) > need
+		and w.rng.randf() > hesitation
 	):
 		u.want_fire = true
-	_throw(w, u, d, toward)
+	if clear:
+		_throw(w, u, d, toward)
 	var want: float = GOOD_RANGE.get(id, 9.0)
 	if u.reload_cooldown > 0.0 or u.hp <= u.max_hp * LOW_HP:
 		want += 8.0
@@ -174,7 +176,7 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 static func _throw(w: SimWorld, u: SimUnit, d: float, toward: Vector2) -> void:
 	if u.secondary_cooldown > 0.0 or d < THROW_RANGE.x or d > THROW_RANGE.y or u.aim.dot(toward) < 0.97:
 		return
-	if w.rng.randf() >= (0.02 if w.hard else 0.004):
+	if w.rng.randf() >= (0.014 if w.hard else 0.0006):
 		return
 	var land := u.pos + u.aim * (minf(d, MOLOTOV_REACH) if u.secondary == &"molotov" else d)
 	if land.distance_to(u.pos) > Shots.BLAST_RADIUS + 1.0 and w.grid.ray_cell(u.pos, land).x < 0:

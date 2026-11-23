@@ -58,14 +58,11 @@ var ai_timer := 0.0
 var ai_move := Vector2.RIGHT
 var ai_path: PackedVector2Array = []
 var ai_path_timer := 0.0
-var ai_aim_error := 0.0
 ## Index of the unit the bot fights or hunts, or -1.
 var ai_target := -1
 ## True when the bot saw its target at the last sense step.
 var ai_sight := false
 var ai_sense_timer := 0.0
-## Seconds left before an easy bot fires at a new target.
-var ai_react := 0.0
 ## Where a loot or box goal is.
 var ai_goal := Vector2.ZERO
 

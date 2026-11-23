@@ -104,7 +104,7 @@ static func throw_secondary(w: SimWorld, u: SimUnit) -> void:
 		return
 	var molotov := u.secondary == &"molotov"
 	var quick := not molotov and u.has_perk(&"proximity_grenades")
-	var dir := u.aim.normalized().rotated(w.rng.randf_range(-0.11, 0.11))
+	var dir := u.aim.normalized()
 	(
 		w
 		. throwables

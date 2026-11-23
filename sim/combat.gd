@@ -129,9 +129,9 @@ static func damage(
 		attacker.damage_dealt += dealt
 		attacker.shots_hit += 1 if cause == &"shot" else 0
 		if attacker.is_player:
-			w.hit_stop = maxf(w.hit_stop, 0.1 if killed else 0.03)
+			w.hit_stop = maxf(w.hit_stop, 0.05 if killed else 0.012)
 	if target.is_player:
-		w.hit_stop = maxf(w.hit_stop, 0.05)
+		w.hit_stop = maxf(w.hit_stop, 0.016)
 	w.emit(
 		&"hit",
 		{target = target.index, source = source, pos = hit, dir = dir, damage = dealt, kill = killed, team = team}
@@ -151,7 +151,7 @@ static func damage(
 		if attacker.kills % Defs.KILLS_PER_PERK_DROP == 0:
 			Loot.spawn_perk(w, target.pos)
 		else:
-			Loot.spawn_weapon(w, target.pos, w.high_tier_chance(), true)
+			Loot.spawn_weapon(w, target.pos, 0.0, true)
 	w.respawn(target)
 
 
