@@ -5,7 +5,13 @@ extends Node3D
 signal event(data: Dictionary)
 
 const SHOT_HEIGHT := 0.75
-const FLAMES_PER_M2 := 1.6
+const FLAMES_PER_M2 := 0.6
+## Size in pixels of a shape that shows item art at its drawn size, and at half of it.
+const ART := Vector2(48.0, 48.0)
+const SMALL_ART := Vector2(24.0, 24.0)
+const INK := Color(0.2, 0.14, 0.2)
+const FIRE: Array[Color] = [Color.WHITE, Color("ffe680"), Color("ff9a3c"), Color("e2552a"), Color("5a3a3a")]
+const SMOKE: Array[Color] = [Color("7a7480"), Color("565160")]
 ## Camera shake of a blast by weapon: x is the amount, y is the most that the shake reaches.
 const BLAST_SHAKE := {
 	&"grenade": Vector2(0.55, 1.4), &"grenade-launcher": Vector2(0.24, 1.6), &"rocket-launcher": Vector2(0.42, 2.4)
@@ -35,18 +41,12 @@ var _jitter := Vector2.ZERO
 var _numbers := {}
 var _bits := Bits.new()
 var _units: Array[UnitView] = []
-var _ring_mesh := TorusMesh.new()
 var _focus := Vector2.ZERO
-var _shots: MultiMesh
-## Thin streak behind each bullet and rocket.
-var _trails: MultiMesh
-var _blobs: MultiMesh
-## Red ring on the ground under each thrown grenade: the reach of its blast.
-var _warns: MultiMesh
-var _fires: MultiMesh
-var _flames: MultiMesh
+## Flat pixel shapes on the ground, under the units: rings, fire glow and shadows.
+var _ground := Fx.new(0)
+## Flat pixel shapes over the units: shots, thrown things, flames, sparks, blasts and pickups.
+var _air := Fx.new(2)
 var _terrain: TerrainView
-var _pickups: Array[Sprite3D] = []
 var _lights := 0
 
 
@@ -75,33 +75,8 @@ func setup(config: Dictionary) -> void:
 		add_child(view)
 		_units.append(view)
 	add_child(_bits)
-	_ring_mesh.inner_radius = 0.86
-	_ring_mesh.outer_radius = 1.0
-	_ring_mesh.ring_segments = 3
-	_ring_mesh.rings = 32
-	var ball := SphereMesh.new()
-	ball.radial_segments = 8
-	ball.rings = 4
-	var shot_material := ShaderMaterial.new()
-	shot_material.shader = preload("res://shaders/shot.gdshader")
-	_trails = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
-	_shots = _multimesh(ball, Defs.PROJECTILE_CAPACITY, true)
-	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
-	# Thrown grenades are solid objects, not glowing shots.
-	_blobs = _multimesh(ball, 96, false)
-	var thin := _ring_mesh.duplicate() as TorusMesh
-	thin.inner_radius = 0.95
-	_warns = _multimesh(thin, 96, true)
-	var disc := CylinderMesh.new()
-	disc.height = 0.06
-	disc.radial_segments = 24
-	_fires = _multimesh(disc, 36, true)
-	var tongue := CylinderMesh.new()
-	tongue.top_radius = 0.0
-	tongue.height = 1.0
-	tongue.radial_segments = 5
-	tongue.rings = 0
-	_flames = _multimesh(tongue, 1000, true)
+	add_child(_ground)
+	add_child(_air)
 
 
 func _physics_process(_delta: float) -> void:
@@ -156,84 +131,12 @@ func _process(delta: float) -> void:
 		camera.size = rest + intro * intro * 14.0
 	camera.target = _focus + _kick + _jitter
 	camera.apply()
-	_shots.visible_instance_count = world.projectiles.size()
-	_trails.visible_instance_count = world.projectiles.size()
-	for i in world.projectiles.size():
-		var p := world.projectiles[i]
-		var progress: float = p.travelled / p.reach
-		var wide: float = p.radius * 1.7
-		var size := Vector3(wide, wide, wide * 2.6)
-		var color := Color(1.0, 0.8, 0.1) if p.team == world.units[0].team else Color(1.0, 0.22, 0.12)
-		match p.kind:
-			&"flame":
-				# A tongue along the flight: white-yellow at the muzzle, dark red at the end.
-				size = Vector3(1.0, 1.0, 1.8) * (0.3 + progress * 0.9)
-				color = Color(1.0, 0.75, 0.2, 0.8).lerp(Color(0.7, 0.12, 0.03, 0.0), progress)
-			&"grenade":
-				size = Vector3.ONE * 0.6
-			&"rocket":
-				size = Vector3(0.5, 0.5, 1.3)
-		var pulse := 1.0 + 0.12 * sin(world.now * 40.0 + i)
-		# Scale first, then turn: Basis.scaled() would stretch along the world axes.
-		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(size * pulse)
-		_shots.set_instance_transform(
-			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * shot_lag, SHOT_HEIGHT, p.pos.y - p.vel.y * shot_lag))
-		)
-		_shots.set_instance_color(i, color)
-		# The streak goes from the middle of the shot back to a point, and no further than the muzzle.
-		# Flame puffs and launched grenades have none.
-		var flown: float = maxf(0.0, p.travelled - p.vel.length() * shot_lag)
-		var thick: float = minf(wide, size.x) * 0.85
-		var tail := Vector3(thick, thick, 0.0 if p.kind in [&"flame", &"grenade"] else minf(size.z * 1.6, flown))
-		var back: Vector2 = p.vel.normalized() * tail.z * 0.5 + p.vel * shot_lag
-		var trail := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(tail)
-		_trails.set_instance_transform(i, Transform3D(trail, Vector3(p.pos.x - back.x, SHOT_HEIGHT, p.pos.y - back.y)))
-		_trails.set_instance_color(i, Color(color.r, color.g, color.b) * 0.8)
-	_blobs.visible_instance_count = world.throwables.size()
-	_warns.visible_instance_count = world.throwables.size()
-	for i in world.throwables.size():
-		var t := world.throwables[i]
-		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
-		_blobs.set_instance_transform(
-			i,
-			Transform3D(
-				Basis.from_scale(Vector3.ONE * 0.6),
-				Vector3(t.pos.x - t.vel.x * shot_lag, height, t.pos.y - t.vel.y * shot_lag)
-			)
-		)
-		var blink := fmod(world.now, 0.24) < 0.08
-		# No ring for a fire bottle: it burns where it lands, and that place is not known yet.
-		# The blast hits a unit whose edge is in reach, so the ring is wider by the radius of a unit.
-		var reach := 0.0 if t.molotov else Shots.BLAST_RADIUS + Defs.PLAYER_RADIUS
-		var under := Vector3(t.pos.x - t.vel.x * shot_lag, 0.12, t.pos.y - t.vel.y * shot_lag)
-		var ring := Transform3D(Basis.from_scale(Vector3(reach, 0.1, reach)), under)
-		_warns.set_instance_transform(i, ring)
-		_warns.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else Color(0.6, 0.1, 0.1))
-		var shell := Color(0.85, 0.4, 0.15) if t.molotov else Color(0.1, 0.13, 0.1)
-		_blobs.set_instance_color(i, Color(1.0, 0.25, 0.2) if blink else shell)
-	_fires.visible_instance_count = world.zones.size()
-	var flames := 0
-	for i in world.zones.size():
-		var z := world.zones[i]
-		var flicker := 0.9 + 0.1 * sin(world.now * 30.0 + i)
-		var basis := Basis.from_scale(Vector3(z.radius * 2.0 * flicker, 1.0, z.radius * 2.0 * flicker))
-		_fires.set_instance_transform(i, Transform3D(basis, Vector3(z.pos.x, 0.05, z.pos.y)))
-		_fires.set_instance_color(i, Color(0.7, 0.2, 0.05))
-		# Flame tongues. Each one stays at a place for 0.2 s, grows to a point and starts again at a new place.
-		for k in mini(ceili(z.radius * z.radius * PI * FLAMES_PER_M2), _flames.instance_count - flames):
-			var phase: float = world.now * 5.0 + k * 0.37
-			var cell := Vector2(i * 31 + k, floorf(phase))
-			var spot: Vector2 = (
-				Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * z.radius * 0.9
-			)
-			var grow := fposmod(phase, 1.0)
-			var size := Vector3(1.1 - 0.5 * grow, 0.5 + 1.0 * grow, 1.1 - 0.5 * grow)
-			var at := Vector3(z.pos.x + spot.x, size.y * 0.5, z.pos.y + spot.y)
-			_flames.set_instance_transform(flames, Transform3D(Basis.from_scale(size), at))
-			_flames.set_instance_color(flames, Color(1.0, 0.8, 0.25).lerp(Color(0.95, 0.28, 0.05), grow))
-			flames += 1
-	_flames.visible_instance_count = flames
+	_draw_shots(shot_lag)
+	_draw_throwables(shot_lag)
+	_draw_zones()
 	_draw_pickups()
+	_ground.step(delta)
+	_air.step(delta)
 
 
 ## Steady pseudo-random number in 0..1 for a point.
@@ -280,7 +183,7 @@ func _show(e: Dictionary) -> void:
 		&"shot":
 			var at: Vector2 = e.pos + UnitView.muzzle(e.dir, e.weapon)
 			_flash(Vector3(at.x, 0.8, at.y), Color(1.0, 0.8, 0.4), 2.5, 0.06)
-			_pop(at, Color(1.0, 0.95, 0.6), 0.9, 0.05)
+			_pop(at, Color(1.0, 0.85, 0.4), 0.9, 0.05, Fx.turn_of(e.dir))
 			if e.weapon != &"flamethrower":
 				var side: Vector2 = -e.dir.orthogonal() * randf_range(1.5, 3.0)
 				_bits.add(
@@ -329,21 +232,17 @@ func _show(e: Dictionary) -> void:
 			_ring(e.pos, Color(1.0, 0.9, 0.4), 1.1, 0.2)
 
 
-## Flat ring on the ground that widens to `radius` and goes away.
+## Ring on the ground that widens to `radius` metres and goes away.
 func _ring(at: Vector2, color: Color, radius: float, seconds: float) -> void:
-	var ring := MeshInstance3D.new()
-	ring.mesh = _ring_mesh
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color
-	ring.material_override = material
-	ring.position = Vector3(at.x, 0.2, at.y)
-	ring.scale = Vector3(0.3, 0.2, 0.3)
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(ring)
-	var tween := create_tween()
-	tween.tween_property(ring, "scale", Vector3(radius, 0.2, radius), seconds).set_ease(Tween.EASE_OUT)
-	tween.tween_callback(ring.queue_free)
+	var size := _on_ground(radius)
+	var more := {hole = Vector2(0.6, 0.94)}
+	_ground.spawn(Vector3(at.x, 0.0, at.y), seconds, Fx.Shape.DISC, size * 0.3, size, [color] as Array[Color], more)
+
+
+## Size in pixels of a circle of `radius` metres that lies on the ground.
+static func _on_ground(radius: float) -> Vector2:
+	var wide := radius * 2.0 * UnitView.PX_PER_M
+	return Vector2(wide, wide * sin(CameraRig.PITCH))
 
 
 func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
@@ -365,11 +264,11 @@ func _flash(at: Vector3, color: Color, reach: float, seconds: float) -> void:
 	)
 
 
-## White-hot ball that shows for a few frames: muzzle flash or impact spark.
-func _pop(at: Vector2, color: Color, size: float, seconds: float) -> void:
-	var ball := _ball(Vector3(at.x, 0.8, at.y), color * 1.8, false)
-	ball.scale = Vector3.ONE * size
-	get_tree().create_timer(seconds, false).timeout.connect(ball.queue_free)
+## Spark with 4 points that shows for a few frames: muzzle flash or impact. `size` 1 is 18 pixels.
+func _pop(at: Vector2, color: Color, size: float, seconds: float, turn := 0.0) -> void:
+	var px := Vector2.ONE * size * 18.0
+	var colors: Array[Color] = [Color.WHITE, color]
+	_air.spawn(Vector3(at.x, SHOT_HEIGHT, at.y), seconds, Fx.Shape.SPARK, px, px * 0.6, colors, {turn = turn})
 
 
 ## Spray of small cubes that fall and bounce. `dir` pushes the spray one way.
@@ -414,81 +313,104 @@ func _number(target: int, at: Vector2, amount: float, color: Color) -> void:
 	tween.tween_callback(label.queue_free)
 
 
+## Blast: smoke discs that rise, fire discs that shrink from white to dark red, and a white flash over both.
 func _burst(at: Vector2, radius: float) -> void:
-	for n in 12:
-		var fire := n < 6
-		var out := Vector2.from_angle(randf() * TAU) * randf() * radius * 0.45
-		var color := (
-			Color(1.0, randf_range(0.55, 0.9), 0.25) * 1.6
-			if fire
-			else Color.from_hsv(0.08, 0.08, randf_range(0.8, 1.0))
-		)
-		var ball := _ball(Vector3(at.x + out.x, 0.6, at.y + out.y), color, not fire)
-		ball.scale = Vector3.ONE * 0.2
-		var life := randf_range(0.12, 0.22) if fire else randf_range(0.35, 0.6)
-		var tween := create_tween()
-		tween.tween_property(ball, "scale", Vector3.ONE * radius * randf_range(0.3, 0.5), life * 0.35)
-		tween.tween_property(ball, "scale", Vector3.ZERO, life * 0.65)
-		tween.parallel().tween_property(ball, "position:y", 0.6 if fire else randf_range(1.4, 2.4), life * 0.65)
-		tween.tween_callback(ball.queue_free)
+	var px := radius * UnitView.PX_PER_M
+	var centre := Vector3(at.x, 0.6, at.y)
+	for n in 14:
+		var smoke := n < 6
+		var out := Vector2.from_angle(randf() * TAU) * randf() * radius * 0.5
+		var size := Vector2.ONE * px * randf_range(0.5, 0.9)
+		var from := centre + Vector3(out.x, 0.0, out.y)
+		if smoke:
+			var more := {vel = Vector3(0.0, 1.6, 0.0), dots = 0.45}
+			_air.spawn(from, randf_range(0.5, 0.8), Fx.Shape.DISC, size * 0.6, size, SMOKE, more)
+		else:
+			_air.spawn(from, randf_range(0.2, 0.4), Fx.Shape.DISC, size, size * 0.1, FIRE)
+	var flash := Vector2.ONE * px * 1.7
+	_air.spawn(centre, 0.07, Fx.Shape.DISC, flash, flash * 1.1, [Color.WHITE] as Array[Color])
 
 
-## A low-poly ball of one colour that the caller animates and frees.
-func _ball(at: Vector3, color: Color, lit: bool) -> MeshInstance3D:
-	var ball := MeshInstance3D.new()
-	ball.mesh = _shots.mesh
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL if lit else BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = color
-	ball.material_override = material
-	ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ball.position = at
-	add_child(ball)
-	return ball
+## Shots: a teardrop along the flight, yellow for the side of the player and red for the others.
+func _draw_shots(shot_lag: float) -> void:
+	for i in world.projectiles.size():
+		var p := world.projectiles[i]
+		var ground := Vector3(p.pos.x - p.vel.x * shot_lag, 0.0, p.pos.y - p.vel.y * shot_lag)
+		var at := ground + Vector3.UP * SHOT_HEIGHT
+		var color := Color(1.0, 0.8, 0.2) if p.team == world.units[0].team else Color(1.0, 0.3, 0.25)
+		match p.kind:
+			&"flame":
+				# Fire art over a dotted glow that grows along the flight. The art flips 8 times per second.
+				var glow: float = 10.0 + 14.0 * p.travelled / p.reach
+				var flip := float((i + int(world.now * 8.0)) % 2) * 2.0
+				_air.add(at, Vector2(glow, glow), Fx.Shape.DISC, Color(1.0, 0.58, 0.28), 0.0, 0.0, 1.0)
+				_air.add(at, ART, Fx.Shape.ART, Color.WHITE, 0.0, Fx.cell(&"fire"), flip)
+			&"grenade":
+				_air.add(at, SMALL_ART, Fx.Shape.ART, Color.WHITE, world.now * 14.0 + i, Fx.cell(&"grenade"), 1.0)
+			_:
+				var rocket: bool = p.kind == &"rocket"
+				var width: float = roundf(maxf(4.0, p.radius * (36.0 if rocket else 28.0)))
+				var length: float = width * 1.85 * clampf(p.vel.length() / 25.0, 1.1, 2.9)
+				_air.add(at, Vector2.ONE * (length + 4.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
+				if rocket:
+					var puff := Vector2(8.0, 8.0)
+					_air.spawn(at, 0.35, Fx.Shape.DISC, puff, puff * 1.8, SMOKE, {dots = 0.5})
+		_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
 
 
+## Thrown grenades and fire bottles: the art turns in the air over a shadow. A red ring shows the reach of a blast.
+func _draw_throwables(shot_lag: float) -> void:
+	for i in world.throwables.size():
+		var t := world.throwables[i]
+		var ground := Vector3(t.pos.x - t.vel.x * shot_lag, 0.0, t.pos.y - t.vel.y * shot_lag)
+		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
+		var blink := fmod(world.now, 0.24) < 0.08
+		var tint := Color.WHITE
+		# No ring for a fire bottle: it burns where it lands, and that place is not known yet.
+		if not t.molotov:
+			# The blast hits a unit whose edge is in reach, so the ring is wider by the radius of a unit.
+			var reach := _on_ground(Shots.BLAST_RADIUS + Defs.PLAYER_RADIUS)
+			var red := Color(1.0, 0.3, 0.25) if blink else Color(0.7, 0.15, 0.15)
+			_ground.add(ground, reach, Fx.Shape.DISC, red, 0.0, 1.0 - 4.0 / reach.x)
+			tint = Color(1.0, 0.45, 0.4) if blink else Color.WHITE
+		_ground.add(ground, Vector2(10.0, 6.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
+		var art := Fx.cell(&"molotov" if t.molotov else &"grenade")
+		_air.add(ground + Vector3.UP * height, SMALL_ART, Fx.Shape.ART, tint, world.now * 9.0 + i, art, 1.0)
+
+
+## Fire on the ground: a dotted glow with a bright rim, and flames that each stay at a place for 0.2 s.
+func _draw_zones() -> void:
+	for i in world.zones.size():
+		var z := world.zones[i]
+		var at := Vector3(z.pos.x, 0.0, z.pos.y)
+		var size := _on_ground(z.radius)
+		var ending: bool = z.life < 0.4
+		if z.flame:
+			_ground.add(at, size * 1.06, Fx.Shape.DISC, Color("3a2f28"), 0.0, 0.0, 1.0)
+		_ground.add(at, size, Fx.Shape.DISC, Color("f4782e"), 0.0, 0.0, 1.0)
+		_ground.add(at, size, Fx.Shape.DISC, Color("ffb054"), 0.0, 1.0 - 4.0 / size.x, float(ending))
+		for k in ceili(z.radius * z.radius * PI * FLAMES_PER_M2 * clampf(z.life / 0.4, 0.0, 1.0)):
+			var phase: float = world.now * 5.0 + k * 0.37
+			var cell := Vector2(i * 31 + k, floorf(phase))
+			var spot: Vector2 = (
+				Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * z.radius * 0.85
+			)
+			var tint := Color.WHITE if fposmod(phase, 1.0) < 0.6 else Color(1.0, 0.75, 0.6)
+			var flip := float(_hash(cell + Vector2(1.0, 9.0)) < 0.5) * 2.0
+			# The flame stands on its place: its art is 6 pixels below the middle of the cell.
+			var flame := at + Vector3(spot.x, Fx.up(6.0), spot.y)
+			_air.add(flame, ART, Fx.Shape.ART, tint, 0.0, Fx.cell(&"fire"), flip)
+
+
+## Weapons and perks to pick up: the item art bobs over a shadow in a ring that pulses. The ring is white for a
+## high-tier weapon and red for a perk.
 func _draw_pickups() -> void:
-	while _pickups.size() < world.pickups.size():
-		var node := Sprite3D.new()
-		node.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-		node.pixel_size = 0.035
-		node.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-		node.no_depth_test = true
-		node.render_priority = 1
-		var rim := node.duplicate() as Sprite3D
-		rim.render_priority = 0
-		rim.scale = Vector3.ONE * 1.3
-		rim.modulate = Color(0.05, 0.05, 0.08)
-		node.add_child(rim)
-		add_child(node)
-		_pickups.append(node)
-	for i in _pickups.size():
-		var node := _pickups[i]
-		node.visible = i < world.pickups.size()
-		if not node.visible:
-			continue
-		var p := world.pickups[i]
-		var perk: bool = p.kind == &"perk"
-		node.position = Vector3(p.pos.x, 0.9 + sin(world.now * 3.0 + p.order) * 0.12, p.pos.y)
-		node.texture = Icons.get_icon(p.id)
-		(node.get_child(0) as Sprite3D).texture = node.texture
-		node.modulate = Color(0.6, 1.0, 0.9) if perk else Color(1.0, 0.8, 0.3) if p.high_tier else Color.WHITE
-
-
-func _multimesh(mesh: Mesh, count: int, glow: bool) -> MultiMesh:
-	var node := MultiMeshInstance3D.new()
-	node.multimesh = MultiMesh.new()
-	node.multimesh.transform_format = MultiMesh.TRANSFORM_3D
-	node.multimesh.use_colors = true
-	node.multimesh.mesh = mesh
-	node.multimesh.instance_count = count
-	node.multimesh.visible_instance_count = 0
-	node.custom_aabb = AABB(Vector3(-60, 0, -60), Vector3(120, 4, 120))
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var material := StandardMaterial3D.new()
-	material.vertex_color_use_as_albedo = true
-	if glow:
-		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	node.material_override = material
-	add_child(node)
-	return node.multimesh
+	for p in world.pickups:
+		var glow := Color("ff7676") if p.kind == &"perk" else Color("f4f8ff") if p.high_tier else Color("ffd668")
+		var pulse: float = 0.5 + 0.5 * sin(world.now * 4.8 + p.order)
+		var ground := Vector3(p.pos.x, 0.0, p.pos.y)
+		var ring := _on_ground(0.6 + 0.12 * pulse)
+		_ground.add(ground, ring * 0.8, Fx.Shape.DISC, glow, 0.0, 0.0, 1.0)
+		_ground.add(ground, ring, Fx.Shape.DISC, glow, 0.0, 1.0 - 4.0 / ring.x)
+		var bob: float = 9.0 + 2.5 * sin(world.now * 3.0 + p.order)
+		_air.add(ground + Vector3.UP * Fx.up(bob), ART, Fx.Shape.ART, Color.WHITE, 0.0, Fx.cell(p.id), 1.0)

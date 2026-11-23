@@ -17,10 +17,6 @@ static func environment() -> Environment:
 		env.ssao_enabled = true
 		env.ssao_radius = 1.2
 		env.ssao_intensity = 2.5
-		env.glow_enabled = true
-		env.glow_intensity = 0.6
-		env.glow_bloom = 0.1
-		env.glow_hdr_threshold = 1.1
 	return env
 
 

@@ -1,6 +1,6 @@
 # Credits
 
-`sprites/*.png` are the item sprites of the original game, by the same author.
+`sprites/*.png` are the item and perk sprites of the original game, by the same author.
 
 Taken from the README of the original game. Sounds not listed here are generated
 in code (`audio/sound.gd`).

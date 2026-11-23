@@ -36,3 +36,22 @@ func test_muzzle_of_a_rifle_is_farther_out_than_the_muzzle_of_a_pistol() -> void
 	assert_gt(rifle.x, pistol.x)
 	# The view is shorter to the north, so the same gun length on screen is a longer way on the ground.
 	assert_gt(UnitView.muzzle(Vector2.UP, &"pistol").length(), pistol.length())
+
+
+func test_atlas_has_a_cell_with_art_for_each_weapon_thrown_thing_and_perk() -> void:
+	var image := Fx.atlas().get_image()
+	var ids: Array = Defs.WEAPON_IDS + Fx.SECONDARY_ART + Defs.PERKS.keys()
+	assert_eq(image.get_width(), Fx.CELL.x * ids.size())
+	for id: StringName in ids:
+		var cell := image.get_region(Rect2i(Vector2i(int(Fx.cell(id)) * Fx.CELL.x, 0), Fx.CELL))
+		assert_false(cell.is_invisible(), "art of %s" % id)
+
+
+func test_timed_shape_is_gone_after_its_life() -> void:
+	var fx := Fx.new(0)
+	fx.spawn(Vector3.ZERO, 0.1, Fx.Shape.DISC, Vector2.ONE * 4.0, Vector2.ONE * 8.0, [Color.WHITE] as Array[Color])
+	fx.step(0.05)
+	assert_eq(fx.multimesh.visible_instance_count, 1, "half of its life is over")
+	fx.step(0.06)
+	assert_eq(fx.multimesh.visible_instance_count, 0)
+	fx.free()
