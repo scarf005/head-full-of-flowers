@@ -184,8 +184,16 @@ static func damage(
 
 ## Blast at a point. With `falloff` the damage is 3 at the rim and 8 at the centre.
 ## `source` is the unit that the blast counts for, or -1. `weapon` is the id that the hit events name.
+## A blast with the cause &"blast" kills its own source at once.
 static func explode(
-	w: SimWorld, at: Vector2, radius: float, amount: float, source: int, falloff: bool, weapon: StringName
+	w: SimWorld,
+	at: Vector2,
+	radius: float,
+	amount: float,
+	source: int,
+	falloff: bool,
+	weapon: StringName,
+	cause := &"blast"
 ) -> void:
 	var owner: SimUnit = w.units[source] if source >= 0 else null
 	for u in w.units:
@@ -197,7 +205,7 @@ static func explode(
 		var push := (6.5 + radius * 2.4) * (0.25 + closeness * 0.75)
 		var dir := to.normalized() if to.length_squared() > 0.0001 else Vector2.RIGHT
 		u.vel += dir * push
-		damage(w, u, 3.0 + 5.0 * closeness if falloff else amount, source, u.pos, dir * push * 6.0, &"blast", weapon)
+		damage(w, u, 3.0 + 5.0 * closeness if falloff else amount, source, u.pos, dir * push * 6.0, cause, weapon)
 	var cells := ceili(radius)
 	var centre := w.grid.cell_of(at)
 	for dy in range(-cells, cells + 1):

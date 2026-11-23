@@ -120,8 +120,9 @@ func hit_cell(cell: Vector2i, amount: float, source := -1) -> void:
 		return
 	emit(&"cell", {cell = cell, destroyed = result.destroyed, material = result.material, cells = result.cells})
 	if result.barrel:
-		# A barrel blows up like a hand grenade of the unit that hit it. Its blast sets off other barrels.
-		Combat.explode(self, grid.center_of(cell), Shots.BLAST_RADIUS, 0.0, source, true, &"grenade")
+		# A barrel blows up like a hand grenade of the unit that hit it, but it does not kill that unit at once.
+		# Its blast sets off other barrels.
+		Combat.explode(self, grid.center_of(cell), Shots.BLAST_RADIUS, 0.0, source, true, &"grenade", &"barrel")
 	if result.destroyed and result.material == Defs.Mat.BOX:
 		Loot.spawn_weapon(self, grid.center_of(cell), 1.0 if result.high_tier else 0.0, true)
 
