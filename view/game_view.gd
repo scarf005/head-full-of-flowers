@@ -112,9 +112,9 @@ func _unhandled_input(input: InputEvent) -> void:
 	if input is InputEventMouseMotion:
 		_stick_aim = false
 	if input.is_action_pressed(&"swap_next"):
-		player.want_swap = 1
+		player.want_swap += 1
 	elif input.is_action_pressed(&"swap_prev"):
-		player.want_swap = -1
+		player.want_swap -= 1
 	elif input.is_action_pressed(&"reload"):
 		player.want_reload = true
 

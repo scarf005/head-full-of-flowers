@@ -204,7 +204,8 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 	u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))
 	u.pos += u.vel * dt
 	if u.want_swap != 0:
-		Arsenal.swap(u, u.want_swap)
+		# As in the original game, the wheel steps of one tick add up and the weapon moves 1 slot by their sign.
+		Arsenal.swap(u, signi(u.want_swap))
 		u.want_swap = 0
 	if u.want_reload and Arsenal.start_reload(u):
 		emit(&"reload", {unit = u.index})
