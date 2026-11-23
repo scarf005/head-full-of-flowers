@@ -60,12 +60,38 @@ func test_bot_reloads_empty_magazine() -> void:
 	assert_gt(a.reload_cooldown, 0.0)
 
 
-func test_bot_collects_nearby_weapon() -> void:
+func test_bot_collects_a_weapon_4_m_away_with_no_enemy_in_sight() -> void:
 	b.pos = Vector2(-22, 0)
-	Loot.spawn_weapon(w, Vector2(6, 4), 0.0)
+	Loot.spawn_weapon(w, Vector2(1, 3), 0.0)
 	_run(240)
 	assert_eq(a.slots.size(), 2, "the bot now holds a second weapon")
 	assert_eq(w.pickups.size(), 0)
+
+
+func test_bot_does_not_walk_to_a_weapon_8_m_away_while_an_enemy_is_in_sight() -> void:
+	b.pos = Vector2(-12, 0)
+	Loot.spawn_weapon(w, Vector2(6, 0), 0.0)
+	_run(120)
+	assert_eq(w.pickups.size(), 1, "the weapon at 8 m stays on the ground")
+	assert_lt(a.pos.x, -2.0, "the bot walks to the enemy at x = -12, away from the weapon at x = 6")
+
+
+func test_bot_in_aggro_range_walks_around_a_wall_to_the_enemy() -> void:
+	_wall(0, -4, 4)
+	a.pos = Vector2(-5, 0)
+	b.pos = Vector2(5, 0)
+	_run(240)
+	assert_lt(a.pos.distance_to(b.pos), 6.0, "the bot started 10 m away behind a 9-cell wall")
+
+
+func test_bot_with_a_pistol_and_a_clear_line_closes_to_3_m() -> void:
+	a.pos = Vector2(-6, 0)
+	b.pos = Vector2(6, 0)
+	var nearest := INF
+	for n in 300:
+		_run(1)
+		nearest = minf(nearest, a.pos.distance_to(b.pos))
+	assert_lt(nearest, 3.0, "the bot started 12 m away and does not hold a range")
 
 
 func test_bot_does_not_throw_at_enemy_2m_away() -> void:
@@ -147,7 +173,7 @@ func test_border_escape_starts_at_1_5_m_and_ends_at_3_m() -> void:
 
 func test_bot_takes_a_weapon_5_m_from_the_border_but_not_1_m_from_it() -> void:
 	b.pos = Vector2(-w.arena_radius + 6.0, 0)
-	a.pos = Vector2(w.arena_radius - 8.0, 0)
+	a.pos = Vector2(w.arena_radius - 4.5, 0)
 	Loot.spawn_weapon(w, Vector2(w.arena_radius - 1.0, 0), 1.0, true)
 	Bots.think(w, a, DT)
 	assert_ne(a.ai_state, &"loot", "weapon in the border margin")
@@ -159,13 +185,14 @@ func test_bot_takes_a_weapon_5_m_from_the_border_but_not_1_m_from_it() -> void:
 
 func test_hunter_keeps_its_goal_while_the_enemy_moves_behind_a_wall() -> void:
 	_wall(0, -12, 12)
+	b.pos = Vector2(14, 0)
 	Bots.think(w, a, DT)
-	assert_eq(a.ai_state, &"hunt")
-	assert_eq(a.ai_goal, Vector2(2, 0))
-	b.pos = Vector2(2, 5)
+	assert_eq(a.ai_state, &"hunt", "the enemy is 16 m away, out of the 14 m aggro distance")
+	assert_eq(a.ai_goal, Vector2(14, 0))
+	b.pos = Vector2(14, 5)
 	for n in 20:
 		Bots.think(w, a, DT)
-	assert_eq(a.ai_goal, Vector2(2, 0), "no new goal before the next decision")
+	assert_eq(a.ai_goal, Vector2(14, 0), "no new goal before the next decision")
 
 
 func test_hunt_goal_for_an_enemy_at_the_border_is_free_and_near_the_margin() -> void:

@@ -17,13 +17,12 @@ const GOOD_RANGE := {
 ## Weapons whose shot explodes. The bot does not fire them at an enemy inside this distance.
 const BLAST_SAFE := {&"grenade-launcher": 6.0, &"rocket-launcher": 7.5}
 const HUNT_RANGE := 36.0
-const LOOT_RANGE := 12.0
+const LOOT_RANGE := 5.0
 const BOX_RANGE := 10.0
 const BOX_STAND_OFF := 5.0
 const EDGE_MARGIN := 3.0
-const THROW_RANGE := Vector2(6.0, 16.0)
+const THROW_RANGE := 12.0
 const MOLOTOV_REACH := 10.5
-const LOW_HP := 0.32
 
 
 static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
@@ -81,7 +80,8 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 	u.move = _steer(w, u, move).limit_length(1.0)
 
 
-## Picks the target and the goal. Line of sight is a cell ray, so it runs here and not every tick.
+## Picks the target and the goal. The bot fights the nearest enemy inside the aggro distance, with or without a line
+## of sight. Line of sight is a cell ray, so it runs here and not every tick.
 static func _sense(w: SimWorld, u: SimUnit) -> void:
 	var aggro := 24.0 if w.hard else 14.0
 	var enemies := w.units.filter(func(o: SimUnit) -> bool: return o.team != u.team)
@@ -99,7 +99,8 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 			break
 	if not u.ai_sight and not enemies.is_empty() and enemies[0].pos.distance_to(u.pos) < HUNT_RANGE:
 		u.ai_target = enemies[0].index
-	var state := &"fight" if u.ai_sight else &"hunt" if u.ai_target >= 0 else &"wander"
+	var near := u.ai_target >= 0 and w.units[u.ai_target].pos.distance_to(u.pos) < aggro
+	var state := &"fight" if near else &"hunt" if u.ai_target >= 0 else &"wander"
 	if not u.ai_sight:
 		# Goals in the border margin are not worth the border damage.
 		var safe := w.arena_radius - EDGE_MARGIN
@@ -109,7 +110,8 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 				best = p.pos.distance_to(u.pos)
 				state = &"loot"
 				u.ai_goal = p.pos
-		if state != &"loot":
+		# Only a bot with no target goes for a box.
+		if state != &"loot" and u.ai_target < 0:
 			best = BOX_RANGE
 			for cell: Vector2i in w.nav.boxes:
 				var at := w.grid.center_of(cell)
@@ -146,8 +148,14 @@ static func _wants(u: SimUnit, p: Dictionary) -> bool:
 	return u.slots.size() < Defs.PRIMARY_SLOT_CAP or Arsenal.tier(p.id) > lowest
 
 
-## Approach to the good range of the weapon, strafe, lead the target and fire when the aim is on it.
+## Runs at the target with a sideways strafe, leads it and fires when the aim is on it. Without a line of sight the
+## bot walks the path to the target and does not fire.
 static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vector2:
+	var pursuit := 1.0 if w.hard else 0.68
+	if not u.ai_sight:
+		var path := _follow(w, u, target.pos) * pursuit
+		_turn(u, path, dt)
+		return path
 	var id := u.weapon_id()
 	var weapon: Dictionary = Defs.WEAPONS[id]
 	var to := target.pos - u.pos
@@ -180,19 +188,15 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 		u.want_fire = true
 	if clear:
 		_throw(w, u, d, toward)
-	var want: float = GOOD_RANGE.get(id, 9.0)
-	if u.reload_cooldown > 0.0 or u.hp <= u.max_hp * LOW_HP:
-		want += 8.0
-	var side := 1.0 if sin(w.now * 1.3 + u.index * 1.7) >= 0.0 else -1.0
-	var move := toward * clampf((d - want) / 3.0, -1.0, 1.0) + toward.orthogonal() * side * (0.45 if w.hard else 0.14)
-	move = move.limit_length(1.0) * (1.0 if w.hard else 0.68)
-	# Keep moving even at the good range, so the bot is never a still target.
-	return move.normalized() * 0.3 if move.length() < 0.3 else move
+	var strafe := toward.orthogonal() * sin(w.now + u.index) * (0.45 if w.hard else 0.14)
+	# A bot with an explosive weapon stops where it can still fire it.
+	var approach := 0.0 if BLAST_SAFE.has(id) and d < BLAST_SAFE[id] + 1.5 else 1.0
+	return (toward * approach + strafe).limit_length(1.0) * pursuit
 
 
-## Throws the secondary when the enemy is 6 to 16 m away and the landing point is clear and far from the bot.
+## Throws the secondary when the enemy is nearer than 12 m and the landing point is clear and far from the bot.
 static func _throw(w: SimWorld, u: SimUnit, d: float, toward: Vector2) -> void:
-	if u.secondary_cooldown > 0.0 or d < THROW_RANGE.x or d > THROW_RANGE.y or u.aim.dot(toward) < 0.97:
+	if u.secondary_cooldown > 0.0 or d > THROW_RANGE or u.aim.dot(toward) < 0.8:
 		return
 	if w.rng.randf() >= (0.014 if w.hard else 0.0006):
 		return
