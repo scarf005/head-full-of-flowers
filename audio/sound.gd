@@ -14,7 +14,11 @@ const BOT_SHOT_CHANCE := 0.18
 const FLAME_TAIL_MS := 150
 const MUSIC_DB := -10.0
 const OPEN_HZ := 20500.0
-const MUSIC_TRACKS: Array[String] = ["res://assets/music/track1.ogg", "res://assets/music/track2.ogg"]
+## As in the original game: one track for the demo behind the menu, one for a match that a person plays.
+const MENU_TRACK := "res://assets/music/track2.ogg"
+const MATCH_TRACK := "res://assets/music/track1.ogg"
+## The menu track is quieter: 0.22 against 0.3 of the match track in the original game.
+const MENU_DB := -2.7
 const FILES: Array[StringName] = [
 	&"pistol",
 	&"assault",
@@ -179,16 +183,13 @@ func _exit_tree() -> void:
 func setup(game: GameView) -> void:
 	_game = game
 	game.event.connect(handle)
-	_music_filter(20500.0)
-	_music.volume_db = MUSIC_DB
-	if not _music.playing:
-		play_music()
-
-
-## Loops one random music track. The import setting makes it loop.
-func play_music() -> void:
-	_music.stream = load(MUSIC_TRACKS.pick_random())
-	_music.play()
+	_music_filter(OPEN_HZ)
+	_music.volume_db = MUSIC_DB + (MENU_DB if game.autoplay else 0.0)
+	var track := MENU_TRACK if game.autoplay else MATCH_TRACK
+	# The track starts again only when it changes. The import setting makes it loop.
+	if not _music.playing or _music.stream.resource_path != track:
+		_music.stream = load(track)
+		_music.play()
 
 
 func _process(_delta: float) -> void:
