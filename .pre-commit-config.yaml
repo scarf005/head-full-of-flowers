@@ -1,0 +1,5 @@
+repos:
+  - repo: local
+    hooks:
+      - { id: lint, name: lint GDScript, entry: just lint, language: system, pass_filenames: false, files: '\.gd$' }
+      - { id: test, name: run tests, entry: just test, language: system, pass_filenames: false, files: '\.gd$' }
