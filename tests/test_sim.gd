@@ -183,6 +183,18 @@ func test_full_pool_recycles_oldest_flower_and_its_score() -> void:
 	assert_gt(field.score(1), 0)
 
 
+func test_no_flower_grows_in_a_solid_cell() -> void:
+	# A wall 1 m in front of the hit: cells (1, -2) to (1, 2). 200 flowers fly along +x.
+	for y in range(-2, 3):
+		w.grid.set_cell(w.grid.cell_of(Vector2(1.5, y + 0.5)), Defs.Mat.WALL)
+	var opts := {arena_radius = 40.0, now = 0.0, grid = w.grid}
+	w.flowers.burst(w.rng, 1, Vector2(0.5, 0.5), Vector2.RIGHT, 200, 1.0, opts)
+	assert_gt(w.flowers.score(1), 0)
+	for i in w.flowers.capacity:
+		if w.flowers.owner[i] == 1:
+			assert_false(w.grid.is_solid(w.grid.cell_of(w.flowers.pos[i])), "flower at %s" % w.flowers.pos[i])
+
+
 func test_flame_patch_scorches_flowers() -> void:
 	w.flowers.burst(w.rng, 1, Vector2(10, 10), Vector2.RIGHT, 20, 1.0, {arena_radius = 40.0, now = 0.0})
 	var before := w.flowers.score(1)
