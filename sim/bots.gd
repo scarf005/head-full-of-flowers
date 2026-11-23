@@ -60,7 +60,7 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 			# Walk to where the enemy was at the last decision. A goal that follows the enemy flips the route from one
 			# side of a wall to the other, and two bots then dance on the two sides of it.
 			if decide or u.pos.distance_to(u.ai_goal) < 1.5:
-				u.ai_goal = target.pos.limit_length(w.arena_radius - EDGE_MARGIN)
+				u.ai_goal = _hunt_goal(w, target)
 			move = _follow(w, u, u.ai_goal) * pursuit
 			_turn(u, move, dt)
 		_:
@@ -113,7 +113,8 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 			best = BOX_RANGE
 			for cell: Vector2i in w.nav.boxes:
 				var at := w.grid.center_of(cell)
-				if at.distance_to(u.pos) < best and at.length() < safe:
+				# The bot circles a box at the stand-off distance, so that ring must be out of the margin too.
+				if at.distance_to(u.pos) < best and at.length() < safe - BOX_STAND_OFF:
 					best = at.distance_to(u.pos)
 					state = &"box"
 					u.ai_goal = at
@@ -121,7 +122,13 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 		u.ai_state = state
 		u.ai_path_timer = 0.0
 		if state == &"hunt":
-			u.ai_goal = w.units[u.ai_target].pos.limit_length(w.arena_radius - EDGE_MARGIN)
+			u.ai_goal = _hunt_goal(w, w.units[u.ai_target])
+
+
+## Where a hunter walks: the place of the enemy, moved out of the border margin when that point is free.
+static func _hunt_goal(w: SimWorld, target: SimUnit) -> Vector2:
+	var inside := target.pos.limit_length(w.arena_radius - EDGE_MARGIN)
+	return target.pos if w.grid.circle_hits(inside, target.radius) else inside
 
 
 ## True when a pickup is a perk the unit can still stack, or a weapon better than what it holds.

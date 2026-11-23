@@ -36,7 +36,7 @@ func _ready() -> void:
 ## sides, not less above and below.
 func rest_size() -> float:
 	var view := get_viewport().get_visible_rect().size
-	return VISIBLE_WIDTH_M * maxf(1.0, view.x / view.y * 9.0 / 16.0)
+	return VISIBLE_WIDTH_M * maxf(1.0, view.x / maxf(view.y, 1.0) * 9.0 / 16.0)
 
 
 func pixels_per_meter() -> Vector2:

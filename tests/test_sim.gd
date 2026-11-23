@@ -302,11 +302,13 @@ func test_timed_box_holds_a_high_tier_weapon() -> void:
 	assert_eq(w.grid.high_tier[boxes[0]], 1)
 
 
-func test_squad_starts_together_and_away_from_the_other_squads() -> void:
-	for sd in [1, 2, 3]:
-		var squads := SimWorld.new({seed = sd, mode = &"squad", size = 3})
+func test_team_starts_together_and_away_from_the_other_teams() -> void:
+	for config: Dictionary in [{mode = &"squad", size = 3}, {mode = &"duo", size = 6}, {mode = &"tdm", size = 6}]:
+		config.seed = config.size
+		var squads := SimWorld.new(config)
 		for a in squads.units:
 			assert_false(squads.grid.circle_hits(a.pos, a.radius), "unit %d stands free" % a.index)
+			assert_lt(a.pos.length(), squads.arena_radius - a.radius, "unit %d is in the arena" % a.index)
 			for b in squads.units:
 				var gap := a.pos.distance_to(b.pos)
 				if a.team == b.team:

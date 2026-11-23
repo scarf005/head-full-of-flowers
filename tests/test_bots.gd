@@ -133,3 +133,36 @@ func _walled_world(seed: int, size := 8) -> SimWorld:
 			)
 		world.grid.set_cell(world.grid.cell_of(at * 0.5), Defs.Mat.BOX)
 	return world
+
+
+func test_border_escape_starts_at_1_5_m_and_ends_at_3_m() -> void:
+	b.pos = Vector2(-w.arena_radius + 6.0, 0)
+	var flags := []
+	for from_border: float in [1.0, 2.5, 3.5, 2.5]:
+		a.pos = Vector2(w.arena_radius - from_border, 0)
+		Bots.think(w, a, DT)
+		flags.append(a.ai_edge)
+	assert_eq(flags, [true, true, false, false], "at 1.0, 2.5, 3.5 and again 2.5 m from the border")
+
+
+func test_bot_takes_a_weapon_5_m_from_the_border_but_not_1_m_from_it() -> void:
+	b.pos = Vector2(-w.arena_radius + 6.0, 0)
+	a.pos = Vector2(w.arena_radius - 8.0, 0)
+	Loot.spawn_weapon(w, Vector2(w.arena_radius - 1.0, 0), 1.0, true)
+	Bots.think(w, a, DT)
+	assert_ne(a.ai_state, &"loot", "weapon in the border margin")
+	w.pickups[0].pos = Vector2(w.arena_radius - 5.0, 0)
+	a.ai_sense_timer = 0.0
+	Bots.think(w, a, DT)
+	assert_eq(a.ai_state, &"loot")
+
+
+func test_hunter_keeps_its_goal_while_the_enemy_moves_behind_a_wall() -> void:
+	_wall(0, -12, 12)
+	Bots.think(w, a, DT)
+	assert_eq(a.ai_state, &"hunt")
+	assert_eq(a.ai_goal, Vector2(2, 0))
+	b.pos = Vector2(2, 5)
+	for n in 20:
+		Bots.think(w, a, DT)
+	assert_eq(a.ai_goal, Vector2(2, 0), "no new goal before the next decision")
