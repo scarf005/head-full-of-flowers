@@ -44,7 +44,7 @@ func _flower_mesh() -> ArrayMesh:
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for petal in 5:
 		var a := TAU * petal / 5.0
-		var points := [Vector3(0, 0.12, 0), _rim(a - 0.5, 0.75), _rim(a, 1.0), _rim(a + 0.5, 0.75)]
+		var points := [Vector3(0, 0.03, 0), _rim(a - 0.5, 0.75), _rim(a, 1.0), _rim(a + 0.5, 0.75)]
 		for index: int in [0, 1, 2, 0, 2, 3]:
 			st.set_normal(Vector3.UP)
 			st.set_color(Color(1.0, 0.8, 0.35) if index == 0 else Color.WHITE)
@@ -53,4 +53,4 @@ func _flower_mesh() -> ArrayMesh:
 
 
 func _rim(angle: float, reach: float) -> Vector3:
-	return Vector3(cos(angle) * reach * 0.5, 0.3, sin(angle) * reach * 0.5)
+	return Vector3(cos(angle) * reach * 0.5, 0.07, sin(angle) * reach * 0.5)

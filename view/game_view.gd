@@ -103,7 +103,7 @@ func _process(delta: float) -> void:
 	_shots.visible_instance_count = world.projectiles.size()
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
-		var size := Vector3(p.radius * 0.7, p.radius * 0.7, maxf(p.radius, p.vel.length() * 0.02))
+		var size := Vector3(p.radius * 0.4, p.radius * 0.4, maxf(p.radius, p.vel.length() * 0.025))
 		var basis := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)).scaled(size * (3.0 if p.kind == &"flame" else 1.0))
 		_shots.set_instance_transform(i, Transform3D(basis, Vector3(p.pos.x, 0.7, p.pos.y)))
 		_shots.set_instance_color(i, SHOT_COLORS[p.kind] * 2.5)

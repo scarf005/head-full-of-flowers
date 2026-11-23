@@ -17,7 +17,7 @@ run *args:
 
 # run the test suite headless; pass a file to narrow: just test res://tests/test_flowers.gd
 test file="": setup
-    {{godot}} --headless -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit {{ if file == "" { "" } else { "-gtest=" + file } }}
+    {{godot}} --headless -s addons/gut/gut_cmdln.gd -gexit {{ if file == "" { "-gdir=res://tests -ginclude_subdirs" } else { "-gtest=" + file } }}
 
 # format GDScript
 fmt:
