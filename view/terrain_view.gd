@@ -62,6 +62,10 @@ const WALL_COLORS := {
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
 const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.GLASS: 0.12, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
+const BLANKET := Color("6f8fd6")
+const BOOKS: Array[Color] = [Color("c9584a"), Color("e0b64f"), Color("4f8a6a"), Color("5873b8")]
+const SOIL := Color("6b4a33")
+const PAPER := Color("f1ead8")
 const DOOR_COLOR := Color("5a3d2a")
 const HIGH_TIER_COLOR := Color("f2f0e6")
 
@@ -137,8 +141,7 @@ func _process(_delta: float) -> void:
 			var look: Array = PROP_LOOK.get(prop.kind, CELL_LOOK[Defs.Mat.PROP])
 			var inset := 0.5 if prop.width * prop.height == 1 and not prop.solid else 0.2
 			var size := Vector2(prop.width - inset, prop.height - inset)
-			_box(out, Vector2(prop.x, prop.y), size, look[1], look[0].darkened(0.25))
-			_box(out, Vector2(prop.x, prop.y), size - Vector2(0.14, 0.14), look[1] + 0.05, look[0])
+			_prop(out, prop.kind, Vector2(prop.x, prop.y), size, look)
 	for building in map.buildings:
 		for door: Vector2i in building.doors:
 			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
@@ -153,6 +156,42 @@ func _process(_delta: float) -> void:
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
 		_boxes.set_instance_color(n, Quality.raw(out[n][1]))
+
+
+## A piece of furniture: a darker base, a lighter top, and the parts that tell its kind.
+func _prop(out: Array, kind: StringName, at: Vector2, size: Vector2, look: Array) -> void:
+	var color: Color = look[0]
+	var top: float = look[1]
+	var long := Vector2.RIGHT if size.x >= size.y else Vector2.DOWN
+	var span := maxf(size.x, size.y)
+	_box(out, at, size, top, color.darkened(0.25))
+	_box(out, at, size - Vector2(0.14, 0.14), top + 0.05, color)
+	match kind:
+		&"bed":
+			_box(out, at + long * span * 0.2, size - long * span * 0.5 - Vector2(0.1, 0.1), top + 0.1, BLANKET)
+			_box(out, at - long * (span * 0.5 - 0.3), Vector2(0.45, 0.45), top + 0.12, Color.WHITE)
+		&"bookshelf", &"shelf":
+			for n in int(span * 2.0):
+				var book := at + long * (0.25 + n * 0.5 - span * 0.5)
+				_box(out, book, Vector2(0.3, 0.3), top + 0.12, BOOKS[n % BOOKS.size()])
+		&"crate":
+			_box(out, at, Vector2(size.x - 0.1, 0.12), top + 0.09, color.darkened(0.35))
+			_box(out, at, Vector2(0.12, size.y - 0.1), top + 0.09, color.darkened(0.35))
+		&"barrel":
+			_box(out, at, size - Vector2(0.4, 0.4), top + 0.09, color.darkened(0.4))
+		&"plant", &"planter", &"flowerbed":
+			out[-1][1] = SOIL
+			var count := maxi(1, int(span * 2.0))
+			for n in count:
+				_box(out, at + long * ((n + 0.5) / count - 0.5) * span, Vector2(0.34, 0.34), top + 0.3, color)
+				out[-1][0] = out[-1][0].rotated_local(Vector3.UP, 0.8)
+		&"table", &"desk", &"workbench", &"counter":
+			_box(out, at + Vector2(0.18, -0.12) * minf(size.x, size.y), Vector2(0.3, 0.22), top + 0.09, PAPER)
+		&"rug":
+			_box(out, at, size - Vector2(0.5, 0.5), top + 0.06, color.lightened(0.25))
+		&"bench", &"chair":
+			var back := at - long.orthogonal() * (minf(size.x, size.y) * 0.5 - 0.08)
+			_box(out, back, long * span + Vector2(0.14, 0.14), top + 0.3, color.darkened(0.2))
 
 
 ## True when a wall, window, fence or hedge stands in `cell`.
@@ -174,49 +213,34 @@ static func tile(map: TerrainMap, p: Vector2) -> TerrainMap.Tile:
 	var raw := map.tile_at(p)
 	if raw in FLOORS:
 		return raw
-	var push := Vector2(_warp.get_noise_2d(p.x, p.y), _warp.get_noise_2d(p.x + 71.0, p.y - 37.0))
-	var moved := map.tile_at(p + push * 2.2)
+	var moved := map.tile_at(p + _push(p) * 2.2)
 	return raw if moved in FLOORS else moved
 
 
-## One plane with a ground texture of 4 pixels for each metre, and hard-edged quads for the floors.
+static func _push(p: Vector2) -> Vector2:
+	return Vector2(_warp.get_noise_2d(p.x, p.y), _warp.get_noise_2d(p.x + 71.0, p.y - 37.0))
+
+
+## One plane. The shader draws each ground kind and bends the borders with the same push as `tile()`.
 func _ground() -> Node3D:
-	var side := map.size * 4
-	var half := map.size / 2.0
-	var data := PackedByteArray()
-	data.resize(side * side * 4)
-	for y in side:
-		for x in side:
-			var kind := tile(map, Vector2(x + 0.5, y + 0.5) / 4.0 - Vector2(half, half))
-			var color := TILE_COLORS[TerrainMap.Tile.DIRT if kind in FLOORS else kind]
-			var at := (y * side + x) * 4
-			data[at] = color.r8
-			data[at + 1] = color.g8
-			data[at + 2] = color.b8
-			data[at + 3] = 255 if kind <= TerrainMap.Tile.WILD_GRASS else 0
+	tile(map, Vector2.ZERO)
+	var kinds := Image.create_from_data(map.size, map.size, false, Image.FORMAT_R8, map.tiles)
+	var push := Image.create_empty(map.size, map.size, false, Image.FORMAT_RGB8)
+	for y in map.size:
+		for x in map.size:
+			var p := Vector2(x + 0.5, y + 0.5) - Vector2.ONE * map.size / 2.0
+			var at := _push(p) * 0.5 + Vector2(0.5, 0.5)
+			push.set_pixel(x, y, Color(at.x, at.y, 0.0))
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://shaders/ground.gdshader")
-	var image := Image.create_from_data(side, side, false, Image.FORMAT_RGBA8, data)
-	material.set_shader_parameter("tiles", ImageTexture.create_from_image(image))
+	material.set_shader_parameter("tiles", ImageTexture.create_from_image(kinds))
+	material.set_shader_parameter("warp", ImageTexture.create_from_image(push))
+	material.set_shader_parameter("map_size", float(map.size))
+	var palette := TILE_COLORS.map(func(c: Color) -> Vector3: return Vector3(c.r, c.g, c.b))
+	material.set_shader_parameter("palette", PackedVector3Array(palette))
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(map.size, map.size)
 	var node := MeshInstance3D.new()
 	node.mesh = plane
 	node.material_override = material
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for y in map.size:
-		for x in map.size:
-			var kind := map.tiles[y * map.size + x]
-			for corner: Vector2i in [
-				Vector2i.ZERO, Vector2i.RIGHT, Vector2i.ONE, Vector2i.ZERO, Vector2i.ONE, Vector2i.DOWN
-			]:
-				if kind in FLOORS:
-					st.set_normal(Vector3.UP)
-					st.set_color(Quality.raw(TILE_COLORS[kind]))
-					st.add_vertex(Vector3(x + corner.x - half, 0.02, y + corner.y - half))
-	var floors := MeshInstance3D.new()
-	floors.mesh = st.commit()
-	floors.material_override = _boxes_material
-	node.add_child(floors)
 	return node

@@ -77,12 +77,12 @@ func setup(config: Dictionary) -> void:
 	_fires = _multimesh(disc, 36, true)
 	_arena = MeshInstance3D.new()
 	var wall := CylinderMesh.new()
-	wall.height = 3.0
+	wall.height = 1.6
 	wall.cap_top = false
 	wall.cap_bottom = false
 	wall.radial_segments = 96
 	_arena.mesh = wall
-	_arena.position.y = 1.5
+	_arena.position.y = 0.8
 	var wall_material := ShaderMaterial.new()
 	wall_material.shader = preload("res://shaders/arena_wall.gdshader")
 	_arena.material_override = wall_material
@@ -121,6 +121,7 @@ func _process(delta: float) -> void:
 	if world == null:
 		return
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
+	RenderingServer.global_shader_parameter_set(&"arena_radius", world.arena_radius)
 	shake = maxf(0.0, shake - delta * 4.4)
 	_focus = _focus.lerp(player.pos + player.aim * 2.0, clampf(delta * 8.0, 0.0, 1.0))
 	_kick = _kick.lerp(Vector2.ZERO, clampf(delta * 12.0, 0.0, 1.0))
