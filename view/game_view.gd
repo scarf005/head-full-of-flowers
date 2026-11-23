@@ -42,7 +42,6 @@ var _fires: MultiMesh
 var _flames: MultiMesh
 var _terrain: TerrainView
 var _pickups: Array[Sprite3D] = []
-var _arena: MeshInstance3D
 var _lights := 0
 
 
@@ -97,18 +96,6 @@ func setup(config: Dictionary) -> void:
 	tongue.radial_segments = 5
 	tongue.rings = 0
 	_flames = _multimesh(tongue, 1000, true)
-	_arena = MeshInstance3D.new()
-	var wall := CylinderMesh.new()
-	wall.height = 1.6
-	wall.cap_top = false
-	wall.cap_bottom = false
-	wall.radial_segments = 96
-	_arena.mesh = wall
-	_arena.position.y = 0.8
-	var wall_material := ShaderMaterial.new()
-	wall_material.shader = preload("res://shaders/arena_wall.gdshader")
-	_arena.material_override = wall_material
-	add_child(_arena)
 
 
 func _physics_process(delta: float) -> void:
@@ -167,7 +154,6 @@ func _process(delta: float) -> void:
 		camera.size = rest + intro * intro * 14.0
 	camera.target = _focus + _kick + Vector2.from_angle(randf() * TAU) * shake * shake * 0.5
 	camera.apply()
-	_arena.scale = Vector3(world.arena_radius * 2.0, 1.0, world.arena_radius * 2.0)
 	_shots.visible_instance_count = world.projectiles.size()
 	_trails.visible_instance_count = world.projectiles.size()
 	for i in world.projectiles.size():
