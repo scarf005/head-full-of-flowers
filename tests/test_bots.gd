@@ -241,6 +241,51 @@ func test_bot_that_sees_the_enemy_through_a_window_walks_around_the_wall() -> vo
 	assert_gt(east, 1.0, "the bot comes to the side of the enemy")
 
 
+func test_hard_bot_that_runs_away_moves_at_115_percent_of_its_speed() -> void:
+	w.hard = true
+	a.hp = 3.0
+	a.pos = Vector2(-3, 0)
+	b.pos = Vector2(3, 0)
+	var fastest := 0.0
+	for n in 60:
+		_run(1)
+		fastest = maxf(fastest, a.vel.length())
+	assert_almost_eq(fastest, a.speed * 1.15, 0.05, "as in the original game")
+
+
+func test_bot_with_a_grenade_launcher_backs_away_from_an_enemy_behind_a_window() -> void:
+	w.hard = true
+	_wall(0, -4, 4)
+	var window := w.grid.cell_of(Vector2(0.5, 0.5))
+	w.grid.solid[window.y * w.grid.size + window.x] = ObstacleGrid.LOW
+	# The bot is in a passage of 2 m that goes west from the window, so its path to the enemy starts to the west.
+	for x in range(-6, 0):
+		for y in [-1.5, 1.5]:
+			w.grid.set_cell(w.grid.cell_of(Vector2(x + 0.5, y)), Defs.Mat.ROCK)
+	Arsenal.equip(a, &"grenade-launcher", 6.0)
+	a.slots.remove_at(0)
+	a.slot_index = 0
+	a.pos = Vector2(-1.5, 0.5)
+	b.pos = Vector2(2.5, 0.5)
+	b.hp = 100000.0
+	_run(40)
+	assert_lt(a.pos.x, -3.0, "the bot started 4 m from the enemy and needs 6 m for its blast")
+
+
+func test_bot_that_runs_away_stops_at_the_arena_border_and_does_not_step_in_and_out() -> void:
+	w.hard = true
+	a.hp = 3.0
+	b.hp = 100000.0
+	a.pos = Vector2(w.arena_radius - 5.0, 0)
+	b.pos = Vector2(w.arena_radius - 11.0, 0)
+	var turns := 0
+	for n in 300:
+		var before := a.ai_edge
+		_run(1)
+		turns += int(a.ai_edge and not before)
+	assert_lt(turns, 2, "times that the bot came nearer than 1.5 m to the border in 5 s")
+
+
 func test_bot_with_3_of_10_health_runs_from_the_enemy_and_still_fires() -> void:
 	w.hard = true
 	a.hp = 3.0

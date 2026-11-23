@@ -161,6 +161,26 @@ func test_rifle_shot_that_clips_the_corner_of_a_hedge_loses_half_its_damage() ->
 	assert_eq(p.damage, damage * 0.5)
 
 
+func test_rifle_shot_hits_a_unit_in_front_of_a_hedge_or_a_wall_with_its_whole_damage() -> void:
+	Arsenal.equip(a, &"assault", 60.0)
+	a.want_fire = true
+	_tick(1)
+	var cell := w.grid.cell_of(Vector2(3.5, 3.5))
+	b.pos = Vector2(2.5, 3.5)
+	for mat: int in [Defs.Mat.HEDGE, Defs.Mat.ROCK]:
+		w.grid.set_cell(cell, mat)
+		var cover: float = w.grid.hp[cell.y * w.grid.size + cell.x]
+		var health := b.hp
+		# One step from (1.9, 3.5) to (3.1, 3.5): through the unit and then 0.1 m into the cell behind it.
+		var p := w.projectiles[0].duplicate()
+		p.pos = Vector2(1.9, 3.5)
+		p.vel = Vector2(60, 0)
+		var damage: float = p.damage
+		assert_false(Shots._step_projectile(w, p, 0.02), "the shot stops at the unit")
+		assert_eq(health - b.hp, damage, "damage to the unit")
+		assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], cover, "the shot does not reach the cell")
+
+
 func test_fire_bottle_that_lands_stops_the_match_for_a_moment() -> void:
 	a.secondary = &"molotov"
 	a.want_throw = true
