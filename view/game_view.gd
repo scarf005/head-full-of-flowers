@@ -5,6 +5,8 @@ extends Node3D
 signal event(data: Dictionary)
 
 const SHOT_HEIGHT := 0.75
+## Smoke puffs of a rocket for each second of the match.
+const SMOKE_RATE := 30.0
 const FLAMES_PER_M2 := 0.6
 ## Size in pixels of a shape that shows item art at its drawn size, and at half of it.
 const ART := Vector2(48.0, 48.0)
@@ -48,6 +50,8 @@ var _ground := Fx.new(0)
 var _air := Fx.new(2)
 var _terrain: TerrainView
 var _lights := 0
+## Match time of the last drawn frame.
+var _drawn := 0.0
 
 
 func setup(config: Dictionary) -> void:
@@ -137,6 +141,7 @@ func _process(delta: float) -> void:
 	_draw_pickups()
 	_ground.step(delta)
 	_air.step(delta)
+	_drawn = world.now
 
 
 ## Steady pseudo-random number in 0..1 for a point.
@@ -352,7 +357,8 @@ func _draw_shots(shot_lag: float) -> void:
 				var width: float = roundf(maxf(4.0, p.radius * (36.0 if rocket else 28.0)))
 				var length: float = width * 1.85 * clampf(p.vel.length() / 25.0, 1.1, 2.9)
 				_air.add(at, Vector2.ONE * (length + 4.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
-				if rocket:
+				# By match time: no more smoke on a fast screen, and none when the match stands still.
+				if rocket and floorf(world.now * SMOKE_RATE) > floorf(_drawn * SMOKE_RATE):
 					var puff := Vector2(8.0, 8.0)
 					_air.spawn(at, 0.35, Fx.Shape.DISC, puff, puff * 1.8, SMOKE, {dots = 0.5})
 		_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
