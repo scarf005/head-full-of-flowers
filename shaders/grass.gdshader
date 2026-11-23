@@ -34,6 +34,6 @@ void vertex() {
 void fragment() {
 	// One colour for each blade, so the field reads as a surface and the gusts read as bands of light.
 	vec3 blade = mix(vec3(0.2, 0.47, 0.2), vec3(0.5, 0.76, 0.3), wave) * mix(0.85, 1.0, UV.y) * COLOR.rgb;
-	ALBEDO = mix(blade, sheen_color, smoothstep(0.75, 1.0, wave) * UV.y * 0.6) * shade;
+	ALBEDO = screen(mix(blade, sheen_color, smoothstep(0.75, 1.0, wave) * UV.y * 0.6) * shade);
 	ALPHA = 1.0;
 }

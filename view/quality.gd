@@ -37,6 +37,11 @@ static func sun() -> DirectionalLight3D:
 	return light
 
 
+## Vertex or instance colour of a lit mesh, adjusted so the web renderer shows it close to the PC renderer.
+static func raw(color: Color) -> Color:
+	return color if high() else color.lerp(color.linear_to_srgb(), 0.5)
+
+
 ## Lights that can be lit at one time for muzzle flashes, fires and blasts.
 static func light_budget() -> int:
 	return 24 if high() else 6

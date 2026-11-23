@@ -24,5 +24,5 @@ void fragment() {
 		discard;
 	}
 	vec3 color = mix(COLOR.rgb, COLOR.rgb * 0.3, step(-0.1, petal));
-	ALBEDO = mix(color, vec3(1.0, 0.82, 0.3), step(length(p), 0.2));
+	ALBEDO = screen(mix(color, vec3(1.0, 0.82, 0.3), step(length(p), 0.2)));
 }

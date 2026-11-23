@@ -12,6 +12,6 @@ void vertex() {
 
 void fragment() {
 	vec4 kind = texture(tiles, UV);
-	ALBEDO = mix(kind.rgb, vec3(0.2, 0.47, 0.2), kind.a) * cloud(ground, TIME);
+	ALBEDO = screen(mix(kind.rgb, vec3(0.2, 0.47, 0.2), kind.a) * cloud(ground, TIME));
 	ROUGHNESS = 1.0;
 }

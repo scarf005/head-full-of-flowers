@@ -146,7 +146,7 @@ func _process(_delta: float) -> void:
 	_boxes.instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
-		_boxes.set_instance_color(n, out[n][1])
+		_boxes.set_instance_color(n, Quality.raw(out[n][1]))
 
 
 ## True when a wall, window, fence or hedge stands in `cell`.
@@ -207,7 +207,7 @@ func _ground() -> Node3D:
 			]:
 				if kind in FLOORS:
 					st.set_normal(Vector3.UP)
-					st.set_color(TILE_COLORS[kind])
+					st.set_color(Quality.raw(TILE_COLORS[kind]))
 					st.add_vertex(Vector3(x + corner.x - half, 0.02, y + corner.y - half))
 	var floors := MeshInstance3D.new()
 	floors.mesh = st.commit()
