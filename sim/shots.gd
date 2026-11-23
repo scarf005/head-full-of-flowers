@@ -150,8 +150,11 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 		if t.molotov or t.bounces <= 0:
 			landed = true
 		else:
-			t.bounces -= 1
-			t.vel = t.vel.bounce(normal) * 0.58
+			# As in the original: the wall keeps 58% of the speed into it and 78% of the speed along it, and a slow
+			# grenade explodes at its next wall.
+			var along: Vector2 = t.vel.slide(normal)
+			t.vel = along * 0.78 - t.vel.project(normal) * 0.58
+			t.bounces = t.bounces - 1 if t.vel.length() >= 2.8 else 0
 	for u in w.units:
 		if u.team == t.team:
 			continue
