@@ -84,7 +84,9 @@ func setup(config: Dictionary) -> void:
 	(get_child(-1) as MultiMeshInstance3D).material_override = shot_material
 	# Thrown grenades are solid objects, not glowing shots.
 	_blobs = _multimesh(ball, 96, false)
-	_warns = _multimesh(_ring_mesh, 96, true)
+	var thin := _ring_mesh.duplicate() as TorusMesh
+	thin.inner_radius = 0.95
+	_warns = _multimesh(thin, 96, true)
 	var disc := CylinderMesh.new()
 	disc.height = 0.06
 	disc.radial_segments = 24
@@ -190,8 +192,8 @@ func _process(delta: float) -> void:
 			i, Transform3D(basis, Vector3(p.pos.x - p.vel.x * shot_lag, SHOT_HEIGHT, p.pos.y - p.vel.y * shot_lag))
 		)
 		_shots.set_instance_color(i, color)
-		# The streak is 3 bullets long and starts at the bullet. A flame puff has none.
-		var tail := Vector3(wide * 0.5, wide * 0.5, 0.0 if p.kind == &"flame" else size.z * 3.0)
+		# The streak is 2 bullets long, starts at the bullet and ends at the muzzle. A flame puff has none.
+		var tail := Vector3(wide * 0.5, wide * 0.5, 0.0 if p.kind == &"flame" else minf(size.z * 2.0, p.travelled))
 		var back: Vector2 = p.vel.normalized() * tail.z * 0.5 + p.vel * shot_lag
 		var trail := Basis(Vector3.UP, atan2(-p.vel.x, -p.vel.y)) * Basis.from_scale(tail)
 		_trails.set_instance_transform(i, Transform3D(trail, Vector3(p.pos.x - back.x, SHOT_HEIGHT, p.pos.y - back.y)))
