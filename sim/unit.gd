@@ -62,6 +62,8 @@ var ai_path_timer := 0.0
 var ai_target := -1
 ## True when the bot saw its target at the last sense step.
 var ai_sight := false
+## False when the bot sees its target over a cell that it cannot walk through, for example a window.
+var ai_direct := true
 var ai_sense_timer := 0.0
 ## Where a loot or box goal is.
 var ai_goal := Vector2.ZERO

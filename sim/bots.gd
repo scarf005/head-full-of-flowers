@@ -16,6 +16,12 @@ const GOOD_RANGE := {
 }
 ## Weapons whose shot explodes. The bot does not fire them at an enemy inside this distance.
 const BLAST_SAFE := {&"grenade-launcher": 6.0, &"rocket-launcher": 7.5}
+## As in the original game: a bot with this share of its health or less runs from the nearest enemy.
+const LOW_HP := 0.32
+## Aim and fire numbers of the original game for a bot that attacks and for a bot that runs. panic and reach are
+## [easy, hard]. need (the aim that a shot needs) and hold (the chance to hold a shot) are [near, far, more on easy].
+const FIGHT := {panic = [1.2, 0.0], reach = [19.0, 32.0], need = [0.8, 0.91, 0.12], hold = [0.02, 0.16, 0.34]}
+const FLEE := {panic = [1.3, 0.45], reach = [15.0, 24.0], need = [0.78, 0.89, 0.1], hold = [0.06, 0.22, 0.26]}
 const HUNT_RANGE := 36.0
 const LOOT_RANGE := 5.0
 const BOX_RANGE := 10.0
@@ -48,7 +54,7 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 	var wander := 0.7 if w.hard else 0.46
 	var move := Vector2.ZERO
 	match u.ai_state:
-		&"fight":
+		&"fight", &"flee":
 			move = _fight(w, u, target, dt)
 		&"box":
 			move = _box(w, u, dt) * wander
@@ -77,7 +83,8 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 	var push := _avoid(w, u)
 	if push != Vector2.ZERO:
 		move = (move + push * 2.0).normalized()
-	u.move = _steer(w, u, move).limit_length(1.0)
+	# Only a bot that runs away on hard is faster than 1.
+	u.move = _steer(w, u, move).limit_length(1.15)
 
 
 ## Picks the target and the goal. The bot fights the nearest enemy inside the aggro distance, with or without a line
@@ -96,11 +103,14 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 		if w.grid.ray_cell(u.pos, other.pos).x < 0:
 			u.ai_target = other.index
 			u.ai_sight = true
+			u.ai_direct = w.grid.walk_clear(u.pos, other.pos)
 			break
 	if not u.ai_sight and not enemies.is_empty() and enemies[0].pos.distance_to(u.pos) < HUNT_RANGE:
 		u.ai_target = enemies[0].index
 	var near := u.ai_target >= 0 and w.units[u.ai_target].pos.distance_to(u.pos) < aggro
 	var state := &"fight" if near else &"hunt" if u.ai_target >= 0 else &"wander"
+	if u.ai_target >= 0 and u.hp <= u.max_hp * LOW_HP:
+		state = &"flee"
 	if not u.ai_sight:
 		# Goals in the border margin are not worth the border damage.
 		var safe := w.arena_radius - EDGE_MARGIN
@@ -149,32 +159,40 @@ static func _wants(u: SimUnit, p: Dictionary) -> bool:
 
 
 ## Runs at the target with a sideways strafe, leads it and fires when the aim is on it. Without a line of sight the
-## bot walks the path to the target and does not fire.
+## bot walks the path to the target and does not fire. A bot in the flee state runs straight away and still fires.
 static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vector2:
+	var flee := u.ai_state == &"flee"
 	var pursuit := 1.0 if w.hard else 0.68
-	if not u.ai_sight:
-		var path := _follow(w, u, target.pos) * pursuit
-		_turn(u, path, dt)
-		return path
-	var id := u.weapon_id()
-	var weapon: Dictionary = Defs.WEAPONS[id]
 	var to := target.pos - u.pos
 	var d := maxf(to.length(), 0.001)
 	var toward := to / d
-	if not w.hard and u.ai_timer > 1.1:
+	var away := -toward * (1.15 if w.hard else 0.8)
+	if not u.ai_sight:
+		var path := away if flee else _follow(w, u, target.pos) * pursuit
+		_turn(u, toward if flee else path, dt)
+		return path
+	var id := u.weapon_id()
+	var weapon: Dictionary = Defs.WEAPONS[id]
+	# Through a window or over a low table the bot sees the enemy but cannot walk to it. Then it takes the path.
+	var advance := toward if u.ai_direct else _follow(w, u, target.pos)
+	# A bot with an explosive weapon makes room for its own blast and stops where it can fire.
+	if BLAST_SAFE.has(id) and d < BLAST_SAFE[id] + 1.5:
+		advance *= -1.0 if d < BLAST_SAFE[id] else 0.0
+	if not flee and not w.hard and u.ai_timer > 1.1:
 		# An easy bot only walks up for the first part of each decision. It does not aim or fire.
-		return toward * 0.42
+		return advance * 0.42
+	var numbers: Dictionary = FLEE if flee else FIGHT
 	# Aim at where the target is, with a sway that grows with range, own speed and panic. A target that strafes
 	# is hard to hit.
 	var far := clampf((d - 8.0) / 24.0, 0.0, 1.0)
-	var panic := 0.0 if w.hard else 1.2
+	var panic: float = numbers.panic[int(w.hard)]
 	var moving := clampf(u.vel.length() / u.speed, 0.0, 1.0)
 	var sway := sin(w.now * 6.0 + u.index * 1.91) * (0.02 + far * 0.1 + moving * 0.035 + panic * 0.05)
 	sway += cos(w.now * 3.0 + u.index * 0.67) * (0.015 + far * 0.07 + panic * 0.02)
 	u.aim = u.aim.lerp(toward.rotated(sway), clampf(dt * (11.0 - far * 6.0 - panic * 1.6), 0.1, 0.95)).normalized()
-	var need := lerpf(0.8, 0.91, far) + (0.0 if w.hard else 0.12)
-	var hesitation := minf(0.98, lerpf(0.02, 0.16, far) + (0.0 if w.hard else 0.34))
-	var fire_range := minf(32.0 if w.hard else 19.0, weapon.reach * u.range_mul * 0.95)
+	var need: float = lerpf(numbers.need[0], numbers.need[1], far) + (0.0 if w.hard else numbers.need[2])
+	var hold: float = lerpf(numbers.hold[0], numbers.hold[1], far) + (0.0 if w.hard else numbers.hold[2])
+	var fire_range := minf(numbers.reach[int(w.hard)], weapon.reach * u.range_mul * 0.95)
 	# A shot at a wall that it cannot break is wasted.
 	var cover := w.grid.ray_cell(u.pos, target.pos)
 	var clear: bool = cover.x < 0 or Defs.MAT_ARMOR[w.grid.material[cover.y * w.grid.size + cover.x]] < weapon.damage
@@ -183,15 +201,15 @@ static func _fight(w: SimWorld, u: SimUnit, target: SimUnit, dt: float) -> Vecto
 		and d < fire_range
 		and d > BLAST_SAFE.get(id, 0.0)
 		and u.aim.dot(toward) > need
-		and w.rng.randf() > hesitation
+		and w.rng.randf() > minf(0.98, hold)
 	):
 		u.want_fire = true
+	if flee:
+		return away
 	if clear:
 		_throw(w, u, d, toward)
 	var strafe := toward.orthogonal() * sin(w.now + u.index) * (0.45 if w.hard else 0.14)
-	# A bot with an explosive weapon stops where it can still fire it.
-	var approach := 0.0 if BLAST_SAFE.has(id) and d < BLAST_SAFE[id] + 1.5 else 1.0
-	return (toward * approach + strafe).limit_length(1.0) * pursuit
+	return (advance + strafe).limit_length(1.0) * pursuit
 
 
 ## Throws the secondary when the enemy is nearer than 12 m and the landing point is clear and far from the bot.
@@ -239,9 +257,11 @@ static func _manage_weapon(w: SimWorld, u: SimUnit, target: SimUnit, decide: boo
 			u.want_swap = 1
 
 
-## Lower is better: distance from the good range, with a bonus for higher tiers.
+## Lower is better: distance from the good range, with a bonus for higher tiers. A weapon whose blast would reach
+## the bot does not fit.
 static func _fit(id: StringName, d: float) -> float:
-	return absf(d - GOOD_RANGE.get(id, 9.0)) - Arsenal.tier(id) * 4.0
+	var unsafe := 100.0 if d < BLAST_SAFE.get(id, 0.0) else 0.0
+	return absf(d - GOOD_RANGE.get(id, 9.0)) - Arsenal.tier(id) * 4.0 + unsafe
 
 
 ## Direction to the next waypoint toward `goal`. Re-paths on a timer staggered by unit index.

@@ -125,6 +125,15 @@ func ray_cell(from: Vector2, to: Vector2, through_hedge := false) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## True when a unit can walk the segment in a straight line. A window or a low prop stops a unit but not a shot.
+func walk_clear(from: Vector2, to: Vector2) -> bool:
+	var steps := maxi(1, ceili(from.distance_to(to) * 4.0))
+	for step in steps + 1:
+		if is_solid(cell_of(from.lerp(to, float(step) / steps))):
+			return false
+	return true
+
+
 ## Where a shot from `from` to `to` first enters a cell that stops it: {point, normal}, or {} when it does not.
 func ricochet_impact(from: Vector2, to: Vector2, through_hedge := false) -> Dictionary:
 	var move := to - from

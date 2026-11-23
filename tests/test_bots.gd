@@ -217,6 +217,8 @@ func test_bot_with_only_a_grenade_launcher_makes_room_for_its_blast_and_then_fir
 func test_bot_takes_its_pistol_when_the_enemy_is_too_near_for_its_grenade_launcher() -> void:
 	w.hard = true
 	Arsenal.equip(a, &"grenade-launcher", 6.0)
+	# The enemy stays alive, so it drops no weapon for the bot.
+	b.hp = 100000.0
 	_run(240)
 	assert_eq(a.weapon_id(), &"pistol", "the enemy is 4 m away and the blast reaches 3.8 m")
 
