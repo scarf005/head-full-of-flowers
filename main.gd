@@ -168,6 +168,10 @@ func _process(_delta: float) -> void:
 
 
 func _add_actions() -> void:
+	# The built-in accept action has keys only, so a gamepad could not press a menu button.
+	var accept := InputEventJoypadButton.new()
+	accept.button_index = JOY_BUTTON_A
+	InputMap.action_add_event(&"ui_accept", accept)
 	for action: StringName in ACTIONS:
 		var spec: Array = ACTIONS[action]
 		InputMap.add_action(action, 0.3)
