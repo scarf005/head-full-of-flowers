@@ -33,7 +33,7 @@ func add(at: Vector3, vel: Vector3, color: Color, size: float, life: float) -> v
 	_vel[_next] = vel
 	_size[_next] = size
 	_life[_next] = life
-	multimesh.set_instance_color(_next, Quality.raw(color))
+	multimesh.set_instance_color(_next, color)
 	_next = (_next + 1) % COUNT
 
 

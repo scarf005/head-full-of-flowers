@@ -12,7 +12,7 @@ static func environment() -> Environment:
 	env.background_color = Color(0.07, 0.08, 0.11)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.55, 0.6, 0.78)
-	env.ambient_light_energy = 0.35 if high() else 0.3
+	env.ambient_light_energy = 0.35 if high() else 0.5
 	if high():
 		env.ssao_enabled = true
 		env.ssao_radius = 1.2
@@ -28,18 +28,13 @@ static func sun() -> DirectionalLight3D:
 	var light := DirectionalLight3D.new()
 	light.rotation = Vector3(deg_to_rad(-48.0), deg_to_rad(-38.0), 0.0)
 	light.light_color = Color(1.0, 0.94, 0.82)
-	light.light_energy = 0.85 if high() else 0.75
+	light.light_energy = 0.85 if high() else 0.48
 	light.shadow_enabled = true
 	light.directional_shadow_mode = (
 		DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if high() else DirectionalLight3D.SHADOW_ORTHOGONAL
 	)
 	light.directional_shadow_max_distance = 120.0
 	return light
-
-
-## Vertex or instance colour of a lit mesh, adjusted so the web renderer shows it close to the PC renderer.
-static func raw(color: Color) -> Color:
-	return color if high() else color.lerp(color.linear_to_srgb(), 0.5)
 
 
 ## Lights that can be lit at one time for muzzle flashes, fires and blasts.

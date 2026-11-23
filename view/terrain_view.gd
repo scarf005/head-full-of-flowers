@@ -171,7 +171,7 @@ func _process(_delta: float) -> void:
 	_boxes.visible_instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
-		_boxes.set_instance_color(n, Quality.raw(out[n][1]))
+		_boxes.set_instance_color(n, out[n][1])
 
 
 ## Draws a loot box that the match put on a free cell.
@@ -188,7 +188,7 @@ func add_box(cell: Vector2i) -> void:
 			return
 		_owners.append(i)
 		_boxes.set_instance_transform(n, part[0])
-		_boxes.set_instance_color(n, Quality.raw(part[1]))
+		_boxes.set_instance_color(n, part[1])
 		_boxes.visible_instance_count = n + 1
 
 
