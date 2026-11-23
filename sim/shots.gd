@@ -45,12 +45,11 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		p.pos = impact.get("point", from) + normal * 0.01
 		return _bounce(w, p, normal) or _end(w, p, p.pos)
 	# A bullet goes through a hedge, hurts it and keeps half its damage. It loses damage at the first hedge only.
-	var leaf := w.grid.cell_of(p.pos)
-	if ballistic and not p.hedged and w.grid.is_solid(leaf):
-		if w.grid.material[leaf.y * w.grid.size + leaf.x] == Defs.Mat.HEDGE:
-			w.hit_cell(leaf, p.damage, p.owner)
-			p.damage *= 0.5
-			p.hedged = true
+	var leaf := w.grid.ray_cell(from, p.pos) if ballistic and not p.hedged else Vector2i(-1, -1)
+	if leaf.x >= 0 and w.grid.material[leaf.y * w.grid.size + leaf.x] == Defs.Mat.HEDGE:
+		w.hit_cell(leaf, p.damage, p.owner)
+		p.damage *= 0.5
+		p.hedged = true
 	for u in w.units:
 		if u.index == p.owner or u.team == p.team:
 			continue
