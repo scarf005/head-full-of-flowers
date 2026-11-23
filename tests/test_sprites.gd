@@ -97,6 +97,20 @@ func test_map_without_walls_keeps_one_art_of_a_rock_when_another_cell_changes() 
 	assert_eq(view.get_child_count(), before, "no second art of the rock")
 
 
+func test_tall_grass_stays_half_a_metre_away_from_a_flowerbed() -> void:
+	var tufts: Array[int] = []
+	for beds in 2:
+		var map := TerrainMap.new()
+		if beds == 1:
+			map.props.append({kind = &"flowerbed", x = 4.0, y = 3.5, width = 2, height = 1, solid = false})
+		var grass: GrassView = autofree(GrassView.new())
+		grass.setup(SimWorld.new({seed = 7, size = 2}, map))
+		tufts.append(grass.multimesh.instance_count)
+	# A map without ponds and roads is all grass. The bed of 2 m by 1 m and the ring around it are 6 square metres.
+	var per_metre := 14 if Quality.high() else 5
+	assert_between(tufts[0] - tufts[1], 4 * per_metre, 8 * per_metre, "tufts that the flowerbed takes away")
+
+
 func test_rocket_leaves_one_smoke_puff_for_2_frames_at_the_same_match_time() -> void:
 	var view: GameView = autofree(GameView.new())
 	view.autoplay = true
