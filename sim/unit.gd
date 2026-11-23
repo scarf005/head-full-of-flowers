@@ -42,6 +42,10 @@ var burst_index := 0
 var burst_spread := 0.0
 var burst_interval := 0.0
 var burst_weapon := &""
+var burst_timer := 0.0
+var shots_fired := 0
+var shots_hit := 0
+var damage_dealt := 0.0
 # Input for this tick, written by the player adapter or the bot brain.
 var move := Vector2.ZERO
 var want_fire := false
@@ -85,6 +89,9 @@ func reset_for_match() -> void:
 	perks = {}
 	kills = 0
 	deaths = 0
+	shots_fired = 0
+	shots_hit = 0
+	damage_dealt = 0.0
 	slots = []
 	slot_index = 0
 	slot_seq = 0
