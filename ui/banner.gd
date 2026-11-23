@@ -55,6 +55,8 @@ func _process(delta: float) -> void:
 		elif _leader == mine:
 			say(tr("Lead lost"), Color(1.0, 0.4, 0.4), 1.2)
 		_leader = top.team
+	if game.player.pos.length() > w.arena_radius:
+		say(tr("Out of bounds"), Color(1.0, 0.4, 0.4), 0.2)
 	var second := ceili(w.time_left)
 	if second <= 10 and second < _second:
 		_second = second

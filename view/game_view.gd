@@ -199,8 +199,10 @@ func _show(e: Dictionary) -> void:
 					Vector3(e.pos.x, 0.7, e.pos.y), Vector3(side.x, 3.5, side.y), Color(0.95, 0.75, 0.25), 0.07, 0.9
 				)
 			if e.unit == 0:
-				shake = minf(1.0, shake + 0.12)
-				_kick -= e.dir * 0.2
+				var weapon: Dictionary = Defs.WEAPONS[e.weapon]
+				var punch: float = 0.5 + 0.12 * weapon.pellets + 0.06 * weapon.damage
+				shake = minf(1.0, shake + 0.12 * punch)
+				_kick -= e.dir * 0.22 * punch
 		&"hit":
 			var color := world.team_color(e.team)
 			_puff(e.pos, color, 40 if e.kill else 8, 7.0 if e.kill else 4.5, e.dir)
