@@ -208,12 +208,10 @@ func handle(e: Dictionary) -> void:
 	match e.type:
 		&"shot":
 			var gain: float = WEAPON_GAIN[e.weapon]
-			if e.unit != _me():
-				# Other units are heard at the first shot of a burst, one time in five, and only when near.
-				if not e.first or randf() > BOT_SHOT_CHANCE:
-					return
-				var from := Vector2(_listener.position.x, _listener.position.z)
-				gain *= clampf(1.0 - e.pos.distance_to(from) / 40.0, 0.0, 1.0)
+			# Other units are heard at the first shot of a burst, one time in five. The 3D player lowers their sound
+			# by the distance.
+			if e.unit != _me() and (not e.first or randf() > BOT_SHOT_CHANCE):
+				return
 			if e.weapon == &"flamethrower":
 				_burn(_at(e.unit, e.pos), gain)
 			else:
@@ -288,8 +286,11 @@ func _tune(p: AudioStreamPlayer3D) -> void:
 	p.max_distance = 45.0
 
 
-## Starts the flame loop. It stops 0.15 s after the last flame shot.
+## Starts the flame loop. It stops 0.15 s after the last flame shot. As in the original game, the flame of
+## another unit does not change a loop that plays.
 func _burn(at: Variant, gain: float) -> void:
+	if at != null and _flame.playing:
+		return
 	_flame.volume_db = linear_to_db(gain)
 	_flame_until = Time.get_ticks_msec() + FLAME_TAIL_MS
 	_flame.position = _listener.position if at == null else Vector3(at.x, 0.0, at.y)
