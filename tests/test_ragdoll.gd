@@ -72,6 +72,17 @@ func test_body_bounces_back_off_a_house_wall() -> void:
 	assert_lt(ragdolls.bodies[0].vel.x, -20.0, "72 % of the speed comes back")
 
 
+func test_body_bounces_off_the_face_of_the_wall_that_it_meets() -> void:
+	# The wall is to the east. A body that flies to the north-east goes on to the north-west.
+	for y in range(-6, 3):
+		grid.set_cell(grid.cell_of(Vector2(3.5, y + 0.5)), Defs.Mat.WAREHOUSE)
+	ragdolls.throw(Vector2.ZERO, Vector2(1.0, -1.0).normalized(), 20.0, 0.4, Color.RED)
+	_fly(0.1)
+	var vel: Vector2 = ragdolls.bodies[0].vel
+	assert_lt(vel.x, -20.0, "72 % of the speed into the wall comes back")
+	assert_lt(vel.y, -30.0, "90 % of the speed along the wall stays")
+
+
 func test_body_flies_out_of_a_hedge_and_over_a_yard_fence() -> void:
 	# A unit that dies in its roll can be in a hedge. Its body flies on, also over the fence 2 m to the east.
 	grid.set_cell(grid.cell_of(Vector2(0.5, 0.5)), Defs.Mat.HEDGE)

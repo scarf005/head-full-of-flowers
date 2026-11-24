@@ -102,13 +102,13 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 	}
 
 
-## True when a circle overlaps a solid cell.
-func circle_hits(p: Vector2, radius: float) -> bool:
+## True when a circle overlaps a solid cell. With `over_low`, a thing that a roll goes over does not count.
+func circle_hits(p: Vector2, radius: float, over_low := false) -> bool:
 	var lo := cell_of(p - Vector2(radius, radius))
 	var hi := cell_of(p + Vector2(radius, radius))
 	for gy in range(maxi(0, lo.y), mini(size - 1, hi.y) + 1):
 		for gx in range(maxi(0, lo.x), mini(size - 1, hi.x) + 1):
-			if solid[gy * size + gx] == 0:
+			if solid[gy * size + gx] == 0 or (over_low and rolls_over(Vector2i(gx, gy))):
 				continue
 			var c := Vector2(gx - half + 0.5, gy - half + 0.5)
 			var nearest := p.clamp(c - Vector2(0.5, 0.5), c + Vector2(0.5, 0.5))

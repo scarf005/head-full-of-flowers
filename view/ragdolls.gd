@@ -29,7 +29,8 @@ func throw(at: Vector2, dir: Vector2, damage: float, radius: float, color: Color
 	)
 
 
-## Moves each body on by `delta` seconds. A body that touches a solid cell of `grid` bounces off it.
+## Moves each body on by `delta` seconds. A body bounces off a wall of `grid`. It flies over each thing that a roll
+## goes over, and out of a wall that it starts in.
 func step(delta: float, grid: ObstacleGrid) -> void:
 	for i in range(bodies.size() - 1, -1, -1):
 		var body := bodies[i]
@@ -39,15 +40,16 @@ func step(delta: float, grid: ObstacleGrid) -> void:
 			var move: Vector2 = body.vel * length / speed
 			var start: Vector2 = body.pos
 			var samples := maxi(1, ceili(move.length() / maxf(0.08, body.radius * 0.35)))
+			var free := not grid.circle_hits(start, body.radius, true)
 			for n in range(1, samples + 1):
 				var at := start + move * n / samples
-				if grid.circle_hits(at, body.radius):
-					# Without a found face of the wall, the body goes back to `start`.
-					var impact := grid.ricochet_impact(start, at)
-					var normal: Vector2 = impact.get("normal", (start - at).normalized())
-					var into: Vector2 = body.vel.project(normal)
+				if free and grid.circle_hits(at, body.radius, true):
+					# The wall stops the body along x, along y, or along both at a corner.
+					var x_hits := grid.circle_hits(Vector2(at.x, body.pos.y), body.radius, true)
+					var y_hits := grid.circle_hits(Vector2(body.pos.x, at.y), body.radius, true)
+					var across := Vector2(float(x_hits or not y_hits), float(y_hits or not x_hits))
+					var into: Vector2 = body.vel.project((move.sign() * across).normalized())
 					body.vel = ((body.vel - into) * SLIDE - into * BOUNCE).rotated(randf_range(-JITTER, JITTER))
-					body.pos = impact.get("point", start) + normal * 0.02
 					break
 				body.pos = at
 			body.turn += body.spin * length / speed
