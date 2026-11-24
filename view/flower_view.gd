@@ -38,7 +38,13 @@ func _process(_delta: float) -> void:
 		multimesh.set_instance_transform(i, Transform3D(basis, at))
 		var color: Color = colors[field.owner[i]]
 		multimesh.set_instance_color(i, color.lerp(Color.from_hsv(seed, 0.5, 1.0), 0.12) * (0.85 + 0.3 * seed))
-		multimesh.set_instance_custom_data(i, Color(field.bloom_at[i], seed, 0.0, 0.0))
+		multimesh.set_instance_custom_data(i, custom_data(i, seed))
 		_used = maxi(_used, i + 1)
 	field.dirty.clear()
 	multimesh.visible_instance_count = _used
+
+
+## Data of flower `i` for the shader: the time of its bloom, its seed, and 1 on a marsh tile.
+func custom_data(i: int, seed: float) -> Color:
+	var marsh := float(TerrainView.tile(map, field.pos[i]) == TerrainMap.Tile.MARSH)
+	return Color(field.bloom_at[i], seed, marsh, 0.0)

@@ -1,10 +1,17 @@
 class_name GrassView
 extends MultiMeshInstance3D
-## A field of grass tufts on the grass tiles inside the arena. The shader bends them in the wind and under units.
+## A field of grass tufts on the grass tiles and reeds on the marsh tiles inside the arena. The shader bends them in
+## the wind and under units.
 
 ## Height in metres at which flowers lie, level with the bent grass tips.
 const TOP := 0.5
 const TALL := {TerrainMap.Tile.GRASS: 0.6, TerrainMap.Tile.CLOVER: 0.5, TerrainMap.Tile.WILD_GRASS: 0.7}
+## Height in metres of a reed on a marsh. Flowers lie under the reeds.
+const REED := 0.9
+## Share of the tufts of a grass tile that a marsh tile has as reeds.
+const REEDS := 0.3
+## Colour of a reed. Alpha below 1 marks a reed for the shader.
+const REED_COLOR := Color(1.0, 0.85, 0.5, 0.0)
 
 var world: SimWorld
 var material := ShaderMaterial.new()
@@ -36,15 +43,17 @@ func setup(sim: SimWorld) -> void:
 			for n in per_tile:
 				var at := corner + Vector2(rng.randf(), rng.randf())
 				var tile := TerrainView.tile(map, at)
-				if not TALL.has(tile) or bare.has(Vector2i((at * 2.0).floor())):
+				var reed := tile == TerrainMap.Tile.MARSH and rng.randf() < REEDS
+				if not (TALL.has(tile) or reed) or bare.has(Vector2i((at * 2.0).floor())):
 					continue
+				var wide := 0.8 if reed else 1.6
 				var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(
-					Vector3(1.6, TALL[tile] * rng.randf_range(0.85, 1.15), 1.6)
+					Vector3(wide, TALL.get(tile, REED) * rng.randf_range(0.85, 1.15), wide)
 				)
-				var color := Color.from_hsv(0.0, 0.0, rng.randf_range(0.96, 1.04))
+				var color := REED_COLOR if reed else Color.from_hsv(0.0, 0.0, rng.randf_range(0.96, 1.04))
 				for row in 3:
 					buffer.append_array([basis.x[row], basis.y[row], basis.z[row], [at.x, 0.0, at.y][row]])
-				buffer.append_array([color.r, color.g, color.b, 1.0])
+				buffer.append_array([color.r, color.g, color.b, color.a])
 	multimesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.use_colors = true

@@ -85,6 +85,13 @@ void fragment() {
 		vec2 centre = id + 0.5 + (vec2(hash(id), hash(id + 7.3)) - 0.5) * 0.6;
 		bool stone = hash(id + 5.9) > 0.3 && length(p * 2.5 - centre) < 0.1 + 0.2 * hash(id + 3.1);
 		color = stone ? color * (0.92 + 0.3 * hash(id + 1.7)) : mix(color, palette[3], 0.55) * 0.82;
+	} else if (kind == 9) {
+		// Marsh: mud with pools of dark water. A pool has a pale rim of weed and slow ripples.
+		float pool = blot(p * 1.1) * 0.75 + blot(p * 3.0) * 0.25;
+		float ripple = sin(p.y * 6.0 + sin(p.x * 1.7 + TIME * 0.5) * 1.4 + TIME * 0.7);
+		vec3 water = mix(vec3(0.07, 0.15, 0.16), vec3(0.34, 0.48, 0.44), step(0.96, ripple));
+		color = mix(color * 0.85, vec3(0.42, 0.5, 0.3), step(0.44, pool));
+		color = pool > 0.5 ? water : color;
 	} else if (kind > 2) {
 		color *= 0.95 + 0.08 * tone;
 		color *= grain > 0.94 ? 0.8 : grain < 0.03 ? 1.12 : 1.0;

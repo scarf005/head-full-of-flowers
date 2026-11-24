@@ -241,3 +241,6 @@ msgstr "땅 톤다운"
 
 msgid "flower tone"
 msgstr "꽃 밝기"
+
+msgid "marsh mark"
+msgstr "늪 표시"

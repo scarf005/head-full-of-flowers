@@ -3,13 +3,14 @@ render_mode cull_disabled, depth_draw_always, unshaded, world_vertex_coords;
 
 #include "wind.gdshaderinc"
 
-// Grass tufts. UV.y is 0 at the root and 1 at the tip. Drawn in the transparent pass so the ink outline pass,
-// which reads the opaque depth, does not ink each blade.
+// Grass tufts and reeds. UV.y is 0 at the root and 1 at the tip. Drawn in the transparent pass so the ink outline
+// pass, which reads the opaque depth, does not ink each blade.
 uniform vec3 pushers[12];
 uniform vec3 sheen_color : source_color = vec3(0.9, 0.98, 0.62);
 global uniform float arena_radius;
 global uniform float rot;
 global uniform float ground_calm;
+global uniform float marsh_mark;
 
 varying float wave;
 varying float shade;
@@ -33,9 +34,12 @@ void vertex() {
 	// A dead tuft outside the arena is short and droops.
 	float dead = step(0.0, past) * rot;
 	bend += normalize(root.xz + vec2(0.0001)) * dead * 0.3;
+	// COLOR.a below 1 marks a reed. Bend a reed less than grass, and scale its height by marsh_mark.
+	float reed = step(COLOR.a, 0.5);
 	vec3 world = VERTEX;
-	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2);
+	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2) * (1.0 - 0.7 * reed);
 	world.y *= (1.0 - 0.45 * g * h - 0.6 * flat_amount * h) * (1.0 - 0.5 * dead);
+	world.y *= mix(1.0, marsh_mark, reed);
 	VERTEX = world;
 	wave = smoothstep(0.3, 0.8, g);
 	root_at = root.xz;
