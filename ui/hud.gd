@@ -144,7 +144,7 @@ func _draw() -> void:
 	# Perks with a stack count.
 	var perk_x := 16.0
 	for id: StringName in p.perks:
-		_icon(id, Rect2(perk_x, size.y - 72.0, 32.0, 32.0), Color(0.6, 1.0, 0.9))
+		_icon(id, Rect2(perk_x, size.y - 72.0, 32.0, 32.0), Color.WHITE)
 		if p.perks[id] > 1:
 			_text(font, Vector2(perk_x + 24.0, size.y - 40.0), str(p.perks[id]), Color.WHITE, 16)
 		perk_x += 40.0
@@ -152,12 +152,12 @@ func _draw() -> void:
 	var right := size.x - 16.0
 	var slot := p.slot()
 	var ammo_x := right - 164.0
-	plates.append(Rect2(ammo_x - 120.0, size.y - 88.0, right - ammo_x + 128.0, 80.0))
+	plates.append(Rect2(ammo_x - 160.0, size.y - 88.0, right - ammo_x + 168.0, 80.0))
 	draw_rect(plates[-1], PLATE)
-	_icon(slot.id, Rect2(ammo_x - 72.0, size.y - 80.0, 64.0, 64.0), Color.WHITE)
+	_icon(slot.id, Rect2(ammo_x - 92.0, size.y - 74.0, 84.0, 48.0), Color.WHITE, 3)
 	for i in p.slots.size():
 		if i != p.slot_index:
-			_icon(p.slots[i].id, Rect2(ammo_x - 112.0, size.y - 64.0, 32.0, 32.0), Color(0.6, 0.6, 0.65))
+			_icon(p.slots[i].id, Rect2(ammo_x - 152.0, size.y - 66.0, 56.0, 32.0), Color(0.6, 0.6, 0.65), 2)
 	var reserve := "--" if is_inf(slot.reserve) else str(int(slot.reserve))
 	var ammo := str(int(slot.ammo))
 	_text(font, Vector2(ammo_x, size.y - 30.0), ammo, Color.WHITE, 32)
@@ -169,24 +169,26 @@ func _draw() -> void:
 		draw_rect(Rect2(ammo_x + 1.0, size.y - 21.0, 86.0 * part, 4.0), Color.WHITE)
 	# Secondary: dim while it recharges, refilled from the bottom up.
 	var ready := clampf(1.0 - p.secondary_cooldown / maxf(0.01, p.secondary_cooldown_max), 0.0, 1.0)
-	var at := Rect2(right - 32.0, size.y - 64.0, 32.0, 32.0)
-	_icon(p.secondary, at, Color(0.35, 0.35, 0.38) if ready < 1.0 else Color(1.0, 0.7, 0.3))
+	var box := Rect2(right - 36.0, size.y - 74.0, 36.0, 48.0)
+	_icon(p.secondary, box, Color(0.35, 0.35, 0.38) if ready < 1.0 else Color.WHITE, 2)
 	if ready < 1.0:
-		var cut := roundf(32.0 * (1.0 - ready))
-		var fill := Rect2(at.position.x, at.position.y + cut, 32.0, 32.0 - cut)
-		draw_texture_rect_region(
-			Icons.get_icon(p.secondary), fill, Rect2(0.0, cut, 32.0, 32.0 - cut), Color(0.8, 0.55, 0.25)
-		)
+		var texture := Icons.get_icon(p.secondary)
+		var at := Icons.fit(texture, box, 2)
+		var rows := roundf(texture.get_height() * (1.0 - ready))
+		var cut := rows * at.size.y / texture.get_height()
+		var fill := Rect2(at.position.x, at.position.y + cut, at.size.x, at.size.y - cut)
+		var part := Rect2(0.0, rows, texture.get_width(), texture.get_height() - rows)
+		draw_texture_rect_region(texture, fill, part, Color(0.8, 0.8, 0.8))
 	# Kill feed, right aligned: killer, what killed, victim.
 	for i in feed.size():
 		var row: Dictionary = feed[i]
 		var base := 34.0 + i * 26.0
 		var end := right - font.get_string_size(row.victim, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		var start := end - 32.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
+		var start := end - 48.0 - font.get_string_size(row.killer, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		plates.append(Rect2(start - 6.0, base - 19.0, right - start + 12.0, 25.0))
 		draw_rect(plates[-1], PLATE)
 		_text(font, Vector2(end, base), row.victim, row.victim_color, 16)
-		_icon(row.icon, Rect2(end - 28.0, base - 18.0, 24.0, 24.0), Color.WHITE)
+		_icon(row.icon, Rect2(end - 44.0, base - 18.0, 40.0, 24.0), Color.WHITE, 1)
 		_text(font, Vector2(start, base), row.killer, row.killer_color, 16)
 	_draw_map(w)
 	# Crosshair.
@@ -256,8 +258,12 @@ func _draw_map(w: SimWorld) -> void:
 	draw_arc(centre + w.units[0].pos * scale, 6.0, 0.0, TAU, 12, Color.WHITE, 1.0)
 
 
-func _icon(id: StringName, at: Rect2, color: Color) -> void:
+## Draws a silhouette over `at` with an ink rim, or item art at a whole scale of at most `most` in the middle of `at`.
+func _icon(id: StringName, at: Rect2, color: Color, most := 99) -> void:
 	var texture := Icons.get_icon(id)
+	if Icons.is_art(id):
+		draw_texture_rect(texture, Icons.fit(texture, at, most), false, color)
+		return
 	for offset in RIM:
 		draw_texture_rect(texture, Rect2(at.position + offset, at.size), false, Color(INK, color.a))
 	draw_texture_rect(texture, at, false, color)
