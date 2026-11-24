@@ -113,6 +113,22 @@ static func _assisted_aim(w: SimWorld, u: SimUnit) -> Vector2:
 	return dir.rotated(best_delta * 0.62)
 
 
+## End of the laser sight beam of a unit. The beam goes along the aim for `Tune.laser_length` past the muzzle.
+## It stops at the first wall or enemy that stops a bullet.
+static func laser_end(w: SimWorld, u: SimUnit) -> Vector2:
+	var dir := u.aim.normalized() if u.aim.length_squared() > 0.0001 else Vector2.RIGHT
+	var end := u.pos + dir * (u.radius + 0.12 + Tune.laser_length)
+	# Each enemy on the beam makes it shorter, so the nearest enemy sets the end.
+	for other in w.units:
+		var head := other.pos + Vector2.UP * Tune.unit_head
+		var pair := Geometry2D.get_closest_points_between_segments(u.pos, end, other.pos, head)
+		if other.team != u.team and pair[0].distance_to(pair[1]) <= other.radius * Tune.hit_size:
+			end = pair[0]
+	if w.grid.ray_cell(u.pos, end, true).x >= 0:
+		end = w.grid.ricochet_impact(u.pos, end, true).get("point", u.pos)
+	return end
+
+
 ## Hurts a unit and plants flowers. `source` is a unit index, or -1 for the arena border.
 static func damage(
 	w: SimWorld,

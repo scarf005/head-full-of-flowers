@@ -24,6 +24,9 @@ const ITEMS := {
 	&"roll_time": [0.15, 1.0, 0.01],
 	&"roll_cooldown": [0.0, 2.0, 0.05],
 	&"roll_safe": [0.0, 1.0, 0.05],
+	&"laser_length": [2.0, 30.0, 0.5],
+	&"laser_width": [1.0, 6.0, 1.0],
+	&"laser_alpha": [0.1, 1.0, 0.02],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -59,6 +62,12 @@ static var roll_time := 0.38
 static var roll_cooldown := 0.3
 ## Share of a roll, from its start, in which shots, blasts and fire do not hurt the unit.
 static var roll_safe := 0.6
+## Metres of the laser sight beam past the muzzle.
+static var laser_length := 9.5
+## Width in view pixels of the laser sight beam of the player. The beam of a bot is 3/4 as wide.
+static var laser_width := 2.0
+## Opacity of the laser sight beam of the player, from 0 to 1. The beam of a bot has 2/3 of it.
+static var laser_alpha := 0.72
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.

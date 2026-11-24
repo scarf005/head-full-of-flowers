@@ -152,6 +152,7 @@ func _process(delta: float) -> void:
 	_draw_throwables(shot_lag)
 	_draw_zones()
 	_draw_pickups()
+	_draw_lasers()
 	_ground.step(delta)
 	_air.step(delta)
 	_drawn = world.now
@@ -429,6 +430,16 @@ func _draw_zones() -> void:
 			# The flame stands on its place: its art is 6 pixels below the middle of the cell.
 			var flame := at + Vector3(spot.x, Fx.up(6.0), spot.y)
 			_air.add(flame, ART, Fx.Shape.ART, tint, 0.0, Fx.cell(&"fire"), flip)
+
+
+## The laser sight beam of each unit with the perk.
+func _draw_lasers() -> void:
+	var lasers := get_node_or_null(^"Lasers") as Lasers
+	if lasers == null:
+		lasers = Lasers.new()
+		lasers.name = &"Lasers"
+		add_child(lasers)
+	lasers.draw(world)
 
 
 ## Weapons and perks to pick up: the item art bobs over a shadow in a ring that pulses. The ring is white for a

@@ -224,3 +224,12 @@ msgstr "무적"
 
 msgid "endless ammo"
 msgstr "무한 탄약"
+
+msgid "laser length"
+msgstr "레이저 길이"
+
+msgid "laser width"
+msgstr "레이저 굵기"
+
+msgid "laser alpha"
+msgstr "레이저 불투명도"
