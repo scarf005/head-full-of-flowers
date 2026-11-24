@@ -24,7 +24,6 @@ const FIGHT := {panic = [1.2, 0.0], reach = [19.0, 32.0], need = [0.8, 0.91, 0.1
 const FLEE := {panic = [1.3, 0.45], reach = [15.0, 24.0], need = [0.78, 0.89, 0.1], hold = [0.06, 0.22, 0.26]}
 const HUNT_RANGE := 36.0
 const LOOT_RANGE := 5.0
-const BOX_RANGE := 10.0
 const BOX_STAND_OFF := 5.0
 const EDGE_MARGIN := 3.0
 const THROW_RANGE := 12.0
@@ -128,7 +127,7 @@ static func _sense(w: SimWorld, u: SimUnit) -> void:
 				u.ai_goal = p.pos
 		# Only a bot with no target goes for a box.
 		if state != &"loot" and u.ai_target < 0:
-			best = BOX_RANGE
+			best = Tune.bot_box_range
 			for cell: Vector2i in w.nav.boxes:
 				var at := w.grid.center_of(cell)
 				# The bot circles a box at the stand-off distance, so that ring must be out of the margin too.

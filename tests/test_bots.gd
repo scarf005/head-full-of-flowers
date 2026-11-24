@@ -18,6 +18,10 @@ func before_each() -> void:
 	w.bots_active = false
 
 
+func after_each() -> void:
+	Tune.reset()
+
+
 ## Runs `count` ticks in which only unit 0 thinks. Returns how many ticks end with its centre in a solid cell.
 func _run(count: int) -> int:
 	var inside := 0
@@ -168,6 +172,10 @@ func test_bot_with_no_target_leaves_a_loot_box_alone() -> void:
 	w.grid.set_cell(w.grid.cell_of(Vector2(-14.5, 0.5)), Defs.Mat.BOX)
 	Bots.think(w, a, DT)
 	assert_eq(a.ai_state, &"wander")
+	Tune.bot_box_range = 10.0
+	a.ai_sense_timer = 0.0
+	Bots.think(w, a, DT)
+	assert_eq(a.ai_state, &"box", "with a box range of 10 m")
 
 
 func test_border_escape_starts_at_1_5_m_and_ends_at_3_m() -> void:

@@ -21,6 +21,7 @@ const ITEMS := {
 	&"box_interval": [0.2, 3.0, 0.05],
 	&"box_hp": [1.0, 20.0, 1.0],
 	&"box_front": [0.0, 1.0, 0.01],
+	&"bot_box_range": [0.0, 20.0, 0.5],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
 	&"roll_distance": [1.0, 10.0, 0.25],
@@ -68,6 +69,9 @@ static var box_hp := 8.0
 ## Metres south of a loot box or a prop in which a shot still hits it. The view draws a shot above its place on the
 ## ground, so such a shot shows on the front of the thing.
 static var box_front := 0.43
+## Metres within which a bot with no target walks to a loot box and opens it. At 0, a bot leaves loot boxes alone, as
+## in the original game.
+static var bot_box_range := 0.0
 static var shake := 1.0
 ## Share of the distance to the player that the camera moves in each second.
 static var camera_follow := 8.0

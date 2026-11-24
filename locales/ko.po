@@ -266,3 +266,6 @@ msgstr "연기 지속 시간"
 
 msgid "box front"
 msgstr "상자 앞면 판정"
+
+msgid "bot box range"
+msgstr "봇 상자 탐색 거리"
