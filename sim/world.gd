@@ -118,6 +118,7 @@ func standings() -> Array[Dictionary]:
 
 ## Damages an obstacle cell. `source` is the unit index that the hit counts for, or -1.
 func hit_cell(cell: Vector2i, amount: float, source := -1) -> void:
+	_break(cell)
 	var result := grid.damage_cell(cell, amount)
 	if not result.damaged:
 		return
@@ -128,6 +129,20 @@ func hit_cell(cell: Vector2i, amount: float, source := -1) -> void:
 		Combat.explode(self, grid.center_of(cell), Shots.BLAST_RADIUS, 0.0, source, true, &"grenade", &"barrel")
 	if result.destroyed and result.material == Defs.Mat.BOX:
 		Loot.spawn_weapon(self, grid.center_of(cell), 1.0 if result.high_tier else 0.0, true)
+
+
+## A shot or a thrown thing that flies from `from` to `to` breaks the glass of each window on its way.
+func break_glass(from: Vector2, to: Vector2) -> void:
+	if grid.glass.is_empty():
+		return
+	var steps := maxi(1, ceili(maxf(absf(to.x - from.x), absf(to.y - from.y)) * 4.0))
+	for n in steps + 1:
+		_break(grid.cell_of(from.lerp(to, float(n) / steps)))
+
+
+func _break(cell: Vector2i) -> void:
+	if grid.in_bounds(cell) and grid.glass.erase(cell.y * grid.size + cell.x):
+		emit(&"glass", {cell = cell})
 
 
 ## Puts a dead unit back at the free point that is farthest from its enemies.

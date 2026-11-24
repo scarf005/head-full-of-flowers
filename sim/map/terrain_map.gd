@@ -68,6 +68,8 @@ func build_grid() -> ObstacleGrid:
 						var i: int = (top + row) * size + left + col
 						grid.set_cell(Vector2i(left + col, top + row), mat)
 						grid.solid[i] = o.tiles[row][col]
+						if o.tiles[row][col] == ObstacleGrid.LOW and o.kind != &"hedge":
+							grid.glass[i] = true
 			continue
 		for row in maxi(1, floori(o.height)):
 			for col in maxi(1, floori(o.width)):

@@ -54,7 +54,9 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		var impact := w.grid.ricochet_impact(from - back, stop, ballistic)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
+		w.break_glass(from, p.pos)
 		return _bounce(w, p, normal) or _end(w, p, p.pos)
+	w.break_glass(from, stop)
 	# A bullet goes through a hedge, hurts it and keeps half its damage. It loses damage at the first hedge only.
 	var leaf := w.grid.ray_cell(from, stop) if ballistic and not p.hedged else Vector2i(-1, -1)
 	if leaf.x >= 0 and w.grid.material[leaf.y * w.grid.size + leaf.x] == Defs.Mat.HEDGE:
@@ -169,6 +171,7 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 			var along: Vector2 = t.vel.slide(normal)
 			t.vel = along * 0.78 - t.vel.project(normal) * 0.58
 			t.bounces = t.bounces - 1 if t.vel.length() >= 2.8 else 0
+	w.break_glass(from, t.pos)
 	for u in w.units:
 		if u.team == t.team:
 			continue

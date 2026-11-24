@@ -14,6 +14,8 @@ var high_tier: PackedByteArray
 var prop_cells := {}
 ## Cell index -> true for each barrel that has not blown up yet.
 var barrels := {}
+## Cell index -> true for each window that has its glass.
+var glass := {}
 ## Bumped when a cell is added or removed.
 var revision := 0
 
@@ -78,6 +80,7 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 			high_tier[c] = 0
 			prop_cells.erase(c)
 			barrels.erase(c)
+			glass.erase(c)
 	if destroyed:
 		revision += 1
 	return {

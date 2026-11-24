@@ -78,11 +78,55 @@ func test_shots_grenades_and_sight_pass_over_a_table_that_units_walk_around() ->
 	_assert_low_cover(2.0)
 
 
-func test_shots_grenades_and_sight_pass_a_window_that_units_do_not_walk_through() -> void:
+## Adds a wall of `kind` that runs north-south at x 3 to 4, with a window on the line from a to b.
+func _window(kind := &"house") -> void:
 	var rows := [PackedByteArray([1]), PackedByteArray([ObstacleGrid.LOW]), PackedByteArray([1])]
-	w.map.obstacles.append({kind = &"house", x = 3.5, y = 0.5, width = 1, height = 3, tiles = rows})
+	w.map.obstacles.append({kind = kind, x = 3.5, y = 0.5, width = 1, height = 3, tiles = rows})
 	w.grid = w.map.build_grid()
+
+
+func test_shots_grenades_and_sight_pass_a_window_that_units_do_not_walk_through() -> void:
+	_window()
 	_assert_low_cover(3.0)
+
+
+func test_first_shot_through_a_window_breaks_its_glass() -> void:
+	_window()
+	for n in 2:
+		a.want_fire = true
+		_tick(1)
+		a.want_fire = false
+		_tick(30)
+	assert_eq(_window_events(), [{type = &"glass", cell = w.grid.cell_of(Vector2(3.5, 0.5))}] as Array[Dictionary])
+	assert_eq(b.hp, 6.0, "the 2 shots pass the window")
+
+
+func test_grenade_that_flies_through_a_window_breaks_its_glass() -> void:
+	_window()
+	a.want_throw = true
+	_tick(1)
+	a.want_throw = false
+	while not w.throwables.is_empty() and w.throwables[0].pos.x < 4.5:
+		_tick(1)
+	assert_eq(w.throwables.size(), 1, "the grenade is past the window and has not blown up")
+	assert_eq(_window_events().size(), 1)
+
+
+func test_blast_breaks_the_glass_of_a_window() -> void:
+	_window()
+	Combat.explode(w, Vector2(1.5, 0.5), Shots.BLAST_RADIUS, 0.0, 0, true, &"grenade")
+	assert_eq(_window_events().size(), 1)
+
+
+func test_gap_in_a_hedge_has_no_glass() -> void:
+	_window(&"hedge")
+	a.want_fire = true
+	_tick(30)
+	assert_eq(_window_events().size(), 0)
+
+
+func _window_events() -> Array[Dictionary]:
+	return w.events.filter(func(e: Dictionary) -> bool: return e.type == &"glass")
 
 
 func test_bookshelf_blocks_shots_and_sight() -> void:
