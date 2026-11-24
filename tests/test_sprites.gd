@@ -23,6 +23,26 @@ func test_sheet_has_a_front_and_a_back_row_of_frames_with_art_in_each() -> void:
 			assert_eq(frame.get_used_rect().end.y, SpriteArt.FRAME.y, "frame %d of row %d" % [n, row])
 
 
+func test_shot_that_the_view_draws_on_a_pixel_of_a_unit_is_in_the_hit_shape_of_the_unit() -> void:
+	var image := SpriteArt.sheet().get_image()
+	var south_px := UnitView.PX_PER_M * sin(CameraRig.PITCH)
+	var head := Vector2.UP * Defs.UNIT_HEAD
+	var missed := 0
+	var total := 0
+	for y in SpriteArt.FRAME.y:
+		for x in SpriteArt.FRAME.x:
+			if image.get_pixel(x, y).a < 0.5:
+				continue
+			# Pixels to the east of the feet and above them. The view draws a shot HAND pixels above its place.
+			var px := Vector2(x + 0.5 - SpriteArt.FRAME.x * 0.5, SpriteArt.FRAME.y - y - 0.5)
+			var shot := Vector2(px.x / UnitView.PX_PER_M, (UnitView.HAND - px.y) / south_px)
+			var gap := shot.distance_to(Geometry2D.get_closest_point_to_segment(shot, Vector2.ZERO, head))
+			# The radius of the smallest unit and of the smallest bullet.
+			missed += 1 if gap > Defs.BOT_RADIUS + 0.24 else 0
+			total += 1
+	assert_lt(float(missed) / total, 0.03, "share of the unit art on which a shot does not hit: the tip of the tail")
+
+
 func test_each_weapon_has_gun_art_with_a_muzzle_in_front_of_its_centre() -> void:
 	for id in Defs.WEAPON_IDS:
 		assert_gt(UnitView.gun_art(id, false)[1], 0.0, "muzzle of %s" % id)
