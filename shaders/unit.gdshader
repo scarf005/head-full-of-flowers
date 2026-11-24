@@ -64,6 +64,13 @@ vec4 body_at(vec2 p) {
 	return vec4(texel.rgb, step(0.5, texel.a));
 }
 
+// The body and the gun as one figure.
+vec4 figure_at(vec2 p) {
+	vec4 body = body_at(p);
+	vec4 held = gun_at(p);
+	return gun_front > 0.5 ? mix(body, held, held.a) : mix(held, body, body.a);
+}
+
 void vertex() {
 	// Toward the camera in depth only, so grass and flowers in front do not cover the unit. Walls still do.
 	vec4 view = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
@@ -82,9 +89,12 @@ void fragment() {
 	if (rings.x >= 0.0 && abs(length(round_p) - 13.5) < 0.75 && turn <= rings.y) {
 		color = vec4(mix(vec3(1.0, 0.94, 0.85), vec3(1.0, 0.75, 0.4), step(1.0, rings.y)), 1.0);
 	}
-	vec4 body = body_at(p);
-	vec4 held = gun_at(p);
-	vec4 figure = gun_front > 0.5 ? mix(body, held, held.a) : mix(held, body, body.a);
+	vec4 figure = figure_at(p);
+	// A second ring of ink around the figure, so the unit shows on flowers of its own colour. The ring stays dark
+	// in a hit flash.
+	float near = figure_at(p + vec2(1.0, 0.0)).a + figure_at(p - vec2(1.0, 0.0)).a;
+	near += figure_at(p + vec2(0.0, 1.0)).a + figure_at(p - vec2(0.0, 1.0)).a;
+	color = mix(color, vec4(INK * 0.5, 1.0), step(0.5, near));
 	figure.rgb = mix(figure.rgb, vec3(1.0), flash);
 	color = mix(color, figure, figure.a);
 	vec2 bar = p - vec2(0.0, frame_px.y + 2.0);
