@@ -161,6 +161,15 @@ func _walled_world(seed: int, size := 8) -> SimWorld:
 	return world
 
 
+func test_bot_with_no_target_leaves_a_loot_box_alone() -> void:
+	# The enemy is 45 m away, out of the 36 m in which a bot hunts. A loot box stands 5.5 m from the bot.
+	a.pos = Vector2(-20, 0)
+	b.pos = Vector2(25, 0)
+	w.grid.set_cell(w.grid.cell_of(Vector2(-14.5, 0.5)), Defs.Mat.BOX)
+	Bots.think(w, a, DT)
+	assert_eq(a.ai_state, &"wander")
+
+
 func test_border_escape_starts_at_1_5_m_and_ends_at_3_m() -> void:
 	b.pos = Vector2(-w.arena_radius + 6.0, 0)
 	var flags := []
