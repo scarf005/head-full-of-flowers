@@ -12,6 +12,8 @@ global uniform float arena_radius;
 varying vec2 ground;
 
 const float PUSH = 2.2;
+// Pixels of the view for each metre to the east and for each metre to the south.
+const vec2 PIXELS = vec2(20.0, 16.383);
 
 void vertex() {
 	ground = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
@@ -36,6 +38,26 @@ int kind_at(vec2 p) {
 	return is_floor(raw) || is_floor(moved) ? raw : moved;
 }
 
+// Floor of a building as pixel art in flat tones. `px` is the pixel of the view on the ground.
+vec3 floor_color(int kind, vec2 px) {
+	if (kind == 11) {
+		// Boards of 2 m x 6 pixels. Each row starts 17 pixels after the row to its north.
+		float row = floor(px.y / 6.0);
+		float along = px.x + row * 17.0;
+		float pick = hash(vec2(floor(along / 40.0), row));
+		vec3 board = pick < 0.33 ? vec3(0.6, 0.42, 0.27) : pick < 0.66 ? vec3(0.6, 0.45, 0.31) : vec3(0.6, 0.4, 0.24);
+		return mod(px.y, 6.0) == 0.0 || mod(along, 40.0) == 0.0 ? vec3(0.4, 0.26, 0.16) : board;
+	}
+	if (kind == 12) {
+		// Tiles of 0.5 m in 2 tones.
+		vec2 slab = floor(px / vec2(10.0, 8.0));
+		vec3 tile = mod(slab.x + slab.y, 2.0) < 0.5 ? vec3(0.72, 0.78, 0.8) : vec3(0.65, 0.74, 0.8);
+		return mod(px.x, 10.0) == 0.0 || mod(px.y, 8.0) == 0.0 ? vec3(0.48, 0.54, 0.6) : tile;
+	}
+	// Concrete: slabs of 2 m.
+	return mod(px.x, 40.0) == 0.0 || mod(px.y, 33.0) == 0.0 ? vec3(0.4, 0.4, 0.38) : vec3(0.6, 0.59, 0.56);
+}
+
 // Rank of a kind at a border. The higher kind draws its rim on the lower one.
 int rank(int kind) {
 	return kind <= 2 ? 3 : kind == 8 ? 0 : kind == 9 ? 1 : 2;
@@ -53,17 +75,8 @@ void fragment() {
 		float wave = sin(p.y * 5.0 + sin(p.x * 1.3 + TIME * 0.8) * 1.6 + TIME * 1.1);
 		color *= 0.92 + 0.08 * tone;
 		color = mix(color, vec3(0.75, 0.9, 0.95), step(0.94, wave) * step(0.35, hash(floor(p * vec2(0.8, 5.0)))));
-	} else if (kind == 11) {
-		vec2 plank = vec2(p.x * 0.5 + floor(p.y * 3.0) * 0.37, p.y * 3.0);
-		color *= 0.94 + 0.1 * hash(floor(plank));
-		color *= 1.0 - 0.22 * max(step(0.9, fract(plank.y)), step(0.96, fract(plank.x)));
-	} else if (kind == 12) {
-		vec2 slab = p * 2.0;
-		color *= mod(floor(slab.x) + floor(slab.y), 2.0) < 0.5 ? 1.0 : 0.93;
-		color *= 1.0 - 0.15 * max(step(0.9, fract(slab.x)), step(0.9, fract(slab.y)));
-	} else if (kind == 7) {
-		color *= 1.0 - 0.14 * max(step(0.96, fract(p.x * 0.5)), step(0.96, fract(p.y * 0.5)));
-		color *= 1.0 - 0.08 * step(0.95, grain);
+	} else if (is_floor(kind)) {
+		color = floor_color(kind, floor(ground * PIXELS + 0.001));
 	} else if (kind == 6) {
 		// Gravel: stones of mixed size on dirt, out of line, with gaps.
 		vec2 id = floor(p * 2.5);
@@ -91,11 +104,18 @@ void fragment() {
 	if (past > 0.0) {
 		color = mix(color, vec3(0.25, 0.1, 0.14), fract((p.x + p.y) * 1.5) < 0.3 ? 0.75 : 0.5);
 	}
-	color *= cloud(ground, TIME);
-	// A red line marks the border.
-	if (abs(past) < 0.12) {
-		color = vec3(0.95, 0.22, 0.25);
-	}
-	ALBEDO = lit_screen(color);
 	ROUGHNESS = 1.0;
+	if (is_floor(kind) && past < -0.12) {
+		// A floor shows its own colour: no light, no shadow and no cloud, so its tones stay flat.
+		ALBEDO = vec3(0.0);
+		SPECULAR = 0.0;
+		EMISSION = flat_color(color);
+	} else {
+		color *= cloud(ground, TIME);
+		// A red line marks the border.
+		if (abs(past) < 0.12) {
+			color = vec3(0.95, 0.22, 0.25);
+		}
+		ALBEDO = lit_screen(color);
+	}
 }

@@ -124,6 +124,17 @@ func test_props_never_cover_walls_or_doors() -> void:
 					assert_false(blocked.has(cell), "seed %d: %s on %s at %s" % [s, p.kind, blocked.get(cell), cell])
 
 
+func test_walls_windows_and_doors_of_a_building_stand_on_concrete() -> void:
+	for s in SEEDS:
+		var other := 0
+		for b in _maps[s].buildings:
+			for cell in _cells(b.rect):
+				var i := cell.y * _maps[s].size + cell.x
+				var wall: bool = _grids[s].material[i] in [Defs.Mat.WALL, Defs.Mat.WAREHOUSE, Defs.Mat.DOOR]
+				other += int(wall and _maps[s].tiles[i] != TerrainMap.Tile.CONCRETE)
+		assert_eq(other, 0, "seed %d" % s)
+
+
 func test_flowerbeds_and_pot_plants_stand_on_dry_ground() -> void:
 	var wet := 0
 	for map in _maps:

@@ -277,7 +277,6 @@ func _stamp(plan: Dictionary, origin: Vector2i, purpose: StringName) -> void:
 	for room in plan.rooms:
 		rooms.append({rect = Rect2i(origin + room.rect.position, room.rect.size), kind = room.kind})
 	var building := {kind = purpose, rect = Rect2i(origin, dims), rooms = rooms, doors = [] as Array[Vector2i]}
-	var base := MapBuilding.floor_tile(rooms[0].kind)
 	var mask: Array[PackedByteArray] = []
 	for y in dims.y:
 		var row := PackedByteArray()
@@ -287,7 +286,8 @@ func _stamp(plan: Dictionary, origin: Vector2i, purpose: StringName) -> void:
 			var code := cells[y * dims.x + x]
 			if code == MapBuilding.OUT:
 				continue
-			_set_tile(p, MapBuilding.floor_tile(rooms[code].kind) if code >= 0 else base)
+			# Walls, windows and doors stand on a base of concrete.
+			_set_tile(p, MapBuilding.floor_tile(rooms[code].kind) if code >= 0 else TerrainMap.Tile.CONCRETE)
 			if code in [MapBuilding.WALL, MapBuilding.WINDOW]:
 				row[x] = 1 if code == MapBuilding.WALL else ObstacleGrid.LOW
 				state[p.y * size + p.x] = SOLID
