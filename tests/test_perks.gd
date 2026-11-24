@@ -1,5 +1,5 @@
 extends GutTest
-## Perks on an empty map: unit 0 stands at the origin and aims along +x, unit 1 is its enemy.
+## Perks and weapon slots on an empty map: unit 0 stands at the origin and aims along +x, unit 1 is its enemy.
 
 var w: SimWorld
 var a: SimUnit
@@ -60,3 +60,22 @@ func test_each_unit_with_the_laser_sight_has_a_beam() -> void:
 	for corner in corners.slice(0, 6):
 		far = maxf(far, corner.x)
 	assert_almost_eq(far, Combat.laser_end(w, a).x, 0.001, "the beam of the player ends where its laser ends")
+
+
+func _ids(u: SimUnit) -> Array:
+	return u.slots.map(func(s: Dictionary) -> StringName: return s.id)
+
+
+func test_empty_weapon_leaves_the_other_weapon_and_a_pistol() -> void:
+	Arsenal.equip(a, &"shotgun", 8.0)
+	Arsenal.equip(a, &"assault", 1.0)
+	assert_eq(_ids(a), [&"assault", &"shotgun"], "the rifle takes the slot of the pistol")
+	Combat.fire(w, a)
+	assert_eq(_ids(a), [&"shotgun", &"pistol"], "as in the original game, a pistol comes back")
+	assert_eq(a.weapon_id(), &"shotgun")
+
+
+func test_empty_weapon_next_to_the_pistol_leaves_one_pistol() -> void:
+	Arsenal.equip(a, &"assault", 1.0)
+	Combat.fire(w, a)
+	assert_eq(_ids(a), [&"pistol"])
