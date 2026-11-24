@@ -1,6 +1,7 @@
 class_name Doors
 ## Doors of the buildings. A closed door stops shots and sight. It opens for a unit that comes near and closes
-## behind it, so a door never stops a unit. Shots, fire and blasts break it.
+## behind it, so a door never stops a unit. It stays open while a shot or a thrown thing is in its cell. Shots, fire
+## and blasts break it.
 
 ## A door opens for a unit within this distance of the middle of its cell.
 const REACH := 1.5
@@ -33,7 +34,9 @@ static func update(w: SimWorld, dt: float) -> void:
 			if not door.open:
 				_move(w, door, true, opener.pos)
 		elif door.open:
-			door.wait -= dt
+			# A shot or a thrown thing in the cell keeps the door open, so the door does not close on it.
+			var inside := func(shot: Dictionary) -> bool: return w.grid.cell_of(shot.pos) == door.cell
+			door.wait = CLOSE_SECONDS if w.throwables.any(inside) or w.projectiles.any(inside) else door.wait - dt
 			if door.wait <= 0.0:
 				_move(w, door, false, at)
 
