@@ -19,6 +19,7 @@ uniform vec2 gun_px = vec2(24.0);
 uniform float mirror = 0.0;
 uniform vec3 team = vec3(1.0);
 uniform vec3 bar_color = vec3(1.0);
+// Health from 0 to 1. Below 0: no health bar.
 uniform float hp = 1.0;
 uniform float flash = 0.0;
 // Centre of the gun in pixels from the feet, and its turn in radians.
@@ -104,7 +105,7 @@ void fragment() {
 	figure.rgb = mix(figure.rgb, vec3(1.0), flash);
 	color = mix(color, figure, figure.a);
 	vec2 bar = p - vec2(0.0, frame_px.y + 2.0);
-	if (abs(bar.x) < 9.0 && bar == clamp(bar, vec2(-9.0, 0.0), vec2(9.0, 4.0))) {
+	if (hp >= 0.0 && abs(bar.x) < 9.0 && bar == clamp(bar, vec2(-9.0, 0.0), vec2(9.0, 4.0))) {
 		bool filled = abs(bar.x) < 8.0 && abs(bar.y - 2.0) < 1.0 && bar.x + 8.0 < 16.0 * hp;
 		color = vec4(filled ? bar_color : INK, 1.0);
 	}

@@ -275,3 +275,12 @@ msgstr "마당 상자 수"
 
 msgid "rocket size"
 msgstr "로켓 크기"
+
+msgid "ragdoll reach"
+msgstr "래그돌 거리"
+
+msgid "ragdoll time"
+msgstr "래그돌 시간"
+
+msgid "ragdoll spin"
+msgstr "래그돌 회전 속도"

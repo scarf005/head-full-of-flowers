@@ -177,6 +177,7 @@ static func damage(
 			&"hit",
 			{
 				target = target.index,
+				target_pos = target.pos,
 				source = source,
 				pos = hit,
 				dir = dir,

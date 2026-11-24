@@ -57,6 +57,8 @@ var _trails := Trails.new()
 var _air := Fx.new(3)
 ## 3D models of the rockets in flight.
 var _rockets := Rockets.new()
+## Bodies of killed units in flight.
+var _ragdolls := Ragdolls.new()
 var _terrain: TerrainView
 var _lights := 0
 ## Match time that the last frame showed. Each frame adds the trail parts from this time to its own time.
@@ -92,6 +94,7 @@ func setup(config: Dictionary) -> void:
 	add_child(_trails)
 	add_child(_air)
 	add_child(_rockets)
+	add_child(_ragdolls)
 
 
 func _physics_process(_delta: float) -> void:
@@ -161,6 +164,7 @@ func _process(delta: float) -> void:
 	_draw_lasers()
 	_ground.step(delta)
 	_air.step(delta)
+	_ragdolls.step(delta, world.grid)
 	# A hit stop makes the step shorter and so the lag. The drawn time stays where it was, so no part comes twice.
 	_drawn = maxf(_drawn, world.now - shot_lag)
 	_trails.show_at(_drawn)
@@ -232,6 +236,8 @@ func _show(e: Dictionary) -> void:
 			_pop(e.pos, Color.WHITE, 1.6 if e.kill else 1.0, 0.07)
 			if e.kill:
 				_ring(e.pos, color, 2.4, 0.3)
+				var target := world.units[e.target]
+				_ragdolls.throw(e.target_pos, e.dir, e.damage, target.radius, world.team_color(target.team))
 			if not autoplay:
 				_number(e.target, e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
 			# A kill by the player shakes the view 5 times as hard as a hit.
