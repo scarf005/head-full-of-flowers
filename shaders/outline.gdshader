@@ -1,9 +1,12 @@
 shader_type spatial;
 render_mode unshaded, fog_disabled, cull_disabled, depth_draw_never;
 
+#include "wind.gdshaderinc"
+
 // Full-screen quad in front of the camera. Draws ink where the depth surface bends or breaks.
 uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
-uniform vec3 ink : source_color = vec3(0.05, 0.04, 0.08);
+// The ink of the pixel art of units and props, at a level of the dither pass, so a line is one flat colour.
+const vec3 INK = vec3(0.2, 0.14, 0.2);
 uniform float threshold = 0.12;
 
 void vertex() {
@@ -28,6 +31,6 @@ void fragment() {
 	float d = view_depth(SCREEN_UV + vec2(0.0, px.y), INV_PROJECTION_MATRIX);
 	// Second difference: zero on a flat tilted surface, large at a crease or a silhouette.
 	float bend = abs(l + r - 2.0 * c) + abs(u + d - 2.0 * c);
-	ALBEDO = ink;
+	ALBEDO = flat_color(INK);
 	ALPHA = step(threshold, bend);
 }
