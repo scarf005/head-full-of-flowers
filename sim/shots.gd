@@ -54,10 +54,13 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 			hit = u
 			stop = near
 	var cell := w.grid.ray_cell(from - back, stop, ballistic)
+	# A shot that shows on the front of a loot box or a prop hits that thing.
+	var front := {} if cell.x >= 0 else w.grid.front_impact(from - back, stop, Tune.box_front)
+	cell = front.get("cell", cell)
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
 		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage), p.owner)
-		var impact := w.grid.ricochet_impact(from - back, stop, ballistic)
+		var impact := front if not front.is_empty() else w.grid.ricochet_impact(from - back, stop, ballistic)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
 		w.break_glass(from, p.pos)

@@ -16,6 +16,10 @@ func before_each() -> void:
 	w.bots_active = false
 
 
+func after_each() -> void:
+	Tune.reset()
+
+
 ## Fires the pistol of unit 0 along y = 0 at an enemy that stands at `feet`. Returns the damage that the enemy takes.
 func _damage_at(feet: Vector2) -> float:
 	b.pos = feet
@@ -28,8 +32,9 @@ func _damage_at(feet: Vector2) -> float:
 
 
 ## Fires the pistol of unit 0 to the east along a line `south` metres south of the cell 5 m ahead, in which a thing
-## of `mat` stands. Returns the hit points that the thing loses.
+## of `mat` stands. The shot has no spread. Returns the hit points that the thing loses.
 func _front_damage(mat: Defs.Mat, south: float) -> float:
+	Tune.spread = 0.0
 	var cell := w.grid.cell_of(Vector2(5.5, -0.5))
 	w.grid.set_cell(cell, mat)
 	a.pos = Vector2(0.0, south)
@@ -51,6 +56,12 @@ func test_shot_across_the_drawn_front_of_a_loot_box_or_a_prop_hits_it() -> void:
 
 func test_shot_south_of_the_drawn_front_of_a_loot_box_flies_on() -> void:
 	assert_eq(_front_damage(Defs.Mat.BOX, 0.6), 0.0, "a pistol shot 0.6 m south of the box")
+	Tune.box_front = 0.0
+	assert_eq(_front_damage(Defs.Mat.BOX, 0.3), 0.0, "with a front of 0 m, a shot 0.3 m south of the box")
+
+
+func test_front_of_a_loot_box_is_as_deep_as_the_view_lifts_a_shot() -> void:
+	assert_almost_eq(Tune.box_front, GameView.SHOT_HEIGHT / tan(CameraRig.PITCH), 0.005)
 
 
 func test_shot_past_the_south_side_of_a_rock_flies_on() -> void:
@@ -60,8 +71,9 @@ func test_shot_past_the_south_side_of_a_rock_flies_on() -> void:
 func test_shot_of_a_unit_that_stands_at_the_front_of_a_loot_box_flies_on() -> void:
 	var cell := w.grid.cell_of(Vector2(0.5, -0.5))
 	w.grid.set_cell(cell, Defs.Mat.BOX)
-	a.pos = Vector2(0.5, 0.2)
-	assert_gt(_damage_at(Vector2(6.0, 0.4)), 0.0, "the enemy 5.5 m east of the unit")
+	Tune.spread = 0.0
+	a.pos = Vector2(0.2, 0.2)
+	assert_gt(_damage_at(Vector2(6.0, 0.4)), 0.0, "the enemy 5.8 m east of the unit")
 	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.BOX])
 
 

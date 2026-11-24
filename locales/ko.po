@@ -263,3 +263,6 @@ msgstr "연기 크기"
 
 msgid "smoke life"
 msgstr "연기 지속 시간"
+
+msgid "box front"
+msgstr "상자 앞면 판정"

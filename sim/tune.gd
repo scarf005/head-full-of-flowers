@@ -20,6 +20,7 @@ const ITEMS := {
 	&"kill_hp": [0.0, 10.0, 1.0],
 	&"box_interval": [0.2, 3.0, 0.05],
 	&"box_hp": [1.0, 20.0, 1.0],
+	&"box_front": [0.0, 1.0, 0.01],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
 	&"roll_distance": [1.0, 10.0, 0.25],
@@ -64,6 +65,9 @@ static var kill_hp := Defs.KILL_HP_BONUS
 static var box_interval := 1.0
 ## Hit points of a loot box.
 static var box_hp := 8.0
+## Metres south of a loot box or a prop in which a shot still hits it. The view draws a shot above its place on the
+## ground, so such a shot shows on the front of the thing.
+static var box_front := 0.43
 static var shake := 1.0
 ## Share of the distance to the player that the camera moves in each second.
 static var camera_follow := 8.0
