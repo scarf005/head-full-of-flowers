@@ -30,10 +30,12 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		p.vel *= maxf(0.0, 1.0 - dt * (5.0 + progress * 10.0))
 	var speed_sq: float = p.vel.length_squared()
 	if progress >= 1.0 or p.ttl <= 0.0 or speed_sq < 0.36 or (progress > 0.72 and speed_sq < 16.0):
+		_reach_glass(w, p, from, back)
 		return _end(w, p, p.pos)
 	if p.pos.length() > w.arena_radius:
 		var inward: Vector2 = -p.pos.normalized()
 		p.pos = p.pos.limit_length(w.arena_radius - 0.05)
+		_reach_glass(w, p, from, back)
 		return _bounce(w, p, inward) or _end(w, p, p.pos)
 	var ballistic: bool = p.kind == &"ballistic"
 	# The shot stops at the nearest unit on its step. Cover behind that unit takes no hit and no damage away.
@@ -69,6 +71,13 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		return _end(w, p, stop)
 	Combat.damage(w, hit, p.damage, p.owner, stop, p.vel, &"shot", p.weapon)
 	return false
+
+
+## Breaks the glass on a step from `from` that ends before the wall check of the step. Skips the glass behind a wall.
+## As in a full step, the search for a wall starts `back` behind `from`.
+static func _reach_glass(w: SimWorld, p: Dictionary, from: Vector2, back: Vector2) -> void:
+	if w.grid.ray_cell(from - back, p.pos, p.kind == &"ballistic").x < 0:
+		w.break_glass(from, p.pos)
 
 
 static func _home(w: SimWorld, p: Dictionary, dt: float) -> void:
