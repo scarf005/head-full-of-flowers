@@ -34,6 +34,12 @@ func _wheel(button: MouseButton) -> InputEventMouseButton:
 	return event
 
 
+func test_match_clock_of_a_real_game_runs_as_fast_as_the_wall_clock() -> void:
+	var before: float = main.game.world.time_left
+	await wait_physics_frames(60)
+	assert_almost_eq(before - main.game.world.time_left, 1.0, 0.05, "60 ticks are 1 s on the screen")
+
+
 func test_mouse_wheel_and_the_q_key_change_the_weapon_of_the_player() -> void:
 	var key := InputEventKey.new()
 	key.physical_keycode = KEY_Q

@@ -80,8 +80,8 @@ func test_bot_in_aggro_range_walks_around_a_wall_to_the_enemy() -> void:
 	_wall(0, -4, 4)
 	a.pos = Vector2(-5, 0)
 	b.pos = Vector2(5, 0)
-	_run(240)
-	assert_lt(a.pos.distance_to(b.pos), 6.0, "the bot started 10 m away behind a 9-cell wall")
+	_run(roundi(3.0 / DT))
+	assert_lt(a.pos.distance_to(b.pos), 6.0, "3 s after the bot started 10 m away behind a 9-cell wall")
 
 
 func test_bot_with_a_pistol_and_a_clear_line_closes_to_3_m() -> void:
