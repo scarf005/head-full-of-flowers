@@ -93,11 +93,12 @@ func _physics_process(_delta: float) -> void:
 	_jitter = Vector2(randf_range(-0.34, 0.34), randf_range(-0.28, 0.28)) * pow(minf(shake, 4.2), 1.08)
 	_kick *= maxf(0.0, 1.0 - real * 8.5)
 	if world.finished:
-		return
-	if autoplay:
-		Bots.think(world, player, Defs.TICK * Defs.GAME_SPEED)
+		pass
+	elif autoplay:
+		Bots.think(world, player, real)
 	else:
 		_read_input()
+	# After the end, the tick sets the step of the match to 0, so the view draws each thing on its last place.
 	world.tick()
 	for e in world.events:
 		_show(e)
