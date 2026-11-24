@@ -110,6 +110,19 @@ func test_damage_number_adds_hits_and_shows_again_after_it_is_gone() -> void:
 	assert_true(is_instance_valid(view._numbers[1]) and view._numbers[1].text == "5")
 
 
+func test_number_over_a_unit_draws_after_the_grass_the_flowers_and_the_effects() -> void:
+	# Grass, flowers, units, props, trails and effects draw with a priority from 0 to 3. A number with a priority in
+	# that range shows with holes where grass or flowers are behind it.
+	var view: GameView = autofree(GameView.new())
+	view.autoplay = true
+	add_child(view)
+	view.setup({seed = 1, size = 2})
+	view._number(1, Vector2.ZERO, 3.0, Color.WHITE)
+	var label: Label3D = view._numbers[1]
+	assert_gt(label.outline_render_priority, 3, "the rim of the number")
+	assert_gt(label.render_priority, label.outline_render_priority, "the number on its rim")
+
+
 func test_kill_shows_its_hit_points_over_the_unit_that_made_it() -> void:
 	var view: GameView = autofree(GameView.new())
 	add_child(view)
