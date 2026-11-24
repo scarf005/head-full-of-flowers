@@ -139,8 +139,12 @@ func test_thrown_grenade_lands_with_its_seconds_of_flight() -> void:
 
 func test_view_adds_trail_parts_for_the_match_time_of_each_frame_only() -> void:
 	var view := _view()
-	Arsenal.equip(view.world.units[0], &"assault", 60.0)
-	assert_true(Combat.fire(view.world, view.world.units[0]))
+	var u := view.world.units[0]
+	Arsenal.equip(u, &"assault", 60.0)
+	# The shot flies 2 m in the 3 ticks. The unit aims along a line with 4 m of free ground.
+	var free := func(aim: Vector2) -> bool: return view.world.grid.ray_cell(u.pos, u.pos + aim * 4.0).x < 0
+	u.aim = [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP].filter(free)[0]
+	assert_true(Combat.fire(view.world, u))
 	for n in 3:
 		view.world.tick()
 	view._process(0.01)
