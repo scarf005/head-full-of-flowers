@@ -63,7 +63,23 @@ func test_door_opens_for_a_unit_that_comes_near_and_closes_behind_it() -> void:
 	assert_false(_events(&"door")[1].open)
 
 
+func test_door_stays_open_while_a_grenade_lies_in_its_cell() -> void:
+	a.pos = at + Vector2(-1.2, 0.0)
+	_tick(1)
+	var grenade := {owner = 0, team = a.team, molotov = false, pos = at, vel = Vector2.ZERO, ttl = 5.0}
+	grenade.merge({bounces = 2, fuse = false})
+	w.throwables.append(grenade)
+	a.pos = Vector2(-8.0, 0.5)
+	_tick(roundi(1.0 / (Defs.TICK * Defs.GAME_SPEED)))
+	assert_eq(_events(&"door").size(), 1, "1 s after the unit left, the door did not close on the grenade")
+	assert_eq(_events(&"cell").size(), 0, "the grenade does not hit the door")
+	w.throwables.clear()
+	_tick(roundi(0.6 / (Defs.TICK * Defs.GAME_SPEED)))
+	assert_true(w.grid.is_solid(door), "0.6 s after the grenade is gone")
+
+
 func test_unit_walks_through_a_door() -> void:
+	assert_true(w.grid.is_solid(door), "the door is closed at the start")
 	a.pos = Vector2(0.0, 0.5)
 	a.move = Vector2.RIGHT
 	_tick(60)
@@ -89,6 +105,7 @@ func test_path_of_a_bot_goes_through_a_closed_door() -> void:
 	for dy in range(-12, 13):
 		if dy != 0:
 			w.grid.set_cell(door + Vector2i(0, dy), Defs.Mat.WAREHOUSE)
+	assert_true(w.grid.is_solid(door), "the door is closed")
 	var nav := NavGrid.new(w.grid)
 	nav.sync(0.0)
 	var path := nav.path(a.pos, b.pos)

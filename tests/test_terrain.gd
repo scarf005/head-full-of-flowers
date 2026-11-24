@@ -101,6 +101,32 @@ func test_first_shot_through_a_window_breaks_its_glass() -> void:
 	assert_eq(b.hp, 6.0, "the 2 shots pass the window")
 
 
+## Moves a pistol shot to 0.1 m west of the window. Its next step of 0.5 m ends in the cell of the window.
+func _shot_at_the_window() -> Dictionary:
+	_window()
+	a.want_fire = true
+	_tick(1)
+	a.want_fire = false
+	var shot := w.projectiles[0]
+	shot.pos = Vector2(2.9, 0.5)
+	return shot
+
+
+func test_shot_that_ends_its_flight_in_a_window_breaks_its_glass() -> void:
+	_shot_at_the_window().ttl = 0.001
+	_tick(1)
+	assert_true(w.projectiles.is_empty(), "the shot is spent")
+	assert_eq(_window_events().size(), 1)
+
+
+func test_shot_that_meets_the_arena_border_in_a_window_breaks_its_glass() -> void:
+	_shot_at_the_window()
+	w.arena_start = 3.3
+	w.arena_end = 3.3
+	_tick(1)
+	assert_eq(_window_events().size(), 1)
+
+
 func test_grenade_that_flies_through_a_window_breaks_its_glass() -> void:
 	_window()
 	a.want_throw = true
