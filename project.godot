@@ -36,6 +36,10 @@ arena_radius={
 "type": "float",
 "value": 100.0
 }
+rot={
+"type": "float",
+"value": 1.0
+}
 
 [gui]
 

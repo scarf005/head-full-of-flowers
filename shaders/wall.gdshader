@@ -15,6 +15,8 @@ const int HEDGE = 7;
 const int GLASS = 8;
 // Pixels of the view for each metre across and for each metre of height.
 const vec2 PIXELS = vec2(20.0, 11.4715);
+global uniform float arena_radius;
+global uniform float rot;
 
 varying vec3 world;
 varying float side;
@@ -61,5 +63,8 @@ void fragment() {
 		// The 2 rows at the ground are the base of the wall.
 		drop = px.y < 2.0 ? 3.0 : seam(kind, px) ? 2.0 : 1.0;
 	}
-	ALBEDO = flat_color(tone(COLOR.rgb, drop));
+	vec3 color = tone(COLOR.rgb, drop);
+	// Outside the arena the wall rots.
+	color = length(world.xz) > arena_radius ? mix(color, rotten(color, world.xz + world.y), rot) : color;
+	ALBEDO = flat_color(color);
 }

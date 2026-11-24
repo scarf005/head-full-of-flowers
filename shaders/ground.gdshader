@@ -9,6 +9,7 @@ uniform sampler2D warp : filter_linear;
 uniform vec3 palette[13];
 uniform float map_size = 112.0;
 global uniform float arena_radius;
+global uniform float rot;
 varying vec2 ground;
 
 const float PUSH = 2.2;
@@ -99,23 +100,18 @@ void fragment() {
 	if (best > rank(kind)) {
 		color = kind == 8 ? vec3(0.8, 0.93, 0.95) : color * 0.7;
 	}
-	// Outside the arena: dark, with diagonal hatching.
+	// Outside the arena the ground rots.
 	float past = length(p) - arena_radius;
-	if (past > 0.0) {
-		color = mix(color, vec3(0.25, 0.1, 0.14), fract((p.x + p.y) * 1.5) < 0.3 ? 0.75 : 0.5);
-	}
+	color = past > 0.0 ? mix(color, rotten(color, p), rot) : color;
+	// A red line marks the border.
+	bool border = abs(past) < 0.12;
 	ROUGHNESS = 1.0;
-	if (is_floor(kind) && past < -0.12) {
+	if (is_floor(kind) && !border) {
 		// A floor shows its own colour: no light, no shadow and no cloud, so its tones stay flat.
 		ALBEDO = vec3(0.0);
 		SPECULAR = 0.0;
 		EMISSION = flat_color(color);
 	} else {
-		color *= cloud(ground, TIME);
-		// A red line marks the border.
-		if (abs(past) < 0.12) {
-			color = vec3(0.95, 0.22, 0.25);
-		}
-		ALBEDO = lit_screen(color);
+		ALBEDO = lit_screen(border ? vec3(0.95, 0.22, 0.25) : color * cloud(ground, TIME));
 	}
 }

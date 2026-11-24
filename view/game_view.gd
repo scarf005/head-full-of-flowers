@@ -133,6 +133,8 @@ func _process(delta: float) -> void:
 		return
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
 	RenderingServer.global_shader_parameter_set(&"arena_radius", world.arena_radius)
+	for id: StringName in Tune.LOOK:
+		RenderingServer.global_shader_parameter_set(id, Tune.read(id))
 	var behind := 1.0 - Engine.get_physics_interpolation_fraction()
 	lag = behind * Defs.TICK * Tune.game_speed * float(world.step > 0.0)
 	var shot_lag := behind * world.step

@@ -2,6 +2,8 @@ class_name Tune
 ## Numbers that a person can change in the debug panel. Lengths in metres, times in seconds.
 ## A number without a unit in its comment multiplies a value of `Defs`.
 
+## Numbers that the shaders read as global parameters with the same name.
+const LOOK: Array[StringName] = [&"rot"]
 ## Name of a variable below -> [least, most, step]. The debug panel shows the numbers in this order.
 const ITEMS := {
 	&"game_speed": [0.4, 1.5, 0.01],
@@ -27,6 +29,7 @@ const ITEMS := {
 	&"laser_length": [2.0, 30.0, 0.5],
 	&"laser_width": [1.0, 6.0, 1.0],
 	&"laser_alpha": [0.1, 1.0, 0.02],
+	&"rot": [0.0, 1.0, 0.05],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -68,6 +71,8 @@ static var laser_length := 9.5
 static var laser_width := 2.0
 ## Opacity of the laser sight beam of the player, from 0 to 1. The beam of a bot has 2/3 of it.
 static var laser_alpha := 0.72
+## Share of the rotten look of the ground, grass, walls, props and doors outside the arena.
+static var rot := 1.0
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.

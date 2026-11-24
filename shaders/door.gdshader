@@ -7,11 +7,15 @@ render_mode unshaded;
 uniform vec3 wood = vec3(0.78, 0.39, 0.24);
 // Pixels of a wide face: columns from the hinge and rows up from the floor.
 const vec2 FACE = vec2(19.0, 13.0);
+global uniform float arena_radius;
+global uniform float rot;
 
 varying vec3 local;
 varying vec3 facing;
+varying vec3 world;
 
 void vertex() {
+	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	local = VERTEX + 0.5;
 	facing = NORMAL;
 }
@@ -26,5 +30,7 @@ void fragment() {
 	} else if (abs(facing.x) > 0.5) {
 		color = tone(wood, 1.0);
 	}
+	// Outside the arena the door rots.
+	color = length(world.xz) > arena_radius ? mix(color, rotten(color, world.xz + world.y), rot) : color;
 	ALBEDO = flat_color(color);
 }

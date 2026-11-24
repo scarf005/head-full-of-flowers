@@ -45,3 +45,44 @@ vec3 tone(vec3 base, float drop) {
 	vec3 hue = mix(base / max(top, 0.001), vec3(0.72, 0.76, 1.0), clamp(drop, 0.0, 3.0) * 0.1);
 	return hue / max(max(hue.r, max(hue.g, hue.b)), 0.001) * level / 5.0;
 }
+
+float speck(vec2 p) {
+	return fract(sin(dot(p, vec2(41.3, 289.1))) * 15731.743);
+}
+
+// Smooth noise from 0 to 1 with blobs of about 1 unit.
+float blot(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = mix(speck(i), speck(i + vec2(1.0, 0.0)), f.x);
+	float b = mix(speck(i + vec2(0.0, 1.0)), speck(i + vec2(1.0)), f.x);
+	return mix(a, b, f.y);
+}
+
+// 1 on a crack of dry ground at `p` metres, else 0. The cracks are the borders of cells of about 1.4 m.
+float crack(vec2 p) {
+	vec2 q = p / 1.4;
+	vec2 cell = floor(q);
+	float near = 9.0;
+	float next = 9.0;
+	for (int y = -1; y <= 1; y++) {
+		for (int x = -1; x <= 1; x++) {
+			vec2 o = cell + vec2(float(x), float(y));
+			float d = length(q - o - vec2(speck(o), speck(o + 3.7)));
+			next = d < near ? near : min(next, d);
+			near = min(near, d);
+		}
+	}
+	return step(next - near, 0.07);
+}
+
+// Colour of a surface outside the arena at `p` metres: near black in rotten tones, with blotches and cracks.
+// A bright `c` stays a little brighter, so shapes still show.
+vec3 rotten(vec3 c, vec2 p) {
+	float mottle = blot(p * 0.9) * 0.6 + blot(p * 2.7 + 5.0) * 0.4;
+	vec3 dark = mix(vec3(0.015, 0.012, 0.018), vec3(0.12, 0.075, 0.06), smoothstep(0.35, 0.8, mottle));
+	dark = mix(dark, vec3(0.08, 0.08, 0.035), step(0.75, blot(p * 1.6 - 9.0)));
+	vec2 bent = p + vec2(blot(p * 0.7), blot(p * 0.7 + 3.0)) * 0.8;
+	return dark * (0.4 + 0.7 * max(c.r, max(c.g, c.b))) * (1.0 - crack(bent));
+}
