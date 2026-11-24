@@ -10,6 +10,7 @@ uniform vec3 palette[13];
 uniform float map_size = 112.0;
 global uniform float arena_radius;
 global uniform float rot;
+global uniform float ground_calm;
 varying vec2 ground;
 
 const float PUSH = 2.2;
@@ -100,9 +101,9 @@ void fragment() {
 	if (best > rank(kind)) {
 		color = kind == 8 ? vec3(0.8, 0.93, 0.95) : color * 0.7;
 	}
-	// Outside the arena the ground rots.
+	// Outside the arena the ground rots. Inside, the outdoor kinds have calm tones.
 	float past = length(p) - arena_radius;
-	color = past > 0.0 ? mix(color, rotten(color, p), rot) : color;
+	color = past > 0.0 ? mix(color, rotten(color, p), rot) : is_floor(kind) ? color : calm(color, ground_calm);
 	// A red line marks the border.
 	bool border = abs(past) < 0.12;
 	ROUGHNESS = 1.0;

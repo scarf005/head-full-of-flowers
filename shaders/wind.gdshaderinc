@@ -86,3 +86,9 @@ vec3 rotten(vec3 c, vec2 p) {
 	vec2 bent = p + vec2(blot(p * 0.7), blot(p * 0.7 + 3.0)) * 0.8;
 	return dark * (0.4 + 0.7 * max(c.r, max(c.g, c.b))) * (1.0 - crack(bent));
 }
+
+// A calmer `c`: less saturation and less brightness. `amount` 0 keeps `c`.
+vec3 calm(vec3 c, float amount) {
+	float grey = dot(c, vec3(0.3, 0.59, 0.11));
+	return mix(c, vec3(grey), 0.25 * amount) * (1.0 - 0.24 * amount);
+}

@@ -9,6 +9,7 @@ uniform vec3 pushers[12];
 uniform vec3 sheen_color : source_color = vec3(0.9, 0.98, 0.62);
 global uniform float arena_radius;
 global uniform float rot;
+global uniform float ground_calm;
 
 varying float wave;
 varying float shade;
@@ -43,8 +44,11 @@ void vertex() {
 
 void fragment() {
 	// One colour for each blade, so the field reads as a surface and the gusts read as bands of light.
-	vec3 blade = mix(vec3(0.2, 0.47, 0.2), vec3(0.5, 0.76, 0.3), wave) * mix(0.85, 1.0, UV.y) * COLOR.rgb;
-	vec3 color = mix(blade, sheen_color, smoothstep(0.75, 1.0, wave) * UV.y * 0.6) * shade;
+	// Light a gust less when ground_calm is above 0.
+	vec3 light = mix(vec3(0.5, 0.76, 0.3), vec3(0.34, 0.6, 0.26), min(ground_calm, 1.0));
+	vec3 blade = mix(vec3(0.2, 0.47, 0.2), light, wave) * mix(0.85, 1.0, UV.y) * COLOR.rgb;
+	float sheen = smoothstep(0.75, 1.0, wave) * UV.y * 0.6 * (1.0 - 0.4 * ground_calm);
+	vec3 color = calm(mix(blade, sheen_color, sheen) * shade, ground_calm);
 	// The same border line and rotten outside as the ground has. A dead tip is a little lighter.
 	color = past > 0.0 ? mix(color, rotten(color, root_at) * mix(0.5, 1.6, UV.y), rot) : color;
 	ALBEDO = screen(abs(past) < 0.12 ? vec3(0.95, 0.22, 0.25) : color);

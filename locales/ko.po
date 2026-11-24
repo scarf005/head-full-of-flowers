@@ -235,3 +235,9 @@ msgid "laser alpha"
 msgstr "레이저 불투명도"
 msgid "rot"
 msgstr "구역 밖 부패"
+
+msgid "ground calm"
+msgstr "땅 톤다운"
+
+msgid "flower tone"
+msgstr "꽃 밝기"

@@ -40,6 +40,14 @@ rot={
 "type": "float",
 "value": 1.0
 }
+ground_calm={
+"type": "float",
+"value": 1.0
+}
+flower_tone={
+"type": "float",
+"value": 0.72
+}
 
 [gui]
 

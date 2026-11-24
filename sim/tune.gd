@@ -3,7 +3,7 @@ class_name Tune
 ## A number without a unit in its comment multiplies a value of `Defs`.
 
 ## Numbers that the shaders read as global parameters with the same name.
-const LOOK: Array[StringName] = [&"rot"]
+const LOOK: Array[StringName] = [&"rot", &"ground_calm", &"flower_tone"]
 ## Name of a variable below -> [least, most, step]. The debug panel shows the numbers in this order.
 const ITEMS := {
 	&"game_speed": [0.4, 1.5, 0.01],
@@ -30,6 +30,8 @@ const ITEMS := {
 	&"laser_width": [1.0, 6.0, 1.0],
 	&"laser_alpha": [0.1, 1.0, 0.02],
 	&"rot": [0.0, 1.0, 0.05],
+	&"ground_calm": [0.0, 2.0, 0.05],
+	&"flower_tone": [0.3, 1.2, 0.02],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -73,6 +75,10 @@ static var laser_width := 2.0
 static var laser_alpha := 0.72
 ## Share of the rotten look of the ground, grass, walls, props and doors outside the arena.
 static var rot := 1.0
+## Strength of the calm tones of the ground and the grass inside the arena. At 0, the tones are bright.
+static var ground_calm := 1.0
+## Brightness of flowers.
+static var flower_tone := 0.72
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.
