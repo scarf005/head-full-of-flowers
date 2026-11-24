@@ -4,7 +4,8 @@ class_name Defs
 enum Mat { NONE, WALL, WAREHOUSE, ROCK, BOX, HEDGE, PROP, DOOR }
 
 const TICK := 1.0 / 60.0
-const GAME_SPEED := 1.0
+## Seconds of match time in each second. The original game has 0.75 and a smaller unit on the screen.
+const GAME_SPEED := 0.86
 const MATCH_SECONDS := 90.0
 const MAP_SIZE := 112
 const UNIT_HP := 10.0

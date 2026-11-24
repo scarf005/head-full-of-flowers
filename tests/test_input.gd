@@ -34,10 +34,11 @@ func _wheel(button: MouseButton) -> InputEventMouseButton:
 	return event
 
 
-func test_match_clock_of_a_real_game_runs_as_fast_as_the_wall_clock() -> void:
+func test_match_clock_of_a_real_game_runs_10_to_20_percent_faster_than_the_original() -> void:
 	var before: float = main.game.world.time_left
 	await wait_physics_frames(60)
-	assert_almost_eq(before - main.game.world.time_left, 1.0, 0.05, "60 ticks are 1 s on the screen")
+	# The original game runs 0.75 s of its match in 1 s.
+	assert_between((before - main.game.world.time_left) / 0.75, 1.1, 1.2, "match time in 60 ticks")
 
 
 func test_mouse_wheel_and_the_q_key_change_the_weapon_of_the_player() -> void:
