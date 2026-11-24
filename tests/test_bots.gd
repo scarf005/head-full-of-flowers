@@ -29,9 +29,9 @@ func _run(count: int) -> int:
 
 
 ## A wall of ROCK cells at world column x from row y0 to row y1, both included.
-func _wall(x: int, y0: int, y1: int) -> void:
+func _wall(x: int, y0: int, y1: int, mat := Defs.Mat.ROCK) -> void:
 	for y in range(y0, y1 + 1):
-		w.grid.set_cell(w.grid.cell_of(Vector2(x + 0.5, y + 0.5)), Defs.Mat.ROCK)
+		w.grid.set_cell(w.grid.cell_of(Vector2(x + 0.5, y + 0.5)), mat)
 
 
 func test_bot_walks_around_wall_and_hits_enemy() -> void:
@@ -223,8 +223,8 @@ func test_bot_takes_its_pistol_when_the_enemy_is_too_near_for_its_grenade_launch
 	assert_eq(a.weapon_id(), &"pistol", "the enemy is 4 m away and the blast reaches 3.8 m")
 
 
-func test_bot_that_sees_the_enemy_through_a_window_walks_around_the_wall() -> void:
-	# The window is at the end of a gap of 1 m between 2 wall cells, so a bot that presses at it cannot slide away.
+func test_bot_that_sees_the_enemy_through_a_window_rolls_through_it() -> void:
+	# The window is at the end of a gap of 1 m between 2 wall cells.
 	w.hard = true
 	_wall(0, -4, 4)
 	for y in [-0.5, 1.5]:
@@ -234,11 +234,8 @@ func test_bot_that_sees_the_enemy_through_a_window_walks_around_the_wall() -> vo
 	a.pos = Vector2(-6, 0.5)
 	b.pos = Vector2(6, 0.5)
 	b.hp = 100000.0
-	var east := -INF
-	for n in 420:
-		_run(1)
-		east = maxf(east, a.pos.x)
-	assert_gt(east, 1.0, "the bot comes to the side of the enemy")
+	_run(90)
+	assert_gt(a.pos.x, 1.0, "1.3 s after the bot started 6 m west of the window")
 
 
 func test_hard_bot_that_runs_away_moves_at_115_percent_of_its_speed() -> void:
@@ -258,7 +255,7 @@ func test_bot_with_a_grenade_launcher_backs_away_from_an_enemy_behind_a_window()
 	_wall(0, -4, 4)
 	var window := w.grid.cell_of(Vector2(0.5, 0.5))
 	w.grid.solid[window.y * w.grid.size + window.x] = ObstacleGrid.LOW
-	# The bot is in a passage of 2 m that goes west from the window, so its path to the enemy starts to the west.
+	# The bot is in a passage of 2 m that goes west from the window.
 	for x in range(-6, 0):
 		for y in [-1.5, 1.5]:
 			w.grid.set_cell(w.grid.cell_of(Vector2(x + 0.5, y)), Defs.Mat.ROCK)
@@ -294,3 +291,31 @@ func test_bot_with_3_of_10_health_runs_from_the_enemy_and_still_fires() -> void:
 	_run(60)
 	assert_gt(a.pos.distance_to(b.pos), 8.0, "the bot started 6 m away")
 	assert_gt(a.shots_fired, 0)
+
+
+func test_path_of_a_bot_crosses_a_fence_and_a_hedge_but_not_a_rock_wall() -> void:
+	for mat: int in [Defs.Mat.WALL, Defs.Mat.HEDGE, Defs.Mat.ROCK]:
+		_wall(0, -w.grid.half, w.grid.half - 1, mat)
+		var nav := NavGrid.new(w.grid)
+		nav.sync(0.0)
+		var path := nav.path(Vector2(-2.5, 0.5), Vector2(3.5, 0.5))
+		if mat == Defs.Mat.ROCK:
+			assert_lt(path[-1].x, 0.0, "the path ends on the near side")
+		else:
+			var through := [-1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map(func(x: float) -> Vector2: return Vector2(x, 0.5))
+			assert_eq(path, PackedVector2Array(through), "material %d" % mat)
+
+
+func test_bot_rolls_over_a_fence_on_its_path_to_the_enemy() -> void:
+	_wall(0, -w.grid.half, w.grid.half - 1, Defs.Mat.WALL)
+	b.hp = 100000.0
+	_run(90)
+	assert_gt(a.pos.x, 1.0 + a.radius, "1.3 s after the bot started 2 m west of the fence")
+
+
+func test_hard_bot_rolls_out_of_a_fire() -> void:
+	w.hard = true
+	Shots.add_zone(w, a.pos + Vector2(1.0, 0.0), 1, &"molotov")
+	_run(1)
+	assert_true(a.rolling)
+	assert_lt(a.roll_dir.x, -0.5, "the middle of the fire is 1 m east of the bot")
