@@ -19,6 +19,7 @@ const ACTIONS := {
 	&"swap_prev": [[], [MOUSE_BUTTON_WHEEL_UP], [JOY_BUTTON_LEFT_SHOULDER], []],
 	&"pause": [[KEY_ESCAPE], [], [JOY_BUTTON_START], []],
 	&"fullscreen": [[KEY_F11], [], [], []],
+	&"debug": [[KEY_F3], [], [], []],
 }
 
 var viewport: SubViewport
@@ -27,6 +28,7 @@ var game: GameView
 var hud := Hud.new()
 var banner := Banner.new()
 var menu := Menu.new()
+var debug := DebugPanel.new()
 ## Darkens the match behind the pause and results menus.
 var dim := ColorRect.new()
 var sound := Sound.new()
@@ -71,6 +73,13 @@ func _ready() -> void:
 	add_child(dim)
 	add_child(menu)
 	menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(debug)
+	debug.process_mode = Node.PROCESS_MODE_ALWAYS
+	debug.give.connect(_give)
+	debug.finish.connect(func() -> void: game.world.time_left = 0.0)
+	debug.changed.connect(_store_numbers)
+	menu.debug.connect(func() -> void: set_debug(not debug.visible))
+	_load_numbers()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	menu.start.connect(start_match)
 	menu.resume.connect(_set_paused.bind(false))
@@ -134,6 +143,8 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause") and _live():
 		_set_paused(not get_tree().paused)
+	elif event.is_action_pressed(&"debug"):
+		set_debug(not debug.visible)
 	elif event.is_action_pressed(&"fullscreen"):
 		var full := get_window().mode == Window.MODE_FULLSCREEN
 		get_window().mode = Window.MODE_WINDOWED if full else Window.MODE_FULLSCREEN
@@ -142,6 +153,36 @@ func _unhandled_input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and game and _live() and not args.has("capture"):
 		_set_paused(true)
+
+
+## Shows or hides the debug panel. Without the panel, each number of the panel has its default.
+func set_debug(on: bool) -> void:
+	menu.settings.set_value("debug", "enabled", on)
+	menu.settings.save("user://settings.cfg")
+	_load_numbers()
+
+
+func _load_numbers() -> void:
+	Tune.load_from(menu.settings)
+	debug.visible = menu.settings.get_value("debug", "enabled", false)
+	debug.refresh()
+
+
+func _store_numbers() -> void:
+	Tune.store(menu.settings)
+	menu.settings.save("user://settings.cfg")
+
+
+## Gives the player a weapon with the ammunition of a pickup, or a perk.
+func _give(id: StringName) -> void:
+	var player := game.player
+	if Defs.PERKS.has(id):
+		Arsenal.apply_perk(player, id)
+		return
+	Arsenal.equip(player, id, Defs.pickup_ammo(id))
+	for index in player.slots.size():
+		if player.slots[index].id == id:
+			player.slot_index = index
 
 
 ## True while a person plays a match that has not ended.
@@ -162,6 +203,7 @@ func _process(_delta: float) -> void:
 	frame += 1
 	dim.visible = menu.visible and not game.autoplay
 	dither.set_shader_parameter("pattern_offset", game.camera.pattern_offset)
+	GameView.hold_fire = debug.visible and debug.get_global_rect().has_point(GameView.mouse)
 	var tint := game.tint
 	if game.player.hp <= 3.0 and tint.a < 0.3 and _live():
 		tint = Color(0.85, 0.05, 0.12, 0.22 + 0.08 * sin(Time.get_ticks_msec() * 0.008))
@@ -184,6 +226,9 @@ func _add_actions() -> void:
 	accept.button_index = JOY_BUTTON_A
 	InputMap.action_add_event(&"ui_accept", accept)
 	for action: StringName in ACTIONS:
+		# A second main scene in one process, as in the tests, finds the actions of the first.
+		if InputMap.has_action(action):
+			continue
 		var spec: Array = ACTIONS[action]
 		InputMap.add_action(action, 0.3)
 		for key: Key in spec[0]:

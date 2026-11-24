@@ -5,6 +5,8 @@ extends PanelContainer
 signal start(config: Dictionary)
 signal resume
 signal quit_to_title
+## A person asked for the debug panel, or asked to hide it.
+signal debug
 
 const MODES: Array[StringName] = [&"ffa", &"tdm", &"duo", &"squad"]
 const MODE_NAMES := ["Free for All", "Team Deathmatch", "Duos", "Squads"]
@@ -20,6 +22,7 @@ const LEGEND := [
 	[["Q", "Wheel"], &"swap"],
 	[["Esc"], &"pause"],
 	[["F11"], &"fullscreen"],
+	[["F3"], &"debug"],
 ]
 ## The same for a gamepad. Shown while one is connected.
 const PAD_LEGEND := [
@@ -81,6 +84,7 @@ func show_title() -> void:
 	_volume(&"sound", "Sound", &"Sfx")
 	_volume(&"music", "Music", &"Music")
 	_button(&"language", "한국어" if TranslationServer.get_locale() != "ko" else "English", _swap_locale)
+	_button(&"debug", "Debug", debug.emit)
 	if not OS.has_feature("web"):
 		_button(&"exit", "Quit", get_tree().quit)
 	_legend()
@@ -91,6 +95,7 @@ func show_pause() -> void:
 	_clear()
 	_label("Paused", 32)
 	_button(&"play", "Resume", resume.emit).grab_focus()
+	_button(&"debug", "Debug", debug.emit)
 	_button(&"exit", "Leave match", quit_to_title.emit)
 	_legend()
 	show()

@@ -25,6 +25,8 @@ static var lag := 0.0
 ## Mouse pointer in root canvas units, from the last mouse event. A query of the pointer in each frame is a round
 ## trip to the display server.
 static var mouse := Vector2.ZERO
+## True while the pointer is on a panel. The player then does not fire or throw.
+static var hold_fire := false
 
 var world: SimWorld
 var camera := CameraRig.new()
@@ -88,9 +90,9 @@ func _physics_process(_delta: float) -> void:
 	if world == null:
 		return
 	# The shake is a new random offset each tick. It fades in game time, so it also fades after the end.
-	var real := Defs.TICK * Defs.GAME_SPEED
+	var real := Defs.TICK * Tune.game_speed
 	shake = maxf(0.0, shake - real * 4.4)
-	_jitter = Vector2(randf_range(-0.34, 0.34), randf_range(-0.28, 0.28)) * pow(minf(shake, 4.2), 1.08)
+	_jitter = Vector2(randf_range(-0.34, 0.34), randf_range(-0.28, 0.28)) * pow(minf(shake, 4.2), 1.08) * Tune.shake
 	_kick *= maxf(0.0, 1.0 - real * 8.5)
 	if world.finished:
 		pass
@@ -126,10 +128,10 @@ func _process(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set(&"match_time", world.now)
 	RenderingServer.global_shader_parameter_set(&"arena_radius", world.arena_radius)
 	var behind := 1.0 - Engine.get_physics_interpolation_fraction()
-	lag = behind * Defs.TICK * Defs.GAME_SPEED * float(world.step > 0.0)
+	lag = behind * Defs.TICK * Tune.game_speed * float(world.step > 0.0)
 	var shot_lag := behind * world.step
 	# The view follows the player only. A view that also follows the pointer moves the ground under a still pointer.
-	_focus = _focus.lerp(player.pos - player.vel * lag, clampf(delta * 8.0, 0.0, 1.0))
+	_focus = _focus.lerp(player.pos - player.vel * lag, clampf(delta * Tune.camera_follow, 0.0, 1.0))
 	intro = maxf(0.0, intro - delta)
 	tint.a = maxf(0.0, tint.a - delta * 2.5)
 	var rest := camera.rest_size()
@@ -182,8 +184,8 @@ func _read_input() -> void:
 		_stick_aim = true
 	elif not _stick_aim and to_pointer.length() > 0.05:
 		player.aim = to_pointer.normalized()
-	player.want_fire = Input.is_action_pressed(&"fire")
-	player.want_throw = Input.is_action_pressed(&"throw")
+	player.want_fire = Input.is_action_pressed(&"fire") and not hold_fire
+	player.want_throw = Input.is_action_pressed(&"throw") and not hold_fire
 
 
 func _show(e: Dictionary) -> void:

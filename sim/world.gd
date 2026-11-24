@@ -178,10 +178,10 @@ func tick() -> void:
 	step = 0.0
 	if finished:
 		return
-	var real := Defs.TICK * Defs.GAME_SPEED
-	var dt := real * 0.12 if hit_stop > 0.0 else real
+	var real := Defs.TICK * Tune.game_speed
+	var dt := real * 0.12 if hit_stop > 0.0 and Tune.hit_stop > 0.0 else real
 	step = dt
-	hit_stop = maxf(0.0, hit_stop - real)
+	hit_stop = maxf(0.0, hit_stop - real / maxf(Tune.hit_stop, 0.001))
 	now += dt
 	time_left -= real
 	if time_left <= 0.0:
@@ -218,7 +218,7 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 			emit(&"reloaded", {unit = u.index})
 	# As in the original game, a bot that runs away on hard moves at 1.15 of its speed. The keys of a person give a
 	# move of 1 at most.
-	var wish := u.move.limit_length(1.15) * u.speed * TerrainMap.speed_mul(map.tile_at(u.pos))
+	var wish := u.move.limit_length(1.15) * u.speed * Tune.move_speed * TerrainMap.speed_mul(map.tile_at(u.pos))
 	var grip := (24.0 if wish != Vector2.ZERO else 18.0) if u.is_player or not bots_active else 16.0 if hard else 6.0
 	u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))
 	u.pos += u.vel * dt

@@ -19,6 +19,7 @@ time. The side with the most petals on the ground at the end wins.
 | Reload        | R                     | X             |
 | Change weapon | Q, mouse wheel        | Y             |
 | Pause         | Esc                   | Start         |
+| Debug panel   | F3                    |               |
 
 ## Run
 

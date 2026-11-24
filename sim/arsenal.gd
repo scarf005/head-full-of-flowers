@@ -72,7 +72,7 @@ static func start_reload(unit: SimUnit) -> bool:
 	var weapon: Dictionary = Defs.WEAPONS[s.id]
 	if unit.reload_cooldown > 0.0 or s.ammo >= weapon.mag or s.reserve <= 0.0:
 		return false
-	unit.reload_cooldown = weapon.reload * unit.next_reload_mul / unit.reload_speed_mul
+	unit.reload_cooldown = weapon.reload * unit.next_reload_mul / (unit.reload_speed_mul * Tune.reload_speed)
 	unit.reload_cooldown_max = unit.reload_cooldown
 	unit.next_reload_mul = 1.0
 	unit.clear_burst()

@@ -16,8 +16,9 @@ static func fire(w: SimWorld, u: SimUnit) -> bool:
 		_after_shot(w, u)
 		return false
 	var shots: int = mini(weapon.get("burst_shots", 1), int(s.ammo))
-	var interval: float = weapon.get("burst_interval", 0.0) / u.fire_rate_mul
-	u.shoot_cooldown = (interval * (shots - 1)) + maxf(0.0, weapon.cooldown / u.fire_rate_mul - interval * (shots - 1))
+	var rate := u.fire_rate_mul * Tune.fire_rate
+	var interval: float = weapon.get("burst_interval", 0.0) / rate
+	u.shoot_cooldown = (interval * (shots - 1)) + maxf(0.0, weapon.cooldown / rate - interval * (shots - 1))
 	u.burst_left = shots - 1
 	u.burst_total = shots
 	u.burst_timer = interval
@@ -34,7 +35,7 @@ static func update_burst(w: SimWorld, u: SimUnit, dt: float) -> void:
 	if u.burst_timer > 0.0:
 		return
 	u.burst_left -= 1
-	u.burst_timer = Defs.WEAPONS[u.burst_weapon].burst_interval / u.fire_rate_mul
+	u.burst_timer = Defs.WEAPONS[u.burst_weapon].burst_interval / (u.fire_rate_mul * Tune.fire_rate)
 	if u.weapon_id() == u.burst_weapon and u.slot().ammo > 0.0:
 		shoot(w, u)
 
@@ -43,13 +44,14 @@ static func update_burst(w: SimWorld, u: SimUnit, dt: float) -> void:
 static func shoot(w: SimWorld, u: SimUnit) -> void:
 	var s := u.slot()
 	var weapon: Dictionary = Defs.WEAPONS[s.id]
-	s.ammo -= 1.0
+	if not (u.is_player and Tune.endless_ammo > 0.5):
+		s.ammo -= 1.0
 	u.shots_fired += 1
 	var dir := _assisted_aim(w, u)
 	# The shots of a burst fan out around the aim.
 	var fan: float = u.burst_total - 1 - u.burst_left - (u.burst_total - 1) * 0.5
 	dir = dir.rotated(fan * weapon.get("burst_spread", 0.0))
-	var spread: float = weapon.spread * (0.7 if u.has_perk(&"laser_sight") else 1.0)
+	var spread: float = weapon.spread * Tune.spread * (0.7 if u.has_perk(&"laser_sight") else 1.0)
 	var ricochets: int = weapon.get("ricochets", 0) if u.has_perk(&"ricochet_shells") else 0
 	for pellet in weapon.pellets:
 		var heading := dir.rotated(w.rng.randf_range(-spread, spread))
@@ -63,13 +65,13 @@ static func shoot(w: SimWorld, u: SimUnit) -> void:
 					kind = weapon.projectile,
 					weapon = s.id,
 					pos = u.pos + heading * (u.radius + 0.2),
-					vel = heading * weapon.speed * w.rng.randf_range(1.02, 1.14),
+					vel = heading * weapon.speed * Tune.shot_speed * w.rng.randf_range(1.02, 1.14),
 					radius = weapon.radius * u.bullet_size_mul,
 					damage = maxf(1.0, weapon.damage + u.damage_bonus),
 					reach = weapon.reach * u.range_mul,
 					travelled = 0.0,
 					free = 0.0,
-					ttl = maxf(0.3, weapon.reach / weapon.speed * 1.6),
+					ttl = maxf(0.3, weapon.reach / (weapon.speed * Tune.shot_speed) * 1.6),
 					ricochets = ricochets,
 					bounces = 2,
 					accel = weapon.get("accel", 0.0),
@@ -126,13 +128,15 @@ static func damage(
 	var is_self := attacker == target
 	if attacker and not is_self and attacker.team == target.team:
 		return
-	var dealt := maxf(1.0, amount - target.damage_reduction)
+	if target.is_player and Tune.god > 0.5:
+		return
+	var dealt := maxf(1.0, amount * Tune.damage - target.damage_reduction)
 	if is_self and cause == &"blast":
 		dealt = maxf(dealt, target.hp)
 	var dir := impact.normalized() if impact.length_squared() > 0.0001 else Vector2.RIGHT.rotated(w.rng.randf() * TAU)
 	target.hp -= dealt
 	target.hit_flash = 1.0
-	target.vel += dir * 2.7
+	target.vel += dir * Tune.knockback
 	var killed := target.hp <= 0.0
 	var team := Defs.BURNT if is_self or attacker == null else attacker.team
 	var opts := {arena_radius = w.arena_radius, now = w.now, grid = w.grid}
@@ -174,7 +178,7 @@ static func damage(
 	target.deaths += 1
 	if attacker and not is_self:
 		attacker.kills += 1
-		attacker.hp = minf(attacker.max_hp, attacker.hp + Defs.KILL_HP_BONUS)
+		attacker.hp = minf(attacker.max_hp, attacker.hp + Tune.kill_hp)
 		if attacker.has_perk(&"kill_reload"):
 			attacker.next_reload_mul = 0.5
 		if attacker.kills % Defs.KILLS_PER_PERK_DROP == 0:

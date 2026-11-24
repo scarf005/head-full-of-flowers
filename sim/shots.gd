@@ -43,10 +43,10 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 	var hit: SimUnit = null
 	var stop: Vector2 = p.pos
 	for u in w.units:
-		var head := u.pos + Vector2.UP * Defs.UNIT_HEAD
+		var head := u.pos + Vector2.UP * Tune.unit_head
 		var pair := Geometry2D.get_closest_points_between_segments(from, p.pos, u.pos, head)
 		var near := pair[0]
-		var touch: bool = near.distance_to(pair[1]) - u.radius - p.radius <= reach
+		var touch: bool = near.distance_to(pair[1]) - u.radius * Tune.hit_size - p.radius <= reach
 		var nearer := from.distance_squared_to(near) <= from.distance_squared_to(stop)
 		if u.index != p.owner and u.team != p.team and touch and nearer:
 			hit = u

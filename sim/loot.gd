@@ -53,6 +53,7 @@ static func spawn_box(w: SimWorld) -> void:
 		if w.grid.circle_hits(w.grid.center_of(cell), 1.2) or w.unit_near(w.grid.center_of(cell), 1.5):
 			continue
 		w.grid.set_cell(cell, Defs.Mat.BOX, true)
+		w.grid.hp[cell.y * w.grid.size + cell.x] = Tune.box_hp
 		w.emit(&"box", {cell = cell})
 		return
 
@@ -63,7 +64,7 @@ static func update(w: SimWorld, dt: float) -> void:
 		spawn_box(w)
 		# Boxes come at the shortest interval from 10 s before the end.
 		var late := clampf((w.duration - w.time_left) / (w.duration - 10.0), 0.0, 1.0)
-		w.box_timer = lerpf(BOX_INTERVAL.x, BOX_INTERVAL.y, late)
+		w.box_timer = lerpf(BOX_INTERVAL.x, BOX_INTERVAL.y, late) * Tune.box_interval
 	w.weapon_timer -= dt
 	if w.weapon_timer <= 0.0:
 		w.weapon_timer = w.rng.randf_range(WEAPON_INTERVAL.x, WEAPON_INTERVAL.y)

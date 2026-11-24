@@ -149,3 +149,66 @@ msgstr "구역 이탈"
 
 msgid "Bot %d"
 msgstr "봇 %d"
+
+msgid "Debug"
+msgstr "디버그"
+
+msgid "Reset numbers"
+msgstr "수치 초기화"
+
+msgid "End match"
+msgstr "경기 끝내기"
+
+msgid "game speed"
+msgstr "게임 속도"
+
+msgid "move speed"
+msgstr "이동 속도"
+
+msgid "unit head"
+msgstr "머리 판정 높이"
+
+msgid "hit size"
+msgstr "피격 판정 크기"
+
+msgid "shot speed"
+msgstr "탄속"
+
+msgid "fire rate"
+msgstr "연사 속도"
+
+msgid "damage"
+msgstr "피해량"
+
+msgid "spread"
+msgstr "탄 퍼짐"
+
+msgid "reload speed"
+msgstr "재장전 속도"
+
+msgid "knockback"
+msgstr "넉백"
+
+msgid "hit stop"
+msgstr "히트스톱"
+
+msgid "kill hp"
+msgstr "처치 회복량"
+
+msgid "box interval"
+msgstr "상자 간격"
+
+msgid "box hp"
+msgstr "상자 체력"
+
+msgid "shake"
+msgstr "화면 흔들림"
+
+msgid "camera follow"
+msgstr "카메라 추적"
+
+msgid "god"
+msgstr "무적"
+
+msgid "endless ammo"
+msgstr "무한 탄약"

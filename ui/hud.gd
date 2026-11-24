@@ -128,7 +128,7 @@ func _draw() -> void:
 	# Timer: red in the last 10 s, with a pulse on each second.
 	var clock_color := Color.WHITE
 	# The sim clock runs at GAME_SPEED. Show wall-clock seconds.
-	var left := w.time_left / Defs.GAME_SPEED
+	var left := w.time_left / Tune.game_speed
 	if left < 10.0:
 		clock_color = Color(1.0, 0.25, 0.25).lerp(Color(0.5, 0.05, 0.05), 1.0 - fposmod(left, 1.0))
 	_icon(&"clock", Rect2(bar.end.x + 12.0, 3.0, 32.0, 32.0), clock_color)
