@@ -233,6 +233,7 @@ msgstr "레이저 굵기"
 
 msgid "laser alpha"
 msgstr "레이저 불투명도"
+
 msgid "rot"
 msgstr "구역 밖 부패"
 
@@ -244,3 +245,21 @@ msgstr "꽃 밝기"
 
 msgid "marsh mark"
 msgstr "늪 표시"
+
+msgid "trail length"
+msgstr "궤적 길이"
+
+msgid "trail width"
+msgstr "궤적 굵기"
+
+msgid "trail alpha"
+msgstr "궤적 불투명도"
+
+msgid "smoke puffs"
+msgstr "연기 개수"
+
+msgid "smoke size"
+msgstr "연기 크기"
+
+msgid "smoke life"
+msgstr "연기 지속 시간"

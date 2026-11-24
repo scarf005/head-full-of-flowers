@@ -10,10 +10,12 @@ static func update_projectiles(w: SimWorld, dt: float) -> void:
 	for p in w.projectiles:
 		if _step_projectile(w, p, dt):
 			live.append(p)
+		else:
+			w.emit(&"spent", {pos = p.pos, vel = p.vel, kind = p.kind, travelled = p.travelled})
 	w.projectiles = live
 
 
-## Moves one projectile. Returns false when it is spent.
+## Moves one projectile. Returns false when it is spent. A spent projectile is at the place where it stopped.
 static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 	var explosive: bool = p.kind == &"grenade" or p.kind == &"rocket"
 	if p.kind == &"rocket":
@@ -69,6 +71,7 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		p.hedged = true
 	if hit == null:
 		return true
+	p.pos = stop
 	if explosive:
 		return _end(w, p, stop)
 	Combat.damage(w, hit, p.damage, p.owner, stop, p.vel, &"shot", p.weapon)
@@ -144,6 +147,7 @@ static func throw_secondary(w: SimWorld, u: SimUnit) -> void:
 				ttl = 0.78 if molotov else 1.5,
 				bounces = 2,
 				fuse = quick,
+				flown = 0.0,
 			}
 		)
 	)
@@ -158,6 +162,8 @@ static func update_throwables(w: SimWorld, dt: float) -> void:
 	for t in w.throwables:
 		if _step_throwable(w, t, dt):
 			live.append(t)
+		else:
+			w.emit(&"landed", {pos = t.pos, vel = t.vel, molotov = t.molotov, ttl = t.ttl, flown = t.flown})
 	w.throwables = live
 
 
@@ -167,6 +173,7 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 	t.pos += t.vel * dt
 	t.vel *= maxf(0.0, 1.0 - (0.55 if t.molotov else 0.18) * dt)
 	t.ttl -= dt
+	t.flown += dt
 	var landed: bool = t.ttl <= 0.0 or t.pos.length() > w.arena_radius - radius
 	var cell := w.grid.ray_cell(from, t.pos)
 	if cell.x >= 0:

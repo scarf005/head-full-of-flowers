@@ -6,8 +6,6 @@ signal event(data: Dictionary)
 
 ## Shots fly at the height of the drawn gun.
 const SHOT_HEIGHT := UnitView.HAND / UnitView.PX_PER_M / cos(CameraRig.PITCH)
-## Smoke puffs of a rocket for each second of the match.
-const SMOKE_RATE := 30.0
 ## Seconds for which a press of the roll key still starts a roll.
 const ROLL_WISH := 0.15
 const FLAMES_PER_M2 := 0.6
@@ -53,11 +51,13 @@ var _units: Array[UnitView] = []
 var _focus := Vector2.ZERO
 ## Flat pixel shapes on the ground, under the units: rings, fire glow and shadows.
 var _ground := Fx.new(0)
-## Flat pixel shapes over the units: shots, thrown things, flames, sparks, blasts and pickups.
-var _air := Fx.new(2)
+## Streaks behind shots and thrown things, and rocket smoke. Over the units.
+var _trails := Trails.new()
+## Flat pixel shapes over the units and the trails: shots, thrown things, flames, sparks, blasts and pickups.
+var _air := Fx.new(3)
 var _terrain: TerrainView
 var _lights := 0
-## Match time of the last drawn frame.
+## Match time that the last frame showed. Each frame adds the trail parts from this time to its own time.
 var _drawn := 0.0
 
 
@@ -87,6 +87,7 @@ func setup(config: Dictionary) -> void:
 		_units.append(view)
 	add_child(_bits)
 	add_child(_ground)
+	add_child(_trails)
 	add_child(_air)
 
 
@@ -157,7 +158,9 @@ func _process(delta: float) -> void:
 	_draw_lasers()
 	_ground.step(delta)
 	_air.step(delta)
-	_drawn = world.now
+	# A hit stop makes the step shorter and so the lag. The drawn time stays where it was, so no part comes twice.
+	_drawn = maxf(_drawn, world.now - shot_lag)
+	_trails.show_at(_drawn)
 
 
 ## Steady pseudo-random number in 0..1 for a point.
@@ -261,6 +264,18 @@ func _show(e: Dictionary) -> void:
 			_ring(e.pos, world.team_color(world.units[e.unit].team), 1.3, 0.25)
 		&"pickup":
 			_ring(e.pos, Color(1.0, 0.9, 0.4), 1.1, 0.2)
+		&"spent":
+			# The trail goes on to the place where the shot stops, and that place gets the last parts.
+			var at := Vector3(e.pos.x, SHOT_HEIGHT, e.pos.y)
+			var look := _look_of(e.kind)
+			_trails.follow(look, at, e.vel, e.travelled / maxf(e.vel.length(), 0.001), _drawn, world.now)
+			_trails.end(look, at, e.vel, world.now)
+		&"landed":
+			var look := &"molotov" if e.molotov else &"grenade"
+			var at := Vector3(e.pos.x, _arc(e.ttl), e.pos.y)
+			var arc := func(age: float) -> float: return _arc(e.ttl + age)
+			_trails.follow(look, at, e.vel, e.flown, _drawn, world.now, arc)
+			_trails.end(look, at, e.vel, world.now)
 
 
 ## Ring on the ground that widens to `radius` metres and goes away.
@@ -362,12 +377,24 @@ func _burst(at: Vector2, radius: float) -> void:
 	_air.spawn(centre, 0.07, Fx.Shape.DISC, flash, flash * 1.1, [Color.WHITE] as Array[Color])
 
 
-## Shots: a teardrop along the flight, yellow for the side of the player and red for the others.
+## Look of the trail of a projectile kind.
+static func _look_of(kind: StringName) -> StringName:
+	return kind if kind == &"flame" or kind == &"rocket" else &"bullet"
+
+
+## Height in metres of a thrown thing that has `ttl` seconds of flight left.
+static func _arc(ttl: float) -> float:
+	return 0.4 + sin(clampf(ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
+
+
+## Shots: a teardrop along the flight, yellow for the side of the player and red for the others, and a trail.
 func _draw_shots(shot_lag: float) -> void:
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
 		var ground := Vector3(p.pos.x - p.vel.x * shot_lag, 0.0, p.pos.y - p.vel.y * shot_lag)
 		var at := ground + Vector3.UP * SHOT_HEIGHT
+		var flown: float = p.travelled / maxf(p.vel.length(), 0.001) - shot_lag
+		_trails.follow(_look_of(p.kind), at, p.vel, flown, _drawn, world.now - shot_lag)
 		var color := Color(1.0, 0.8, 0.2) if p.team == world.units[0].team else Color(1.0, 0.3, 0.25)
 		match p.kind:
 			&"flame":
@@ -383,19 +410,21 @@ func _draw_shots(shot_lag: float) -> void:
 				var width: float = roundf(maxf(4.0, p.radius * (36.0 if rocket else 28.0)))
 				var length: float = width * 1.85 * clampf(p.vel.length() / 25.0, 1.1, 2.9)
 				_air.add(at, Vector2.ONE * (length + 4.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
-				# By match time: no more smoke on a fast screen, and none when the match stands still.
-				if rocket and floorf(world.now * SMOKE_RATE) > floorf(_drawn * SMOKE_RATE):
-					var puff := Vector2(8.0, 8.0)
-					_air.spawn(at, 0.35, Fx.Shape.DISC, puff, puff * 1.8, SMOKE, {dots = 0.5})
 		_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
 
 
-## Thrown grenades and fire bottles: the art turns in the air over a shadow. A red ring shows the reach of a blast.
+## Thrown grenades and fire bottles: the art turns in the air over a shadow and leaves a trail. A red ring shows the
+## reach of a blast.
 func _draw_throwables(shot_lag: float) -> void:
 	for i in world.throwables.size():
 		var t := world.throwables[i]
 		var ground := Vector3(t.pos.x - t.vel.x * shot_lag, 0.0, t.pos.y - t.vel.y * shot_lag)
-		var height: float = 0.4 + sin(clampf(t.ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
+		var ttl: float = t.ttl + shot_lag
+		var height := _arc(ttl)
+		var look := &"molotov" if t.molotov else &"grenade"
+		var arc := func(age: float) -> float: return _arc(ttl + age)
+		var at := ground + Vector3.UP * height
+		_trails.follow(look, at, t.vel, t.flown - shot_lag, _drawn, world.now - shot_lag, arc)
 		var blink := fmod(world.now, 0.24) < 0.08
 		var tint := Color.WHITE
 		# No ring for a fire bottle: it burns where it lands, and that place is not known yet.
@@ -406,8 +435,7 @@ func _draw_throwables(shot_lag: float) -> void:
 			_ground.add(ground, reach, Fx.Shape.DISC, red, 0.0, 1.0 - 4.0 / reach.x)
 			tint = Color(1.0, 0.45, 0.4) if blink else Color.WHITE
 		_ground.add(ground, Vector2(10.0, 6.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
-		var art := Fx.cell(&"molotov" if t.molotov else &"grenade")
-		_air.add(ground + Vector3.UP * height, SMALL_ART, Fx.Shape.ART, tint, world.now * 9.0 + i, art, 1.0)
+		_air.add(at, SMALL_ART, Fx.Shape.ART, tint, world.now * 9.0 + i, Fx.cell(look), 1.0)
 
 
 ## Fire on the ground: a dotted glow with a bright rim, and flames that each stay at a place for 0.2 s.

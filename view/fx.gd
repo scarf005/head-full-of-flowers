@@ -19,7 +19,7 @@ var _count := 0
 var _parts: Array[Dictionary] = []
 
 
-## `priority` 0 draws under the units and props, 2 over them.
+## `priority` 0 draws under the units and props, 3 over them and over the trails.
 func _init(priority: int) -> void:
 	multimesh = MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D

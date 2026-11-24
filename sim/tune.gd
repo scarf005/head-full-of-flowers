@@ -33,6 +33,12 @@ const ITEMS := {
 	&"ground_calm": [0.0, 2.0, 0.05],
 	&"flower_tone": [0.3, 1.2, 0.02],
 	&"marsh_mark": [0.0, 1.0, 0.05],
+	&"trail_length": [0.0, 4.0, 0.05],
+	&"trail_width": [0.25, 4.0, 0.05],
+	&"trail_alpha": [0.0, 3.0, 0.05],
+	&"smoke_puffs": [0.0, 12.0, 1.0],
+	&"smoke_size": [0.25, 4.0, 0.05],
+	&"smoke_life": [0.25, 4.0, 0.05],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -82,6 +88,18 @@ static var ground_calm := 1.0
 static var flower_tone := 0.72
 ## Share of the sunk look of a flower on a marsh.
 static var marsh_mark := 1.0
+## Multiplies the life of each streak behind a shot or a thrown thing, and so the length of the trail.
+static var trail_length := 1.0
+## Multiplies the width of each streak.
+static var trail_width := 1.0
+## Multiplies the alpha of each streak.
+static var trail_alpha := 1.0
+## Smoke puffs of a rocket for each 0.09 m of its flight.
+static var smoke_puffs := 4.0
+## Multiplies the width and the growth of each smoke puff.
+static var smoke_size := 1.0
+## Multiplies the life of each smoke puff.
+static var smoke_life := 1.0
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.

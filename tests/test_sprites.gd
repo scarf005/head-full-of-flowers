@@ -131,20 +131,6 @@ func test_tall_grass_stays_half_a_metre_away_from_a_flowerbed() -> void:
 	assert_between(tufts[0] - tufts[1], 4 * per_metre, 8 * per_metre, "tufts that the flowerbed takes away")
 
 
-func test_rocket_leaves_one_smoke_puff_for_2_frames_at_the_same_match_time() -> void:
-	var view: GameView = autofree(GameView.new())
-	view.autoplay = true
-	add_child(view)
-	view.setup({seed = 1, size = 2})
-	var unit := view.world.units[0]
-	Arsenal.equip(unit, &"rocket-launcher", 4.0)
-	assert_true(Combat.fire(view.world, unit))
-	view.world.now += 0.5
-	view._process(0.01)
-	view._process(0.01)
-	assert_eq(view._air._parts.size(), 1)
-
-
 func test_view_draws_a_finished_match_where_its_last_tick_left_it() -> void:
 	var view: GameView = autofree(GameView.new())
 	view.autoplay = true

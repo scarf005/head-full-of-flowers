@@ -67,7 +67,7 @@ func test_door_stays_open_while_a_grenade_lies_in_its_cell() -> void:
 	a.pos = at + Vector2(-1.2, 0.0)
 	_tick(1)
 	var grenade := {owner = 0, team = a.team, molotov = false, pos = at, vel = Vector2.ZERO, ttl = 5.0}
-	grenade.merge({bounces = 2, fuse = false})
+	grenade.merge({bounces = 2, fuse = false, flown = 0.0})
 	w.throwables.append(grenade)
 	a.pos = Vector2(-8.0, 0.5)
 	_tick(roundi(1.0 / (Defs.TICK * Defs.GAME_SPEED)))
