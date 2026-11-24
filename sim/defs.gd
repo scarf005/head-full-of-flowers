@@ -12,6 +12,9 @@ const UNIT_HP := 10.0
 const UNIT_SPEED := 10.0
 const PLAYER_RADIUS := 0.3
 const BOT_RADIUS := 0.28
+## Metres from the feet of a unit to the north end of its hit line. A shot within the unit radius of that line hits.
+## The view draws a unit that stands up to the north of its feet, so a shot on its head is north of its feet.
+const UNIT_HEAD := 0.8
 const ARENA_BORDER_DAMAGE := 1.0
 const ARENA_BORDER_DAMAGE_COOLDOWN := 0.16
 const KILL_HP_BONUS := 3.0
