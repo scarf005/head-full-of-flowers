@@ -137,21 +137,34 @@ func test_thrown_grenade_lands_with_its_seconds_of_flight() -> void:
 	assert_almost_eq(landed[0].flown, w.step * ticks, 0.001)
 
 
-func test_view_adds_trail_parts_for_the_match_time_of_each_frame_only() -> void:
+## A view in which unit 0 fired its rifle 3 ticks ago. The shot flew 2 m along a line with 4 m of free ground.
+func _view_with_shot() -> GameView:
 	var view := _view()
 	var u := view.world.units[0]
 	Arsenal.equip(u, &"assault", 60.0)
-	# The shot flies 2 m in the 3 ticks. The unit aims along a line with 4 m of free ground.
 	var free := func(aim: Vector2) -> bool: return view.world.grid.ray_cell(u.pos, u.pos + aim * 4.0).x < 0
 	u.aim = [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP].filter(free)[0]
 	assert_true(Combat.fire(view.world, u))
 	for n in 3:
 		view.world.tick()
+	return view
+
+
+func test_view_adds_trail_parts_for_the_match_time_of_each_frame_only() -> void:
+	var view := _view_with_shot()
 	view._process(0.01)
 	var parts := view._trails.added()
 	assert_gt(parts, 0)
 	view._process(0.01)
 	assert_eq(view._trails.added(), parts, "a second frame at the same match time adds no part")
+
+
+func test_view_adds_no_trail_parts_for_a_shot_outside_the_view() -> void:
+	# The view shows 16 m of ground to each side of the player.
+	var view := _view_with_shot()
+	view.world.projectiles[0].pos += Vector2(30.0, 0.0)
+	view._process(0.01)
+	assert_eq(view._trails.added(), 0)
 
 
 func test_spent_shot_gets_its_last_streaks_at_the_place_where_it_stopped() -> void:

@@ -23,6 +23,9 @@ const BULLET := Color("ffe6aa")
 const SMOKE: Array[Color] = [Color("30363d"), Color("1f252b")]
 const END_SMOKE: Array[Color] = [Color("2b3238"), Color("1c2228")]
 
+## Ground in metres that the view shows. A thing outside it gets no parts.
+var seen := Rect2(-1e6, -1e6, 2e6, 2e6)
+
 var _next := 0
 var _material := ShaderMaterial.new()
 ## All parts. A part with life 0 does not show.
@@ -75,7 +78,7 @@ func follow(
 	look: StringName, at: Vector3, vel: Vector2, flown: float, from: float, now: float, arc := Callable()
 ) -> void:
 	var speed := vel.length()
-	if speed <= SLOWEST[look]:
+	if speed <= SLOWEST[look] or not seen.has_point(Vector2(at.x, at.z)):
 		return
 	var every: float = SPACING[look] / speed
 	var factor := clampf(speed / FULL_SPEED[look], 0.0, TOP_FACTOR[look])
@@ -90,7 +93,7 @@ func follow(
 ## Adds the last parts of a thing that stops at `at` at the match time `now`.
 func end(look: StringName, at: Vector3, vel: Vector2, now: float) -> void:
 	var speed := vel.length()
-	if speed <= SLOWEST[look]:
+	if speed <= SLOWEST[look] or not seen.has_point(Vector2(at.x, at.z)):
 		return
 	var dir := vel / speed
 	var back := Vector3(dir.x, 0.0, dir.y)

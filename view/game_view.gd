@@ -157,6 +157,9 @@ func _process(delta: float) -> void:
 		camera.size = rest + intro * intro * 14.0
 	camera.target = _focus + _kick + _jitter
 	camera.apply()
+	# Trail parts only on the ground that the view shows, and 4 m around it.
+	var corner := camera.ground_point(Vector2.ZERO)
+	_trails.seen = Rect2(corner, camera.ground_point(get_viewport().get_visible_rect().size) - corner).grow(4.0)
 	_draw_shots(shot_lag)
 	_draw_throwables(shot_lag)
 	_draw_zones()
