@@ -20,6 +20,10 @@ const ITEMS := {
 	&"box_hp": [1.0, 20.0, 1.0],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
+	&"roll_distance": [1.0, 10.0, 0.25],
+	&"roll_time": [0.15, 1.0, 0.01],
+	&"roll_cooldown": [0.0, 2.0, 0.05],
+	&"roll_safe": [0.0, 1.0, 0.05],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -48,6 +52,13 @@ static var box_hp := 8.0
 static var shake := 1.0
 ## Share of the distance to the player that the camera moves in each second.
 static var camera_follow := 8.0
+## Metres that a roll takes a unit, and its seconds.
+static var roll_distance := 4.5
+static var roll_time := 0.38
+## Seconds from the end of a roll to the start of the next roll.
+static var roll_cooldown := 0.3
+## Share of a roll, from its start, in which shots, blasts and fire do not hurt the unit.
+static var roll_safe := 0.6
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.

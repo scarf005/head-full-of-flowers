@@ -27,6 +27,9 @@ uniform float angle = 0.0;
 uniform float gun_front = 1.0;
 // Pixel rows of the body that are under water.
 uniform float sink = 0.0;
+// Turn of the figure to the left in radians around its middle, and pixels from the ground up to its feet. A unit in
+// a roll has both.
+uniform vec2 tumble = vec2(0.0);
 // Fill from 0 to 1 of the magazine ring and of the grenade ring, then 1 during a reload. x below 0: no rings.
 uniform vec3 rings = vec3(-1.0, 1.0, 0.0);
 
@@ -89,11 +92,14 @@ void fragment() {
 	if (rings.x >= 0.0 && abs(length(round_p) - 13.5) < 0.75 && turn <= rings.y) {
 		color = vec4(mix(vec3(1.0, 0.94, 0.85), vec3(1.0, 0.75, 0.4), step(1.0, rings.y)), 1.0);
 	}
-	vec4 figure = figure_at(p);
+	vec2 middle = vec2(0.0, frame_px.y * 0.45);
+	vec2 q = p - vec2(0.0, tumble.y) - middle;
+	q = vec2(cos(tumble.x) * q.x + sin(tumble.x) * q.y, cos(tumble.x) * q.y - sin(tumble.x) * q.x) + middle;
+	vec4 figure = figure_at(q);
 	// A second ring of ink around the figure, so the unit shows on flowers of its own colour. The ring stays dark
 	// in a hit flash.
-	float near = figure_at(p + vec2(1.0, 0.0)).a + figure_at(p - vec2(1.0, 0.0)).a;
-	near += figure_at(p + vec2(0.0, 1.0)).a + figure_at(p - vec2(0.0, 1.0)).a;
+	float near = figure_at(q + vec2(1.0, 0.0)).a + figure_at(q - vec2(1.0, 0.0)).a;
+	near += figure_at(q + vec2(0.0, 1.0)).a + figure_at(q - vec2(0.0, 1.0)).a;
 	color = mix(color, vec4(INK * 0.5, 1.0), step(0.5, near));
 	figure.rgb = mix(figure.rgb, vec3(1.0), flash);
 	color = mix(color, figure, figure.a);

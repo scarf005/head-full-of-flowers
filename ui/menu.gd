@@ -20,6 +20,7 @@ const LEGEND := [
 	[["RMB", "G"], &"grenade"],
 	[["R"], &"rapid_reload"],
 	[["Q", "Wheel"], &"swap"],
+	[["Shift"], &"roll"],
 	[["Esc"], &"pause"],
 	[["F11"], &"fullscreen"],
 	[["F3"], &"debug"],
@@ -32,6 +33,7 @@ const PAD_LEGEND := [
 	[["LT"], &"grenade"],
 	[["X"], &"rapid_reload"],
 	[["Y", "LB"], &"swap"],
+	[["B"], &"roll"],
 	[["Start"], &"pause"],
 ]
 

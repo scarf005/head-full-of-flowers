@@ -18,8 +18,12 @@ time. The side with the most petals on the ground at the end wins.
 | Throw         | Right mouse button, G | Left trigger  |
 | Reload        | R                     | X             |
 | Change weapon | Q, mouse wheel        | Y             |
+| Roll          | Shift                 | B             |
 | Pause         | Esc                   | Start         |
 | Debug panel   | F3                    |               |
+
+Roll to cross fences, hedges, low props and windows. Shots, blasts and fire do not hurt you in the first part of a
+roll.
 
 ## Run
 

@@ -70,6 +70,7 @@ const SYNTH := {
 	&"die": {secs = 0.28, f0 = 420.0, f1 = 44.0, tone = 1.0, decay = 4.0, gain = 0.86},
 	&"click": {secs = 0.04, f0 = 1100.0, f1 = 900.0, tone = 1.0, decay = 7.0, gain = 0.25},
 	&"door": {secs = 0.12, f0 = 190.0, f1 = 110.0, tone = 0.9, noise = 0.4, lp = 0.25, decay = 7.0, gain = 0.3},
+	&"roll": {secs = 0.2, noise = 1.0, lp = 0.25, decay = 4.0, attack = 0.05, gain = 0.3},
 	&"glass": {secs = 0.3, f0 = 3100.0, f1 = 2300.0, tone = 0.45, noise = 1.0, lp = 0.9, decay = 6.0, gain = 0.42},
 }
 
@@ -233,6 +234,8 @@ func handle(e: Dictionary) -> void:
 			_play(&"explosion", e.pos, 0.25)
 		&"throw":
 			_play(&"grenade_throw", _at(e.unit, _unit_pos(e.unit)))
+		&"roll":
+			_play(&"roll", _at(e.unit, _unit_pos(e.unit)))
 		&"reload":
 			if e.unit == _me():
 				_play(&"reload", null, 0.74, 1.1, 0.4)

@@ -8,6 +8,8 @@ signal event(data: Dictionary)
 const SHOT_HEIGHT := UnitView.HAND / UnitView.PX_PER_M / cos(CameraRig.PITCH)
 ## Smoke puffs of a rocket for each second of the match.
 const SMOKE_RATE := 30.0
+## Seconds for which a press of the roll key still starts a roll.
+const ROLL_WISH := 0.15
 const FLAMES_PER_M2 := 0.6
 ## Size in pixels of a shape that shows item art at its drawn size, and at half of it.
 const ART := Vector2(48.0, 48.0)
@@ -40,6 +42,8 @@ var intro := 0.0
 var tint := Color(0, 0, 0, 0)
 ## True from the last right stick aim until the mouse moves.
 var _stick_aim := false
+## Seconds that are left of ROLL_WISH for the last press of the roll key.
+var _roll_wish := 0.0
 var _kick := Vector2.ZERO
 var _jitter := Vector2.ZERO
 ## Unit index -> the damage number that shows over it.
@@ -120,6 +124,8 @@ func _unhandled_input(input: InputEvent) -> void:
 		player.want_swap -= 1
 	elif input.is_action_pressed(&"reload"):
 		player.want_reload = true
+	elif input.is_action_pressed(&"roll"):
+		_roll_wish = ROLL_WISH
 
 
 func _process(delta: float) -> void:
@@ -186,6 +192,9 @@ func _read_input() -> void:
 		player.aim = to_pointer.normalized()
 	player.want_fire = Input.is_action_pressed(&"fire") and not hold_fire
 	player.want_throw = Input.is_action_pressed(&"throw") and not hold_fire
+	# A press of the roll key in the last 0.15 s before a roll can start still starts that roll.
+	_roll_wish = 0.0 if player.rolling else _roll_wish - Defs.TICK
+	player.want_roll = _roll_wish > 0.0
 
 
 func _show(e: Dictionary) -> void:
@@ -206,6 +215,8 @@ func _show(e: Dictionary) -> void:
 		&"throw":
 			if e.unit == me:
 				shake = minf(1.2, shake + 0.15)
+		&"roll":
+			_puff(world.units[e.unit].pos, Color(0.78, 0.74, 0.66), 6, 2.5, -e.dir)
 		&"hit":
 			var color := world.team_color(e.team)
 			_puff(e.pos, color, 40 if e.kill else 8, 7.0 if e.kill else 4.5, e.dir)

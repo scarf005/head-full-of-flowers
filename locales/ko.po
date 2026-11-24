@@ -207,6 +207,18 @@ msgstr "화면 흔들림"
 msgid "camera follow"
 msgstr "카메라 추적"
 
+msgid "roll distance"
+msgstr "구르기 거리"
+
+msgid "roll time"
+msgstr "구르기 시간"
+
+msgid "roll cooldown"
+msgstr "구르기 대기 시간"
+
+msgid "roll safe"
+msgstr "구르기 무적 비율"
+
 msgid "god"
 msgstr "무적"
 

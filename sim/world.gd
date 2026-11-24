@@ -2,6 +2,8 @@ class_name SimWorld
 ## One match. Call tick() 60 times per second and read the state and the event list.
 
 const MODES := {&"ffa": 1, &"tdm": 0, &"duo": 2, &"squad": 4}
+## Seconds that a roll goes on past its time while the unit is on a low wall.
+const ROLL_EXTRA := 0.25
 
 var rng := RandomNumberGenerator.new()
 var map: TerrainMap
@@ -216,12 +218,25 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		if u.reload_cooldown <= 0.0:
 			Arsenal.finish_reload(u)
 			emit(&"reloaded", {unit = u.index})
-	# As in the original game, a bot that runs away on hard moves at 1.15 of its speed. The keys of a person give a
-	# move of 1 at most.
-	var wish := u.move.limit_length(1.15) * u.speed * Tune.move_speed * TerrainMap.speed_mul(map.tile_at(u.pos))
-	var grip := (24.0 if wish != Vector2.ZERO else 18.0) if u.is_player or not bots_active else 16.0 if hard else 6.0
-	u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))
-	u.pos += u.vel * dt
+	u.roll_cooldown = maxf(0.0, u.roll_cooldown - dt)
+	if u.want_roll and not u.rolling and u.roll_cooldown <= 0.0:
+		u.rolling = true
+		u.roll_time = 0.0
+		u.roll_dir = (u.move if u.move.length() > 0.1 else u.aim).normalized()
+		u.clear_burst()
+		emit(&"roll", {unit = u.index, dir = u.roll_dir})
+	u.want_roll = false
+	if u.rolling:
+		_roll(u, dt)
+	else:
+		# As in the original game, a bot that runs away on hard moves at 1.15 of its speed. The keys of a person
+		# give a move of 1 at most.
+		var wish := u.move.limit_length(1.15) * u.speed * Tune.move_speed * TerrainMap.speed_mul(map.tile_at(u.pos))
+		var grip := (
+			(24.0 if wish != Vector2.ZERO else 18.0) if u.is_player or not bots_active else 16.0 if hard else 6.0
+		)
+		u.vel = u.vel.lerp(wish, clampf(dt * grip, 0.0, 1.0))
+		u.pos += u.vel * dt
 	if u.want_swap != 0:
 		# As in the original game, the wheel steps of one tick add up and the weapon moves 1 slot by their sign.
 		Arsenal.swap(u, signi(u.want_swap))
@@ -230,11 +245,27 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		emit(&"reload", {unit = u.index})
 	u.want_reload = false
 	Combat.update_burst(self, u, dt)
-	if u.want_fire:
+	if u.want_fire and not u.rolling:
 		Combat.fire(self, u)
-	if u.want_throw:
+	if u.want_throw and not u.rolling:
 		Shots.throw_secondary(self, u)
 	Loot.collect(self, u)
+
+
+## Moves a unit in a roll along its direction, fast at the start and slow at the end. The unit breaks the glass of
+## a window on its way. A roll that would end on a low wall goes on to the far side of the wall.
+func _roll(u: SimUnit, dt: float) -> void:
+	var part := minf(1.0, u.roll_time / Tune.roll_time)
+	u.vel = u.roll_dir * Tune.roll_distance / Tune.roll_time * (1.4 - 0.8 * part)
+	var from := u.pos
+	u.pos += u.vel * dt
+	u.roll_time += dt
+	break_glass(from, u.pos)
+	var tail := u.pos - u.roll_dir * u.radius
+	var on_wall := grid.rolls_over(grid.cell_of(u.pos)) or grid.rolls_over(grid.cell_of(tail))
+	if u.roll_time >= Tune.roll_time and not (on_wall and u.roll_time < Tune.roll_time + ROLL_EXTRA):
+		u.rolling = false
+		u.roll_cooldown = Tune.roll_cooldown
 
 
 func _separate_units() -> void:
@@ -259,9 +290,10 @@ func _push_out_of_cells(u: SimUnit) -> void:
 		var hi := grid.cell_of(u.pos + Vector2(u.radius, u.radius))
 		for gy in range(lo.y, hi.y + 1):
 			for gx in range(lo.x, hi.x + 1):
-				if not grid.is_solid(Vector2i(gx, gy)):
+				var cell := Vector2i(gx, gy)
+				if not grid.is_solid(cell) or (u.rolling and grid.rolls_over(cell)):
 					continue
-				var centre := grid.center_of(Vector2i(gx, gy))
+				var centre := grid.center_of(cell)
 				var nearest := u.pos.clamp(centre - Vector2(0.5, 0.5), centre + Vector2(0.5, 0.5))
 				var gap := u.pos - nearest
 				if gap.length_squared() >= u.radius * u.radius:

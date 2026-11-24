@@ -30,6 +30,8 @@ func test_every_event_type_plays_without_error() -> void:
 		{type = &"hit", target = 1, source = 0, pos = Vector2.ZERO, damage = 1.0, kill = true, team = 0},
 		{type = &"explosion", pos = Vector2(3, 3), radius = 4.0, source = 1},
 		{type = &"throw", unit = 0, molotov = true},
+		{type = &"roll", unit = 0, dir = Vector2.RIGHT},
+		{type = &"roll", unit = 1, dir = Vector2.RIGHT},
 		{type = &"reload", unit = 1},
 		{type = &"reload", unit = 0},
 		{type = &"pickup", unit = 0, kind = &"perk", id = &"x", pos = Vector2.ZERO},

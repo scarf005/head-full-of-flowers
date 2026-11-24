@@ -45,6 +45,14 @@ func is_solid(cell: Vector2i) -> bool:
 	return in_bounds(cell) and solid[cell.y * size + cell.x] > 0
 
 
+## True for an obstacle that a unit in a roll goes over: a window sill, a low prop, a yard fence or a hedge.
+func rolls_over(cell: Vector2i) -> bool:
+	if not in_bounds(cell):
+		return false
+	var i := cell.y * size + cell.x
+	return solid[i] == LOW or (solid[i] == 1 and material[i] in [Defs.Mat.WALL, Defs.Mat.HEDGE])
+
+
 func is_damageable(cell: Vector2i) -> bool:
 	return in_bounds(cell) and hp[cell.y * size + cell.x] > 0.0
 
