@@ -77,6 +77,26 @@ func test_shot_of_a_unit_that_stands_at_the_front_of_a_loot_box_flies_on() -> vo
 	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.BOX])
 
 
+func test_shell_bounces_off_the_side_of_the_drawn_front_that_it_meets() -> void:
+	# The front of the box in the cell from (5, -1) to (6, 0) reaches to y = 0.43. The shell flies to the north-east
+	# and meets the south side of that front at x = 5.54, so it flies on to the south-east.
+	Tune.spread = 0.0
+	var cell := w.grid.cell_of(Vector2(5.5, -0.5))
+	w.grid.set_cell(cell, Defs.Mat.BOX)
+	Arsenal.equip(a, &"grenade-launcher", 6.0)
+	a.pos = Vector2(4.0, 1.2)
+	a.aim = Vector2(2.0, -1.0).normalized()
+	b.pos = Vector2(-10.0, 0.0)
+	assert_true(Combat.fire(w, a))
+	var ticks := 0
+	while not w.events.any(func(e: Dictionary) -> bool: return e.type == &"bounce") and ticks < 60:
+		w.tick()
+		ticks += 1
+	assert_lt(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.BOX], "the shell hits the box")
+	assert_eq(w.projectiles.size(), 1)
+	assert_gt(w.projectiles[0].vel.x, 0.0, "to the east")
+
+
 func test_shot_across_the_head_of_an_enemy_hits_it() -> void:
 	# The view draws a unit that stands up to the north of its feet. The middle of its head is 0.7 m north of them.
 	assert_gt(_damage_at(Vector2(6.0, 0.8)), 0.0, "the shot flies 0.8 m north of the feet")

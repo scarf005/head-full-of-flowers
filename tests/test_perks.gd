@@ -39,6 +39,14 @@ func test_laser_stops_at_a_wall_and_goes_through_a_hedge() -> void:
 	assert_almost_eq(Combat.laser_end(w, a).x, 4.0, 0.05, "at the near face of the rock")
 
 
+func test_laser_stops_at_the_drawn_front_of_a_loot_box() -> void:
+	# The beam goes east along y = 0.3. The front of the box in the cell north of that line reaches to y = 0.43, and a
+	# bullet on that line hits the box.
+	w.grid.set_cell(w.grid.cell_of(Vector2(4.5, -0.5)), Defs.Mat.BOX)
+	a.pos = Vector2(0.0, 0.3)
+	assert_almost_eq(Combat.laser_end(w, a).x, 4.0, 0.001, "at the west side of the front")
+
+
 func test_laser_stops_at_the_nearest_enemy_and_not_at_a_friend() -> void:
 	b.pos = Vector2(6.0, 0.0)
 	w.units[2].pos = Vector2(3.0, 0.0)
