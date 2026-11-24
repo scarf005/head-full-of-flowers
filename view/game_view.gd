@@ -241,6 +241,10 @@ func _show(e: Dictionary) -> void:
 				_ring(e.pos, color, 2.4, 0.3)
 				var target := world.units[e.target]
 				_ragdolls.throw(e.target_pos, e.dir, e.damage, target.radius, world.team_color(target.team))
+				# As in the original game, a green number over a unit shows the hit points of its kill.
+				if not autoplay and e.source >= 0 and e.source != e.target and Tune.kill_hp > 0.0:
+					var at: Vector2 = world.units[e.source].pos
+					_number("heal %d" % e.source, at, Tune.kill_hp, Color("a9ffbb"), "+%d HP")
 			if not autoplay:
 				_number(e.target, e.pos, e.damage, Color(1.0, 0.4, 0.4) if e.target == me else Color.WHITE)
 			# A kill by the player shakes the view 5 times as hard as a hit.
@@ -339,11 +343,11 @@ func _puff(at: Vector2, color: Color, amount: int, speed: float, dir := Vector2.
 		)
 
 
-## Damage number that rises and fades.
-## Damage number over a unit. Hits on the same unit while its number shows add to that number.
-func _number(target: int, at: Vector2, amount: float, color: Color) -> void:
+## Number over a unit that rises and goes away: the damage of a hit, or with `format` the hit points of a kill. A
+## number with the same `key` while the first number shows adds to that number.
+func _number(key: Variant, at: Vector2, amount: float, color: Color, format := "%d") -> void:
 	# A typed variable cannot take a freed object, so test the stored value first.
-	var label: Label3D = _numbers[target] if is_instance_valid(_numbers.get(target)) else null
+	var label: Label3D = _numbers[key] if is_instance_valid(_numbers.get(key)) else null
 	if label == null:
 		label = Label3D.new()
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -355,10 +359,10 @@ func _number(target: int, at: Vector2, amount: float, color: Color) -> void:
 		label.modulate = color
 		label.set_meta(&"total", 0.0)
 		add_child(label)
-		_numbers[target] = label
+		_numbers[key] = label
 	var total: float = label.get_meta(&"total") + amount
 	label.set_meta(&"total", total)
-	label.text = str(int(total))
+	label.text = format % int(total)
 	# Above the health bar, which is at 2.7 m.
 	label.position = Vector3(at.x, 3.4, at.y)
 	label.scale = Vector3.ONE * 1.5

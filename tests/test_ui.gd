@@ -108,3 +108,29 @@ func test_damage_number_adds_hits_and_shows_again_after_it_is_gone() -> void:
 	await wait_seconds(0.9)
 	view._number(1, Vector2.ZERO, 5.0, Color.WHITE)
 	assert_true(is_instance_valid(view._numbers[1]) and view._numbers[1].text == "5")
+
+
+func test_kill_shows_its_hit_points_over_the_unit_that_made_it() -> void:
+	var view: GameView = autofree(GameView.new())
+	add_child(view)
+	view.setup({seed = 1, size = 2})
+	var hit := {
+		type = &"hit",
+		target = 1,
+		source = 0,
+		pos = Vector2.ZERO,
+		dir = Vector2.RIGHT,
+		damage = 3.0,
+		kill = true,
+		team = 0,
+		weapon = &"pistol",
+		target_pos = Vector2.ZERO
+	}
+	view._show(hit)
+	view._show(hit)
+	assert_eq(view._numbers["heal 0"].text, "+6 HP", "3 hit points for each of the two kills")
+	assert_eq(view._numbers["heal 0"].position.x, view.world.units[0].pos.x)
+	# The arena border makes a kill with the source -1. No unit gets hit points for it.
+	hit.source = -1
+	view._show(hit)
+	assert_eq(view._numbers.size(), 2, "the hit points of unit 0 and the damage of unit 1")
