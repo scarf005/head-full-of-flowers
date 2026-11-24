@@ -174,3 +174,25 @@ func test_view_keeps_its_drawn_time_when_the_lag_of_a_frame_puts_it_back() -> vo
 	view.world.now = 1.5
 	view._process(0.01)
 	assert_gt(view._drawn, 1.2)
+
+
+func test_rocket_model_points_along_the_flight_with_the_debug_size() -> void:
+	Tune.rocket_size = 2.0
+	var place := Rockets.place(Vector3(1.0, 0.6, 2.0), Vector2(0.0, 30.0), 0.7)
+	assert_eq(place.origin, Vector3(1.0, 0.6, 2.0))
+	assert_almost_eq(place.basis.x, Vector3(0.0, 0.0, 2.0), Vector3.ONE * 0.001, "nose south, twice as long")
+	assert_almost_eq(place.basis.y.length(), 2.0, 0.001)
+
+
+func test_rocket_shows_as_one_model_and_no_teardrop() -> void:
+	var view := _view()
+	view.world.pickups.clear()
+	Arsenal.equip(view.world.units[0], &"rocket-launcher", 10.0)
+	assert_true(Combat.fire(view.world, view.world.units[0]))
+	view._process(0.01)
+	var model := view._rockets.multimesh
+	assert_eq(model.visible_instance_count, 1)
+	assert_eq(view._air.multimesh.visible_instance_count, 0, "no flat teardrop")
+	view.world.projectiles.clear()
+	view._process(0.01)
+	assert_eq(model.visible_instance_count, 0)

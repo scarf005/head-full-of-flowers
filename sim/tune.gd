@@ -42,6 +42,7 @@ const ITEMS := {
 	&"smoke_puffs": [0.0, 12.0, 1.0],
 	&"smoke_size": [0.25, 4.0, 0.05],
 	&"smoke_life": [0.25, 4.0, 0.05],
+	&"rocket_size": [0.5, 3.0, 0.05],
 	&"god": [0.0, 1.0, 1.0],
 	&"endless_ammo": [0.0, 1.0, 1.0],
 }
@@ -111,6 +112,8 @@ static var smoke_puffs := 4.0
 static var smoke_size := 1.0
 ## Multiplies the life of each smoke puff.
 static var smoke_life := 1.0
+## Multiplies the size of the rocket model.
+static var rocket_size := 1.0
 ## At 1, the player takes no damage.
 static var god := 0.0
 ## At 1, the player spends no ammunition.

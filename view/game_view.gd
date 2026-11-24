@@ -55,6 +55,8 @@ var _ground := Fx.new(0)
 var _trails := Trails.new()
 ## Flat pixel shapes over the units and the trails: shots, thrown things, flames, sparks, blasts and pickups.
 var _air := Fx.new(3)
+## 3D models of the rockets in flight.
+var _rockets := Rockets.new()
 var _terrain: TerrainView
 var _lights := 0
 ## Match time that the last frame showed. Each frame adds the trail parts from this time to its own time.
@@ -89,6 +91,7 @@ func setup(config: Dictionary) -> void:
 	add_child(_ground)
 	add_child(_trails)
 	add_child(_air)
+	add_child(_rockets)
 
 
 func _physics_process(_delta: float) -> void:
@@ -387,7 +390,8 @@ static func _arc(ttl: float) -> float:
 	return 0.4 + sin(clampf(ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
 
 
-## Shots: a teardrop along the flight, yellow for the side of the player and red for the others, and a trail.
+## Shots: a teardrop along the flight, yellow for the side of the player and red for the others, and a trail. A
+## rocket is a 3D model that turns around its length.
 func _draw_shots(shot_lag: float) -> void:
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
@@ -405,12 +409,14 @@ func _draw_shots(shot_lag: float) -> void:
 				_air.add(at, ART, Fx.Shape.ART, Color.WHITE, 0.0, Fx.cell(&"fire"), flip)
 			&"grenade":
 				_air.add(at, SMALL_ART, Fx.Shape.ART, Color.WHITE, world.now * 14.0 + i, Fx.cell(&"grenade"), 1.0)
+			&"rocket":
+				_rockets.add(at, p.vel, world.now * 6.0 + i)
 			_:
-				var rocket: bool = p.kind == &"rocket"
-				var width: float = roundf(maxf(4.0, p.radius * (36.0 if rocket else 28.0)))
+				var width: float = roundf(maxf(4.0, p.radius * 28.0))
 				var length: float = width * 1.85 * clampf(p.vel.length() / 25.0, 1.1, 2.9)
 				_air.add(at, Vector2.ONE * (length + 4.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
 		_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
+	_rockets.end_frame()
 
 
 ## Thrown grenades and fire bottles: the art turns in the air over a shadow and leaves a trail. A red ring shows the

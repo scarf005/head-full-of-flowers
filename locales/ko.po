@@ -272,3 +272,6 @@ msgstr "봇 상자 탐색 거리"
 
 msgid "yard boxes"
 msgstr "마당 상자 수"
+
+msgid "rocket size"
+msgstr "로켓 크기"
