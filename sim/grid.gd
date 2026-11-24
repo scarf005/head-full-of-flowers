@@ -136,19 +136,24 @@ func ray_cell(from: Vector2, to: Vector2, through_hedge := false) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
-## Where a shot from `from` to `to` first shows on the drawn front of a loot box or a prop: {cell, point}, or {} when
-## it does not. The view draws a shot above its place on the ground, so the front of a thing reaches `front` metres
-## south of its cell. A thing at whose front the shot starts does not count: a unit that stands there fires past it.
+## Where a shot from `from` to `to` first shows on the drawn front of a loot box or a prop: {cell, point, normal}, or
+## {} when it does not. The view draws a shot above its place on the ground, so the front of a thing reaches `front`
+## metres south of its cell. A thing at whose front the shot starts does not count: a unit that stands there fires
+## past it.
 func front_impact(from: Vector2, to: Vector2, front: float) -> Dictionary:
 	var shift := Vector2.UP * front
 	var skip := cell_of(from + shift)
 	var d := to - from
 	var steps := maxi(1, ceili(maxf(absf(d.x), absf(d.y)) * 4.0))
 	for step in steps + 1:
-		var point := from.lerp(to, float(step) / steps)
-		var cell := cell_of(point + shift)
+		var cell := cell_of(from.lerp(to, float(step) / steps) + shift)
 		if cell != skip and stops_shot(cell) and material[cell.y * size + cell.x] in [Defs.Mat.BOX, Defs.Mat.PROP]:
-			return {cell = cell, point = point}
+			# The shot goes in through the side of the front that it reaches last.
+			var side := center_of(cell) - shift - d.sign() * 0.5
+			var tx := (side.x - from.x) / d.x if d.x != 0.0 else -INF
+			var ty := (side.y - from.y) / d.y if d.y != 0.0 else -INF
+			var normal := Vector2(-signf(d.x), 0.0) if tx > ty else Vector2(0.0, -signf(d.y))
+			return {cell = cell, point = from + d * maxf(tx, ty), normal = normal}
 	return {}
 
 
