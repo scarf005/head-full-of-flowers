@@ -352,6 +352,9 @@ func _number(key: Variant, at: Vector2, amount: float, color: Color, format := "
 		label = Label3D.new()
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		label.no_depth_test = true
+		# After the grass, the flowers, the units and the effects, which have a priority of 3 at most.
+		label.outline_render_priority = 4
+		label.render_priority = 5
 		label.pixel_size = 0.06
 		label.font_size = 16
 		label.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
