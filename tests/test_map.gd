@@ -177,6 +177,15 @@ func test_arena_holds_buildings_and_open_connected_ground() -> void:
 		assert_eq(cut, [] as Array[Vector2i], "seed %d: cells cut off" % s)
 
 
+func test_arena_holds_about_as_many_loot_boxes_as_the_arena_of_the_original_game() -> void:
+	# The maps of the original game have a mean of 26 loot boxes within 40 m of the centre.
+	var boxes := 0
+	for map in _maps:
+		for o in map.obstacles:
+			boxes += 1 if o.kind in [&"box", &"high-tier-box"] and Vector2(o.x, o.y).length() < 40.0 else 0
+	assert_between(float(boxes) / SEEDS, 23.0, 29.0, "mean of %d maps" % SEEDS)
+
+
 ## Counts rows and columns with no solid cell over the 80 m square around the origin. Expects 5 or more each.
 func test_open_lanes_cross_the_arena() -> void:
 	for s in SEEDS:
