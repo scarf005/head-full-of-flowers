@@ -69,6 +69,8 @@ const SYNTH := {
 	&"hit": {secs = 0.11, f0 = 340.0, f1 = 100.0, tone = 1.0, decay = 6.0, gain = 0.52},
 	&"die": {secs = 0.28, f0 = 420.0, f1 = 44.0, tone = 1.0, decay = 4.0, gain = 0.86},
 	&"click": {secs = 0.04, f0 = 1100.0, f1 = 900.0, tone = 1.0, decay = 7.0, gain = 0.25},
+	&"door": {secs = 0.12, f0 = 190.0, f1 = 110.0, tone = 0.9, noise = 0.4, lp = 0.25, decay = 7.0, gain = 0.3},
+	&"glass": {secs = 0.3, f0 = 3100.0, f1 = 2300.0, tone = 0.45, noise = 1.0, lp = 0.9, decay = 6.0, gain = 0.42},
 }
 
 static var _streams: Dictionary = {}
@@ -241,6 +243,8 @@ func handle(e: Dictionary) -> void:
 			_play(&"perk" if e.kind == &"perk" else &"item_acquire", _at(e.unit, e.pos))
 		&"cell":
 			_play(&"wall_break" if e.destroyed else &"hit", _cell_pos(e.cell))
+		&"door", &"glass":
+			_play(e.type, _cell_pos(e.cell))
 		&"bounce":
 			_play(&"bounce", e.pos)
 		&"zone":

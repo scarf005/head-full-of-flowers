@@ -36,6 +36,8 @@ func test_every_event_type_plays_without_error() -> void:
 		{type = &"pickup", unit = 1, kind = &"weapon", id = &"pistol", pos = Vector2.ZERO},
 		{type = &"cell", cell = Vector2i(1, 1), destroyed = true, material = 1, cells = []},
 		{type = &"cell", cell = Vector2i(1, 1), destroyed = false, material = 1, cells = []},
+		{type = &"door", cell = Vector2i(1, 1), open = true, from = Vector2.ZERO},
+		{type = &"glass", cell = Vector2i(1, 1)},
 		{type = &"bounce", pos = Vector2(2, 2)},
 		{type = &"zone", pos = Vector2(2, 2), flame = false, radius = 2.9},
 		{type = &"box", cell = Vector2i(2, 2)},
@@ -47,6 +49,14 @@ func test_every_event_type_plays_without_error() -> void:
 	sound.play_ui(&"click")
 	sound.play_ui(&"empty")
 	assert_true(true)
+
+
+func test_door_and_breaking_glass_each_play_their_own_sound() -> void:
+	for type: StringName in [&"door", &"glass"]:
+		sound.handle({type = type, cell = Vector2i(1, 1), open = true, from = Vector2.ZERO})
+		var p := sound._spatial.back() as AudioStreamPlayer3D
+		assert_true(p.playing, type)
+		assert_eq(p.stream, Sound.streams()[type], type)
 
 
 func test_same_sound_does_not_restart_within_30_ms() -> void:
