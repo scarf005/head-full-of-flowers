@@ -26,6 +26,10 @@ void fragment() {
 	float steps = max(levels - 1.0, 1.0);
 	// Dither the brightness only, so the hue stays clean and no stray colour dots show.
 	float value = max(color.r, max(color.g, color.b));
-	vec3 dithered = color * (floor(value * steps + threshold) / steps / max(value, 0.001));
+	// The view stores 8 bits, so a flat colour arrives a little off its level. Move a value that is within 1.5 of
+	// those 255 steps of a level to the level. Without this, 1 pixel in each 8 x 8 of a flat colour is 1 level darker.
+	float scaled = value * steps;
+	scaled = abs(scaled - round(scaled)) < 0.03 ? round(scaled) : scaled;
+	vec3 dithered = color * (floor(scaled + threshold) / steps / max(value, 0.001));
 	COLOR = vec4(mix(color, dithered, strength), 1.0);
 }
