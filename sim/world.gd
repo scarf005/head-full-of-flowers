@@ -19,6 +19,8 @@ var projectiles: Array[Dictionary] = []
 var throwables: Array[Dictionary] = []
 var zones: Array[Dictionary] = []
 var pickups: Array[Dictionary] = []
+## Each: {cell, open, wait}. See Doors.
+var doors: Array[Dictionary] = []
 var pickup_seq := 0
 var box_timer := Loot.BOX_INTERVAL.x
 var weapon_timer := Loot.WEAPON_INTERVAL.x
@@ -43,6 +45,7 @@ func _init(config: Dictionary = {}, terrain: TerrainMap = null) -> void:
 	hard = config.get("hard", false)
 	map = terrain if terrain else MapGen.generate(rng)
 	grid = map.build_grid()
+	doors = Doors.create(map)
 	flowers = FlowerField.new()
 	var size: int = config.get("size", 8)
 	var per_team: int = MODES[mode] if mode != &"tdm" else size
@@ -172,6 +175,7 @@ func tick() -> void:
 		emit(&"finish", {})
 		return
 	arena_radius = lerpf(arena_start, arena_end, 1.0 - time_left / duration)
+	Doors.update(self, real)
 	for u in units:
 		# Hit stop slows shots, fires and loot only. Units keep their speed, so the controls never drag.
 		if bots_active and not u.is_player:

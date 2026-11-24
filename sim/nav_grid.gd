@@ -40,7 +40,8 @@ func sync(now: float) -> void:
 			continue
 		for x in size:
 			var cell := Vector2i(x, y)
-			var solid := grid.solid[row + x] > 0
+			# A door opens for a unit that comes near.
+			var solid := grid.solid[row + x] > 0 and grid.material[row + x] != Defs.Mat.DOOR
 			if solid != (_solid[row + x] > 0):
 				astar.set_point_solid(cell, solid)
 			if solid and grid.material[row + x] == Defs.Mat.BOX:

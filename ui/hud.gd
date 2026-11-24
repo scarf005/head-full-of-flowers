@@ -238,7 +238,7 @@ func _draw_map(w: SimWorld) -> void:
 		_map_revision = w.grid.revision
 		var image := Image.create(w.grid.size, w.grid.size, false, Image.FORMAT_RGBA8)
 		for i in w.grid.solid.size():
-			if w.grid.solid[i]:
+			if w.grid.solid[i] and w.grid.material[i] != Defs.Mat.DOOR:
 				image.set_pixel(i % w.grid.size, i / w.grid.size, Color(1, 1, 1, 0.55))
 		_map.set_image(image)
 	var origin := Vector2(16.0, 16.0)

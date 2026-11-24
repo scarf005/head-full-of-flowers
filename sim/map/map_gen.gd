@@ -97,11 +97,7 @@ static func ascii(terrain: TerrainMap, area := Rect2i()) -> String:
 	if not area.has_area():
 		area = Rect2i(0, 0, terrain.size, terrain.size)
 	var grid := terrain.build_grid()
-	var doors := {}
-	for b in terrain.buildings:
-		for door: Vector2i in b.doors:
-			doors[door] = true
-	var marks := {Defs.Mat.PROP: "o", Defs.Mat.BOX: "$"}
+	var marks := {Defs.Mat.PROP: "o", Defs.Mat.BOX: "$", Defs.Mat.DOOR: "+"}
 	var lines := PackedStringArray()
 	for y in range(area.position.y, area.end.y):
 		var line := ""
@@ -112,8 +108,6 @@ static func ascii(terrain: TerrainMap, area := Rect2i()) -> String:
 				line += "="
 			elif grid.solid[i]:
 				line += marks.get(grid.material[i], "#")
-			elif doors.has(Vector2i(x, y)):
-				line += "+"
 			elif tile == TerrainMap.Tile.WATER:
 				line += "~"
 			elif tile == TerrainMap.Tile.MARSH:

@@ -31,7 +31,7 @@ var props: Array[Dictionary] = []
 var pickup_points: PackedVector2Array = []
 ## Each: {kind, rect, rooms, doors} in grid cells. kind is the purpose (&"house", &"office", &"shop",
 ## &"warehouse", &"garage" or &"greenhouse"). rooms is an Array of {rect: Rect2i, kind: StringName}. doors is an
-## Array[Vector2i] of open wall cells.
+## Array[Vector2i] of the wall cells with a door.
 var buildings: Array[Dictionary] = []
 
 
@@ -65,12 +65,16 @@ func build_grid() -> ObstacleGrid:
 			for row in o.tiles.size():
 				for col in o.tiles[row].size():
 					if o.tiles[row][col]:
+						var i: int = (top + row) * size + left + col
 						grid.set_cell(Vector2i(left + col, top + row), mat)
-						grid.solid[(top + row) * size + left + col] = o.tiles[row][col]
+						grid.solid[i] = o.tiles[row][col]
 			continue
 		for row in maxi(1, floori(o.height)):
 			for col in maxi(1, floori(o.width)):
 				grid.set_cell(Vector2i(left + col, top + row), mat, high_tier)
+	for building in buildings:
+		for door: Vector2i in building.doors:
+			grid.set_cell(door, Defs.Mat.DOOR)
 	for prop in props:
 		var left := floori(prop.x - prop.width / 2.0 + half)
 		var top := floori(prop.y - prop.height / 2.0 + half)

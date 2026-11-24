@@ -33,7 +33,12 @@ func _cells(r: Rect2i) -> Array[Vector2i]:
 	return out
 
 
-## Marks all non-solid cells that a flood fill reaches from `start`.
+## True when a unit cannot walk into `cell`. A door opens for a unit.
+func _blocks(grid: ObstacleGrid, cell: Vector2i) -> bool:
+	return grid.is_solid(cell) and grid.material[cell.y * grid.size + cell.x] != Defs.Mat.DOOR
+
+
+## Marks all cells that a unit can walk to from `start`.
 func _flood(grid: ObstacleGrid, start: Vector2i, limit: float = INF) -> PackedByteArray:
 	var seen := PackedByteArray()
 	seen.resize(grid.size * grid.size)
@@ -43,7 +48,7 @@ func _flood(grid: ObstacleGrid, start: Vector2i, limit: float = INF) -> PackedBy
 	while i < queue.size():
 		for d in SIDES:
 			var n := queue[i] + d
-			if not grid.in_bounds(n) or grid.is_solid(n) or seen[n.y * grid.size + n.x]:
+			if not grid.in_bounds(n) or _blocks(grid, n) or seen[n.y * grid.size + n.x]:
 				continue
 			if (Vector2(n) + Vector2(0.5, 0.5) - Vector2(grid.half, grid.half)).length() > limit:
 				continue

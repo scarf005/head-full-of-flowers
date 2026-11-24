@@ -27,6 +27,7 @@ const CELL_LOOK := [
 	[Color("d9a441"), 0.8],
 	[Color("2f6b3a"), 0.9],
 	[Color("8b6a4c"), 0.7],
+	[Color("b0733c"), 1.15],
 ]
 const WALL_COLORS := {
 	&"house": Color("e9dcc0"),
@@ -109,7 +110,7 @@ func _process(_delta: float) -> void:
 	for i in grid.material.size():
 		_claim(out, i - 1)
 		var mat := grid.material[i]
-		if grid.hp[i] <= 0.0 or mat == Defs.Mat.PROP or mat == Defs.Mat.NONE:
+		if grid.hp[i] <= 0.0 or mat in [Defs.Mat.PROP, Defs.Mat.NONE, Defs.Mat.DOOR]:
 			continue
 		var cell := Vector2i(i % grid.size, i / grid.size)
 		var centre := Vector2(cell) + Vector2(0.5 - grid.half, 0.5 - grid.half)
