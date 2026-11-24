@@ -43,5 +43,5 @@ vec3 tone(vec3 base, float drop) {
 	float top = max(base.r, max(base.g, base.b));
 	float level = clamp(round(top * 5.0) - drop, 1.0, 5.0);
 	vec3 hue = mix(base / max(top, 0.001), vec3(0.72, 0.76, 1.0), clamp(drop, 0.0, 3.0) * 0.1);
-	return hue / max(hue.r, max(hue.g, hue.b)) * level / 5.0;
+	return hue / max(max(hue.r, max(hue.g, hue.b)), 0.001) * level / 5.0;
 }
