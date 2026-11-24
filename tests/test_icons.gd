@@ -30,7 +30,13 @@ func test_each_item_icon_is_its_sprite_with_a_light_rim() -> void:
 func test_menu_icons_stay_silhouettes() -> void:
 	for id: StringName in [&"skull", &"clock", &"move", &"fire"]:
 		assert_false(Icons.is_art(id), id)
-		assert_eq(Icons.get_icon(id).get_size(), Vector2(32.0, 32.0), id)
+
+
+func test_each_silhouette_is_32_px() -> void:
+	# A button of the menu is as tall as its icon. A 512 px icon makes the menu taller than the window.
+	for file in DirAccess.get_files_at("res://assets/icons"):
+		if file.ends_with(".svg"):
+			assert_eq(Icons.get_icon(StringName(file.get_basename())).get_size(), Vector2(32.0, 32.0), file)
 
 
 func test_fit_keeps_square_pixels_in_the_middle_of_the_box() -> void:
