@@ -125,6 +125,24 @@ func test_rocket_leaves_one_smoke_puff_for_2_frames_at_the_same_match_time() -> 
 	assert_eq(view._air._parts.size(), 1)
 
 
+func test_view_draws_a_finished_match_where_its_last_tick_left_it() -> void:
+	var view: GameView = autofree(GameView.new())
+	view.autoplay = true
+	add_child(view)
+	view.setup({seed = 1, size = 2})
+	view.world.bots_active = false
+	view.world.time_left = 0.001
+	for n in 3:
+		view._physics_process(0.0)
+	assert_true(view.world.finished)
+	# Between 2 ticks the view draws a moving thing a part of a step back. No tick comes after the end, so that
+	# part must be 0: a unit with speed stays on its place in each frame.
+	view.world.units[0].vel = Vector2(7.5, 0.0)
+	view._process(0.01)
+	assert_eq(GameView.lag, 0.0)
+	assert_eq(view.world.step, 0.0, "shots are drawn a part of this step back")
+
+
 ## A view of an empty map with one door and one window in a wall of a house that runs north-south at x 2 to 3.
 func _house_view(door: Vector2i, window: Vector2i) -> TerrainView:
 	var map := TerrainMap.new()
