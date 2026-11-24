@@ -4,7 +4,7 @@ class_name Defs
 enum Mat { NONE, WALL, WAREHOUSE, ROCK, BOX, HEDGE, PROP, DOOR }
 
 const TICK := 1.0 / 60.0
-const GAME_SPEED := 0.75
+const GAME_SPEED := 1.0
 const MATCH_SECONDS := 90.0
 const MAP_SIZE := 112
 const UNIT_HP := 10.0
