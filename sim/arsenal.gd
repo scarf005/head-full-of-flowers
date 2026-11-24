@@ -88,10 +88,10 @@ static func finish_reload(unit: SimUnit) -> void:
 	unit.reload_cooldown_max = 0.0
 
 
-## Removes the empty active slot and selects a weapon that can fire. The pistol is the fallback.
+## Removes the empty active slot and selects the first slot. A unit without a pistol gets one in a free slot.
 static func drop_empty(unit: SimUnit) -> void:
 	unit.slots.remove_at(unit.slot_index)
-	if unit.slots.is_empty():
+	if not unit.slots.any(func(s: Dictionary) -> bool: return s.id == &"pistol"):
 		equip(unit, &"pistol", INF)
 	unit.slot_index = 0
 	cancel_actions(unit)
