@@ -77,7 +77,8 @@ static func generate(seed_rng: RandomNumberGenerator, map_size: int = Defs.MAP_S
 			gen._fence(yard.lot, &"hedge" if seed_rng.randf() < 0.5 else &"wall", 1)
 		for i in seed_rng.randi_range(2, 4):
 			gen.place(YARD_PROPS[seed_rng.randi_range(0, YARD_PROPS.size() - 1)], yard.lot.grow(-1), &"any")
-		if seed_rng.randf() < 0.5:
+		# The whole part of the number, and one more loot box with a chance equal to the rest of the number.
+		for i in floori(Tune.yard_boxes) + int(seed_rng.randf() < fmod(Tune.yard_boxes, 1.0)):
 			gen.place(&"box", yard.lot.grow(-1), &"any")
 	gen._pickups()
 	return gen.map

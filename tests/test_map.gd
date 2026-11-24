@@ -14,6 +14,10 @@ func before_all() -> void:
 		_grids.append(_maps[-1].build_grid())
 
 
+func after_each() -> void:
+	Tune.reset()
+
+
 func _map(seed_value: int) -> TerrainMap:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
@@ -184,6 +188,24 @@ func test_arena_holds_about_as_many_loot_boxes_as_the_arena_of_the_original_game
 		for o in map.obstacles:
 			boxes += 1 if o.kind in [&"box", &"high-tier-box"] and Vector2(o.x, o.y).length() < 40.0 else 0
 	assert_between(float(boxes) / SEEDS, 23.0, 29.0, "mean of %d maps" % SEEDS)
+
+
+func test_yard_boxes_number_sets_the_loot_boxes_in_the_yard_of_each_building() -> void:
+	var counts := {}
+	for boxes: float in [0.0, 1.0, 2.0]:
+		Tune.yard_boxes = boxes
+		var map := _map(3)
+		var half := Vector2i(map.size, map.size) / 2
+		var outdoors := map.obstacles.filter(
+			func(o: Dictionary) -> bool:
+				var cell := Vector2i(floori(o.x), floori(o.y)) + half
+				var is_box: bool = o.kind in [&"box", &"high-tier-box"]
+				return is_box and not map.buildings.any(func(b: Dictionary) -> bool: return b.rect.has_point(cell))
+		)
+		counts[boxes] = outdoors.size()
+	assert_eq(counts[0.0], 0, "loot boxes outdoors with the number at 0")
+	assert_gt(counts[1.0], 8, "loot boxes outdoors with the number at 1")
+	assert_almost_eq(float(counts[2.0]) / counts[1.0], 2.0, 0.2, "loot boxes at 2 for each loot box at 1")
 
 
 ## Counts rows and columns with no solid cell over the 80 m square around the origin. Expects 5 or more each.

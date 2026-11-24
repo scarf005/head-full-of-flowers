@@ -269,3 +269,6 @@ msgstr "상자 앞면 판정"
 
 msgid "bot box range"
 msgstr "봇 상자 탐색 거리"
+
+msgid "yard boxes"
+msgstr "마당 상자 수"

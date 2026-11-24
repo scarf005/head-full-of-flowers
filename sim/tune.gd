@@ -21,6 +21,7 @@ const ITEMS := {
 	&"box_interval": [0.2, 3.0, 0.05],
 	&"box_hp": [1.0, 20.0, 1.0],
 	&"box_front": [0.0, 1.0, 0.01],
+	&"yard_boxes": [0.0, 4.0, 0.5],
 	&"bot_box_range": [0.0, 20.0, 0.5],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
@@ -69,6 +70,8 @@ static var box_hp := 8.0
 ## Metres south of a loot box or a prop in which a shot still hits it. The view draws a shot above its place on the
 ## ground, so such a shot shows on the front of the thing.
 static var box_front := 0.43
+## Mean number of loot boxes in the yard of each building of a new map.
+static var yard_boxes := 2.5
 ## Metres within which a bot with no target walks to a loot box and opens it. At 0, a bot leaves loot boxes alone, as
 ## in the original game.
 static var bot_box_range := 0.0
