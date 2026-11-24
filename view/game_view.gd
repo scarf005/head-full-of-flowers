@@ -223,6 +223,11 @@ func _show(e: Dictionary) -> void:
 			var at := world.grid.center_of(e.cell)
 			_puff(at, TerrainView.CELL_LOOK[mini(e.material, 7)][0], 14 if e.destroyed else 3, 4.0)
 			_pop(at, Color.WHITE, 0.7, 0.05)
+		&"door":
+			_terrain.door(e)
+		&"glass":
+			_terrain.break_glass(e.cell)
+			_puff(world.grid.center_of(e.cell), TerrainView.GLASS, 10, 5.0)
 		&"explosion":
 			_flash(Vector3(e.pos.x, 1.0, e.pos.y), Color(1.0, 0.6, 0.25), e.radius * 2.5, 0.35)
 			_burst(e.pos, e.radius)

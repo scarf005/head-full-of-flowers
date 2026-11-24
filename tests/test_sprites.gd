@@ -123,3 +123,47 @@ func test_rocket_leaves_one_smoke_puff_for_2_frames_at_the_same_match_time() -> 
 	view._process(0.01)
 	view._process(0.01)
 	assert_eq(view._air._parts.size(), 1)
+
+
+## A view of an empty map with one door and one window in a wall of a house that runs north-south at x 2 to 3.
+func _house_view(door: Vector2i, window: Vector2i) -> TerrainView:
+	var map := TerrainMap.new()
+	var rows := [PackedByteArray([ObstacleGrid.LOW]), PackedByteArray([1]), PackedByteArray([0])]
+	var top := window.y - map.size / 2
+	map.obstacles.append({kind = &"house", x = 2.5, y = top + 1.5, width = 1, height = 3, tiles = rows})
+	map.buildings.append({kind = &"house", rect = Rect2i(window, Vector2i(1, 3)), rooms = [], doors = [door]})
+	var view := TerrainView.new()
+	add_child_autofree(view)
+	view.setup(SimWorld.new({seed = 7, size = 2}, map))
+	view._process(0.0)
+	return view
+
+
+func test_leaf_of_a_door_turns_away_from_the_unit_that_opens_it_and_closes_again() -> void:
+	var map_half := TerrainMap.new().size / 2
+	var door := Vector2i(map_half + 2, map_half + 2)
+	var view := _house_view(door, door + Vector2i.UP * 2)
+	var pivot: Node3D = view._doors[door.y * view.grid.size + door.x].pivot
+	var at := view.grid.center_of(door)
+	# The far end of the leaf from its hinge, as [east, south].
+	var tip := func() -> Vector2:
+		var end := pivot.transform * Vector3(1.0, 0.0, 0.0) - pivot.position
+		return Vector2(end.x, end.z).snappedf(0.01)
+	assert_eq(tip.call(), Vector2.DOWN, "a closed leaf fills its cell from north to south")
+	for side: Vector2 in [Vector2.LEFT, Vector2.RIGHT]:
+		view.door({cell = door, open = true, from = at + side * 1.2})
+		view._process(1.0)
+		assert_eq(tip.call(), -side, "opened from %s" % side)
+	view.door({cell = door, open = false, from = at})
+	view._process(1.0)
+	assert_eq(tip.call(), Vector2.DOWN)
+
+
+func test_view_keeps_one_pane_of_glass_for_a_window_until_it_breaks() -> void:
+	var map_half := TerrainMap.new().size / 2
+	var window := Vector2i(map_half + 2, map_half)
+	var view := _house_view(window + Vector2i.DOWN * 2, window)
+	# The headless renderer keeps no instance transforms, so the test reads the record of the view.
+	assert_eq(view._panes.keys(), [window.y * view.grid.size + window.x], "no pane on the wall cell or the door")
+	view.break_glass(window)
+	assert_eq(view._panes.size(), 0)

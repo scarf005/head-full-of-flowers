@@ -36,3 +36,12 @@ vec3 flat_color(vec3 c) {
 	vec3 decoded = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
 	return CURRENT_RENDERER == RENDERER_COMPATIBILITY ? c : decoded;
 }
+
+// `base` at the level of the dither pass that is `drop` levels below its own, a little bluer for each level, as a
+// surface in the shade. The result is a colour for flat_color().
+vec3 tone(vec3 base, float drop) {
+	float top = max(base.r, max(base.g, base.b));
+	float level = clamp(round(top * 5.0) - drop, 1.0, 5.0);
+	vec3 hue = mix(base / max(top, 0.001), vec3(0.72, 0.76, 1.0), clamp(drop, 0.0, 3.0) * 0.1);
+	return hue / max(hue.r, max(hue.g, hue.b)) * level / 5.0;
+}

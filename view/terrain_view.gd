@@ -1,7 +1,10 @@
 class_name TerrainView
 extends Node3D
-## Ground and obstacles of a match, drawn like a floor plan: thin walls, door leaves and one box for each
-## piece of furniture.
+## Ground and obstacles of a match, drawn like a floor plan: thin walls, door leaves that turn, window glass and
+## pixel art for each piece of furniture.
+
+## Look of a box in `shaders/wall.gdshader`. The 6 kinds of buildings are in the order of WALL_COLORS.
+enum Style { PLAIN, HOUSE, OFFICE, SHOP, WAREHOUSE, GARAGE, GREENHOUSE, HEDGE, GLASS }
 
 const TILE_COLORS: Array[Color] = [
 	Color("457a36"),
@@ -34,16 +37,32 @@ const WALL_COLORS := {
 	&"office": Color("c3ccd6"),
 	&"shop": Color("e3b877"),
 	&"warehouse": Color("b5745f"),
-	&"garage": Color("9a8f86"),
+	&"garage": Color("c2b8ae"),
 	&"greenhouse": Color("d6e6d0"),
+}
+## Door leaf of each kind of building, in a colour that its wall does not have.
+const DOOR_COLORS := {
+	&"house": Color("c8643c"),
+	&"office": Color("5a8fc0"),
+	&"shop": Color("4fa070"),
+	&"warehouse": Color("a9bcc6"),
+	&"garage": Color("d9a441"),
+	&"greenhouse": Color("c8843c"),
 }
 ## Wall thickness in metres per linear material. The other materials draw as boxes.
 const THICK := {Defs.Mat.WALL: 0.22, Defs.Mat.WAREHOUSE: 0.4, Defs.Mat.HEDGE: 0.55}
 const FLOORS: Array[int] = [TerrainMap.Tile.CONCRETE, TerrainMap.Tile.WOOD_FLOOR, TerrainMap.Tile.TILE_FLOOR]
 const BOOKS: Array[Color] = [Color("c9584a"), Color("e0b64f"), Color("4f8a6a"), Color("5873b8")]
-const DOOR_COLOR := Color("5a3d2a")
+## Length, height and thickness in metres of a door leaf. The ink outline takes 1 pixel of each side, so a thinner
+## leaf is all ink from above.
+const DOOR_SIZE := Vector3(0.94, 1.15, 0.24)
+## Radians that a door leaf turns in each second.
+const DOOR_TURN := 16.0
 ## Height in metres of the wall under a window.
 const SILL := 0.5
+const GLASS := Color("bfe8ff")
+## Top in metres and thickness in metres of the glass of a window.
+const PANE := Vector2(1.2, 0.2)
 
 static var _warp: FastNoiseLite
 
@@ -52,8 +71,13 @@ var map: TerrainMap
 var _boxes := MultiMesh.new()
 var _revision := -1
 var _built := false
-## Cell index -> wall colour of the building that owns the cell.
+## Cell index -> kind of the building that owns the cell.
 var _walls := {}
+## Cell index -> {pivot, closed, turn}: the leaf of each door that stands, its angle when closed and the angle
+## that it turns to, in radians.
+var _doors := {}
+## Cell index -> index of the box of its window glass.
+var _panes := {}
 var _boxes_material := ShaderMaterial.new()
 ## For each box, the cell that it stands on, or -1 for a box that stays.
 var _owners := PackedInt32Array()
@@ -67,7 +91,7 @@ var _flat_material := ShaderMaterial.new()
 func setup(world: SimWorld) -> void:
 	grid = world.grid
 	map = world.map
-	_boxes_material.shader = preload("res://shaders/box.gdshader")
+	_boxes_material.shader = preload("res://shaders/wall.gdshader")
 	_sprite_material.shader = preload("res://shaders/prop.gdshader")
 	_sprite_material.set_shader_parameter(&"atlas", PropArt.atlas())
 	# After the ink outline pass, as the units: the art has its own outline.
@@ -80,9 +104,11 @@ func setup(world: SimWorld) -> void:
 		var rect: Rect2i = building.rect
 		for y in range(rect.position.y, rect.end.y):
 			for x in range(rect.position.x, rect.end.x):
-				_walls[y * grid.size + x] = WALL_COLORS[building.kind]
+				_walls[y * grid.size + x] = building.kind
+	_add_doors()
 	_boxes.transform_format = MultiMesh.TRANSFORM_3D
 	_boxes.use_colors = true
+	_boxes.use_custom_data = true
 	_boxes.mesh = BoxMesh.new()
 	var node := MultiMeshInstance3D.new()
 	node.multimesh = _boxes
@@ -90,7 +116,9 @@ func setup(world: SimWorld) -> void:
 	add_child(node)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	for entry: Dictionary in _doors.values():
+		entry.pivot.rotation.y = move_toward(entry.pivot.rotation.y, entry.turn, DOOR_TURN * delta)
 	if grid == null or grid.revision == _revision:
 		return
 	_revision = grid.revision
@@ -99,7 +127,11 @@ func _process(_delta: float) -> void:
 		for n in _owners.size():
 			if _owners[n] >= 0 and grid.hp[_owners[n]] <= 0.0:
 				_owners[n] = -1
-				_boxes.set_instance_transform(n, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+				_hide(n)
+		for cell: int in _doors.keys():
+			if grid.hp[cell] <= 0.0:
+				_doors[cell].pivot.queue_free()
+				_doors.erase(cell)
 		for cell: int in _sprites.keys():
 			if grid.hp[cell] <= 0.0:
 				_sprites[cell].queue_free()
@@ -119,46 +151,92 @@ func _process(_delta: float) -> void:
 			var box: StringName = &"box_high" if grid.high_tier[i] else &"box"
 			_sprite(i, box if mat == Defs.Mat.BOX else &"rocks", centre, Vector2i.ONE)
 			continue
-		var color: Color = _walls.get(i, look[0]) if mat == Defs.Mat.WAREHOUSE else look[0]
+		var kind: StringName = _walls.get(i, &"warehouse")
+		var color: Color = WALL_COLORS[kind] if mat == Defs.Mat.WAREHOUSE else look[0]
+		var style := Style.HEDGE if mat == Defs.Mat.HEDGE else Style.PLAIN
+		if mat == Defs.Mat.WAREHOUSE:
+			style = WALL_COLORS.keys().find(kind) + 1 as Style
 		var thick: float = THICK[mat]
 		var height: float = SILL if grid.solid[i] == ObstacleGrid.LOW else look[1]
-		_box(out, centre, Vector2(thick, thick), height, color)
+		_box(out, centre, Vector2(thick, thick), height, color, style)
 		for side: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-			if _joins(cell + side):
+			if _lined(cell + side):
 				var arm := Vector2(side) * (0.25 + thick * 0.25)
-				_box(
-					out,
-					centre + arm,
-					Vector2(side).abs() * (0.5 - thick * 0.5) + Vector2(side.y, side.x).abs() * thick,
-					height,
-					color
-				)
+				var size := Vector2(side).abs() * (0.5 - thick * 0.5) + Vector2(side.y, side.x).abs() * thick
+				_box(out, centre + arm, size, height, color, style)
+		if grid.glass.has(i):
+			_panes[i] = out.size()
+			var along := Vector2(_axis(cell))
+			_box(out, centre, along + Vector2(along.y, along.x) * PANE.y, PANE.x, GLASS, Style.GLASS, SILL)
 	_claim(out, grid.material.size() - 1)
 	for prop in map.props:
 		var i := grid.size * floori(prop.y + grid.half) + floori(prop.x + grid.half)
 		if grid.hp[i] > 0.0:
 			_sprite(i, prop.kind, Vector2(prop.x, prop.y), Vector2i(prop.width, prop.height))
-	for building in map.buildings:
-		for door: Vector2i in building.doors:
-			var along_x := _joins(door + Vector2i.LEFT) or _joins(door + Vector2i.RIGHT)
-			var hinge := Vector3(door.x - grid.half + 0.5, 0.3, door.y - grid.half + 0.5)
-			hinge -= Vector3(0.5, 0, 0) if along_x else Vector3(0, 0, 0.5)
-			var swing := Basis(Vector3.UP, (0.0 if along_x else -PI / 2.0) - 1.4)
-			var leaf := (
-				Transform3D(swing, hinge) * Transform3D(Basis.from_scale(Vector3(0.9, 0.6, 0.1)), Vector3(0.45, 0, 0))
-			)
-			out.append([leaf, DOOR_COLOR])
-	_claim(out, -1)
 	_boxes.instance_count = out.size()
 	for n in out.size():
 		_boxes.set_instance_transform(n, out[n][0])
 		_boxes.set_instance_color(n, out[n][1])
+		_boxes.set_instance_custom_data(n, Color(out[n][2], 0.0, 0.0))
 
 
 ## Draws a loot box that the match put on a free cell.
 func add_box(cell: Vector2i) -> void:
 	var i := cell.y * grid.size + cell.x
 	_sprite(i, &"box_high" if grid.high_tier[i] else &"box", grid.center_of(cell), Vector2i.ONE)
+
+
+## Turns the leaf of a door for a `door` event. An open leaf stands square to its wall, on the far side from the
+## unit that opened it.
+func door(e: Dictionary) -> void:
+	var entry: Dictionary = _doors.get(e.cell.y * grid.size + e.cell.x, {})
+	if entry.is_empty():
+		return
+	var hinge := Vector2(entry.pivot.position.x, entry.pivot.position.z)
+	var away := [0.5, -0.5].filter(
+		func(side: float) -> bool:
+			var angle: float = entry.closed + PI * side
+			return Vector2(cos(angle), -sin(angle)).dot(e.from - hinge) < 0.0
+	)
+	entry.turn = entry.closed + (PI * (away[0] if away else 0.5) if e.open else 0.0)
+
+
+## Takes the glass of a window away.
+func break_glass(cell: Vector2i) -> void:
+	var i := cell.y * grid.size + cell.x
+	if _panes.has(i):
+		_hide(_panes[i])
+		_panes.erase(i)
+
+
+func _hide(box: int) -> void:
+	_boxes.set_instance_transform(box, Transform3D(Basis.from_scale(Vector3.ZERO), Vector3.ZERO))
+
+
+## One leaf for each door. The hinge is at the west or the north end of the cell. The second leaf of a wide door
+## has it at the other end.
+func _add_doors() -> void:
+	var mesh := BoxMesh.new()
+	for building in map.buildings:
+		var material := ShaderMaterial.new()
+		material.shader = preload("res://shaders/door.gdshader")
+		var wood: Color = DOOR_COLORS[building.kind]
+		material.set_shader_parameter(&"wood", Vector3(wood.r, wood.g, wood.b))
+		for cell: Vector2i in building.doors:
+			var axis := _axis(cell)
+			var far := _door(cell - axis)
+			var hinge := grid.center_of(cell) + Vector2(axis) * (0.5 if far else -0.5)
+			var pivot := Node3D.new()
+			pivot.position = Vector3(hinge.x, 0.0, hinge.y)
+			pivot.rotation.y = (PI if far else 0.0) + (0.0 if axis == Vector2i.RIGHT else -PI / 2.0)
+			var leaf := MeshInstance3D.new()
+			leaf.mesh = mesh
+			leaf.material_override = material
+			leaf.scale = DOOR_SIZE
+			leaf.position = Vector3(0.5, DOOR_SIZE.y * 0.5, 0.0)
+			pivot.add_child(leaf)
+			add_child(pivot)
+			_doors[cell.y * grid.size + cell.x] = {pivot = pivot, closed = pivot.rotation.y, turn = pivot.rotation.y}
 
 
 ## Records `cell` as the owner of the boxes added since the last call.
@@ -189,9 +267,29 @@ func _joins(cell: Vector2i) -> bool:
 	return grid.is_solid(cell) and THICK.has(grid.material[cell.y * grid.size + cell.x])
 
 
-func _box(out: Array, centre: Vector2, size: Vector2, height: float, color: Color) -> void:
-	var basis := Basis.from_scale(Vector3(size.x, height, size.y))
-	out.append([Transform3D(basis, Vector3(centre.x, height * 0.5, centre.y)), color])
+func _door(cell: Vector2i) -> bool:
+	return grid.in_bounds(cell) and grid.material[cell.y * grid.size + cell.x] == Defs.Mat.DOOR
+
+
+## True when `cell` continues the line of a wall: a wall, a window, a fence, a hedge or a door.
+func _lined(cell: Vector2i) -> bool:
+	return _joins(cell) or _door(cell)
+
+
+## Direction of the wall that a door or a window is in: south when more of its 2 neighbours to the north and south
+## continue the line than of its 2 neighbours to the west and east, else east.
+func _axis(cell: Vector2i) -> Vector2i:
+	var across := int(_lined(cell + Vector2i.LEFT)) + int(_lined(cell + Vector2i.RIGHT))
+	var along := int(_lined(cell + Vector2i.UP)) + int(_lined(cell + Vector2i.DOWN))
+	return Vector2i.RIGHT if across >= along else Vector2i.DOWN
+
+
+## Adds a box of `size` metres on the ground plane, from `bottom` to `top` metres.
+func _box(
+	out: Array, centre: Vector2, size: Vector2, top: float, color: Color, style := Style.PLAIN, bottom := 0.0
+) -> void:
+	var basis := Basis.from_scale(Vector3(size.x, top - bottom, size.y))
+	out.append([Transform3D(basis, Vector3(centre.x, (top + bottom) * 0.5, centre.y)), color, style])
 
 
 ## Ground kind at a world point. Borders between outdoor kinds wander off the tile grid. Floors keep their tile.
