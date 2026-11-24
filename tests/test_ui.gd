@@ -67,6 +67,18 @@ func test_kill_feed_shows_the_weapon_of_the_hit_and_a_skull_without_one() -> voi
 	assert_eq(hud.feed.map(func(row: Dictionary) -> StringName: return row.icon), [&"shotgun", &"skull"])
 
 
+func test_minimap_marks_each_loot_box_in_the_colour_of_its_tier() -> void:
+	var w := SimWorld.new({seed = 1, size = 2}, TerrainMap.new())
+	var plain := w.grid.cell_of(Vector2(3.5, 0.5))
+	w.grid.set_cell(plain, Defs.Mat.BOX)
+	w.grid.set_cell(w.grid.cell_of(Vector2(-3.5, 0.5)), Defs.Mat.BOX, true)
+	w.grid.set_cell(w.grid.cell_of(Vector2(0.5, 5.5)), Defs.Mat.ROCK)
+	var marks := [{at = Vector2(-3.5, 0.5), color = Hud.BOX_HIGH}, {at = Vector2(3.5, 0.5), color = Hud.BOX}]
+	assert_eq(Hud.box_marks(w.grid), marks, "a high-tier box to the west, a plain box to the east and a rock")
+	w.hit_cell(plain, 99.0, 0)
+	assert_eq(Hud.box_marks(w.grid), marks.slice(0, 1), "after the plain box breaks")
+
+
 func test_arrow_for_a_unit_out_of_view_is_on_the_screen_border_toward_the_unit() -> void:
 	var area := Rect2(32.0, 32.0, 1216.0, 656.0)
 	assert_eq(Hud.edge_point(Vector2(3000.0, 360.0), area), Vector2(1248.0, 360.0), "a unit to the right")

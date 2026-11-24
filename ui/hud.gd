@@ -6,6 +6,9 @@ const MAP_PX := 150.0
 const INK := Color(0.05, 0.05, 0.08)
 const PLATE := Color(0.05, 0.05, 0.08, 0.88)
 const RED := Color(0.95, 0.3, 0.35)
+## Minimap colours of a plain loot box and of a high-tier loot box, as in the original game.
+const BOX := Color("de7d4f")
+const BOX_HIGH := Color("eef4ff")
 ## Pixels from the screen border to the arrows of units out of view, and from an arrow to a corner.
 const EDGE := 32.0
 ## Offsets that stamp an ink rim around each icon.
@@ -24,6 +27,7 @@ var game: GameView
 var feed: Array[Dictionary] = []
 var _map := ImageTexture.new()
 var _map_revision := -1
+var _map_boxes: Array[Dictionary] = []
 ## Seconds left of the hit marker at the crosshair.
 var _marker := 0.0
 var _marker_color := Color.WHITE
@@ -243,6 +247,7 @@ func _draw_map(w: SimWorld) -> void:
 			if w.grid.solid[i] and w.grid.material[i] != Defs.Mat.DOOR:
 				image.set_pixel(i % w.grid.size, i / w.grid.size, Color(1, 1, 1, 0.55))
 		_map.set_image(image)
+		_map_boxes = box_marks(w.grid)
 	var origin := Vector2(16.0, 16.0)
 	var scale := MAP_PX / (w.arena_start * 2.0)
 	var centre := origin + Vector2.ONE * MAP_PX * 0.5
@@ -251,11 +256,26 @@ func _draw_map(w: SimWorld) -> void:
 	var shown := Rect2(Vector2.ONE * (w.grid.size * 0.5 - w.arena_start), Vector2.ONE * w.arena_start * 2.0)
 	draw_texture_rect_region(_map, Rect2(origin, Vector2.ONE * MAP_PX), shown)
 	draw_arc(centre, w.arena_radius * scale, 0.0, TAU, 48, Color(1.0, 0.4, 0.35), 2.0)
+	for mark in _map_boxes:
+		# Only a mark that is fully on the map.
+		if maxf(absf(mark.at.x), absf(mark.at.y)) < w.arena_start - 3.0 / scale:
+			draw_rect(Rect2(centre + mark.at * scale - Vector2.ONE * 3.0, Vector2.ONE * 6.0), INK)
+			draw_rect(Rect2(centre + mark.at * scale - Vector2.ONE * 2.0, Vector2.ONE * 4.0), mark.color)
 	for pickup in w.pickups:
 		draw_rect(Rect2(centre + pickup.pos * scale - Vector2.ONE * 1.5, Vector2.ONE * 3.0), Color(1.0, 0.85, 0.3))
 	for u in w.units:
 		draw_circle(centre + u.pos * scale, 4.0 if u.is_player else 3.0, w.team_color(u.team))
 	draw_arc(centre + w.units[0].pos * scale, 6.0, 0.0, TAU, 12, Color.WHITE, 1.0)
+
+
+## The minimap mark of each loot box that stands: {at, color}. at is the middle of the box in metres.
+static func box_marks(grid: ObstacleGrid) -> Array[Dictionary]:
+	var marks: Array[Dictionary] = []
+	for i in grid.material.size():
+		if grid.material[i] == Defs.Mat.BOX and grid.solid[i] > 0:
+			var at := grid.center_of(Vector2i(i % grid.size, i / grid.size))
+			marks.append({at = at, color = BOX_HIGH if grid.high_tier[i] > 0 else BOX})
+	return marks
 
 
 ## Draws a silhouette over `at` with an ink rim, or item art at a whole scale of at most `most` in the middle of `at`.
