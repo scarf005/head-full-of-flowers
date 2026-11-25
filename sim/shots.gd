@@ -193,13 +193,21 @@ static func _step_throwable(w: SimWorld, t: Dictionary, dt: float) -> bool:
 			t.vel = along * 0.78 - t.vel.project(normal) * 0.58
 			t.bounces = t.bounces - 1 if t.vel.length() >= 2.8 else 0
 	w.break_glass(from, t.pos)
+	var fuser: SimUnit = null
+	var fuse_gap := INF
 	for u in w.units:
 		if u.team == t.team:
 			continue
 		var gap: float = u.pos.distance_to(t.pos) - u.radius - radius
 		if gap <= 0.0 and not t.molotov:
 			Combat.damage(w, u, 20.0, t.owner, t.pos, t.vel, &"shot", &"grenade")
+		if t.fuse and gap <= 1.25 and gap < fuse_gap:
+			fuser = u
+			fuse_gap = gap
 		landed = landed or gap <= (1.25 if t.fuse else 0.0)
+	# The enemy that sets off the fuse takes the hit of a touch that the grenade blows up too early to make.
+	if fuser and fuse_gap > 0.0:
+		Combat.damage(w, fuser, 20.0, t.owner, t.pos, t.vel, &"shot", &"grenade")
 	if not landed:
 		return true
 	if t.molotov:
