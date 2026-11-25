@@ -11,8 +11,10 @@ const FLAMES_PER_M2 := 0.6
 const ART := Vector2(48.0, 48.0)
 const SMALL_ART := Vector2(24.0, 24.0)
 const INK := Color(0.2, 0.14, 0.2)
-const FIRE: Array[Color] = [Color.WHITE, Color("ffe680"), Color("ff9a3c"), Color("e2552a"), Color("5a3a3a")]
-const SMOKE: Array[Color] = [Color("7a7480"), Color("565160")]
+const FIRE: Array[Color] = [Color.WHITE, Color("ffe680"), Color("ff9a3c"), Color("e2552a")]
+## Instance colours of a blast shape: a ball of fire, and smoke only.
+const HOT: Array[Color] = [Color.WHITE]
+const COLD: Array[Color] = [Color.BLACK]
 ## Camera shake of a blast by weapon: x is the amount, y is the most that the shake reaches.
 const BLAST_SHAKE := {
 	&"grenade": Vector2(0.55, 1.4), &"grenade-launcher": Vector2(0.24, 1.6), &"rocket-launcher": Vector2(0.42, 2.4)
@@ -270,7 +272,6 @@ func _show(e: Dictionary) -> void:
 		&"explosion":
 			_flash(Vector3(e.pos.x, 1.0, e.pos.y), Color(1.0, 0.6, 0.25), e.radius * 2.5, 0.35)
 			_burst(e.pos, e.radius)
-			_ring(e.pos, Color(1.0, 0.8, 0.4), e.radius * 1.2, 0.25)
 			_puff(e.pos, Color(0.22, 0.2, 0.2), 18, 8.0)
 			_scorch.crater(e.pos, e.radius * Tune.crater_size)
 			# Full shake within 10 m of the player, none from 34 m.
@@ -386,22 +387,33 @@ func _number(key: Variant, at: Vector2, amount: float, color: Color, format := "
 	tween.tween_callback(label.queue_free)
 
 
-## Blast: smoke discs that rise, fire discs that shrink from white to dark red, and a white flash over both.
+## Blast: smoke that rises, a ball of fire that cools to smoke, a thin ring on the ground that shows the reach, and
+## embers that fly out.
 func _burst(at: Vector2, radius: float) -> void:
 	var px := radius * UnitView.PX_PER_M
-	var centre := Vector3(at.x, 0.6, at.y)
+	var ground := Vector3(at.x, 0.0, at.y)
+	var age := {hole = Vector2(0.0, 1.0)}
+	for n in 5:
+		var out := Vector2.from_angle(randf() * TAU) * randf() * radius * 0.45
+		var size := Vector2.ONE * px * randf_range(0.55, 0.85)
+		var more := age.merged({vel = Vector3(out.x * 0.6, randf_range(1.1, 2.0), out.y * 0.6), turn = randf() * TAU})
+		var from := ground + Vector3(out.x, Fx.up(size.y * 0.3), out.y)
+		_air.spawn(from, randf_range(0.8, 1.2), Fx.Shape.BLAST, size * 0.6, size, COLD, more)
+	for n in 4:
+		# The first ball is in the middle and has the full size.
+		var out := Vector2.from_angle(randf() * TAU) * radius * 0.4 * float(n > 0)
+		var size := Vector2.ONE * px * (1.5 if n == 0 else randf_range(0.6, 0.9))
+		var more := age.merged({vel = Vector3(0.0, 0.7, 0.0), turn = randf() * TAU})
+		var from := ground + Vector3(out.x, Fx.up(size.y * 0.2), out.y)
+		_air.spawn(from, 0.5 if n == 0 else randf_range(0.3, 0.45), Fx.Shape.BLAST, size * 0.6, size, HOT, more)
 	for n in 14:
-		var smoke := n < 6
-		var out := Vector2.from_angle(randf() * TAU) * randf() * radius * 0.5
-		var size := Vector2.ONE * px * randf_range(0.5, 0.9)
-		var from := centre + Vector3(out.x, 0.0, out.y)
-		if smoke:
-			var more := {vel = Vector3(0.0, 1.6, 0.0), dots = 0.45}
-			_air.spawn(from, randf_range(0.5, 0.8), Fx.Shape.DISC, size * 0.6, size, SMOKE, more)
-		else:
-			_air.spawn(from, randf_range(0.2, 0.4), Fx.Shape.DISC, size, size * 0.1, FIRE)
-	var flash := Vector2.ONE * px * 1.7
-	_air.spawn(centre, 0.07, Fx.Shape.DISC, flash, flash * 1.1, [Color.WHITE] as Array[Color])
+		var out := Vector2.from_angle(randf() * TAU) * randf_range(0.6, 1.5) * radius / 0.35
+		var more := {vel = Vector3(out.x, randf_range(1.0, 5.0), out.y)}
+		var size := Vector2.ONE * randf_range(3.0, 5.0)
+		_air.spawn(ground + Vector3.UP * 0.5, randf_range(0.2, 0.4), Fx.Shape.DISC, size, size * 0.4, FIRE, more)
+	var reach := _on_ground(radius)
+	var ring := {hole = Vector2(0.88, 0.97), dots = 0.6}
+	_ground.spawn(ground, 0.24, Fx.Shape.DISC, reach * 0.35, reach, [Color("ffe9b0")] as Array[Color], ring)
 
 
 ## Look of the trail of a projectile kind.

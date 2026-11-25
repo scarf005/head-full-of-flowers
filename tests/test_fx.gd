@@ -220,3 +220,17 @@ func test_rocket_shows_as_one_model_and_no_teardrop() -> void:
 	view.world.projectiles.clear()
 	view._process(0.01)
 	assert_eq(model.visible_instance_count, 0)
+
+
+func test_blast_shows_4_balls_of_fire_and_5_of_smoke_over_a_thin_ring_on_the_ground() -> void:
+	var view := _view()
+	view._show({type = &"explosion", pos = Vector2(3.0, 1.0), radius = 4.0, source = -1, weapon = &"grenade"})
+	var balls := view._air._parts.filter(func(p: Dictionary) -> bool: return p.shape == Fx.Shape.BLAST)
+	var fire := balls.filter(func(p: Dictionary) -> bool: return p.colors == GameView.HOT)
+	assert_eq(balls.size(), 9)
+	assert_eq(fire.size(), 4)
+	assert_eq(fire[0].to, Vector2.ONE * 4.0 * UnitView.PX_PER_M * 1.5, "the ball in the middle")
+	for ball: Dictionary in balls:
+		assert_eq(ball.hole, Vector2(0.0, 1.0), "the shader gets the age of the ball")
+	assert_eq(view._ground._parts.size(), 1)
+	assert_eq(view._ground._parts[0].hole, Vector2(0.88, 0.97))
