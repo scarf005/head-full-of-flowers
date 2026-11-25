@@ -75,3 +75,25 @@ func test_mouse_wheel_down_and_up_before_one_tick_keep_the_weapon() -> void:
 	_send(_wheel(MOUSE_BUTTON_WHEEL_DOWN))
 	await _send(_wheel(MOUSE_BUTTON_WHEEL_UP))
 	assert_eq(player.slot_index, 0)
+
+
+func test_key_held_through_the_death_of_the_player_starts_nothing_in_the_new_life() -> void:
+	# The grenade is not ready. A person holds the throw key and the fire key, and the player dies. The respawn makes
+	# the grenade and the weapon ready, so the held keys would throw and fire at the respawn place.
+	main.game.intro = 0.0
+	player.secondary_cooldown = 2.0
+	Input.action_press(&"throw")
+	Input.action_press(&"fire")
+	await wait_physics_frames(2)
+	Combat.damage(main.game.world, player, 100.0, 1, player.pos, Vector2.RIGHT, &"shot")
+	var shots := player.shots_fired
+	await wait_physics_frames(4)
+	assert_eq(main.game.world.throwables.size(), 0, "no grenade at the respawn place")
+	assert_eq(player.shots_fired, shots, "no shot at the respawn place")
+	Input.action_release(&"throw")
+	Input.action_release(&"fire")
+	await wait_physics_frames(2)
+	Input.action_press(&"throw")
+	await wait_physics_frames(2)
+	assert_eq(main.game.world.throwables.size(), 1, "a new press of the key throws")
+	Input.action_release(&"throw")
