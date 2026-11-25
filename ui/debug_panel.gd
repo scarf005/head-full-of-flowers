@@ -9,9 +9,15 @@ signal finish
 ## A person changed a number.
 signal changed
 
+## The range of a number that is a yes or no.
+const YES_NO: Array = [0.0, 1.0, 1.0]
+
 ## Number id -> its slider.
 var sliders := {}
-var _values := {}
+## Id of a yes/no number -> its check box.
+var checks := {}
+## Number id -> the control that shows when the number differs from its default.
+var _marks := {}
 
 
 func _ready() -> void:
@@ -47,6 +53,16 @@ func _ready() -> void:
 		var label := Label.new()
 		label.text = tr(String(id).replace("_", " "))
 		grid.add_child(label)
+		if item == YES_NO:
+			var check := CheckBox.new()
+			# The arrow keys move the player, so a check box must not take them.
+			check.focus_mode = Control.FOCUS_NONE
+			check.toggled.connect(func(on: bool) -> void: _write(float(on), id))
+			grid.add_child(check)
+			grid.add_child(Control.new())
+			checks[id] = check
+			_marks[id] = label
+			continue
 		var slider := HSlider.new()
 		slider.min_value = item[0]
 		slider.max_value = item[1]
@@ -62,7 +78,7 @@ func _ready() -> void:
 		value.custom_minimum_size.x = 40.0
 		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		grid.add_child(value)
-		_values[id] = value
+		_marks[id] = value
 	refresh()
 
 
@@ -71,12 +87,16 @@ func refresh() -> void:
 	for id: StringName in sliders:
 		sliders[id].set_value_no_signal(Tune.read(id))
 		_show(id)
+	for id: StringName in checks:
+		checks[id].set_pressed_no_signal(Tune.read(id) > 0.5)
+		_show(id)
 
 
 func _show(id: StringName) -> void:
 	var differs := not is_equal_approx(Tune.read(id), Tune.default_of(id))
-	_values[id].text = String.num(Tune.read(id), 2)
-	_values[id].modulate = Color(1.0, 0.75, 0.4) if differs else Color.WHITE
+	if sliders.has(id):
+		_marks[id].text = String.num(Tune.read(id), 2)
+	_marks[id].modulate = Color(1.0, 0.75, 0.4) if differs else Color.WHITE
 
 
 func _write(value: float, id: StringName) -> void:

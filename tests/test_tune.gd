@@ -223,6 +223,22 @@ func test_slider_of_the_debug_panel_changes_its_number_and_the_settings() -> voi
 	assert_false(main.menu.settings.has_section("tune"))
 
 
+func test_yes_no_numbers_of_the_debug_panel_have_a_check_box_and_no_slider() -> void:
+	_start()
+	main.set_debug(true)
+	for id: StringName in [&"god", &"endless_ammo"]:
+		assert_has(main.debug.checks, id)
+		assert_does_not_have(main.debug.sliders, id)
+	assert_has(main.debug.sliders, &"game_speed")
+	main.debug.checks[&"god"].button_pressed = true
+	assert_eq(Tune.god, 1.0)
+	assert_eq(main.menu.settings.get_value("tune", "god"), 1.0)
+	assert_eq(Tune.endless_ammo, 0.0, "the other check box stays off")
+	main.debug._reset()
+	assert_false(main.debug.checks[&"god"].button_pressed)
+	assert_eq(Tune.god, 0.0)
+
+
 func test_buttons_of_the_debug_panel_give_a_weapon_and_a_perk_and_end_the_match() -> void:
 	_start()
 	main.start_match({seed = 1, size = 2})
