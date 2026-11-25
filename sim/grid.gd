@@ -63,7 +63,7 @@ func set_cell(cell: Vector2i, mat: int, is_high_tier := false, is_solid_cell := 
 	var i := cell.y * size + cell.x
 	solid[i] = 1 if is_solid_cell else 0
 	material[i] = mat
-	hp[i] = Defs.MAT_HP[mat]
+	hp[i] = Tune.box_hp if mat == Defs.Mat.BOX else Defs.MAT_HP[mat]
 	high_tier[i] = 1 if is_high_tier else 0
 	revision += 1
 

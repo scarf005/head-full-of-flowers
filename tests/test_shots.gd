@@ -37,6 +37,7 @@ func _front_damage(mat: Defs.Mat, south: float) -> float:
 	Tune.spread = 0.0
 	var cell := w.grid.cell_of(Vector2(5.5, -0.5))
 	w.grid.set_cell(cell, mat)
+	var full := w.grid.hp[cell.y * w.grid.size + cell.x]
 	a.pos = Vector2(0.0, south)
 	b.pos = Vector2(-10.0, 0.0)
 	a.want_fire = true
@@ -44,7 +45,7 @@ func _front_damage(mat: Defs.Mat, south: float) -> float:
 	a.want_fire = false
 	for n in 30:
 		w.tick()
-	return Defs.MAT_HP[mat] - w.grid.hp[cell.y * w.grid.size + cell.x]
+	return full - w.grid.hp[cell.y * w.grid.size + cell.x]
 
 
 func test_shot_across_the_drawn_front_of_a_loot_box_or_a_prop_hits_it() -> void:
@@ -74,7 +75,7 @@ func test_shot_of_a_unit_that_stands_at_the_front_of_a_loot_box_flies_on() -> vo
 	Tune.spread = 0.0
 	a.pos = Vector2(0.2, 0.2)
 	assert_gt(_damage_at(Vector2(6.0, 0.4)), 0.0, "the enemy 5.8 m east of the unit")
-	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.BOX])
+	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], Tune.box_hp)
 
 
 func test_shell_bounces_off_the_side_of_the_drawn_front_that_it_meets() -> void:
@@ -92,7 +93,7 @@ func test_shell_bounces_off_the_side_of_the_drawn_front_that_it_meets() -> void:
 	while not w.events.any(func(e: Dictionary) -> bool: return e.type == &"bounce") and ticks < 60:
 		w.tick()
 		ticks += 1
-	assert_lt(w.grid.hp[cell.y * w.grid.size + cell.x], Defs.MAT_HP[Defs.Mat.BOX], "the shell hits the box")
+	assert_lt(w.grid.hp[cell.y * w.grid.size + cell.x], Tune.box_hp, "the shell hits the box")
 	assert_eq(w.projectiles.size(), 1)
 	assert_gt(w.projectiles[0].vel.x, 0.0, "to the east")
 

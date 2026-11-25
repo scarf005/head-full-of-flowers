@@ -69,8 +69,8 @@ static var hit_stop := 1.0
 static var kill_hp := Defs.KILL_HP_BONUS
 ## Multiplies the seconds between two loot boxes.
 static var box_interval := 1.0
-## Hit points of a loot box.
-static var box_hp := 8.0
+## Hit points of a loot box. The original game has 8, which is 4 shots of the pistol.
+static var box_hp := 4.0
 ## Metres south of a loot box or a prop in which a shot still hits it. The view draws a shot above its place on the
 ## ground, so such a shot shows on the front of the thing.
 static var box_front := 0.43

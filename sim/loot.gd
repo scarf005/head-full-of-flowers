@@ -53,7 +53,6 @@ static func spawn_box(w: SimWorld) -> void:
 		if w.grid.circle_hits(w.grid.center_of(cell), 1.2) or w.unit_near(w.grid.center_of(cell), 1.5):
 			continue
 		w.grid.set_cell(cell, Defs.Mat.BOX, true)
-		w.grid.hp[cell.y * w.grid.size + cell.x] = Tune.box_hp
 		w.emit(&"box", {cell = cell})
 		return
 

@@ -30,6 +30,7 @@ const BURNT := -1
 const GRENADE_COOLDOWN := 2.8
 const MOLOTOV_COOLDOWN := 4.4
 
+## Hit points of a cell by its material. A loot box has the hit points of `Tune.box_hp`.
 const MAT_HP: Array[float] = [0.0, 3.0, 4.0, 8.0, 8.0, 2.0, 3.0, 4.0]
 const MAT_ARMOR: Array[float] = [0.0, 2.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0]
 ## Prop kinds with their own hit points. A barrel blows up at the first hit, a crate takes 3 rifle hits.

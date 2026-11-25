@@ -171,6 +171,8 @@ func test_box_numbers_set_the_hit_points_and_the_interval_of_loot_boxes() -> voi
 	var cell: Vector2i = boxes[0].cell
 	assert_eq(w.grid.hp[cell.y * w.grid.size + cell.x], 3.0)
 	assert_almost_eq(w.box_timer, Loot.BOX_INTERVAL.x * 2.0, 0.01, "at the start of a match")
+	w.grid.set_cell(Vector2i(3, 3), Defs.Mat.BOX)
+	assert_eq(w.grid.hp[3 * w.grid.size + 3], 3.0, "a box of the map")
 
 
 func test_shake_and_camera_follow_change_the_view() -> void:
