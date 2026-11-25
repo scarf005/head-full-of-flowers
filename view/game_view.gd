@@ -531,7 +531,8 @@ func _fire(at: Vector2, radius: float, age: float, left: float) -> void:
 		var on: Vector2 = at + spot[0] * radius
 		burning.append(Vector3(on.x, 0.5, on.y))
 		_air.add(Vector3(on.x, Fx.up(size.y * 0.5 - 1.0), on.y), size, Fx.Shape.FLAME, Color.WHITE, spot[2] * TAU)
-	# For each 0.1 s of match time on 4 m² of fire: one ember, and one smoke puff for each third ember.
+	# For each 0.1 s of match time: one ember from a fire of 4 m² or more, and from a smaller fire with a chance
+	# of its share of 4 m². One smoke puff with the ember of each third 0.1 s.
 	var share := radius * radius * PI / 4.0
 	for k in range(floori(_fire_time * 10.0) + 1, floori(world.now * 10.0) + 1):
 		if burning.is_empty() or _hash(Vector2(k, seed)) >= share:
