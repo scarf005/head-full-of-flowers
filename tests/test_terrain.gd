@@ -17,6 +17,10 @@ func before_each() -> void:
 	w.bots_active = false
 
 
+func after_each() -> void:
+	Tune.reset()
+
+
 func _tick(count: int) -> void:
 	for n in count:
 		w.tick()
@@ -54,8 +58,9 @@ func test_fire_does_not_burn_on_water() -> void:
 
 
 ## Checks that sight, a pistol shot and a grenade from a reach b over cover whose near face is at x `face`, and that
-## a walks to the face and stops there.
+## a walks to the face and stops there with the automatic vault off.
 func _assert_low_cover(face: float) -> void:
+	Tune.auto_vault = 0.0
 	assert_lt(w.grid.ray_cell(a.pos, b.pos).x, 0, "a bot sees over the cover")
 	a.move = Vector2.RIGHT
 	_tick(60)
@@ -73,7 +78,7 @@ func _assert_low_cover(face: float) -> void:
 	assert_eq(b.deaths, 1, "the grenade flies over the cover")
 
 
-func test_shots_grenades_and_sight_pass_over_a_table_that_units_walk_around() -> void:
+func test_shots_grenades_and_sight_pass_over_a_table_that_stops_a_walk_with_the_vault_off() -> void:
 	_prop(&"table", Vector2(3, 0.5), Vector2i(2, 1))
 	_assert_low_cover(2.0)
 
@@ -85,7 +90,7 @@ func _window(kind := &"house") -> void:
 	w.grid = w.map.build_grid()
 
 
-func test_shots_grenades_and_sight_pass_a_window_that_units_do_not_walk_through() -> void:
+func test_shots_grenades_and_sight_pass_a_window_that_stops_a_walk_with_the_vault_off() -> void:
 	_window()
 	_assert_low_cover(3.0)
 
