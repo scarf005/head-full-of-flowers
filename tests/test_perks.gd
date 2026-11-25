@@ -87,3 +87,24 @@ func test_empty_weapon_next_to_the_pistol_leaves_one_pistol() -> void:
 	Arsenal.equip(a, &"assault", 1.0)
 	Combat.fire(w, a)
 	assert_eq(_ids(a), [&"pistol"])
+
+
+func _throw_at(enemy: Vector2, other: Vector2, perk: bool) -> Array[float]:
+	if perk:
+		Arsenal.apply_perk(a, &"proximity_grenades")
+	var c: SimUnit = w.units[2]
+	for u: SimUnit in [b, c]:
+		u.max_hp = 100.0
+		u.hp = 100.0
+	b.pos = enemy
+	c.pos = other
+	Shots.throw_secondary(w, a)
+	for n in 60:
+		w.tick()
+	return [100.0 - b.hp, 100.0 - c.hp]
+
+
+func test_fused_hand_grenade_gives_the_contact_hit_to_the_enemy_that_sets_it_off() -> void:
+	var hurt := _throw_at(Vector2(8.0, 0.0), Vector2(8.0, 2.0), true)
+	assert_gte(hurt[0], 20.0, "the enemy on the line takes the contact hit and the blast")
+	assert_lt(hurt[1], 20.0, "the enemy beside it takes the blast only")
