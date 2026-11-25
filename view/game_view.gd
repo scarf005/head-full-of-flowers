@@ -453,7 +453,9 @@ func _draw_shots(shot_lag: float) -> void:
 				# Fire art over a glow of dots that grows along the flight. The art flips 8 times per second.
 				var glow: float = 10.0 + 14.0 * p.travelled / p.reach
 				var flip := float((i + int(world.now * 8.0)) % 2) * 2.0
-				_air.add(at, Vector2(glow, glow) * 1.5, Fx.Shape.BLAST, Color(1.0, 0.58, 0.28), i, world.now, 1.0)
+				# The web build keeps the time with 11 bits, so the time goes up and down in 2 s.
+				var time := pingpong(world.now, 2.0)
+				_air.add(at, Vector2(glow, glow) * 1.5, Fx.Shape.BLAST, Color(1.0, 0.58, 0.28), i, time, 1.0)
 				_air.add(at, ART, Fx.Shape.ART, Color.WHITE, 0.0, Fx.cell(&"fire"), flip)
 				_ground.add(ground, Vector2(glow, glow * 0.6), Fx.Shape.DISC, Color(1.0, 0.58, 0.28), 0.0, 0.0, 1.0)
 			&"rocket":
