@@ -90,7 +90,7 @@ void fragment() {
 		if (shape.w > 0.5) {
 			color = vec4(COLOR.rgb, step(grid + 0.02, edge * 1.5));
 		} else {
-			float heat = COLOR.r * (edge * 2.3 + 0.3) - shape.z * 2.0 + (grid - 0.5) * 0.18;
+			float heat = COLOR.r * (edge * 2.3 + 0.3 + (grid - 0.5) * 0.18) - shape.z * 2.0;
 			float light = u.y + (blot(u * 4.0 + shape.y) - 0.5) * 0.9;
 			vec3 smoke = light > 0.45 ? vec3(0.56, 0.52, 0.6) : light > -0.4 ? vec3(0.37, 0.35, 0.4) : vec3(0.18, 0.17, 0.2);
 			vec3 fire = heat > 1.2 ? vec3(1.0) : heat > 0.85 ? vec3(1.0, 0.9, 0.5) : vec3(1.0, 0.6, 0.24);
