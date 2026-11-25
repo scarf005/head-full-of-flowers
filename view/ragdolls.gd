@@ -9,6 +9,8 @@ const BOUNCE := 0.72
 const SLIDE := 0.9
 ## Most radians that a bounce turns a body off its way.
 const JITTER := 0.16
+## Brightness of a body, as a share of the brightness of a unit.
+const TONE := 0.8
 
 ## Each body: pos, vel, turn and spin (radians and radians a second), life (metres of flight left), radius, color
 ## and left (1 when it looks to the left).
@@ -70,6 +72,7 @@ func _show() -> void:
 		material.set_shader_parameter(&"sheet", SpriteArt.sheet())
 		material.set_shader_parameter(&"frame", SpriteArt.frame_uv(false, 0))
 		material.set_shader_parameter(&"hp", -1.0)
+		material.set_shader_parameter(&"brightness", TONE)
 		# The gun is far off the canvas.
 		material.set_shader_parameter(&"hand", Vector2(0.0, 1000.0))
 		view.material_override = material

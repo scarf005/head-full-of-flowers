@@ -22,6 +22,8 @@ uniform vec3 bar_color = vec3(1.0);
 // Health from 0 to 1. Below 0: no health bar.
 uniform float hp = 1.0;
 uniform float flash = 0.0;
+// Brightness of the figure. The body of a killed unit is darker than a unit.
+uniform float brightness = 1.0;
 // Centre of the gun in pixels from the feet, and its turn in radians.
 uniform vec2 hand = vec2(8.0, 7.0);
 uniform float angle = 0.0;
@@ -102,7 +104,7 @@ void fragment() {
 	float near = figure_at(q + vec2(1.0, 0.0)).a + figure_at(q - vec2(1.0, 0.0)).a;
 	near += figure_at(q + vec2(0.0, 1.0)).a + figure_at(q - vec2(0.0, 1.0)).a;
 	color = mix(color, vec4(INK * 0.5, 1.0), step(0.5, near));
-	figure.rgb = mix(figure.rgb, vec3(1.0), flash);
+	figure.rgb = mix(figure.rgb, vec3(1.0), flash) * brightness;
 	color = mix(color, figure, figure.a);
 	vec2 bar = p - vec2(0.0, frame_px.y + 2.0);
 	if (hp >= 0.0 && abs(bar.x) < 9.0 && bar == clamp(bar, vec2(-9.0, 0.0), vec2(9.0, 4.0))) {

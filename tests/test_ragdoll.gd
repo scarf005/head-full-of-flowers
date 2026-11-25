@@ -92,6 +92,13 @@ func test_body_flies_out_of_a_hedge_and_over_a_yard_fence() -> void:
 	assert_almost_eq(ragdolls.bodies[0].pos, Vector2(0.5 + 4.0 * 0.34 / 0.35, 0.5), Vector2.ONE * 0.01)
 
 
+func test_body_has_80_percent_of_the_brightness_of_a_unit() -> void:
+	ragdolls.throw(Vector2(0.5, 0.5), Vector2.RIGHT, 4.0, 0.4, Color.RED)
+	_fly(0.01)
+	var body := ragdolls.get_child(0) as MeshInstance3D
+	assert_eq((body.material_override as ShaderMaterial).get_shader_parameter(&"brightness"), 0.8)
+
+
 func test_view_throws_a_body_for_a_kill_only() -> void:
 	var view: GameView = autofree(GameView.new())
 	add_child(view)
