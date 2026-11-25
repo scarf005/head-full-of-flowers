@@ -262,3 +262,16 @@ func test_fire_comes_up_from_its_middle_and_goes_out_from_its_rim() -> void:
 	assert_between(flames.call(0.2), 1, 31)
 	assert_eq(flames.call(0.0), 0)
 	assert_eq(view._ground.shown, {Fx.Shape.BLAST: 1}, "a glow of dots, and no disc with a rim")
+
+
+func test_view_adds_no_flames_for_a_fire_outside_the_view() -> void:
+	# The view shows 16 m of ground to each side of the player.
+	var view := _view()
+	Shots.add_zone(view.world, view.world.units[0].pos, 0, &"molotov")
+	view.world.zones[0].life = 1.2
+	view._process(0.01)
+	assert_eq(view._air.shown.get(Fx.Shape.FLAME, 0), 32)
+	view.world.zones[0].pos += Vector2(40.0, 0.0)
+	view._process(0.01)
+	assert_eq(view._air.shown.get(Fx.Shape.FLAME, 0), 0)
+	assert_eq(view._ground.shown.get(Fx.Shape.BLAST, 0), 0, "no glow")

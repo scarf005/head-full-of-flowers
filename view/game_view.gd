@@ -506,6 +506,9 @@ func _draw_zones() -> void:
 ## ragged edge. The flames come up from the middle to the rim, each at its own place, and go out from the rim to
 ## the middle. Embers and smoke rise from the flames that burn. No line shows the rim.
 func _fire(at: Vector2, radius: float, age: float, left: float) -> void:
+	# As for the trails, no shapes for a fire outside the ground that the view shows.
+	if not _trails.seen.grow(radius).has_point(at):
+		return
 	var seed := int(absf(at.x * 73.0 + at.y * 151.0)) % 64
 	var ground := Vector3(at.x, 0.0, at.y)
 	var reach := minf(0.3 + 0.8 * age / FIRE_SPREAD, minf(1.1, 0.25 + 0.85 * left / FIRE_END))
