@@ -557,7 +557,7 @@ func _fire_spots(count: int, seed: int) -> Array:
 			var jitter := (
 				Vector2(_hash(Vector2(k, seed)) - 0.5, _hash(Vector2(seed, k + 0.5)) - 0.5) * 0.9 / sqrt(count)
 			)
-			var place := Vector2.from_angle(k * 2.39996 + seed) * far * 0.94 + jitter
+			var place := (Vector2.from_angle(k * 2.39996 + seed) * far * 0.94 + jitter).limit_length(1.0)
 			var lobes := 1.0 + 0.22 * sin(place.angle() * 3.0 + seed) + 0.1 * sin(place.angle() * 5.0 - seed)
 			spots.append([place, far * lobes, _hash(Vector2(k + 0.25, seed + 0.5))])
 		spots.sort_custom(func(a: Array, b: Array) -> bool: return a[0].y < b[0].y)
