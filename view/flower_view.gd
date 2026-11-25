@@ -2,6 +2,8 @@ class_name FlowerView
 extends MultiMeshInstance3D
 ## Draws every flower of the match in one multimesh.
 
+const GROW_TIME := 0.22
+
 var field: FlowerField
 var map: TerrainMap
 var colors := {}
@@ -44,7 +46,7 @@ func _process(_delta: float) -> void:
 	multimesh.visible_instance_count = _used
 
 
-## Data of flower `i` for the shader: the time of its bloom, its seed, and 1 on a marsh tile.
+## Data of flower `i` for the shader: the time of its bloom, its seed, 1 on a marsh tile, and the seconds that it grows.
 func custom_data(i: int, seed: float) -> Color:
 	var marsh := float(TerrainView.tile(map, field.pos[i]) == TerrainMap.Tile.MARSH)
-	return Color(field.bloom_at[i], seed, marsh, 0.0)
+	return Color(field.bloom_at[i], seed, marsh, GROW_TIME / Tune.flower_speed)

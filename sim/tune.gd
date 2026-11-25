@@ -35,6 +35,7 @@ const ITEMS := {
 	&"rot": [0.0, 1.0, 0.05],
 	&"ground_calm": [0.0, 2.0, 0.05],
 	&"flower_tone": [0.3, 1.2, 0.02],
+	&"flower_speed": [0.2, 5.0, 0.1],
 	&"marsh_mark": [0.0, 1.0, 0.05],
 	&"trail_length": [0.0, 4.0, 0.05],
 	&"trail_width": [0.25, 4.0, 0.05],
@@ -101,6 +102,9 @@ static var rot := 1.0
 static var ground_calm := 1.0
 ## Brightness of flowers.
 static var flower_tone := 0.72
+## Multiplies the speed at which the flowers of a hit appear. At 2, each flower waits half as long and grows in half
+## the time.
+static var flower_speed := 1.0
 ## Share of the sunk look of a flower on a marsh.
 static var marsh_mark := 1.0
 ## Multiplies the life of each streak behind a shot or a thrown thing, and so the length of the trail.

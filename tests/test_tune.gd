@@ -268,3 +268,38 @@ func test_player_does_not_fire_while_the_pointer_is_on_the_debug_panel() -> void
 	await wait_physics_frames(4)
 	assert_lt(player.slot().ammo, rounds, "the pointer is on the match")
 	Input.action_release(&"fire")
+
+
+func _delays(speed: float) -> Array[float]:
+	Tune.flower_speed = speed
+	var field := FlowerField.new()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	field.burst(rng, 0, Vector2.ZERO, Vector2.RIGHT, 12, 1.0, {arena_radius = 30.0, now = 10.0, stagger = 0.25})
+	var out: Array[float] = []
+	for i in field.capacity:
+		if field.owner[i] != FlowerField.INACTIVE:
+			out.append(field.bloom_at[i] - 10.0)
+	return out
+
+
+func test_flower_speed_divides_the_delay_and_the_grow_time_of_flowers() -> void:
+	var normal := _delays(1.0)
+	var fast := _delays(2.0)
+	var slow := _delays(0.5)
+	assert_eq(normal.size(), 12, "the count of flowers does not change")
+	assert_eq(fast.size(), normal.size())
+	assert_eq(slow.size(), normal.size())
+	assert_gt(normal.max(), 0.0)
+	for n in normal.size():
+		assert_almost_eq(fast[n], normal[n] / 2.0, 0.0001)
+		assert_almost_eq(slow[n], normal[n] * 2.0, 0.0001)
+	var view := FlowerView.new()
+	view.field = FlowerField.new()
+	view.map = TerrainMap.new()
+	view.field.pos[0] = Vector2.ZERO
+	Tune.flower_speed = 1.0
+	assert_almost_eq(view.custom_data(0, 0.5).a, 0.22, 0.0001)
+	Tune.flower_speed = 2.0
+	assert_almost_eq(view.custom_data(0, 0.5).a, 0.11, 0.0001)
+	view.free()

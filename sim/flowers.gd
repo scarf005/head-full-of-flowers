@@ -76,7 +76,9 @@ func burst(
 		# No flower in a wall, and none in a cell that is full after all moves.
 		if grid and grid.is_solid(grid.cell_of(p)) or _weight[_cell(p)] + weight > CELL_WEIGHT_CAP:
 			continue
-		_plant(team, p, flower_size, weight, opts.now + rng.randf_range(0.0, opts.get("stagger", 0.0)))
+		_plant(
+			team, p, flower_size, weight, opts.now + rng.randf_range(0.0, opts.get("stagger", 0.0) / Tune.flower_speed)
+		)
 
 
 ## Turns the flowers in a circle into burnt flowers. Returns the number of flowers changed.

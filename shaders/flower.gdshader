@@ -5,6 +5,7 @@ render_mode cull_disabled, depth_draw_always, unshaded;
 
 // One flat flower seen from above: five round petals with a thin dark rim and a yellow centre.
 // INSTANCE_CUSTOM.x is the match time at which it blooms. INSTANCE_CUSTOM.z is 1 for a flower on a marsh.
+// INSTANCE_CUSTOM.w is the seconds that it takes to grow.
 // Drawn in the transparent pass, so the ink outline pass does not ink the edge of a patch of flowers.
 global uniform float match_time;
 global uniform float flower_tone;
@@ -14,7 +15,7 @@ varying float sunk;
 
 void vertex() {
 	vec3 root = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-	float t = clamp((match_time - INSTANCE_CUSTOM.x) / 0.22, 0.0, 1.0);
+	float t = clamp((match_time - INSTANCE_CUSTOM.x) / INSTANCE_CUSTOM.w, 0.0, 1.0);
 	sunk = INSTANCE_CUSTOM.z * marsh_mark;
 	// Draw a flower on a marsh smaller, as if it sinks in the mud.
 	VERTEX *= t * (1.0 + 0.6 * sin(t * PI)) * (1.0 - 0.3 * sunk);
