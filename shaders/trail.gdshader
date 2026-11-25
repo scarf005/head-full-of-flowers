@@ -17,7 +17,7 @@ uniform float now = 0.0;
 varying vec2 uv;
 varying float alpha;
 varying float puff;
-// 1 at the start of a puff of fire, 0 from the time at which it is smoke.
+// 1 at the start of a puff of fire, 0 at the time at which it is smoke, less than 0 for smoke.
 varying float heat;
 
 void vertex() {
@@ -30,7 +30,7 @@ void vertex() {
 	puff = INSTANCE_CUSTOM.y;
 	uv = VERTEX.xy * 2.0;
 	alpha = 0.0;
-	heat = INSTANCE_CUSTOM.z > 0.0 ? 1.0 - age / INSTANCE_CUSTOM.z : 0.0;
+	heat = INSTANCE_CUSTOM.z > 0.0 ? 1.0 - age / INSTANCE_CUSTOM.z : -1.0;
 	if (age < 0.0 || age >= life) {
 		POSITION = vec4(2.0, 2.0, 2.0, 1.0);
 	} else if (puff > 0.5) {
