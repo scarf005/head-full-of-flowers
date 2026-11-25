@@ -108,6 +108,17 @@ func test_rocket_leaves_smoke_puffs_with_the_colours_of_the_original() -> void:
 	assert_eq(trails.added(), 6)
 
 
+func test_rocket_smoke_is_fire_at_its_start_and_the_smoke_of_the_end_is_not() -> void:
+	var trails: Trails = autofree(Trails.new())
+	trails.follow(&"rocket", Vector3.ZERO, Vector2(18.0, 0.0), 1.0, 0.0, 0.0051)
+	for slot in 4:
+		assert_almost_eq(trails.part(slot).hot, 0.05, 0.0001, "seconds of fire")
+	trails.end(&"rocket", Vector3.ZERO, Vector2(18.0, 0.0), 0.0051)
+	assert_eq(trails.added(), 7)
+	for slot in range(4, 7):
+		assert_eq(trails.part(slot).hot, 0.0)
+
+
 func test_shot_that_hits_a_unit_is_spent_where_it_meets_the_unit() -> void:
 	Arsenal.equip(a, &"assault", 60.0)
 	a.want_fire = true

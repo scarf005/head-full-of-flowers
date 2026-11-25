@@ -20,6 +20,8 @@ const STREAKS := {
 	&"molotov": [Vector2(0.18, 0.15), Vector2(0.396, 0.108), Color("ffd2a2"), 0.42, Vector2(0.13, 0.05)],
 }
 const BULLET := Color("ffe6aa")
+## Seconds for which a smoke puff behind a rocket is fire: yellow, then orange.
+const HOT := 0.05
 const SMOKE: Array[Color] = [Color("30363d"), Color("1f252b")]
 const END_SMOKE: Array[Color] = [Color("2b3238"), Color("1c2228")]
 
@@ -54,10 +56,10 @@ func added() -> int:
 	return _next
 
 
-## Part in `slot`: {at, dir, length, width, growth, color, life, puff, born}.
+## Part in `slot`: {at, dir, length, width, growth, color, life, puff, born, hot}.
 func part(slot: int) -> Dictionary:
 	var f := _buffer.slice(slot * FLOATS, (slot + 1) * FLOATS)
-	var shape := {dir = Vector2(f[0], f[4]), length = f[8], width = f[1], growth = f[5], born = f[10]}
+	var shape := {dir = Vector2(f[0], f[4]), length = f[8], width = f[1], growth = f[5], born = f[10], hot = f[18]}
 	return shape.merged(
 		{at = Vector3(f[3], f[7], f[11]), color = Color(f[12], f[13], f[14], f[15]), life = f[16], puff = f[17] > 0.5}
 	)
@@ -135,7 +137,7 @@ func _sample(look: StringName, head: Vector3, dir: Vector2, sf: float, born: flo
 		var grow := Vector3(width, randf_range(0.65, 1.35), randf_range(1.8, 4.4))
 		var life := 0.24 + sf * randf_range(0.08, 0.16)
 		var from := head + Vector3(back.x, 0.0, back.y)
-		_puff(from, fly, grow, drift, SMOKE[int(not core)], 0.78 if core else 0.66, life, born)
+		_puff(from, fly, grow, drift, SMOKE[int(not core)], 0.78 if core else 0.66, life, born, HOT)
 
 
 ## A streak that ends at `head` and lies `length` metres back along `dir`.
@@ -147,17 +149,25 @@ func _streak(
 
 
 ## A smoke puff that starts at `from` and moves along `dir`. `grow`: width in metres, growth in metres per second
-## and turbulence. `drift`: speed in m/s and drag in m/s².
+## and turbulence. `drift`: speed in m/s and drag in m/s². For its first `hot` seconds the puff is fire.
 func _puff(
-	from: Vector3, dir: Vector2, grow: Vector3, drift: Vector2, color: Color, alpha: float, life: float, born: float
+	from: Vector3,
+	dir: Vector2,
+	grow: Vector3,
+	drift: Vector2,
+	color: Color,
+	alpha: float,
+	life: float,
+	born: float,
+	hot := 0.0
 ) -> void:
 	var size := Vector3(grow.x * Tune.smoke_size, grow.y * Tune.smoke_size, grow.z)
 	var basis := Basis(Vector3(dir.x, dir.y, 0.0), size, Vector3(drift.x, drift.y, born))
-	_add(from, basis, Color(color, alpha), life * Tune.smoke_life, true)
+	_add(from, basis, Color(color, alpha), life * Tune.smoke_life, true, hot)
 
 
 ## Writes one part over the oldest part. The shader reads the numbers of the part from the columns of `basis`.
-func _add(at: Vector3, basis: Basis, color: Color, life: float, puff: bool) -> void:
+func _add(at: Vector3, basis: Basis, color: Color, life: float, puff: bool, hot := 0.0) -> void:
 	var i := _next % CAPACITY * FLOATS
 	for row in 3:
 		_buffer[i + row * 4] = basis.x[row]
@@ -170,5 +180,6 @@ func _add(at: Vector3, basis: Basis, color: Color, life: float, puff: bool) -> v
 	_buffer[i + 15] = clampf(color.a, 0.0, 1.0)
 	_buffer[i + 16] = life
 	_buffer[i + 17] = float(puff)
+	_buffer[i + 18] = hot
 	_next += 1
 	_dirty = true

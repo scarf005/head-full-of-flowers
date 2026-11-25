@@ -7,7 +7,8 @@ render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled, blend_m
 // Streaks and smoke puffs of Trails. One instance is one part, written one time at its start. The shader moves the
 // part and fades it by its age, as the trails of the original do.
 // Instance basis: x (dir x, dir y, length), y (width, growth, turbulence), z (drift, drag, start time).
-// Origin: the head of a streak or the start of a puff. INSTANCE_CUSTOM: x life, y 1 for a puff.
+// Origin: the head of a streak or the start of a puff. INSTANCE_CUSTOM: x life, y 1 for a puff, z the seconds for
+// which a puff is fire.
 const int DRIFT_STEPS = 6;
 
 // Match time of the drawn frame.
@@ -16,6 +17,8 @@ uniform float now = 0.0;
 varying vec2 uv;
 varying float alpha;
 varying float puff;
+// 1 at the start of a puff of fire, 0 from the time at which it is smoke.
+varying float heat;
 
 void vertex() {
 	vec3 head = MODEL_MATRIX[3].xyz;
@@ -27,6 +30,7 @@ void vertex() {
 	puff = INSTANCE_CUSTOM.y;
 	uv = VERTEX.xy * 2.0;
 	alpha = 0.0;
+	heat = INSTANCE_CUSTOM.z > 0.0 ? 1.0 - age / INSTANCE_CUSTOM.z : 0.0;
 	if (age < 0.0 || age >= life) {
 		POSITION = vec4(2.0, 2.0, 2.0, 1.0);
 	} else if (puff > 0.5) {
@@ -41,7 +45,8 @@ void vertex() {
 			dir = vec2(dir.x * cos(turn) - dir.y * sin(turn), dir.x * sin(turn) + dir.y * cos(turn));
 			at += dir * max(0.0, c.x - c.y * t) * step_time;
 		}
-		float radius = max(0.02, (b.x + b.y * age * 0.8) * 0.6 + b.y * 0.12);
+		// A puff of fire is half as wide at its start, so the fire behind a rocket is a point that opens to the smoke.
+		float radius = max(0.02, (b.x + b.y * age * 0.8) * 0.6 + b.y * 0.12) * (1.0 - 0.5 * clamp(heat, 0.0, 1.0));
 		vec4 centre = VIEW_MATRIX * vec4(at.x, head.y, at.y, 1.0);
 		centre.z += 0.9;
 		POSITION = PROJECTION_MATRIX * (centre + vec4(VERTEX.xy * 2.0 * radius, 0.0, 0.0));
@@ -64,9 +69,14 @@ void vertex() {
 
 void fragment() {
 	float a = alpha;
+	vec3 color = COLOR.rgb;
 	if (puff > 0.5) {
-		// Smoke is a pattern of dots that gets thin, so a unit in the smoke stays in view.
-		a = step(length(uv), 1.0) * step(bayer8(FRAGCOORD.xy) + 0.01, a);
+		// Smoke is a pattern of dots that gets thin, so a unit in the smoke stays in view. A puff of fire is whole and
+		// goes from yellow to orange, then it is smoke.
+		float grid = bayer8(FRAGCOORD.xy);
+		float fire = heat + (grid - 0.5) * 0.3;
+		color = fire > 0.6 ? vec3(1.0, 0.8, 0.36) : fire > 0.0 ? vec3(1.0, 0.5, 0.18) : color;
+		a = step(length(uv), 1.0) * step(grid + 0.01, max(a, step(0.0, fire)));
 	} else {
 		float centred = abs(uv.y);
 		float taper = smoothstep(0.0, 0.55, uv.x);
@@ -77,6 +87,6 @@ void fragment() {
 	if (a <= 0.01) {
 		discard;
 	}
-	ALBEDO = flat_color(COLOR.rgb);
+	ALBEDO = flat_color(color);
 	ALPHA = a;
 }
