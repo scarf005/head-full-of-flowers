@@ -275,3 +275,14 @@ func test_view_adds_no_flames_for_a_fire_outside_the_view() -> void:
 	view._process(0.01)
 	assert_eq(view._air.shown.get(Fx.Shape.FLAME, 0), 0)
 	assert_eq(view._ground.shown.get(Fx.Shape.BLAST, 0), 0, "no glow")
+
+
+func test_each_flame_of_a_fire_stands_within_the_radius_of_the_fire() -> void:
+	# 4 flames is a burning cell, 56 is the largest fire. A place is in units of the radius.
+	var view := _view()
+	var farthest := 0.0
+	for count: int in [4, 12, 32, 56]:
+		for seed in 64:
+			for spot: Array in view._fire_spots(count, seed):
+				farthest = maxf(farthest, spot[0].length())
+	assert_between(farthest, 0.9, 1.001)
