@@ -7,7 +7,7 @@ extends Node
 
 const PER_M := 4
 ## Char that a fire on the ground leaves.
-const ZONE_CHAR := 0.4
+const ZONE_CHAR := 0.8
 ## Metres of char around the middle of a cell that burnt.
 const CELL_REACH := 0.9
 ## Radius of the char of a blast, as a share of the radius of its crater.

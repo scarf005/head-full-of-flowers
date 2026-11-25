@@ -23,6 +23,12 @@ void vertex() {
 	ground = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
 
+// Height in a crater at the point `p`: a bowl below a raised rim, with lumps of earth.
+float crater_height(vec2 p) {
+	float depth = scorch_smooth(p).r;
+	return smoothstep(0.0, 0.14, depth) * (0.25 + 0.12 * (blot(p * 3.1) - 0.5)) - depth * 0.9;
+}
+
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -113,21 +119,23 @@ void fragment() {
 	// Outside the arena the ground rots. Inside, the outdoor kinds have calm tones.
 	float past = length(p) - arena_radius;
 	color = past > 0.0 ? mix(color, rotten(color, p), rot) : is_floor(kind) ? color : calm(color, ground_calm);
-	// Craters and char in hard tones with an ordered dither. The south wall of a crater faces away from the view and is
-	// in shadow. The north wall and the north rim face the view and are lighter.
+	// Char: soot in dots that are dense in the middle of a burnt place and break up at its edge.
+	// Crater: a bowl with a raised rim in the light from the north-west, so the north-west wall is dark and the
+	// south-east wall is light.
 	if (kind != 8) {
-		vec2 mark = scorch_at(p);
-		float north = scorch_at(p - vec2(0.0, 0.5)).r;
-		float south = scorch_at(p + vec2(0.0, 0.5)).r;
+		vec2 mark = scorch_smooth(p);
+		float lumps = blot(p * 2.6);
 		float dither = bayer8(floor(ground * PIXELS + 0.001));
-		vec3 burnt = mix(vec3(0.15, 0.12, 0.1), color, 0.15);
-		if (mark.r > 0.04) {
-			float slope = (south - north) / (0.1 + 0.1 * dither);
-			color = slope > 1.0 ? vec3(0.4, 0.31, 0.23) : slope < -1.0 ? vec3(0.1, 0.08, 0.08) : vec3(0.2, 0.15, 0.12);
-		} else if (south > 0.04) {
-			color = vec3(0.5, 0.41, 0.31);
-		} else if (mark.g > dither) {
-			color = burnt;
+		if (mark.g * 2.2 - lumps * 0.6 > dither) {
+			color = mix(vec3(0.15, 0.12, 0.1), color, 0.15);
+		}
+		if (mark.r > 0.02 + 0.06 * lumps) {
+			vec2 slope = vec2(
+				crater_height(p + vec2(0.25, 0.0)) - crater_height(p - vec2(0.25, 0.0)),
+				crater_height(p + vec2(0.0, 0.25)) - crater_height(p - vec2(0.0, 0.25))
+			) * 2.0;
+			float light = 0.42 + dot(slope, vec2(0.6, 0.8)) * 0.55 - 0.2 * mark.r;
+			color = mix(vec3(0.1, 0.08, 0.07), vec3(0.68, 0.56, 0.42), clamp(light, 0.0, 1.0));
 		}
 	}
 	// A red line marks the border.

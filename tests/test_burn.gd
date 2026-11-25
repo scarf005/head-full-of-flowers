@@ -159,6 +159,14 @@ func test_blast_digs_a_crater_of_crater_size_times_its_radius() -> void:
 	assert_gt(view._scorch.at(at + Vector2(2.2, 0.0)).y, 0.0, "char around the crater")
 
 
+func test_fire_on_the_ground_leaves_char_of_0_8_under_it() -> void:
+	var view := _view()
+	var at := Vector2(20.25, -30.25)
+	view._show({type = &"zone", pos = at, radius = 2.9})
+	assert_almost_eq(view._scorch.at(at).y, 0.8, 0.01)
+	assert_eq(view._scorch.at(at + Vector2(3.2, 0.0)).y, 0.0)
+
+
 func test_burnt_cell_chars_the_ground_under_it() -> void:
 	var view := _view()
 	var at := view.world.grid.center_of(Vector2i(80, 30))
