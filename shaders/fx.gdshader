@@ -4,8 +4,8 @@ render_mode unshaded, cull_disabled, depth_draw_never, shadows_disabled;
 #include "wind.gdshaderinc"
 #include "dither.gdshaderinc"
 
-// Flat pixel shapes that face the camera: shots, discs, rings, sparks, item art and blasts. One instance is one
-// shape.
+// Flat pixel shapes that face the camera: shots, discs, rings, sparks, item art, blasts and flames. One instance is
+// one shape.
 // The instance scale is the size in view pixels / 20. INSTANCE_CUSTOM: x shape, y turn in radians, z and w per shape.
 const float PX_PER_M = 20.0;
 const vec3 INK = vec3(0.2, 0.14, 0.2);
@@ -100,6 +100,18 @@ void fragment() {
 			float thin = heat > 0.0 ? 1.0 : step(grid, 0.82 - gone * 0.8);
 			color = vec4(heat > 0.0 ? fire : smoke, step(gone * 0.9, edge) * thin);
 		}
+	} else {
+		// Flame: a tongue of fire that stands on the bottom of the shape. It sways, and its tip goes up and down. y is
+		// a seed.
+		vec2 f = vec2(p.x / (size_px.x * 0.5), p.y / size_px.y + 0.5);
+		float beat = TIME * 9.0 + shape.y * 5.0;
+		float h = f.y / (0.78 + 0.22 * sin(beat * 1.3) * sin(beat * 0.7 + 1.0));
+		float lean = (sin(beat + h * 3.5) * 0.26 + 0.12) * h * h;
+		float half_width = 0.82 * (h < 0.22 ? sqrt(h / 0.22) : pow(max(0.0, 1.0 - (h - 0.22) / 0.78), 0.75));
+		float inside = 1.0 - abs(f.x - lean) / max(half_width, 0.001);
+		float heat = inside * 1.1 - h * 0.95 + 0.35 + (bayer8(FRAGCOORD.xy) - 0.5) * 0.2;
+		vec3 fire = heat > 0.95 ? vec3(1.0, 0.96, 0.75) : heat > 0.62 ? vec3(1.0, 0.82, 0.29) : vec3(1.0, 0.54, 0.18);
+		color = vec4(heat > 0.25 ? fire : vec3(0.85, 0.26, 0.12), step(0.0, inside) * step(h, 1.0));
 	}
 	if (color.a < 0.5) {
 		discard;

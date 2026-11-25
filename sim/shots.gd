@@ -226,8 +226,9 @@ static func add_zone(w: SimWorld, at: Vector2, source: int, weapon: StringName) 
 	if w.map.tile_at(at) == TerrainMap.Tile.WATER:
 		return
 	var flame := weapon != &"molotov"
+	var life := 3.0 if flame else 2.2
 	var zone := {pos = at, owner = source, flame = flame, radius = 1.12 if flame else 2.9, weapon = weapon}
-	zone.merge({life = 3.0 if flame else 2.2, every = 1.0 if flame else 0.22, tick = 0.0})
+	zone.merge({life = life, full = life, every = 1.0 if flame else 0.22, tick = 0.0})
 	w.zones.append(zone)
 	if w.zones.size() > 36:
 		w.zones.pop_front()

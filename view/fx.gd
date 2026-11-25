@@ -1,10 +1,10 @@
 class_name Fx
 extends MultiMeshInstance3D
-## Batch of flat pixel shapes that face the camera: shots, discs, rings, sparks, item art and blasts.
+## Batch of flat pixel shapes that face the camera: shots, discs, rings, sparks, item art, blasts and flames.
 ## Each frame: add() the shapes of things that the match holds, then step(). spawn() adds a shape that lives for
 ## a set time.
 
-enum Shape { SHOT, DISC, SPARK, ART, BLAST }
+enum Shape { SHOT, DISC, SPARK, ART, BLAST, FLAME }
 
 const CAPACITY := 2048
 ## Size of one atlas cell in pixels, as in the shader.

@@ -244,3 +244,21 @@ func test_blast_shows_4_balls_of_fire_and_5_of_smoke_over_a_thin_ring_on_the_gro
 		assert_eq(ball.hole, Vector2(0.0, 1.0), "the shader gets the age of the ball")
 	assert_eq(view._ground._parts.size(), 1)
 	assert_eq(view._ground._parts[0].hole, Vector2(0.88, 0.97))
+
+
+func test_fire_comes_up_from_its_middle_and_goes_out_from_its_rim() -> void:
+	var view := _view()
+	Shots.add_zone(view.world, view.world.units[0].pos, 0, &"molotov")
+	var zone: Dictionary = view.world.zones[0]
+	var flames := func(left: float) -> int:
+		zone.life = left
+		view._draw_zones()
+		view._air.step(0.0)
+		view._ground.step(0.0)
+		return view._air.shown.get(Fx.Shape.FLAME, 0)
+	# The fire of a fire bottle burns for 2.2 s on 26.4 m². It has 1.2 flames for each square metre.
+	assert_between(flames.call(2.0), 1, 31, "0.2 s old")
+	assert_eq(flames.call(1.2), 32)
+	assert_between(flames.call(0.2), 1, 31)
+	assert_eq(flames.call(0.0), 0)
+	assert_eq(view._ground.shown, {Fx.Shape.BLAST: 1}, "a glow of dots, and no disc with a rim")

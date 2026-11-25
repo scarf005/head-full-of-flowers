@@ -6,7 +6,14 @@ signal event(data: Dictionary)
 
 ## Shots fly at the height of the drawn gun.
 const SHOT_HEIGHT := UnitView.HAND / UnitView.PX_PER_M / cos(CameraRig.PITCH)
-const FLAMES_PER_M2 := 0.6
+## Flames of a fire for each square metre, and the most flames of one fire.
+const FLAMES_PER_M2 := 1.2
+const MOST_FLAMES := 56
+## Seconds in which a fire spreads from its middle to its rim, and in which it dies from its rim to its middle.
+const FIRE_SPREAD := 0.45
+const FIRE_END := 0.5
+## Width and height in pixels of a flame of size 1.
+const FLAME := Vector2(12.0, 20.0)
 ## Size in pixels of a shape that shows item art at its drawn size, and at half of it.
 const ART := Vector2(48.0, 48.0)
 const SMALL_ART := Vector2(24.0, 24.0)
@@ -63,6 +70,10 @@ var _rockets := Rockets.new()
 var _ragdolls := Ragdolls.new()
 var _terrain: TerrainView
 var _scorch := Scorch.new()
+## Vector2i(number of flames, number of the fire) -> the places of the flames. See _fire_spots.
+var _spots := {}
+## Match time to which the fires gave their embers and smoke.
+var _fire_time := 0.0
 var _lights := 0
 ## Match time that the last frame showed. Each frame adds the trail parts from this time to its own time.
 var _drawn := 0.0
@@ -482,36 +493,73 @@ func _draw_throwables(shot_lag: float) -> void:
 		_air.add(at, SMALL_ART, Fx.Shape.ART, tint, world.now * 9.0 + i, Fx.cell(look), 1.0)
 
 
-## Fire on the ground: a dotted glow with a bright rim, and flames that each stay at a place for 0.2 s.
+## Fire on the ground and on burning cells.
 func _draw_zones() -> void:
-	for i in world.zones.size():
-		var z := world.zones[i]
-		var at := Vector3(z.pos.x, 0.0, z.pos.y)
-		var size := _on_ground(z.radius)
-		var ending: bool = z.life < 0.4
-		if z.flame:
-			_ground.add(at, size * 1.06, Fx.Shape.DISC, Color("3a2f28"), 0.0, 0.0, 1.0)
-		_ground.add(at, size, Fx.Shape.DISC, Color("f4782e"), 0.0, 0.0, 1.0)
-		_ground.add(at, size, Fx.Shape.DISC, Color("ffb054"), 0.0, 1.0 - 4.0 / size.x, float(ending))
-		_flames(at, z.radius, z.radius * z.radius * PI * FLAMES_PER_M2 * clampf(z.life / 0.4, 0.0, 1.0), i * 31)
-	for i: int in world.burning:
-		var middle := world.grid.center_of(world.burning[i].cell)
-		_flames(Vector3(middle.x, 0.0, middle.y), 0.6, 0.36 * PI * FLAMES_PER_M2, i)
+	for z in world.zones:
+		_fire(z.pos, z.radius, z.full - z.life, z.life)
+	for b: Dictionary in world.burning.values():
+		_fire(world.grid.center_of(b.cell), 0.7, Tune.burn_time - b.left, b.left)
+	_fire_time = world.now
 
 
-## Flames in a disc of `radius` m around `at`. `seed` picks their places.
-func _flames(at: Vector3, radius: float, amount: float, seed: int) -> void:
-	for k in ceili(amount):
-		var phase: float = world.now * 5.0 + k * 0.37
-		var cell := Vector2(seed + k, floorf(phase))
-		var spot: Vector2 = (
-			Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * radius * 0.85
+## Fire of `radius` m that is `age` seconds old and has `left` seconds to burn: flames over a glow of dots with a
+## ragged edge. The flames come up from the middle to the rim, each at its own place, and go out from the rim to
+## the middle. Embers and smoke rise from the flames that burn. No line shows the rim.
+func _fire(at: Vector2, radius: float, age: float, left: float) -> void:
+	var seed := int(absf(at.x * 73.0 + at.y * 151.0)) % 64
+	var ground := Vector3(at.x, 0.0, at.y)
+	var reach := minf(0.3 + 0.8 * age / FIRE_SPREAD, minf(1.1, 0.25 + 0.85 * left / FIRE_END))
+	var glow := _on_ground(radius * reach)
+	_ground.add(ground, glow, Fx.Shape.BLAST, Color("f4782e"), seed, pingpong(world.now * 0.3, 1.0), 1.0)
+	var spots := _fire_spots(clampi(ceili(radius * radius * PI * FLAMES_PER_M2), 4, MOST_FLAMES), seed)
+	var burning: Array[Vector3] = []
+	for spot: Array in spots:
+		var far: float = spot[1]
+		var grown := clampf((age - far * FIRE_SPREAD * 0.8 - spot[2] * 0.1) / 0.16, 0.0, 1.0)
+		var alive := clampf((left - far * FIRE_END * 0.7) / 0.15, 0.0, 1.0)
+		# A new flame is larger than its size for a moment.
+		var swell := grown / 0.7 * 1.25 if grown < 0.7 else lerpf(1.25, 1.0, (grown - 0.7) / 0.3)
+		var size: Vector2 = (
+			FLAME * lerpf(1.3, 0.75, minf(far, 1.0)) * Vector2(0.8 + 0.5 * spot[2], 1.25 - 0.5 * spot[2])
 		)
-		var tint := Color.WHITE if fposmod(phase, 1.0) < 0.6 else Color(1.0, 0.75, 0.6)
-		var flip := float(_hash(cell + Vector2(1.0, 9.0)) < 0.5) * 2.0
-		# The flame stands on its place: its art is 6 pixels below the middle of the cell.
-		var flame := at + Vector3(spot.x, Fx.up(6.0), spot.y)
-		_air.add(flame, ART, Fx.Shape.ART, tint, 0.0, Fx.cell(&"fire"), flip)
+		size *= swell * alive
+		if size.x < 3.0:
+			continue
+		var on: Vector2 = at + spot[0] * radius
+		burning.append(Vector3(on.x, 0.5, on.y))
+		_air.add(Vector3(on.x, Fx.up(size.y * 0.5 - 1.0), on.y), size, Fx.Shape.FLAME, Color.WHITE, spot[2] * TAU)
+	# For each 0.1 s of match time on 4 m² of fire: one ember, and one smoke puff for each third ember.
+	var share := radius * radius * PI / 4.0
+	for k in range(floori(_fire_time * 10.0) + 1, floori(world.now * 10.0) + 1):
+		if burning.is_empty() or _hash(Vector2(k, seed)) >= share:
+			continue
+		var from := burning[k * 7 % burning.size()]
+		var more := {vel = Vector3(randf_range(-0.6, 0.6), randf_range(2.0, 3.5), 0.0)}
+		_air.spawn(from, randf_range(0.4, 0.7), Fx.Shape.DISC, Vector2(3.0, 3.0), Vector2(2.0, 2.0), FIRE, more)
+		if k % 3 == 0:
+			var size := Vector2.ONE * randf_range(14.0, 22.0)
+			var rise := {vel = Vector3(0.5, randf_range(1.4, 2.2), 0.0), hole = Vector2(0.3, 1.0), turn = randf() * TAU}
+			_air.spawn(from + Vector3.UP * 0.6, randf_range(0.6, 0.9), Fx.Shape.BLAST, size * 0.5, size, COLD, rise)
+
+
+## Places of the `count` flames of a fire with the number `seed`, from north to south so that a flame covers the
+## flames behind it. Each: [place in a disc of radius 1, when the fire comes to it (0 at the middle, about 1 at the
+## rim, with a front that has lobes), a number from 0 to 1].
+func _fire_spots(count: int, seed: int) -> Array:
+	var key := Vector2i(count, seed)
+	if not _spots.has(key):
+		var spots := []
+		for k in count:
+			var far := sqrt((k + 0.5) / count)
+			var jitter := (
+				Vector2(_hash(Vector2(k, seed)) - 0.5, _hash(Vector2(seed, k + 0.5)) - 0.5) * 0.9 / sqrt(count)
+			)
+			var place := Vector2.from_angle(k * 2.39996 + seed) * far * 0.94 + jitter
+			var lobes := 1.0 + 0.22 * sin(place.angle() * 3.0 + seed) + 0.1 * sin(place.angle() * 5.0 - seed)
+			spots.append([place, far * lobes, _hash(Vector2(k + 0.25, seed + 0.5))])
+		spots.sort_custom(func(a: Array, b: Array) -> bool: return a[0].y < b[0].y)
+		_spots[key] = spots
+	return _spots[key]
 
 
 ## The laser sight beam of each unit with the perk.
