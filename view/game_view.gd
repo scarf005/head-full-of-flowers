@@ -40,6 +40,10 @@ var intro := 0.0
 var tint := Color(0, 0, 0, 0)
 ## True from the last right stick aim until the mouse moves.
 var _stick_aim := false
+## Deaths of the player at the last tick.
+var _deaths := 0
+## Action -> true while a person holds its key since before the last death of the player.
+var _stale := {&"fire": false, &"throw": false}
 ## Seconds that are left of ROLL_WISH for the last press of the roll key.
 var _roll_wish := 0.0
 var _kick := Vector2.ZERO
@@ -206,8 +210,13 @@ func _read_input() -> void:
 		_stick_aim = true
 	elif not _stick_aim and to_pointer.length() > 0.05:
 		player.aim = to_pointer.normalized()
-	player.want_fire = Input.is_action_pressed(&"fire") and not hold_fire
-	player.want_throw = Input.is_action_pressed(&"throw") and not hold_fire
+	# A key that a person holds through the death of the player starts nothing in the new life. The respawn makes
+	# the weapon and the grenade ready, so the held key would fire or throw at the respawn place.
+	for action: StringName in _stale:
+		_stale[action] = (_stale[action] or player.deaths != _deaths) and Input.is_action_pressed(action)
+	_deaths = player.deaths
+	player.want_fire = Input.is_action_pressed(&"fire") and not hold_fire and not _stale[&"fire"]
+	player.want_throw = Input.is_action_pressed(&"throw") and not hold_fire and not _stale[&"throw"]
 	# A press of the roll key in the last 0.15 s before a roll can start still starts that roll.
 	_roll_wish = 0.0 if player.rolling else _roll_wish - Defs.TICK
 	player.want_roll = _roll_wish > 0.0
