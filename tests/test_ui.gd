@@ -39,6 +39,13 @@ func test_results_show_trophy_on_victory_and_skull_on_defeat() -> void:
 	assert_has(_textures(), Icons.get_icon(&"skull"))
 
 
+func test_title_offers_the_size_of_the_original_game_for_each_mode() -> void:
+	menu.show_title()
+	for mode in 4:
+		menu._mode.item_selected.emit(mode)
+		assert_eq(int(menu._size.value), [4, 4, 4, 2][mode], Menu.MODE_NAMES[mode])
+
+
 func test_play_again_on_results_starts_a_match_with_the_last_settings() -> void:
 	menu._size.value = 4
 	menu._start()

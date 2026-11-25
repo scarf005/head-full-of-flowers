@@ -10,8 +10,8 @@ signal debug
 
 const MODES: Array[StringName] = [&"ffa", &"tdm", &"duo", &"squad"]
 const MODE_NAMES := ["Free for All", "Team Deathmatch", "Duos", "Squads"]
-## Per mode: [smallest size, largest size, default size].
-const SIZES := [[2, 8, 8], [2, 6, 4], [2, 6, 4], [2, 3, 3]]
+## Per mode: [smallest size, largest size, default size]. The default sizes are those of the original game.
+const SIZES := [[2, 8, 4], [2, 6, 4], [2, 6, 4], [2, 3, 2]]
 ## Controls legend: key caps (a StringName is an icon) and the icon of what they do.
 const LEGEND := [
 	[["W", "A", "S", "D"], &"move"],
@@ -72,7 +72,7 @@ func show_title() -> void:
 	_mode.item_selected.connect(func(index: int) -> void: _fit_size(index, SIZES[index][2]))
 	_row(&"mode", "Mode", _mode)
 	_size = SpinBox.new()
-	_fit_size(_mode.selected, settings.get_value("match", "size", 8))
+	_fit_size(_mode.selected, settings.get_value("match", "size", SIZES[_mode.selected][2]))
 	_row(&"players", "Size", _size)
 	_hard = OptionButton.new()
 	_hard.add_item(tr("Easy"))
