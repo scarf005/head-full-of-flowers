@@ -239,6 +239,7 @@ static func explode(
 			var distance := at.clamp(middle - Vector2(0.5, 0.5), middle + Vector2(0.5, 0.5)).distance_to(at)
 			if distance <= radius and w.grid.is_damageable(cell):
 				w.hit_cell(cell, 2.5 + radius * 0.65 + (1.0 - distance / radius) * 1.1, source)
+				Burn.ignite(w, cell, source, weapon)
 	w.pickups = w.pickups.filter(func(p: Dictionary) -> bool: return p.pos.distance_to(at) > radius)
 	w.hit_stop = maxf(w.hit_stop, BLAST_STOP.get(weapon, 0.0))
 	w.emit(&"explosion", {pos = at, radius = radius, source = source, weapon = weapon})

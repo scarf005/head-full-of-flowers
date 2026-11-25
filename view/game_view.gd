@@ -60,6 +60,7 @@ var _rockets := Rockets.new()
 ## Bodies of killed units in flight.
 var _ragdolls := Ragdolls.new()
 var _terrain: TerrainView
+var _scorch := Scorch.new()
 var _lights := 0
 ## Match time that the last frame showed. Each frame adds the trail parts from this time to its own time.
 var _drawn := 0.0
@@ -77,6 +78,8 @@ func setup(config: Dictionary) -> void:
 	_terrain = TerrainView.new()
 	_terrain.setup(world)
 	add_child(_terrain)
+	_scorch.setup(world.map.size)
+	add_child(_scorch)
 	var grass := GrassView.new()
 	grass.setup(world)
 	add_child(grass)
@@ -269,12 +272,17 @@ func _show(e: Dictionary) -> void:
 			_burst(e.pos, e.radius)
 			_ring(e.pos, Color(1.0, 0.8, 0.4), e.radius * 1.2, 0.25)
 			_puff(e.pos, Color(0.22, 0.2, 0.2), 18, 8.0)
+			_scorch.crater(e.pos, e.radius * Tune.crater_size)
 			# Full shake within 10 m of the player, none from 34 m.
 			var near := clampf((34.0 - e.pos.distance_to(player.pos)) / 24.0, 0.0, 1.0)
 			var blast: Vector2 = BLAST_SHAKE.get(e.weapon, BLAST_SHAKE[&"grenade"])
 			shake = minf(maxf(shake, blast.y), shake + blast.x * near)
 		&"box":
 			_terrain.add_box(e.cell)
+		&"zone":
+			_scorch.burn(e.pos, e.radius, Scorch.ZONE_CHAR)
+		&"burnt":
+			_scorch.burn(e.pos, Scorch.CELL_REACH, 1.0)
 		&"respawn":
 			_units[e.unit].grow = 0.2
 			_ring(e.pos, world.team_color(world.units[e.unit].team), 1.3, 0.25)
@@ -471,17 +479,25 @@ func _draw_zones() -> void:
 			_ground.add(at, size * 1.06, Fx.Shape.DISC, Color("3a2f28"), 0.0, 0.0, 1.0)
 		_ground.add(at, size, Fx.Shape.DISC, Color("f4782e"), 0.0, 0.0, 1.0)
 		_ground.add(at, size, Fx.Shape.DISC, Color("ffb054"), 0.0, 1.0 - 4.0 / size.x, float(ending))
-		for k in ceili(z.radius * z.radius * PI * FLAMES_PER_M2 * clampf(z.life / 0.4, 0.0, 1.0)):
-			var phase: float = world.now * 5.0 + k * 0.37
-			var cell := Vector2(i * 31 + k, floorf(phase))
-			var spot: Vector2 = (
-				Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * z.radius * 0.85
-			)
-			var tint := Color.WHITE if fposmod(phase, 1.0) < 0.6 else Color(1.0, 0.75, 0.6)
-			var flip := float(_hash(cell + Vector2(1.0, 9.0)) < 0.5) * 2.0
-			# The flame stands on its place: its art is 6 pixels below the middle of the cell.
-			var flame := at + Vector3(spot.x, Fx.up(6.0), spot.y)
-			_air.add(flame, ART, Fx.Shape.ART, tint, 0.0, Fx.cell(&"fire"), flip)
+		_flames(at, z.radius, z.radius * z.radius * PI * FLAMES_PER_M2 * clampf(z.life / 0.4, 0.0, 1.0), i * 31)
+	for i: int in world.burning:
+		var middle := world.grid.center_of(world.burning[i].cell)
+		_flames(Vector3(middle.x, 0.0, middle.y), 0.6, 0.36 * PI * FLAMES_PER_M2, i)
+
+
+## Flames in a disc of `radius` m around `at`. `seed` picks their places.
+func _flames(at: Vector3, radius: float, amount: float, seed: int) -> void:
+	for k in ceili(amount):
+		var phase: float = world.now * 5.0 + k * 0.37
+		var cell := Vector2(seed + k, floorf(phase))
+		var spot: Vector2 = (
+			Vector2.from_angle(_hash(cell) * TAU) * sqrt(_hash(cell + Vector2(7.0, 3.0))) * radius * 0.85
+		)
+		var tint := Color.WHITE if fposmod(phase, 1.0) < 0.6 else Color(1.0, 0.75, 0.6)
+		var flip := float(_hash(cell + Vector2(1.0, 9.0)) < 0.5) * 2.0
+		# The flame stands on its place: its art is 6 pixels below the middle of the cell.
+		var flame := at + Vector3(spot.x, Fx.up(6.0), spot.y)
+		_air.add(flame, ART, Fx.Shape.ART, tint, 0.0, Fx.cell(&"fire"), flip)
 
 
 ## The laser sight beam of each unit with the perk.

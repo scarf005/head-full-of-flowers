@@ -60,6 +60,8 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 	if cell.x >= 0:
 		var soft: bool = p.kind == &"flame" and w.grid.material[cell.y * w.grid.size + cell.x] <= Defs.Mat.WAREHOUSE
 		w.hit_cell(cell, 0.0 if soft else maxf(1.0, p.damage), p.owner)
+		if p.kind == &"flame":
+			Burn.ignite(w, cell, p.owner, p.weapon)
 		var impact := front if not front.is_empty() else w.grid.ricochet_impact(from - back, stop, ballistic)
 		var normal: Vector2 = impact.get("normal", -p.vel.normalized())
 		p.pos = impact.get("point", from) + normal * 0.01
@@ -239,6 +241,7 @@ static func update_zones(w: SimWorld, dt: float) -> void:
 		if z.tick > 0.0:
 			continue
 		z.tick = z.every
+		Burn.ignite_circle(w, z.pos, z.radius, z.owner, z.weapon)
 		if z.flame:
 			w.flowers.scorch(z.pos, z.radius)
 		var owner: SimUnit = w.units[z.owner]

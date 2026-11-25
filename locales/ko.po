@@ -276,6 +276,15 @@ msgstr "마당 상자 수"
 msgid "rocket size"
 msgstr "로켓 크기"
 
+msgid "crater size"
+msgstr "구덩이 크기"
+
+msgid "burn time"
+msgstr "타는 시간"
+
+msgid "burn spread"
+msgstr "불 번짐"
+
 msgid "ragdoll reach"
 msgstr "래그돌 거리"
 

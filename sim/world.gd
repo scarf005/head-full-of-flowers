@@ -23,6 +23,8 @@ var hard := false
 var projectiles: Array[Dictionary] = []
 var throwables: Array[Dictionary] = []
 var zones: Array[Dictionary] = []
+## Cell index -> {cell, source, weapon, left, tick, spread} for each cell on fire. See Burn.
+var burning := {}
 var pickups: Array[Dictionary] = []
 ## Each: {cell, open, wait}. See Doors.
 var doors: Array[Dictionary] = []
@@ -208,6 +210,7 @@ func tick() -> void:
 	Shots.update_projectiles(self, dt)
 	Shots.update_throwables(self, dt)
 	Shots.update_zones(self, dt)
+	Burn.update(self, dt)
 	Loot.update(self, dt)
 
 

@@ -23,6 +23,8 @@ const ITEMS := {
 	&"box_front": [0.0, 1.0, 0.01],
 	&"yard_boxes": [0.0, 4.0, 0.5],
 	&"bot_box_range": [0.0, 20.0, 0.5],
+	&"burn_time": [0.5, 10.0, 0.5],
+	&"burn_spread": [0.0, 1.0, 0.05],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
 	&"auto_vault": [0.0, 1.0, 1.0],
@@ -43,6 +45,7 @@ const ITEMS := {
 	&"smoke_size": [0.25, 4.0, 0.05],
 	&"smoke_life": [0.25, 4.0, 0.05],
 	&"rocket_size": [0.5, 3.0, 0.05],
+	&"crater_size": [0.0, 2.0, 0.1],
 	&"ragdoll_reach": [0.0, 3.0, 0.05],
 	&"ragdoll_time": [0.1, 2.0, 0.05],
 	&"ragdoll_spin": [0.0, 40.0, 1.0],
@@ -79,6 +82,10 @@ static var yard_boxes := 2.5
 ## Metres within which a bot with no target walks to a loot box and opens it. At 0, a bot leaves loot boxes alone, as
 ## in the original game.
 static var bot_box_range := 0.0
+## Seconds that a hedge, a door, a loot box or a prop burns before it breaks.
+static var burn_time := 3.0
+## Chance in each second that a burning cell sets each burnable cell next to it on fire.
+static var burn_spread := 0.35
 static var shake := 1.0
 ## Share of the distance to the player that the camera moves in each second.
 static var camera_follow := 8.0
@@ -119,6 +126,8 @@ static var smoke_size := 1.0
 static var smoke_life := 1.0
 ## Multiplies the size of the rocket model.
 static var rocket_size := 1.0
+## Radius of the crater of a blast, as a share of the radius of the blast.
+static var crater_size := 0.6
 ## Multiplies the distance that the body of a killed unit flies.
 static var ragdoll_reach := 1.0
 ## Seconds of flight of the body of a killed unit.

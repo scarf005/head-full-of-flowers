@@ -73,6 +73,9 @@ func update_hazards(w: SimWorld) -> void:
 	hazards.clear()
 	for z in w.zones:
 		hazards.append({pos = z.pos, reach = z.radius + 0.6, team = w.units[z.owner].team, owner = z.owner})
+	for b: Dictionary in w.burning.values():
+		var team: int = w.units[b.source].team if b.source >= 0 else Defs.BURNT
+		hazards.append({pos = w.grid.center_of(b.cell), reach = Burn.REACH + 1.2, team = team, owner = b.source})
 	for p in w.projectiles:
 		if p.kind == &"grenade" or p.kind == &"rocket":
 			var reach := Shots.BLAST_RADIUS * (1.4 if p.kind == &"rocket" else 1.0)

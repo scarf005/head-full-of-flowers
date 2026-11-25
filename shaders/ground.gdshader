@@ -1,6 +1,8 @@
 shader_type spatial;
 
 #include "wind.gdshaderinc"
+#include "dither.gdshaderinc"
+#include "scorch.gdshaderinc"
 
 // Ground. `tiles` holds one TerrainMap.Tile for each tile and `warp` the push that bends the borders between
 // outdoor kinds, so the borders are sharp curves at any zoom. Each kind draws its own surface pattern.
@@ -111,6 +113,23 @@ void fragment() {
 	// Outside the arena the ground rots. Inside, the outdoor kinds have calm tones.
 	float past = length(p) - arena_radius;
 	color = past > 0.0 ? mix(color, rotten(color, p), rot) : is_floor(kind) ? color : calm(color, ground_calm);
+	// Craters and char in hard tones with an ordered dither. The south wall of a crater faces away from the view and is
+	// in shadow. The north wall and the north rim face the view and are lighter.
+	if (kind != 8) {
+		vec2 mark = scorch_at(p);
+		float north = scorch_at(p - vec2(0.0, 0.5)).r;
+		float south = scorch_at(p + vec2(0.0, 0.5)).r;
+		float dither = bayer8(floor(ground * PIXELS + 0.001));
+		vec3 burnt = mix(vec3(0.15, 0.12, 0.1), color, 0.15);
+		if (mark.r > 0.04) {
+			float slope = (south - north) / (0.1 + 0.1 * dither);
+			color = slope > 1.0 ? vec3(0.4, 0.31, 0.23) : slope < -1.0 ? vec3(0.1, 0.08, 0.08) : vec3(0.2, 0.15, 0.12);
+		} else if (south > 0.04) {
+			color = vec3(0.5, 0.41, 0.31);
+		} else if (mark.g > dither) {
+			color = burnt;
+		}
+	}
 	// A red line marks the border.
 	bool border = abs(past) < 0.12;
 	ROUGHNESS = 1.0;

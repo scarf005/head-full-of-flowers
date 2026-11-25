@@ -90,6 +90,8 @@ func build_grid() -> ObstacleGrid:
 					grid.solid[i] = ObstacleGrid.LOW
 				if prop.kind == &"barrel":
 					grid.barrels[i] = true
+				if prop.kind in Burn.PROPS:
+					grid.burnable[i] = true
 				cells.append(i)
 		for cell: int in cells:
 			grid.prop_cells[cell] = cells

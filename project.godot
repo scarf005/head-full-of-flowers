@@ -52,6 +52,10 @@ marsh_mark={
 "type": "float",
 "value": 1.0
 }
+scorch={
+"type": "sampler2D",
+"value": ""
+}
 
 [gui]
 

@@ -14,6 +14,8 @@ var high_tier: PackedByteArray
 var prop_cells := {}
 ## Cell index -> true for each barrel that has not blown up yet.
 var barrels := {}
+## Cell index -> true for each prop cell of wood, cloth or plants. See Burn.
+var burnable := {}
 ## Cell index -> true for each window that has its glass.
 var glass := {}
 ## Bumped when a cell is added or removed.

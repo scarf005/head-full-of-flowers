@@ -2,6 +2,7 @@ shader_type spatial;
 render_mode cull_disabled, depth_draw_always, unshaded, world_vertex_coords;
 
 #include "wind.gdshaderinc"
+#include "scorch.gdshaderinc"
 
 // Grass tufts and reeds. UV.y is 0 at the root and 1 at the tip. Drawn in the transparent pass so the ink outline
 // pass, which reads the opaque depth, does not ink each blade.
@@ -40,7 +41,9 @@ void vertex() {
 	world.xz += bend * h * (world.y / max(UV.y, 0.01) + 0.2) * (1.0 - 0.7 * reed);
 	world.y *= (1.0 - 0.45 * g * h - 0.6 * flat_amount * h) * (1.0 - 0.5 * dead);
 	world.y *= mix(1.0, marsh_mark, reed);
-	VERTEX = world;
+	// No grass in a crater. Char takes away a share of the tufts that grows with it.
+	vec2 mark = scorch_at(root.xz);
+	VERTEX = mark.r > 0.04 || mark.g > speck(root.xz) + 0.001 ? root : world;
 	wave = smoothstep(0.3, 0.8, g);
 	root_at = root.xz;
 	shade = cloud(root.xz, TIME);
