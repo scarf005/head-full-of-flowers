@@ -217,10 +217,11 @@ func _draw() -> void:
 
 
 ## An arrow in the team colour at the screen border for each unit that is not fully in view, with its distance in
-## metres. As in the original game.
+## metres. As in the original game. A text that would cover another arrow or a nearer text stays out.
 func _draw_arrows(w: SimWorld, font: Font, plates: Array[Rect2]) -> void:
 	var screen := Rect2(Vector2.ZERO, size)
 	var to_hud := size / Vector2(game.get_viewport().get_visible_rect().size)
+	var arrows: Array[Dictionary] = []
 	for u in w.units:
 		# The middle of the body. The body is 20 pixels wide on each side of it.
 		var at := game.camera.unproject_position(Vector3(u.pos.x, 0.6, u.pos.y)) * to_hud
@@ -228,15 +229,55 @@ func _draw_arrows(w: SimWorld, font: Font, plates: Array[Rect2]) -> void:
 			continue
 		# Under the score bar at the top.
 		var area := screen.grow_individual(-EDGE, -60.0, -EDGE, -EDGE)
-		var spot := beside(edge_point(at, area), plates, size.x)
-		var dir := (at - area.get_center()).normalized()
+		var metres := u.pos.distance_to(game.player.pos)
+		var label := "%dm" % roundi(metres)
+		var arrow := {
+			spot = beside(edge_point(at, area), plates, size.x),
+			dir = (at - area.get_center()).normalized(),
+			metres = metres,
+			label = label,
+			width = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x,
+			color = w.team_color(u.team),
+		}
+		arrows.append(arrow)
+	var texts := text_rects(arrows)
+	for i in arrows.size():
+		var spot: Vector2 = arrows[i].spot
+		var dir: Vector2 = arrows[i].dir
 		var side := dir.orthogonal()
 		var back := spot - dir * 4.0
 		draw_colored_polygon([spot + dir * 22.0, back + side * 14.0, back - side * 14.0], INK)
-		draw_colored_polygon([spot + dir * 16.0, spot + side * 9.0, spot - side * 9.0], w.team_color(u.team))
-		var label := "%dm" % roundi(u.pos.distance_to(game.player.pos))
-		var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
-		_text(font, spot - dir * 26.0 + Vector2(-width * 0.5, 6.0), label, Color.WHITE, 16)
+		draw_colored_polygon([spot + dir * 16.0, spot + side * 9.0, spot - side * 9.0], arrows[i].color)
+		if texts[i].has_area():
+			_text(font, texts[i].position + Vector2(0.0, 17.0), arrows[i].label, Color.WHITE, 16)
+
+
+## The box around the black arrow at `spot` that points along `dir`.
+static func arrow_rect(spot: Vector2, dir: Vector2) -> Rect2:
+	var side := dir.orthogonal() * 14.0
+	var back := spot - dir * 4.0
+	var box := Rect2(spot + dir * 22.0, Vector2.ZERO)
+	return box.expand(back + side).expand(back - side)
+
+
+## The rectangle of the distance text of each arrow of `arrows`, each {spot, dir, metres, width}, in the same order.
+## A text that would cover the arrow of another unit or the text of a nearer unit has an empty rectangle.
+static func text_rects(arrows: Array[Dictionary]) -> Array[Rect2]:
+	var rects: Array[Rect2] = []
+	rects.resize(arrows.size())
+	var order := range(arrows.size())
+	order.sort_custom(func(a: int, b: int) -> bool: return arrows[a].metres < arrows[b].metres)
+	for i: int in order:
+		var rect := Rect2(
+			arrows[i].spot - arrows[i].dir * 26.0 + Vector2(-arrows[i].width * 0.5, -11.0),
+			Vector2(arrows[i].width, 24.0)
+		)
+		var free := true
+		for j in arrows.size():
+			if j != i and (rects[j].intersects(rect) or arrow_rect(arrows[j].spot, arrows[j].dir).intersects(rect)):
+				free = false
+		rects[i] = rect if free else Rect2()
+	return rects
 
 
 func _draw_map(w: SimWorld) -> void:

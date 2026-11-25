@@ -94,6 +94,50 @@ func test_arrow_for_a_unit_out_of_view_is_on_the_screen_border_toward_the_unit()
 	assert_eq(Hud.edge_point(Vector2(5000.0, 2700.0), area), Vector2(1248.0, 656.0), "a unit toward a corner")
 
 
+## Arrows of units far off screen to the right of the middle, `degrees` below the horizontal, at `metres`.
+func _arrows(degrees_and_metres: Array) -> Array[Dictionary]:
+	var area := Rect2(32.0, 32.0, 1216.0, 656.0)
+	var arrows: Array[Dictionary] = []
+	for pair: Array in degrees_and_metres:
+		var dir := Vector2.from_angle(deg_to_rad(pair[0]))
+		arrows.append(
+			{spot = Hud.edge_point(area.get_center() + dir * 5000.0, area), dir = dir, metres = pair[1], width = 40.0}
+		)
+	return arrows
+
+
+func test_distance_text_of_the_farther_of_two_close_arrows_stays_out() -> void:
+	for pairs: Array in [[[0.0, 30.0], [2.0, 50.0]], [[0.0, 50.0], [2.0, 30.0]]]:
+		var rects := Hud.text_rects(_arrows(pairs))
+		var nearer := 0 if pairs[0][1] < pairs[1][1] else 1
+		assert_true(rects[nearer].has_area(), "the nearer enemy keeps its text")
+		assert_false(rects[1 - nearer].has_area(), "the farther enemy has an arrow only")
+
+
+func test_distance_texts_of_arrows_in_different_directions_all_show() -> void:
+	var rects := Hud.text_rects(_arrows([[0.0, 30.0], [90.0, 50.0]]))
+	assert_true(rects[0].has_area())
+	assert_true(rects[1].has_area())
+
+
+func test_distance_texts_of_a_fan_of_arrows_do_not_overlap() -> void:
+	var pairs := []
+	for i in 6:
+		pairs.append([i * 4.0, 30.0 + i * 7.0])
+	var arrows := _arrows(pairs)
+	var rects := Hud.text_rects(arrows)
+	var shown := rects.filter(func(r: Rect2) -> bool: return r.has_area())
+	assert_gt(shown.size(), 0, "the nearest text shows")
+	for i in rects.size():
+		for j in range(i + 1, rects.size()):
+			assert_false(rects[i].intersects(rects[j]), "texts %d and %d" % [i, j])
+		for j in arrows.size():
+			if j != i:
+				assert_false(
+					rects[i].intersects(Hud.arrow_rect(arrows[j].spot, arrows[j].dir)), "text %d, arrow %d" % [i, j]
+				)
+
+
 func test_arrow_on_a_plate_of_the_hud_moves_beside_it_toward_the_middle_of_the_screen() -> void:
 	# The map and the ammo plate.
 	var plates: Array[Rect2] = [Rect2(16.0, 16.0, 150.0, 150.0), Rect2(980.0, 632.0, 292.0, 80.0)]
