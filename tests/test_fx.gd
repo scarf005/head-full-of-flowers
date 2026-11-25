@@ -222,6 +222,16 @@ func test_rocket_shows_as_one_model_and_no_teardrop() -> void:
 	assert_eq(model.visible_instance_count, 0)
 
 
+func test_shell_of_the_grenade_launcher_shows_as_one_shot_over_its_light_on_the_ground() -> void:
+	var view := _view()
+	view.world.pickups.clear()
+	Arsenal.equip(view.world.units[0], &"grenade-launcher", 10.0)
+	assert_true(Combat.fire(view.world, view.world.units[0]))
+	view._process(0.01)
+	assert_eq(view._air.shown, {Fx.Shape.SHOT: 1}, "a teardrop and no grenade art")
+	assert_eq(view._ground.shown, {Fx.Shape.DISC: 1})
+
+
 func test_blast_shows_4_balls_of_fire_and_5_of_smoke_over_a_thin_ring_on_the_ground() -> void:
 	var view := _view()
 	view._show({type = &"explosion", pos = Vector2(3.0, 1.0), radius = 4.0, source = -1, weapon = &"grenade"})

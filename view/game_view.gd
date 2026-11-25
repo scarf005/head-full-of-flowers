@@ -426,8 +426,9 @@ static func _arc(ttl: float) -> float:
 	return 0.4 + sin(clampf(ttl, 0.0, 1.5) / 1.5 * PI) * 1.2
 
 
-## Shots: a teardrop along the flight, yellow for the side of the player and red for the others, and a trail. A
-## rocket is a 3D model that turns around its length.
+## Shots: a teardrop that glows along the flight, yellow for the side of the player and red for the others, over its
+## light on the ground, and a trail. The shell of the grenade launcher is a large shot. A rocket is a 3D model that
+## turns around its length.
 func _draw_shots(shot_lag: float) -> void:
 	for i in world.projectiles.size():
 		var p := world.projectiles[i]
@@ -438,20 +439,21 @@ func _draw_shots(shot_lag: float) -> void:
 		var color := Color(1.0, 0.8, 0.2) if p.team == world.units[0].team else Color(1.0, 0.3, 0.25)
 		match p.kind:
 			&"flame":
-				# Fire art over a dotted glow that grows along the flight. The art flips 8 times per second.
+				# Fire art over a glow of dots that grows along the flight. The art flips 8 times per second.
 				var glow: float = 10.0 + 14.0 * p.travelled / p.reach
 				var flip := float((i + int(world.now * 8.0)) % 2) * 2.0
-				_air.add(at, Vector2(glow, glow), Fx.Shape.DISC, Color(1.0, 0.58, 0.28), 0.0, 0.0, 1.0)
+				_air.add(at, Vector2(glow, glow) * 1.5, Fx.Shape.BLAST, Color(1.0, 0.58, 0.28), i, world.now, 1.0)
 				_air.add(at, ART, Fx.Shape.ART, Color.WHITE, 0.0, Fx.cell(&"fire"), flip)
-			&"grenade":
-				_air.add(at, SMALL_ART, Fx.Shape.ART, Color.WHITE, world.now * 14.0 + i, Fx.cell(&"grenade"), 1.0)
+				_ground.add(ground, Vector2(glow, glow * 0.6), Fx.Shape.DISC, Color(1.0, 0.58, 0.28), 0.0, 0.0, 1.0)
 			&"rocket":
 				_rockets.add(at, p.vel, world.now * 6.0 + i)
+				_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
 			_:
 				var width: float = roundf(maxf(4.0, p.radius * 28.0))
 				var length: float = width * 1.85 * clampf(p.vel.length() / 25.0, 1.1, 2.9)
-				_air.add(at, Vector2.ONE * (length + 4.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
-		_ground.add(ground, Vector2(6.0, 4.0), Fx.Shape.DISC, INK, 0.0, 0.0, 1.0)
+				_air.add(at, Vector2.ONE * (length + 8.0), Fx.Shape.SHOT, color, Fx.turn_of(p.vel), width)
+				var pool := width * 1.6 + 6.0
+				_ground.add(ground, Vector2(pool, pool * 0.6), Fx.Shape.DISC, color, 0.0, 0.0, 1.0)
 	_rockets.end_frame()
 
 

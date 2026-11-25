@@ -14,7 +14,10 @@ const SECONDARY_ART: Array[StringName] = [&"grenade", &"molotov", &"fire"]
 static var _atlas: ImageTexture
 static var _cells: Array[StringName] = []
 
+## Shape -> number of shapes that the last step() showed. A headless run cannot read them from the multimesh.
+var shown := {}
 var _count := 0
+var _added := {}
 ## Each: {at, vel, age, life, shape, from, to, colors, turn, hole, dots}.
 var _parts: Array[Dictionary] = []
 
@@ -83,6 +86,7 @@ func add(at: Vector3, size: Vector2, shape: Shape, color: Color, turn := 0.0, z 
 	multimesh.set_instance_color(_count, color)
 	# The web build keeps these numbers with 11 bits, so a turn of many rounds would go in steps.
 	multimesh.set_instance_custom_data(_count, Color(shape, fposmod(turn, TAU), z, w))
+	_added[shape] = _added.get(shape, 0) + 1
 	_count += 1
 
 
@@ -113,4 +117,6 @@ func step(delta: float) -> void:
 		var hole: Vector2 = part.hole
 		add(part.at, size, part.shape, color, part.turn, lerpf(hole.x, hole.y, t), float(t >= part.dots))
 	multimesh.visible_instance_count = _count
+	shown = _added
+	_added = {}
 	_count = 0

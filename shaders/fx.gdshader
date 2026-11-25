@@ -49,11 +49,16 @@ void fragment() {
 	vec2 q = vec2(cos(shape.y) * p.x + sin(shape.y) * p.y, cos(shape.y) * p.y - sin(shape.y) * p.x);
 	vec4 color = vec4(0.0);
 	if (shape.x < 0.5) {
-		// Shot: z is the width in pixels. Pale core, rim in the instance colour, ink border.
-		float half_len = size_px.x * 0.5 - 2.0;
+		// Shot that glows: z is the width in pixels. Pale core, body in the instance colour, a rim in a deeper tone of
+		// it, then dots of the colour that get thin over 3 pixels.
+		float half_len = size_px.x * 0.5 - 4.0;
 		float rim = teardrop(q, half_len, shape.z * 0.5);
 		float core = teardrop(q - vec2(half_len * 0.2, 0.0), half_len * 0.6, shape.z * 0.5 - 1.0);
-		color = vec4(rim < 0.0 ? mix(COLOR.rgb, vec3(1.0), 0.85 * step(core, 0.0)) : INK, step(rim, 1.0));
+		float odd = dot(mod(floor(p), 2.0), vec2(1.0));
+		float halo = rim < 2.4 ? step(odd, 0.5) + step(1.5, odd) : step(odd, 0.5);
+		vec3 body = mix(COLOR.rgb, vec3(1.0), 0.85 * step(core, 0.0));
+		vec3 deep = COLOR.rgb * vec3(1.0, 0.62, 0.5);
+		color = rim < 0.0 ? vec4(body, 1.0) : rim < 1.0 ? vec4(deep, 1.0) : vec4(COLOR.rgb, halo * step(rim, 4.0));
 	} else if (shape.x < 1.5) {
 		// Disc: z is the radius of the hole from 0 to 1, w above 0.5 draws every second pixel only.
 		float r = length(p / (size_px * 0.5));
