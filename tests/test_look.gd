@@ -39,6 +39,17 @@ func test_a_flower_on_a_marsh_gets_the_marsh_mark() -> void:
 	assert_between(marsh, 10, 20)
 
 
+func test_flowers_get_the_place_of_each_unit_and_a_far_place_for_each_unit_that_is_not_there() -> void:
+	var view: FlowerView = autofree(FlowerView.new())
+	view.setup(w)
+	view._process(0.0)
+	var places: PackedVector3Array = (view.material_override as ShaderMaterial).get_shader_parameter("pushers")
+	assert_eq(places.size(), 12)
+	for n in 12:
+		var unit := w.units[n] if n < w.units.size() else null
+		assert_eq(places[n], Vector3(unit.pos.x, 0.0, unit.pos.y) if unit else Vector3.ONE * 1e6)
+
+
 func test_reeds_stand_on_a_marsh_and_grass_on_the_rest() -> void:
 	var view: GrassView = autofree(GrassView.new())
 	view.setup(w)

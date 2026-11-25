@@ -6,6 +6,7 @@ const GROW_TIME := 0.22
 
 var field: FlowerField
 var map: TerrainMap
+var units: Array[SimUnit] = []
 var colors := {}
 var _used := 0
 
@@ -13,6 +14,7 @@ var _used := 0
 func setup(world: SimWorld) -> void:
 	field = world.flowers
 	map = world.map
+	units = world.units
 	for team in range(-1, world.team_count):
 		colors[team] = world.team_color(team)
 	multimesh = MultiMesh.new()
@@ -44,6 +46,7 @@ func _process(_delta: float) -> void:
 		_used = maxi(_used, i + 1)
 	field.dirty.clear()
 	multimesh.visible_instance_count = _used
+	(material_override as ShaderMaterial).set_shader_parameter("pushers", GrassView.pushers(units))
 
 
 ## Data of flower `i` for the shader: the time of its bloom, its seed, 1 on a marsh tile, and the seconds that it grows.

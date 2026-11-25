@@ -67,11 +67,16 @@ func setup(sim: SimWorld) -> void:
 
 
 func _process(_delta: float) -> void:
-	var pushers := PackedVector3Array()
-	for u in world.units:
-		pushers.append(Vector3(u.pos.x, 0.0, u.pos.y))
-	pushers.resize(12)
-	material.set_shader_parameter("pushers", pushers)
+	material.set_shader_parameter("pushers", pushers(world.units))
+
+
+## Places of the units for the shaders of the grass and the flowers: 12 places, with a far place for each one that
+## no unit has.
+static func pushers(units: Array[SimUnit]) -> PackedVector3Array:
+	var places := PackedVector3Array()
+	for n in 12:
+		places.append(Vector3(units[n].pos.x, 0.0, units[n].pos.y) if n < units.size() else Vector3.ONE * 1e6)
+	return places
 
 
 ## Three tapered blades that lean outward.
