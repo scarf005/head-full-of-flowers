@@ -2,8 +2,11 @@ class_name SimWorld
 ## One match. Call tick() 60 times per second and read the state and the event list.
 
 const MODES := {&"ffa": 1, &"tdm": 0, &"duo": 2, &"squad": 4}
-## Seconds that a roll goes on past its time while the unit is on a low wall.
-const ROLL_EXTRA := 0.25
+## Seconds that a vault can last past the time that its distance needs.
+const VAULT_EXTRA := 0.25
+## Least part of the move of a unit along a grid axis for a vault. A unit that moves at 45 degrees into a low thing
+## slides along it, so a unit can walk along a fence with a push into it.
+const VAULT_STRAIGHT := 0.75
 
 var rng := RandomNumberGenerator.new()
 var map: TerrainMap
@@ -218,16 +221,10 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		if u.reload_cooldown <= 0.0:
 			Arsenal.finish_reload(u)
 			emit(&"reloaded", {unit = u.index})
-	u.roll_cooldown = maxf(0.0, u.roll_cooldown - dt)
-	if u.want_roll and not u.rolling and u.roll_cooldown <= 0.0:
-		u.rolling = true
-		u.roll_time = 0.0
-		u.roll_dir = (u.move if u.move.length() > 0.1 else u.aim).normalized()
-		u.clear_burst()
-		emit(&"roll", {unit = u.index, dir = u.roll_dir})
-	u.want_roll = false
-	if u.rolling:
-		_roll(u, dt)
+	if not u.vaulting:
+		_start_vault(u, dt)
+	if u.vaulting:
+		_vault(u, dt)
 	else:
 		# As in the original game, a bot that runs away on hard moves at 1.15 of its speed. The keys of a person
 		# give a move of 1 at most.
@@ -245,27 +242,55 @@ func _update_unit(u: SimUnit, dt: float) -> void:
 		emit(&"reload", {unit = u.index})
 	u.want_reload = false
 	Combat.update_burst(self, u, dt)
-	if u.want_fire and not u.rolling:
+	if u.want_fire:
 		Combat.fire(self, u)
-	if u.want_throw and not u.rolling:
+	if u.want_throw:
 		Shots.throw_secondary(self, u)
 	Loot.collect(self, u)
 
 
-## Moves a unit in a roll along its direction, fast at the start and slow at the end. The unit breaks the glass of
-## a window on its way. A roll that would end on a low wall goes on to the far side of the wall.
-func _roll(u: SimUnit, dt: float) -> void:
-	var part := minf(1.0, u.roll_time / Tune.roll_time)
-	u.vel = u.roll_dir * Tune.roll_distance / Tune.roll_time * (1.4 - 0.8 * part)
+## Starts a vault when the move of a unit points nearly along a grid axis into 1 to 3 cells that it goes over, with
+## free ground behind them. The unit first pushes into the cells for `Tune.vault_delay` seconds.
+func _start_vault(u: SimUnit, dt: float) -> void:
+	var dir := u.move.normalized()
+	var d := Vector2(signf(dir.x), 0.0) if absf(dir.x) >= absf(dir.y) else Vector2(0.0, signf(dir.y))
+	var cell := grid.cell_of(u.pos + d * (u.radius + 0.15))
+	var low := 0
+	while low < 4 and grid.vaults_over(cell + Vector2i(d) * low):
+		low += 1
+	var after := cell + Vector2i(d) * low
+	# The landing point keeps the other coordinate of the unit and is just past the far face of the last low cell.
+	var land := u.pos + d * (d.dot(grid.center_of(after) - u.pos) - 0.5 + u.radius + 0.05)
+	var ready := (
+		Tune.auto_vault > 0.5
+		and u.move.length() > 0.5
+		and dir.dot(d) >= VAULT_STRAIGHT
+		and low in [1, 2, 3]
+		and grid.in_bounds(after)
+		and not grid.is_solid(after)
+		and land.length() < arena_radius - u.radius
+		and not grid.circle_hits(land, u.radius)
+	)
+	u.vault_wait = u.vault_wait + dt if ready else 0.0
+	if not ready or u.vault_wait < Tune.vault_delay:
+		return
+	u.vaulting = true
+	u.vault_wait = 0.0
+	u.vault_from = u.pos
+	u.vault_to = land
+	u.vault_left = u.pos.distance_to(land) / (u.speed * Tune.move_speed * Tune.vault_speed) + VAULT_EXTRA
+	emit(&"vault", {unit = u.index, dir = d})
+
+
+## Moves a unit in a vault straight to its landing point. The unit breaks the glass of a window on its way.
+func _vault(u: SimUnit, dt: float) -> void:
 	var from := u.pos
-	u.pos += u.vel * dt
-	u.roll_time += dt
+	u.vel = u.pos.direction_to(u.vault_to) * u.speed * Tune.move_speed * Tune.vault_speed
+	u.pos = u.pos.move_toward(u.vault_to, u.vel.length() * dt)
+	u.vault_left -= dt
 	break_glass(from, u.pos)
-	var tail := u.pos - u.roll_dir * u.radius
-	var on_wall := grid.rolls_over(grid.cell_of(u.pos)) or grid.rolls_over(grid.cell_of(tail))
-	if u.roll_time >= Tune.roll_time and not (on_wall and u.roll_time < Tune.roll_time + ROLL_EXTRA):
-		u.rolling = false
-		u.roll_cooldown = Tune.roll_cooldown
+	if u.pos == u.vault_to or u.vault_left <= 0.0:
+		u.vaulting = false
 
 
 func _separate_units() -> void:
@@ -291,7 +316,7 @@ func _push_out_of_cells(u: SimUnit) -> void:
 		for gy in range(lo.y, hi.y + 1):
 			for gx in range(lo.x, hi.x + 1):
 				var cell := Vector2i(gx, gy)
-				if not grid.is_solid(cell) or (u.rolling and grid.rolls_over(cell)):
+				if not grid.is_solid(cell) or (u.vaulting and grid.vaults_over(cell)):
 					continue
 				var centre := grid.center_of(cell)
 				var nearest := u.pos.clamp(centre - Vector2(0.5, 0.5), centre + Vector2(0.5, 0.5))

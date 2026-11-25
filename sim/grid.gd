@@ -45,8 +45,8 @@ func is_solid(cell: Vector2i) -> bool:
 	return in_bounds(cell) and solid[cell.y * size + cell.x] > 0
 
 
-## True for an obstacle that a unit in a roll goes over: a window sill, a low prop, a yard fence or a hedge.
-func rolls_over(cell: Vector2i) -> bool:
+## True for an obstacle that a unit vaults: a window sill, a low prop, a yard fence or a hedge.
+func vaults_over(cell: Vector2i) -> bool:
 	if not in_bounds(cell):
 		return false
 	var i := cell.y * size + cell.x
@@ -102,13 +102,13 @@ func damage_cell(cell: Vector2i, amount: float) -> Dictionary:
 	}
 
 
-## True when a circle overlaps a solid cell. With `over_low`, a thing that a roll goes over does not count.
+## True when a circle overlaps a solid cell. With `over_low`, a thing that a unit vaults does not count.
 func circle_hits(p: Vector2, radius: float, over_low := false) -> bool:
 	var lo := cell_of(p - Vector2(radius, radius))
 	var hi := cell_of(p + Vector2(radius, radius))
 	for gy in range(maxi(0, lo.y), mini(size - 1, hi.y) + 1):
 		for gx in range(maxi(0, lo.x), mini(size - 1, hi.x) + 1):
-			if solid[gy * size + gx] == 0 or (over_low and rolls_over(Vector2i(gx, gy))):
+			if solid[gy * size + gx] == 0 or (over_low and vaults_over(Vector2i(gx, gy))):
 				continue
 			var c := Vector2(gx - half + 0.5, gy - half + 0.5)
 			var nearest := p.clamp(c - Vector2(0.5, 0.5), c + Vector2(0.5, 0.5))

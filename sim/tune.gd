@@ -25,10 +25,9 @@ const ITEMS := {
 	&"bot_box_range": [0.0, 20.0, 0.5],
 	&"shake": [0.0, 3.0, 0.1],
 	&"camera_follow": [2.0, 30.0, 0.5],
-	&"roll_distance": [1.0, 10.0, 0.25],
-	&"roll_time": [0.15, 1.0, 0.01],
-	&"roll_cooldown": [0.0, 2.0, 0.05],
-	&"roll_safe": [0.0, 1.0, 0.05],
+	&"auto_vault": [0.0, 1.0, 1.0],
+	&"vault_speed": [0.5, 3.0, 0.1],
+	&"vault_delay": [0.0, 0.5, 0.05],
 	&"laser_length": [2.0, 30.0, 0.5],
 	&"laser_width": [1.0, 6.0, 1.0],
 	&"laser_alpha": [0.1, 1.0, 0.02],
@@ -83,13 +82,12 @@ static var bot_box_range := 0.0
 static var shake := 1.0
 ## Share of the distance to the player that the camera moves in each second.
 static var camera_follow := 8.0
-## Metres that a roll takes a unit, and its seconds.
-static var roll_distance := 4.5
-static var roll_time := 0.38
-## Seconds from the end of a roll to the start of the next roll.
-static var roll_cooldown := 0.3
-## Share of a roll, from its start, in which shots, blasts and fire do not hurt the unit.
-static var roll_safe := 0.6
+## At 1, a unit that walks into a low thing goes over it.
+static var auto_vault := 1.0
+## Multiplies the speed of a unit in a vault.
+static var vault_speed := 1.0
+## Seconds that a unit pushes into a low thing before it goes over.
+static var vault_delay := 0.0
 ## Metres of the laser sight beam past the muzzle.
 static var laser_length := 9.5
 ## Width in view pixels of the laser sight beam of the player. The beam of a bot is 3/4 as wide.

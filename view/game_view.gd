@@ -6,8 +6,6 @@ signal event(data: Dictionary)
 
 ## Shots fly at the height of the drawn gun.
 const SHOT_HEIGHT := UnitView.HAND / UnitView.PX_PER_M / cos(CameraRig.PITCH)
-## Seconds for which a press of the roll key still starts a roll.
-const ROLL_WISH := 0.15
 const FLAMES_PER_M2 := 0.6
 ## Size in pixels of a shape that shows item art at its drawn size, and at half of it.
 const ART := Vector2(48.0, 48.0)
@@ -44,8 +42,6 @@ var _stick_aim := false
 var _deaths := 0
 ## Action -> true while a person holds its key since before the last death of the player.
 var _stale := {&"fire": false, &"throw": false}
-## Seconds that are left of ROLL_WISH for the last press of the roll key.
-var _roll_wish := 0.0
 var _kick := Vector2.ZERO
 var _jitter := Vector2.ZERO
 ## Unit index -> the damage number that shows over it.
@@ -135,8 +131,6 @@ func _unhandled_input(input: InputEvent) -> void:
 		player.want_swap -= 1
 	elif input.is_action_pressed(&"reload"):
 		player.want_reload = true
-	elif input.is_action_pressed(&"roll"):
-		_roll_wish = ROLL_WISH
 
 
 func _process(delta: float) -> void:
@@ -217,9 +211,6 @@ func _read_input() -> void:
 	_deaths = player.deaths
 	player.want_fire = Input.is_action_pressed(&"fire") and not hold_fire and not _stale[&"fire"]
 	player.want_throw = Input.is_action_pressed(&"throw") and not hold_fire and not _stale[&"throw"]
-	# A press of the roll key in the last 0.15 s before a roll can start still starts that roll.
-	_roll_wish = 0.0 if player.rolling else _roll_wish - Defs.TICK
-	player.want_roll = _roll_wish > 0.0
 
 
 func _show(e: Dictionary) -> void:
@@ -240,7 +231,7 @@ func _show(e: Dictionary) -> void:
 		&"throw":
 			if e.unit == me:
 				shake = minf(1.2, shake + 0.15)
-		&"roll":
+		&"vault":
 			_puff(world.units[e.unit].pos, Color(0.78, 0.74, 0.66), 6, 2.5, -e.dir)
 		&"hit":
 			var color := world.team_color(e.team)

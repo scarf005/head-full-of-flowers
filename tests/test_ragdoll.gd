@@ -84,7 +84,7 @@ func test_body_bounces_off_the_face_of_the_wall_that_it_meets() -> void:
 
 
 func test_body_flies_out_of_a_hedge_and_over_a_yard_fence() -> void:
-	# A unit that dies in its roll can be in a hedge. Its body flies on, also over the fence 2 m to the east.
+	# A unit that dies in its vault can be in a hedge. Its body flies on, also over the fence 2 m to the east.
 	grid.set_cell(grid.cell_of(Vector2(0.5, 0.5)), Defs.Mat.HEDGE)
 	grid.set_cell(grid.cell_of(Vector2(2.5, 0.5)), Defs.Mat.WALL)
 	ragdolls.throw(Vector2(0.5, 0.5), Vector2.RIGHT, 4.0, 0.4, Color.RED)

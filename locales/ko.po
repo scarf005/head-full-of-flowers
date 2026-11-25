@@ -207,17 +207,14 @@ msgstr "화면 흔들림"
 msgid "camera follow"
 msgstr "카메라 추적"
 
-msgid "roll distance"
-msgstr "구르기 거리"
+msgid "auto vault"
+msgstr "자동 넘기"
 
-msgid "roll time"
-msgstr "구르기 시간"
+msgid "vault speed"
+msgstr "넘는 속도"
 
-msgid "roll cooldown"
-msgstr "구르기 대기 시간"
-
-msgid "roll safe"
-msgstr "구르기 무적 비율"
+msgid "vault delay"
+msgstr "넘기 전 대기"
 
 msgid "god"
 msgstr "무적"

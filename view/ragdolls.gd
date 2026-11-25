@@ -29,8 +29,8 @@ func throw(at: Vector2, dir: Vector2, damage: float, radius: float, color: Color
 	)
 
 
-## Moves each body on by `delta` seconds. A body bounces off a wall of `grid`. It flies over each thing that a roll
-## goes over, and out of a wall that it starts in.
+## Moves each body on by `delta` seconds. A body bounces off a wall of `grid`. It flies over each thing that a unit
+## vaults, and out of a wall that it starts in.
 func step(delta: float, grid: ObstacleGrid) -> void:
 	for i in range(bodies.size() - 1, -1, -1):
 		var body := bodies[i]

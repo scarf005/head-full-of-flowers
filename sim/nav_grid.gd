@@ -3,8 +3,8 @@ class_name NavGrid
 
 ## Seconds between two rebuilds of the solid cells. Destroyed cells reach the bots after this delay at most.
 const SYNC_INTERVAL := 0.25
-## Cost of a cell that a bot crosses in a roll, as a multiple of a free cell.
-const ROLL_COST := 2.0
+## Cost of a cell that a bot vaults, as a multiple of a free cell.
+const VAULT_COST := 2.0
 
 var grid: ObstacleGrid
 var astar := AStarGrid2D.new()
@@ -42,12 +42,12 @@ func sync(now: float) -> void:
 			continue
 		for x in size:
 			var cell := Vector2i(x, y)
-			# A door opens for a unit that comes near. A bot rolls over a low wall.
-			var over := grid.rolls_over(cell)
+			# A door opens for a unit that comes near. A bot vaults a low wall.
+			var over := grid.vaults_over(cell)
 			var solid := grid.solid[row + x] > 0 and grid.material[row + x] != Defs.Mat.DOOR and not over
 			if solid != (_solid[row + x] > 0):
 				astar.set_point_solid(cell, solid)
-			astar.set_point_weight_scale(cell, ROLL_COST if over else 1.0)
+			astar.set_point_weight_scale(cell, VAULT_COST if over else 1.0)
 			if solid and grid.material[row + x] == Defs.Mat.BOX:
 				boxes[cell] = true
 			else:

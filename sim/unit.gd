@@ -52,13 +52,14 @@ var want_fire := false
 var want_throw := false
 var want_reload := false
 var want_swap := 0
-var want_roll := false
-## True during a roll. The unit then moves along `roll_dir` only and goes over low walls.
-var rolling := false
-## Seconds since the start of the roll.
-var roll_time := 0.0
-var roll_dir := Vector2.RIGHT
-var roll_cooldown := 0.0
+## True during a vault. The unit then moves straight from `vault_from` to `vault_to` and goes over low things.
+var vaulting := false
+var vault_from := Vector2.ZERO
+var vault_to := Vector2.ZERO
+## Seconds after which the vault ends, also when the unit is not at `vault_to`.
+var vault_left := 0.0
+## Seconds for which the unit has pushed into a low thing that it can vault.
+var vault_wait := 0.0
 # Bot brain state.
 var ai_state := &"wander"
 var ai_timer := 0.0
@@ -80,11 +81,6 @@ var ai_edge := false
 
 func has_perk(id: StringName) -> bool:
 	return perks.get(id, 0) > 0
-
-
-## True in the first part of a roll, in which shots, blasts and fire do not hurt the unit.
-func dodges() -> bool:
-	return rolling and roll_time < Tune.roll_time * Tune.roll_safe
 
 
 func slot() -> Dictionary:
@@ -133,8 +129,8 @@ func respawn(at: Vector2) -> void:
 	hit_flash = 0.0
 	recoil = 0.0
 	border_cooldown = 0.0
-	rolling = false
-	roll_cooldown = 0.0
+	vaulting = false
+	vault_wait = 0.0
 	clear_burst()
 
 

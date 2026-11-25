@@ -50,7 +50,7 @@ static func _step_projectile(w: SimWorld, p: Dictionary, dt: float) -> bool:
 		var near := pair[0]
 		var touch: bool = near.distance_to(pair[1]) - u.radius * Tune.hit_size - p.radius <= reach
 		var nearer := from.distance_squared_to(near) <= from.distance_squared_to(stop)
-		if u.index != p.owner and u.team != p.team and touch and nearer and not u.dodges():
+		if u.index != p.owner and u.team != p.team and touch and nearer:
 			hit = u
 			stop = near
 	var cell := w.grid.ray_cell(from - back, stop, ballistic)

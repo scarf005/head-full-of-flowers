@@ -146,8 +146,6 @@ static func damage(
 		return
 	if target.is_player and Tune.god > 0.5:
 		return
-	if target.dodges() and cause != &"arena":
-		return
 	var dealt := maxf(1.0, amount * Tune.damage - target.damage_reduction)
 	if is_self and cause == &"blast":
 		dealt = maxf(dealt, target.hp)

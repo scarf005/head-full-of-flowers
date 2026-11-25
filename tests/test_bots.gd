@@ -240,7 +240,7 @@ func test_bot_takes_its_pistol_when_the_enemy_is_too_near_for_its_grenade_launch
 	assert_eq(a.weapon_id(), &"pistol", "the enemy is 4 m away and the blast reaches 3.8 m")
 
 
-func test_bot_that_sees_the_enemy_through_a_window_rolls_through_it() -> void:
+func test_bot_that_sees_the_enemy_through_a_window_vaults_through_it() -> void:
 	# The window is at the end of a gap of 1 m between 2 wall cells.
 	w.hard = true
 	_wall(0, -4, 4)
@@ -323,16 +323,8 @@ func test_path_of_a_bot_crosses_a_fence_and_a_hedge_but_not_a_rock_wall() -> voi
 			assert_eq(path, PackedVector2Array(through), "material %d" % mat)
 
 
-func test_bot_rolls_over_a_fence_on_its_path_to_the_enemy() -> void:
+func test_bot_vaults_a_fence_on_its_path_to_the_enemy() -> void:
 	_wall(0, -w.grid.half, w.grid.half - 1, Defs.Mat.WALL)
 	b.hp = 100000.0
 	_run(90)
 	assert_gt(a.pos.x, 1.0 + a.radius, "1.3 s after the bot started 2 m west of the fence")
-
-
-func test_hard_bot_rolls_out_of_a_fire() -> void:
-	w.hard = true
-	Shots.add_zone(w, a.pos + Vector2(1.0, 0.0), 1, &"molotov")
-	_run(1)
-	assert_true(a.rolling)
-	assert_lt(a.roll_dir.x, -0.5, "the middle of the fire is 1 m east of the bot")

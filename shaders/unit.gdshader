@@ -28,8 +28,8 @@ uniform float angle = 0.0;
 uniform float gun_front = 1.0;
 // Pixel rows of the body that are under water.
 uniform float sink = 0.0;
-// Turn of the figure to the left in radians around its middle, and pixels from the ground up to its feet. A unit in
-// a roll has both.
+// Turn of the figure to the left in radians around its middle, and pixels from the ground up to its feet. A thrown
+// body has a turn. A unit in a vault has a lift.
 uniform vec2 tumble = vec2(0.0);
 // Fill from 0 to 1 of the magazine ring and of the grenade ring, then 1 during a reload. x below 0: no rings.
 uniform vec3 rings = vec3(-1.0, 1.0, 0.0);

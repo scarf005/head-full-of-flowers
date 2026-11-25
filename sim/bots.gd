@@ -28,8 +28,8 @@ const BOX_STAND_OFF := 5.0
 const EDGE_MARGIN := 3.0
 const THROW_RANGE := 12.0
 const MOLOTOV_REACH := 10.5
-## Distance to the middle of a low wall on its path at which a bot starts its roll.
-const ROLL_REACH := 1.6
+## Distance to the middle of a low wall on its path within which a bot walks straight at it.
+const VAULT_REACH := 1.6
 
 
 static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
@@ -84,10 +84,8 @@ static func think(w: SimWorld, u: SimUnit, dt: float) -> void:
 	var push := _avoid(w, u)
 	if push != Vector2.ZERO:
 		move = (move + push * 2.0).normalized()
-	# A bot rolls straight over a low wall on its path. It also rolls out of a fire or a blast. An easy bot is slow
-	# to start that roll.
+	# A bot walks straight at a low wall on its path, and the vault takes it over.
 	var over := push == Vector2.ZERO and not u.ai_edge and _at_low_wall(w, u, move)
-	u.want_roll = over or (push.length() > 0.5 and (w.hard or w.rng.randf() < 0.1))
 	# Only a bot that runs away on hard is faster than 1.
 	u.move = (u.ai_path[0] - u.pos).normalized() if over else _steer(w, u, move).limit_length(1.15)
 
@@ -282,18 +280,22 @@ static func _follow(w: SimWorld, u: SimUnit, goal: Vector2) -> Vector2:
 	if u.ai_path_timer <= 0.0:
 		u.ai_path_timer = 0.3 + 0.03 * (u.index % 11)
 		u.ai_path = w.nav.path(u.pos, goal)
-	while not u.ai_path.is_empty() and u.pos.distance_to(u.ai_path[0]) < 0.4:
+	# A bot in a vault goes over the low cells of its path, so it leaves their waypoints behind.
+	while (
+		not u.ai_path.is_empty()
+		and (u.pos.distance_to(u.ai_path[0]) < 0.4 or (u.vaulting and w.grid.vaults_over(w.grid.cell_of(u.ai_path[0]))))
+	):
 		u.ai_path.remove_at(0)
 	return ((goal if u.ai_path.is_empty() else u.ai_path[0]) - u.pos).normalized()
 
 
-## True when the next waypoint of the bot is on a low wall, nearer than ROLL_REACH, and the bot moves toward it.
+## True when the next waypoint of the bot is on a low wall, nearer than VAULT_REACH, and the bot moves toward it.
 static func _at_low_wall(w: SimWorld, u: SimUnit, move: Vector2) -> bool:
 	if u.ai_path.is_empty():
 		return false
 	var to := u.ai_path[0] - u.pos
 	var ahead := move.normalized().dot(to.normalized()) > 0.7
-	return ahead and to.length() < ROLL_REACH and w.grid.rolls_over(w.grid.cell_of(u.ai_path[0]))
+	return ahead and to.length() < VAULT_REACH and w.grid.vaults_over(w.grid.cell_of(u.ai_path[0]))
 
 
 ## Turns the aim toward `dir`. Far targets turn the aim slower, as in the original game.

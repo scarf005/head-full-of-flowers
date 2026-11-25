@@ -10,7 +10,7 @@ const FEET := Vector2(32.0, 20.0)
 ## Pixels from the feet up to the hand, and from the body out to the centre of the gun.
 const HAND := 7.0
 const REACH := 9.0
-## Pixels that the figure is above the ground in the middle of a roll.
+## Pixels that the figure is above the ground in the middle of a vault.
 const HOP := 7.0
 
 static var _mesh: ArrayMesh
@@ -79,10 +79,10 @@ func _process(delta: float) -> void:
 	_material.set_shader_parameter(&"sink", roundf(_sink))
 	_material.set_shader_parameter(&"hp", unit.hp / unit.max_hp)
 	_material.set_shader_parameter(&"flash", unit.hit_flash)
-	# A unit in a roll turns one time around its middle, forward along the roll, in a low hop.
-	var part := clampf(unit.roll_time / Tune.roll_time, 0.0, 1.0) if unit.rolling else 0.0
-	var forward := 1.0 if unit.roll_dir.x < 0.0 else -1.0
-	_material.set_shader_parameter(&"tumble", Vector2(forward * TAU * part, roundf(sin(PI * part) * HOP)))
+	var part := (
+		unit.vault_from.distance_to(unit.pos) / unit.vault_from.distance_to(unit.vault_to) if unit.vaulting else 0.0
+	)
+	_material.set_shader_parameter(&"tumble", Vector2(0.0, roundf(sin(PI * clampf(part, 0.0, 1.0)) * HOP)))
 	if unit.is_player:
 		_material.set_shader_parameter(&"rings", _rings(reloading))
 
