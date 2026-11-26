@@ -1,7 +1,10 @@
 # Head Full of Flowers
 
-A dithered remake of [head-full-of-flowers](https://github.com/scarf005/head-full-of-flowers) in Godot 4.7: pixel-art
-fox-ear girls fight on a 3D field of grass and flowers.
+A dithered remake of [the first version](https://github.com/scarf005/head-full-of-flowers/tree/v1) in Godot 4.7:
+pixel-art fox-ear girls fight on a 3D field of grass and flowers.
+
+Play in the browser on [itch.io](https://scarf005.itch.io/head-full-of-flowers) or
+[GitHub Pages](https://scarf005.github.io/head-full-of-flowers/).
 
 ![A white-haired fox-ear girl fires a shotgun at an orange-haired one in a meadow with flowers, a fire, hedges and houses](docs/screenshot.webp)
 
