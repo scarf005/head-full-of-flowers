@@ -190,9 +190,14 @@ func _live() -> bool:
 	return not game.autoplay and not game.world.finished
 
 
+## The mouse mode of a match in play. The web has no confined mode.
+static func aim_mouse(web: bool) -> Input.MouseMode:
+	return Input.MOUSE_MODE_HIDDEN if web else Input.MOUSE_MODE_CONFINED_HIDDEN
+
+
 func _set_paused(paused: bool) -> void:
 	get_tree().paused = paused
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused or game.autoplay else Input.MOUSE_MODE_CONFINED_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused or game.autoplay else aim_mouse(OS.has_feature("web"))
 	if paused:
 		menu.show_pause()
 	else:
