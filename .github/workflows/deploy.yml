@@ -7,10 +7,9 @@ on:
 concurrency: { group: deploy, cancel-in-progress: false }
 
 jobs:
-  pages:
+  build:
     runs-on: ubuntu-latest
-    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
-    permissions: { contents: read, pages: write, id-token: write }
+    permissions: { contents: read }
     steps:
       - uses: actions/checkout@v7
       - uses: chickensoft-games/setup-godot@v2
@@ -19,6 +18,15 @@ jobs:
       - run: just export Web
       - uses: actions/upload-pages-artifact@v5
         with: { path: build/web }
+
+  # Deploy in a later job. GitHub can list a new artifact some seconds after the upload:
+  # https://github.com/actions/deploy-pages/issues/451
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
+    permissions: { pages: write, id-token: write }
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
 
