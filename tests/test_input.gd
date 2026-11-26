@@ -97,3 +97,9 @@ func test_key_held_through_the_death_of_the_player_starts_nothing_in_the_new_lif
 	await wait_physics_frames(2)
 	assert_eq(main.game.world.throwables.size(), 1, "a new press of the key throws")
 	Input.action_release(&"throw")
+
+
+func test_hides_the_mouse_without_the_confined_mode_on_the_web() -> void:
+	# The web has no confined mouse mode. Godot refuses it there, and the system pointer stays over the crosshair.
+	assert_eq(main.aim_mouse(true), Input.MOUSE_MODE_HIDDEN)
+	assert_eq(main.aim_mouse(false), Input.MOUSE_MODE_CONFINED_HIDDEN)
