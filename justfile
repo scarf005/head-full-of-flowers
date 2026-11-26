@@ -38,3 +38,4 @@ export +presets="Web Linux":
     touch build/.gdignore
     ln -sfn "${XDG_DATA_HOME:-$HOME/.local/share}"/godot/export_templates/* {{profile}}/data/godot/export_templates/
     for preset in {{presets}}; do {{godot}} --headless --export-release "$preset" || exit 1; done
+    cp docs/og.webp build/web/
