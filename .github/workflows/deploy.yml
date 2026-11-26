@@ -1,0 +1,40 @@
+name: Deploy
+
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+
+concurrency: { group: deploy, cancel-in-progress: false }
+
+jobs:
+  pages:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
+    permissions: { contents: read, pages: write, id-token: write }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: chickensoft-games/setup-godot@v2
+        with: { version: 4.7.2, use-dotnet: false, include-templates: true }
+      - uses: extractions/setup-just@v4
+      - run: just export Web
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: build/web }
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  itch:
+    needs: pages
+    runs-on: ubuntu-latest
+    environment: itch.io
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v8
+        with: { name: github-pages }
+      - run: mkdir web && tar -xf artifact.tar -C web
+      - uses: KikimoraGames/itch-publish@v0.0.3
+        with:
+          butlerApiKey: ${{ secrets.BUTLER_API_KEY }}
+          gameData: ./web
+          itchUsername: ${{ vars.ITCH_USERNAME }}
+          itchGameId: ${{ vars.ITCH_GAME_ID }}
+          buildChannel: html5

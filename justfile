@@ -32,10 +32,9 @@ lint:
 capture out *args:
     tools/capture.sh {{out}} {{args}}
 
-# build the web and Linux releases into build/
-export:
+# build releases into build/: just export [Web] [Linux]
+export +presets="Web Linux":
     mkdir -p build/web build/linux {{profile}}/data/godot/export_templates
     touch build/.gdignore
     ln -sfn "${XDG_DATA_HOME:-$HOME/.local/share}"/godot/export_templates/* {{profile}}/data/godot/export_templates/
-    {{godot}} --headless --export-release Web
-    {{godot}} --headless --export-release Linux
+    for preset in {{presets}}; do {{godot}} --headless --export-release "$preset" || exit 1; done
